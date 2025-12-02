@@ -5,12 +5,9 @@
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script src="appdata/etude/data.js"></script>
-<script src="appdata/vocalization/data.js"></script>
-
 <style>
 /* ===========================
-   기본 스타일
+   기본 스타일 (유지)
    =========================== */
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f5f7fb; margin: 0; color: #333; display: flex; flex-direction: column; min-height: 100vh; }
 .wrapper { max-width: 1200px; width: 95%; margin: 0 auto; flex: 1; padding: 20px 0; }
@@ -37,7 +34,6 @@ footer b { color: #fff; font-weight: 700; }
 .lock-btn { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.05); border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px; z-index: 10; }
 .lock-btn.locked { background: #ff4757; color: white; opacity: 1; }
 
-/* 탭 1 */
 .scene-main-card { border: 2px solid #f0f0f0; border-radius: 20px; padding: 30px 20px; background: #fff; text-align: center; margin-bottom: 30px; }
 .color-badge-box { width: 100%; height: 80px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 800; color: #fff; margin-bottom: 20px; position: relative; }
 .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; text-align: left; }
@@ -49,7 +45,6 @@ footer b { color: #fff; font-weight: 700; }
 .mission-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
 .mission-card { background: #fff; border: 1px solid #eee; border-radius: 14px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
 
-/* 탭 2 */
 .char-container { display: flex; flex-direction: column; align-items: center; gap: 20px; }
 .char-img-frame { width: 100%; max-width: 300px; aspect-ratio: 1/1; border-radius: 20px; overflow: hidden; background: #f0f0f0; border: 5px solid #fff; box-shadow: 0 8px 20px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; position: relative; }
 .char-img { width: 100%; height: 100%; object-fit: cover; }
@@ -96,6 +91,7 @@ audio { width: 100%; height: 40px; }
 
 .time-info { margin-top:8px; font-size:14px; color:#555; font-weight:bold; }
 .time-val { color: #ff4757; font-weight:900; }
+
 .stt-text { font-size: 18px; color: #333; line-height: 1.4; background:#f9f9f9; padding:15px; border-radius:10px; border:1px solid #eee; margin-bottom:10px; font-weight:500; min-height: 40px;}
 .accuracy-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 13px; color: white; font-weight:bold; }
 .acc-good { background: #2ecc71; } .acc-bad { background: #ff6b6b; } .acc-soso { background: #f1c40f; } .acc-wait { background: #aaa; }
@@ -191,7 +187,7 @@ audio { width: 100%; height: 40px; }
 
       <div class="record-box" id="recordBox">
         <div class="pro-player-box">
-            <span class="player-label">🎧 프로 성우 예시 듣기</span>
+            <span class="player-label">🎧 프로 성우 예시 듣기 (appdata/audio/1~5.mp3)</span>
             <audio id="proAudio" controls src=""></audio>
         </div>
 
@@ -256,10 +252,25 @@ document.querySelectorAll('.tab').forEach(t => {
     };
 });
 
-function pick(a){return a[Math.floor(Math.random()*a.length)];}
+// --- [탭 1] 상황극 로직 ---
+const etudeData = {
+    colors: [{name:"빨강",code:"#e74c3c"},{name:"파랑",code:"#3498db"},{name:"노랑",code:"#f1c40f"},{name:"초록",code:"#2ecc71"},{name:"보라",code:"#9b59b6"},{name:"분홍",code:"#e91e63"},{name:"주황",code:"#e67e22"},{name:"연두",code:"#82cc19"},{name:"남색",code:"#34495e"},{name:"검정",code:"#2c3e50"}],
+    emotions: ["기쁨","슬픔","분노","당황","설렘","불안","의심","후회","공포","허탈","냉소","애절"],
+    actions: ["한숨 쉬며","고개를 떨구며","양손 벌리며","벽에 기대며","주먹 쥐며","뒷걸음질 치며","눈을 피하며","머리를 쓸어넘기며","다리를 떨며","미소 지으며"],
+    places: ["학교 운동장","버스 정류장","지하철 안","카페","집 거실","회의실","놀이공원 앞","편의점 앞","병원 복도","경찰서","옥상"],
+    relations: ["친구","연인","동창","상사직원","이웃","룸메이트","가족","낯선 사람","채권자","첫사랑"],
+    lines: ["너 왜 이제야 왔어?","계속 생각났어.","오늘 진짜 힘들었어.","책임질 수 있어?","나만 몰랐던 거야?","그렇게까지 해야 했어?","미안하다고 뭐가 달라져?","한 번만 더 믿어줘.","이제 그만하자.","처음부터 다시 시작하면 안 될까?"]
+};
 
-/* [탭 1] 상황극 로직 */
-// (etudeData 변수는 appdata/etude/data.js에서 불러옴)
+// 외부 파일이 있으면 그걸 쓰고, 없으면 위 기본값 사용 (에러 방지)
+const colors = typeof window.etudeData !== 'undefined' ? window.etudeData.colors : etudeData.colors;
+const emotions = typeof window.etudeData !== 'undefined' ? window.etudeData.emotions : etudeData.emotions;
+const actions = typeof window.etudeData !== 'undefined' ? window.etudeData.actions : etudeData.actions;
+const places = typeof window.etudeData !== 'undefined' ? window.etudeData.places : etudeData.places;
+const relations = typeof window.etudeData !== 'undefined' ? window.etudeData.relations : etudeData.relations;
+const lines = typeof window.etudeData !== 'undefined' ? window.etudeData.lines : etudeData.lines;
+
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
 let locks = {color:false, place:false, emotion:false, relation:false, action:false, line:false};
 let currentData = {c:{name:"색상",code:"#ddd"}, p:"-", e:"-", r:"-", a:"-", l:"버튼을 눌러 시작하세요"};
 let missionCount = 0;
@@ -272,26 +283,23 @@ function toggleLock(key){
 }
 
 async function rollScene(){
-    // 데이터가 로드되었는지 확인
-    if (typeof etudeData === 'undefined') return alert("데이터 로딩 중입니다. 잠시 후 다시 시도해주세요.");
-
     const btn = document.getElementById('btnGen'); btn.disabled = true;
-    const newC = locks.color ? currentData.c : pick(etudeData.colors);
-    const newP = locks.place ? currentData.p : pick(etudeData.places);
-    const newE = locks.emotion ? currentData.e : pick(etudeData.emotions);
-    const newR = locks.relation ? currentData.r : pick(etudeData.relations);
-    const newA = locks.action ? currentData.a : pick(etudeData.actions);
-    const newL = locks.line ? currentData.l : pick(etudeData.lines);
+    const newC = locks.color ? currentData.c : pick(colors);
+    const newP = locks.place ? currentData.p : pick(places);
+    const newE = locks.emotion ? currentData.e : pick(emotions);
+    const newR = locks.relation ? currentData.r : pick(relations);
+    const newA = locks.action ? currentData.a : pick(actions);
+    const newL = locks.line ? currentData.l : pick(lines);
     
     currentData = {c:newC, p:newP, e:newE, r:newR, a:newA, l:newL};
 
     const promises = [];
     if(!locks.color) promises.push(spinColor(newC, 600));
-    if(!locks.place) promises.push(spinText('placeDisplay', etudeData.places, newP, 1000));
-    if(!locks.emotion) promises.push(spinText('emotionDisplay', etudeData.emotions, newE, 1400));
-    if(!locks.relation) promises.push(spinText('relationDisplay', etudeData.relations, newR, 1800));
-    if(!locks.action) promises.push(spinText('actionDisplay', etudeData.actions, newA, 2200));
-    if(!locks.line) promises.push(spinText('lineDisplay', etudeData.lines, newL, 2600));
+    if(!locks.place) promises.push(spinText('placeDisplay', places, newP, 1000));
+    if(!locks.emotion) promises.push(spinText('emotionDisplay', emotions, newE, 1400));
+    if(!locks.relation) promises.push(spinText('relationDisplay', relations, newR, 1800));
+    if(!locks.action) promises.push(spinText('actionDisplay', actions, newA, 2200));
+    if(!locks.line) promises.push(spinText('lineDisplay', lines, newL, 2600));
     
     await Promise.all(promises);
     btn.disabled = false;
@@ -313,7 +321,7 @@ function spinColor(val, dur){
         const start = Date.now();
         const int = setInterval(()=>{
             if(Date.now()-start > dur){ clearInterval(int); el.style.backgroundColor=val.code; el.textContent=val.name; r(); }
-            else { const t=pick(etudeData.colors); el.style.backgroundColor=t.code; el.textContent=t.name; }
+            else { const t=pick(colors); el.style.backgroundColor=t.code; el.textContent=t.name; }
         }, 50);
     });
 }
@@ -385,13 +393,22 @@ function saveCharacter(){
     document.getElementById("charSaveGrid").appendChild(div);
 }
 
-/* --- [탭 3] 발성훈련 (외부 데이터 + 단계별 분리) --- */
+/* --- [탭 3] 발성훈련 (표준발음법 교정 & Step 7 확장) --- */
+const trainData = [
+    { id:1, text: "변화는 두려움보다 가능성이 크다.", pron: "변화는 두려움보다 가능썽이 크다" },
+    { id:2, text: "성장은 불편함을 통과해야 온다.", pron: "성장은 불편하믈 통과해야 온다" }, 
+    { id:3, text: "깊은 강물은 소리 없이 흐른다.", pron: "기픈 강무른 소리 업씨 흐른다" },
+    { id:4, text: "가장 어두운 밤이 지나야 별이 뜬다.", pron: "가장 어두운 바미 지나야 벼리 뜬다" },
+    { id:5, text: "천천히 가는 것을 두려워 말고 멈추는 것을 두려워하라.", pron: "천천히 가는 거슬 두려워 말고 멈추는 거슬 두려워하라" }
+];
+
 let step=0, currentTrainObj=null;
 let mediaRecorder, audioChunks = [], isRecording = false, startTime;
 let recognition;
-let recognitionResult = "";
+let recognitionResult = ""; // 결과 임시 저장
 
 // 0. 시스템 진단
+const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 const isSpeechSupported = ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
 
 // 1. 유사도 계산 (Levenshtein)
@@ -423,7 +440,7 @@ function editDistance(s1, s2) {
 }
 
 // 2. 음성인식 초기화
-if (isSpeechSupported) {
+if (isSpeechSupported && !isIOS) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SpeechRecognition();
     recognition.lang = 'ko-KR';
@@ -453,10 +470,11 @@ function updateRecognitionUI() {
         const similarity = getSimilarity(targetClean, inputClean);
 
         const badge = document.getElementById('accBadge');
-        if (similarity >= 0.7) { // 70% 이상 완벽
+        // [판정 기준 대폭 완화]
+        if (similarity >= 0.7) { 
             badge.className = 'accuracy-badge acc-good';
             badge.textContent = '완벽합니다! (70%↑)';
-        } else if (similarity >= 0.3) { // 30% 이상 통과
+        } else if (similarity >= 0.3) { 
             badge.className = 'accuracy-badge acc-soso';
             badge.textContent = '통과 (30%↑)';
         } else {
@@ -478,14 +496,13 @@ function extractVowels(s){
 }
 
 function trainNew(){
-    if (typeof vocalData === 'undefined') return alert("데이터 로딩 중입니다.");
-    currentTrainObj = pick(vocalData); 
+    currentTrainObj = pick(trainData); 
     step=1;
     document.getElementById("train_origin").textContent = currentTrainObj.text; 
     document.getElementById("recordBox").style.display = 'none';
 
     const proAudio = document.getElementById("proAudio");
-    proAudio.src = currentTrainObj.audio;
+    proAudio.src = `appdata/audio/${currentTrainObj.id}.mp3`;
     proAudio.onloadedmetadata = function() {
         document.getElementById("proTime").textContent = proAudio.duration.toFixed(1) + "s";
     };
@@ -498,13 +515,13 @@ function trainNext(){ if(step<7) {step++; renderTrain();} }
 function renderTrain(){
     const box = document.getElementById("train_card");
     const ind = document.getElementById("step_indicator");
+    // 총 7단계로 변경
     const T=["","STEP1 모음을 호흡으로","STEP2 모음 소리","STEP3 원문 호흡","STEP4 원문 소리","STEP5 자연 호흡","STEP6 발음 AI 체크","STEP7 최종 녹음"];
     const D=["","모음 입모양 신경쓰며 호흡으로 읽기","소리내기","(발음대로) 호흡","(발음대로) 소리","자연 호흡","AI가 발음 정확도를 평가합니다.","최종 결과물을 녹음하고 들어보세요."];
 
     let showText = "";
     if (step <= 2) { showText = extractVowels(currentTrainObj.text); }
-    else if (step <= 4) { showText = currentTrainObj.pron; } 
-    else { showText = currentTrainObj.text; } 
+    else if (step <= 7) { showText = currentTrainObj.pron; } // Step 3부터 끝까지 발음대로 표기
 
     ind.textContent="STEP "+step;
     box.innerHTML=
@@ -515,6 +532,7 @@ function renderTrain(){
     document.getElementById("btn_prev").disabled = step===1;
     document.getElementById("btn_next").disabled = step===7;
 
+    // 하단 박스 표시 제어
     const recBox = document.getElementById("recordBox");
     const micBtn = document.getElementById("micBtn");
     const recStatus = document.getElementById("recStatus");
@@ -522,36 +540,47 @@ function renderTrain(){
     const recSection = document.getElementById("recSection");
 
     if(step === 6) {
+        // Step 6: AI 체크 모드
         recBox.style.display = 'block';
         recBox.scrollIntoView({behavior: "smooth"});
         micBtn.textContent = '🗣️';
         recStatus.textContent = "버튼을 눌러 AI 체크 시작";
         aiSection.style.display = 'block';
-        recSection.style.display = 'none';
+        recSection.style.display = 'none'; // 녹음 결과 숨김
+        // 결과 초기화
         document.getElementById("resultBox").style.display = 'none';
     } else if (step === 7) {
+        // Step 7: 녹음 모드
         recBox.style.display = 'block';
         recBox.scrollIntoView({behavior: "smooth"});
         micBtn.textContent = '🎤';
         recStatus.textContent = "버튼을 눌러 녹음 시작";
-        aiSection.style.display = 'none';
+        aiSection.style.display = 'none'; // AI 결과 숨김
         recSection.style.display = 'block';
+        // 결과 초기화
         document.getElementById("resultBox").style.display = 'none';
     } else {
         recBox.style.display = 'none';
     }
 }
 
+// 공통 핸들러 (단계별 기능 분기)
 async function handleAction() {
-    if(step === 6) { startRecognition(); }
-    else if (step === 7) { toggleRecord(); }
+    if(step === 6) {
+        // AI 체크
+        startRecognition();
+    } else if (step === 7) {
+        // 녹음
+        toggleRecord();
+    }
 }
 
-/* Step 6: AI 인식 */
+/* --- Step 6: AI 인식 기능 --- */
 function startRecognition() {
     if(!isSpeechSupported) return alert("이 기기에서는 AI 인식을 지원하지 않습니다.");
     
     if(!isRecording) {
+        // 시작
         isRecording = true;
         recognitionResult = "";
         try { recognition.start(); } catch(e) { console.log(e); }
@@ -561,12 +590,14 @@ function startRecognition() {
         btn.classList.add('recording');
         document.getElementById('recStatus').textContent = "듣는 중...";
         
+        // UI 초기화
         document.getElementById('resultBox').style.display='block';
         document.getElementById('sttResult').textContent = "...";
         document.getElementById('accBadge').className = 'accuracy-badge acc-wait';
         document.getElementById('accBadge').textContent = '분석중...';
 
     } else {
+        // 정지 (수동) -> 보통은 자동 종료됨
         try { recognition.stop(); } catch(e) { }
         isRecording = false;
         resetBtn();
@@ -585,7 +616,8 @@ function resetBtn() {
     }
 }
 
-/* Step 7: 녹음 */
+
+/* --- Step 7: 녹음 기능 --- */
 async function toggleRecord() {
     if(window.location.protocol === 'file:') {
         alert("주의: 로컬 파일에서는 마이크가 작동하지 않습니다.");
