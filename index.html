@@ -5,6 +5,9 @@
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<script src="appdata/etude/data.js"></script>
+<script src="appdata/vocalization/data.js"></script>
+
 <style>
 /* ===========================
    기본 스타일
@@ -12,7 +15,6 @@
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f5f7fb; margin: 0; color: #333; display: flex; flex-direction: column; min-height: 100vh; }
 .wrapper { max-width: 1200px; width: 95%; margin: 0 auto; flex: 1; padding: 20px 0; }
 
-/* 헤더 & 푸터 */
 header { background: #fff; padding: 15px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; }
 .header-content { max-width: 1200px; width: 100%; display: flex; align-items: center; }
 .logo-img { height: 45px; width: auto; margin-right: 12px; }
@@ -20,7 +22,6 @@ header { background: #fff; padding: 15px 20px; box-shadow: 0 2px 10px rgba(0,0,0
 footer { background: #333; color: #aaa; padding: 30px 20px; text-align: center; font-size: 13px; line-height: 1.6; margin-top: 40px; }
 footer b { color: #fff; font-weight: 700; }
 
-/* 탭 및 공통 UI */
 .tabs { display: flex; gap: 5px; border-bottom: 2px solid #ddd; margin-bottom: 20px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
 .tab { padding: 12px 16px; cursor: pointer; font-weight: 700; color: #666; font-size: 15px; transition: 0.2s; flex-shrink: 0; }
 .tab.active { background: #fff; color: #2ecc71; border: 1px solid #ddd; border-bottom: none; border-radius: 10px 10px 0 0; }
@@ -29,7 +30,6 @@ footer b { color: #fff; font-weight: 700; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 .section { background: #fff; padding: 25px; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
 
-/* 버튼 공통 */
 .btn-row { display: flex; gap: 10px; margin-top: 20px; }
 .btn-row button { flex: 1; padding: 16px; border: none; border-radius: 12px; font-size: 17px; font-weight: 800; cursor: pointer; color: white; transition: 0.1s; box-shadow: 0 4px 0 rgba(0,0,0,0.2); white-space: nowrap; }
 .btn-row button:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
@@ -89,7 +89,6 @@ audio { width: 100%; height: 40px; }
 .mic-btn.recording { animation: pulse 1.5s infinite; background: #333; }
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(255, 71, 87, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0); } }
 
-/* 결과 박스 */
 .result-box { margin-top: 20px; background: #fff; border-radius: 15px; border: 1px solid #e0e0e0; display: none; overflow:hidden; }
 .result-section { padding: 20px; border-bottom: 1px solid #f0f0f0; }
 .result-section:last-child { border-bottom: none; }
@@ -97,7 +96,6 @@ audio { width: 100%; height: 40px; }
 
 .time-info { margin-top:8px; font-size:14px; color:#555; font-weight:bold; }
 .time-val { color: #ff4757; font-weight:900; }
-
 .stt-text { font-size: 18px; color: #333; line-height: 1.4; background:#f9f9f9; padding:15px; border-radius:10px; border:1px solid #eee; margin-bottom:10px; font-weight:500; min-height: 40px;}
 .accuracy-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 13px; color: white; font-weight:bold; }
 .acc-good { background: #2ecc71; } .acc-bad { background: #ff6b6b; } .acc-soso { background: #f1c40f; } .acc-wait { background: #aaa; }
@@ -193,7 +191,7 @@ audio { width: 100%; height: 40px; }
 
       <div class="record-box" id="recordBox">
         <div class="pro-player-box">
-            <span class="player-label">🎧 프로 성우 예시 듣기 (appdata/audio/1~5.mp3)</span>
+            <span class="player-label">🎧 프로 성우 예시 듣기</span>
             <audio id="proAudio" controls src=""></audio>
         </div>
 
@@ -258,15 +256,10 @@ document.querySelectorAll('.tab').forEach(t => {
     };
 });
 
-// --- [탭 1] 상황극 ---
-const colors = [{name:"빨강",code:"#e74c3c"},{name:"파랑",code:"#3498db"},{name:"노랑",code:"#f1c40f"},{name:"초록",code:"#2ecc71"},{name:"보라",code:"#9b59b6"},{name:"분홍",code:"#e91e63"},{name:"주황",code:"#e67e22"},{name:"연두",code:"#82cc19"},{name:"남색",code:"#34495e"},{name:"검정",code:"#2c3e50"}];
-const emotions = ["기쁨","슬픔","분노","당황","설렘","불안","의심","후회","공포","허탈","냉소","애절"];
-const actions = ["한숨 쉬며","고개를 떨구며","양손 벌리며","벽에 기대며","주먹 쥐며","뒷걸음질 치며","눈을 피하며","머리를 쓸어넘기며","다리를 떨며","미소 지으며"];
-const places = ["학교 운동장","버스 정류장","지하철 안","카페","집 거실","회의실","놀이공원 앞","편의점 앞","병원 복도","경찰서","옥상"];
-const relations = ["친구","연인","동창","상사직원","이웃","룸메이트","가족","낯선 사람","채권자","첫사랑"];
-const lines = ["너 왜 이제야 왔어?","계속 생각났어.","오늘 진짜 힘들었어.","책임질 수 있어?","나만 몰랐던 거야?","그렇게까지 해야 했어?","미안하다고 뭐가 달라져?","한 번만 더 믿어줘.","이제 그만하자.","처음부터 다시 시작하면 안 될까?"];
-
 function pick(a){return a[Math.floor(Math.random()*a.length)];}
+
+/* [탭 1] 상황극 로직 */
+// (etudeData 변수는 appdata/etude/data.js에서 불러옴)
 let locks = {color:false, place:false, emotion:false, relation:false, action:false, line:false};
 let currentData = {c:{name:"색상",code:"#ddd"}, p:"-", e:"-", r:"-", a:"-", l:"버튼을 눌러 시작하세요"};
 let missionCount = 0;
@@ -279,23 +272,26 @@ function toggleLock(key){
 }
 
 async function rollScene(){
+    // 데이터가 로드되었는지 확인
+    if (typeof etudeData === 'undefined') return alert("데이터 로딩 중입니다. 잠시 후 다시 시도해주세요.");
+
     const btn = document.getElementById('btnGen'); btn.disabled = true;
-    const newC = locks.color ? currentData.c : pick(colors);
-    const newP = locks.place ? currentData.p : pick(places);
-    const newE = locks.emotion ? currentData.e : pick(emotions);
-    const newR = locks.relation ? currentData.r : pick(relations);
-    const newA = locks.action ? currentData.a : pick(actions);
-    const newL = locks.line ? currentData.l : pick(lines);
+    const newC = locks.color ? currentData.c : pick(etudeData.colors);
+    const newP = locks.place ? currentData.p : pick(etudeData.places);
+    const newE = locks.emotion ? currentData.e : pick(etudeData.emotions);
+    const newR = locks.relation ? currentData.r : pick(etudeData.relations);
+    const newA = locks.action ? currentData.a : pick(etudeData.actions);
+    const newL = locks.line ? currentData.l : pick(etudeData.lines);
     
     currentData = {c:newC, p:newP, e:newE, r:newR, a:newA, l:newL};
 
     const promises = [];
     if(!locks.color) promises.push(spinColor(newC, 600));
-    if(!locks.place) promises.push(spinText('placeDisplay', places, newP, 1000));
-    if(!locks.emotion) promises.push(spinText('emotionDisplay', emotions, newE, 1400));
-    if(!locks.relation) promises.push(spinText('relationDisplay', relations, newR, 1800));
-    if(!locks.action) promises.push(spinText('actionDisplay', actions, newA, 2200));
-    if(!locks.line) promises.push(spinText('lineDisplay', lines, newL, 2600));
+    if(!locks.place) promises.push(spinText('placeDisplay', etudeData.places, newP, 1000));
+    if(!locks.emotion) promises.push(spinText('emotionDisplay', etudeData.emotions, newE, 1400));
+    if(!locks.relation) promises.push(spinText('relationDisplay', etudeData.relations, newR, 1800));
+    if(!locks.action) promises.push(spinText('actionDisplay', etudeData.actions, newA, 2200));
+    if(!locks.line) promises.push(spinText('lineDisplay', etudeData.lines, newL, 2600));
     
     await Promise.all(promises);
     btn.disabled = false;
@@ -317,7 +313,7 @@ function spinColor(val, dur){
         const start = Date.now();
         const int = setInterval(()=>{
             if(Date.now()-start > dur){ clearInterval(int); el.style.backgroundColor=val.code; el.textContent=val.name; r(); }
-            else { const t=pick(colors); el.style.backgroundColor=t.code; el.textContent=t.name; }
+            else { const t=pick(etudeData.colors); el.style.backgroundColor=t.code; el.textContent=t.name; }
         }, 50);
     });
 }
@@ -333,30 +329,30 @@ function saveScene(){
     document.getElementById("missionGrid").appendChild(div);
 }
 
-/* [탭 2] 캐릭터 로직 */
+/* [탭 2] 캐릭터 로직 (로컬 경로 방식) */
 const maleCharacters = [
-    {id:10, name:"카이엔", job:"왕국 기사단장", desc:"정의롭고 열혈적인 리더.", driveId:""},
-    {id:1, name:"레이븐", job:"궁정 수석 마법사", desc:"냉철하고 이성적인 두뇌파.", driveId:""},
-    {id:2, name:"진", job:"뒷골목 해결사", desc:"능글맞고 자유분방한 현실주의자.", driveId:""},
-    {id:4, name:"노아", job:"치유의 성직자", desc:"온화하고 성스러운 외모.", driveId:""},
-    {id:3, name:"류", job:"열혈 요리사", desc:"요리에 목숨 건 정열남.", driveId:""},
-    {id:5, name:"애쉬", job:"천재 메카닉", desc:"사람보다 기계를 편해하는 기술 오타쿠.", driveId:""},
-    {id:6, name:"시우", job:"톱 아이돌 센터", desc:"타고난 끼와 팬 서비스.", driveId:""},
-    {id:7, name:"빅터", job:"냉혹한 CEO", desc:"모든 것을 수치로 계산하는 엘리트.", driveId:""},
-    {id:8, name:"한울", job:"사연 있는 탐정", desc:"평소엔 의욕 없는 베짱이, 사건 터지면 날카로운 추리력.", driveId:""},
-    {id:9, name:"그림", job:"과묵한 암살자", desc:"감정을 배제한 임무 수행 기계.", driveId:""}
+    {id:10, name:"카이엔", job:"왕국 기사단장", desc:"정의롭고 열혈적인 리더."},
+    {id:1, name:"레이븐", job:"궁정 수석 마법사", desc:"냉철하고 이성적인 두뇌파."},
+    {id:2, name:"진", job:"뒷골목 해결사", desc:"능글맞고 자유분방한 현실주의자."},
+    {id:4, name:"노아", job:"치유의 성직자", desc:"온화하고 성스러운 외모."},
+    {id:3, name:"류", job:"열혈 요리사", desc:"요리에 목숨 건 정열남."},
+    {id:5, name:"애쉬", job:"천재 메카닉", desc:"사람보다 기계를 편해하는 기술 오타쿠."},
+    {id:6, name:"시우", job:"톱 아이돌 센터", desc:"타고난 끼와 팬 서비스."},
+    {id:7, name:"빅터", job:"냉혹한 CEO", desc:"모든 것을 수치로 계산하는 엘리트."},
+    {id:8, name:"한울", job:"사연 있는 탐정", desc:"평소엔 의욕 없는 베짱이, 사건 터지면 날카로운 추리력."},
+    {id:9, name:"그림", job:"과묵한 암살자", desc:"감정을 배제한 임무 수행 기계."}
 ];
 const femaleCharacters = [
-    {id:10, name:"세라피나", job:"황실 근위대장", desc:"빈틈없는 원칙주의자 '얼음 마녀'.", driveId:""},
-    {id:2, name:"루나", job:"괴짜 마녀", desc:"장난기 넘치고 자유로운 영혼.", driveId:""},
-    {id:9, name:"유나", job:"덜렁이 성녀님", desc:"신성력은 최고지만 덜렁이.", driveId:""},
-    {id:1, name:"벨라", job:"팬텀 시프", desc:"우아하고 요염한 괴도.", driveId:""},
-    {id:8, name:"서연", job:"완벽주의 비서", desc:"걸어 다니는 컴퓨터.", driveId:""},
-    {id:7, name:"리나", job:"신인 아이돌", desc:"지치지 않는 긍정 에너지.", driveId:""},
-    {id:6, name:"앨리스", job:"학생회장", desc:"전형적인 츤데레.", driveId:""},
-    {id:3, name:"힐다", job:"대장장이", desc:"털털한 성격의 장인.", driveId:""},
-    {id:4, name:"하나", job:"매드 사이언티스트", desc:"상식을 벗어난 괴짜 발명가.", driveId:""},
-    {id:5, name:"카오리", job:"심야 식당 주인", desc:"나긋나긋하고 포용력 있는 어른.", driveId:""}
+    {id:10, name:"세라피나", job:"황실 근위대장", desc:"빈틈없는 원칙주의자 '얼음 마녀'."},
+    {id:2, name:"루나", job:"괴짜 마녀", desc:"장난기 넘치고 자유로운 영혼."},
+    {id:9, name:"유나", job:"덜렁이 성녀님", desc:"신성력은 최고지만 덜렁이."},
+    {id:1, name:"벨라", job:"팬텀 시프", desc:"우아하고 요염한 괴도."},
+    {id:8, name:"서연", job:"완벽주의 비서", desc:"걸어 다니는 컴퓨터."},
+    {id:7, name:"리나", job:"신인 아이돌", desc:"지치지 않는 긍정 에너지."},
+    {id:6, name:"앨리스", job:"학생회장", desc:"전형적인 츤데레."},
+    {id:3, name:"힐다", job:"대장장이", desc:"털털한 성격의 장인."},
+    {id:4, name:"하나", job:"매드 사이언티스트", desc:"상식을 벗어난 괴짜 발명가."},
+    {id:5, name:"카오리", job:"심야 식당 주인", desc:"나긋나긋하고 포용력 있는 어른."}
 ];
 
 let currentChar = null;
@@ -389,21 +385,16 @@ function saveCharacter(){
     document.getElementById("charSaveGrid").appendChild(div);
 }
 
-/* --- [탭 3] 발성훈련 (7단계 분리 및 표준발음법 교정) --- */
-const trainData = [
-    { id:1, text: "변화는 두려움보다 가능성이 크다.", pron: "변화는 두려움보다 가능썽이 크다" },
-    { id:2, text: "성장은 불편함을 통과해야 온다.", pron: "성장은 불편하믈 통과해야 온다" }, 
-    { id:3, text: "깊은 강물은 소리 없이 흐른다.", pron: "기픈 강무른 소리 업씨 흐른다" },
-    { id:4, text: "가장 어두운 밤이 지나야 별이 뜬다.", pron: "가장 어두운 바미 지나야 벼리 뜬다" },
-    { id:5, text: "천천히 가는 것을 두려워 말고 멈추는 것을 두려워하라.", pron: "천천히 가는 거슬 두려워 말고 멈추는 거슬 두려워하라" }
-];
-
+/* --- [탭 3] 발성훈련 (외부 데이터 + 단계별 분리) --- */
 let step=0, currentTrainObj=null;
 let mediaRecorder, audioChunks = [], isRecording = false, startTime;
 let recognition;
-let recognitionResult = ""; // 결과 임시 저장
+let recognitionResult = "";
 
-// 1. 유사도 계산
+// 0. 시스템 진단
+const isSpeechSupported = ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
+
+// 1. 유사도 계산 (Levenshtein)
 function getSimilarity(s1, s2) {
     const longer = s1.length > s2.length ? s1 : s2;
     const shorter = s1.length > s2.length ? s2 : s1;
@@ -432,7 +423,6 @@ function editDistance(s1, s2) {
 }
 
 // 2. 음성인식 초기화
-const isSpeechSupported = ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
 if (isSpeechSupported) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SpeechRecognition();
@@ -444,7 +434,6 @@ if (isSpeechSupported) {
         recognitionResult = event.results[0][0].transcript;
         updateRecognitionUI(); 
     };
-    
     recognition.onerror = function(event) {
         console.log("STT error:", event.error);
         if(!recognitionResult) {
@@ -464,11 +453,10 @@ function updateRecognitionUI() {
         const similarity = getSimilarity(targetClean, inputClean);
 
         const badge = document.getElementById('accBadge');
-        // [판정 기준 대폭 완화]
-        if (similarity >= 0.7) { 
+        if (similarity >= 0.7) { // 70% 이상 완벽
             badge.className = 'accuracy-badge acc-good';
             badge.textContent = '완벽합니다! (70%↑)';
-        } else if (similarity >= 0.3) { 
+        } else if (similarity >= 0.3) { // 30% 이상 통과
             badge.className = 'accuracy-badge acc-soso';
             badge.textContent = '통과 (30%↑)';
         } else {
@@ -490,13 +478,14 @@ function extractVowels(s){
 }
 
 function trainNew(){
-    currentTrainObj = pick(trainData); 
+    if (typeof vocalData === 'undefined') return alert("데이터 로딩 중입니다.");
+    currentTrainObj = pick(vocalData); 
     step=1;
     document.getElementById("train_origin").textContent = currentTrainObj.text; 
     document.getElementById("recordBox").style.display = 'none';
 
     const proAudio = document.getElementById("proAudio");
-    proAudio.src = `appdata/audio/${currentTrainObj.id}.mp3`;
+    proAudio.src = currentTrainObj.audio;
     proAudio.onloadedmetadata = function() {
         document.getElementById("proTime").textContent = proAudio.duration.toFixed(1) + "s";
     };
@@ -509,14 +498,13 @@ function trainNext(){ if(step<7) {step++; renderTrain();} }
 function renderTrain(){
     const box = document.getElementById("train_card");
     const ind = document.getElementById("step_indicator");
-    // 총 7단계로 변경
     const T=["","STEP1 모음을 호흡으로","STEP2 모음 소리","STEP3 원문 호흡","STEP4 원문 소리","STEP5 자연 호흡","STEP6 발음 AI 체크","STEP7 최종 녹음"];
     const D=["","모음 입모양 신경쓰며 호흡으로 읽기","소리내기","(발음대로) 호흡","(발음대로) 소리","자연 호흡","AI가 발음 정확도를 평가합니다.","최종 결과물을 녹음하고 들어보세요."];
 
     let showText = "";
     if (step <= 2) { showText = extractVowels(currentTrainObj.text); }
-    else if (step <= 4) { showText = currentTrainObj.pron; } // Step 3,4는 발음대로
-    else { showText = currentTrainObj.text; } // Step 5,6,7은 원문
+    else if (step <= 4) { showText = currentTrainObj.pron; } 
+    else { showText = currentTrainObj.text; } 
 
     ind.textContent="STEP "+step;
     box.innerHTML=
@@ -527,7 +515,6 @@ function renderTrain(){
     document.getElementById("btn_prev").disabled = step===1;
     document.getElementById("btn_next").disabled = step===7;
 
-    // 하단 박스 표시 제어
     const recBox = document.getElementById("recordBox");
     const micBtn = document.getElementById("micBtn");
     const recStatus = document.getElementById("recStatus");
@@ -535,47 +522,36 @@ function renderTrain(){
     const recSection = document.getElementById("recSection");
 
     if(step === 6) {
-        // Step 6: AI 체크 모드
         recBox.style.display = 'block';
         recBox.scrollIntoView({behavior: "smooth"});
         micBtn.textContent = '🗣️';
         recStatus.textContent = "버튼을 눌러 AI 체크 시작";
         aiSection.style.display = 'block';
-        recSection.style.display = 'none'; // 녹음 결과 숨김
-        // 결과 초기화
+        recSection.style.display = 'none';
         document.getElementById("resultBox").style.display = 'none';
     } else if (step === 7) {
-        // Step 7: 녹음 모드
         recBox.style.display = 'block';
         recBox.scrollIntoView({behavior: "smooth"});
         micBtn.textContent = '🎤';
         recStatus.textContent = "버튼을 눌러 녹음 시작";
-        aiSection.style.display = 'none'; // AI 결과 숨김
+        aiSection.style.display = 'none';
         recSection.style.display = 'block';
-        // 결과 초기화
         document.getElementById("resultBox").style.display = 'none';
     } else {
         recBox.style.display = 'none';
     }
 }
 
-// 공통 핸들러 (단계별 기능 분기)
 async function handleAction() {
-    if(step === 6) {
-        // AI 체크
-        startRecognition();
-    } else if (step === 7) {
-        // 녹음
-        toggleRecord();
-    }
+    if(step === 6) { startRecognition(); }
+    else if (step === 7) { toggleRecord(); }
 }
 
-/* --- Step 6: AI 인식 기능 --- */
+/* Step 6: AI 인식 */
 function startRecognition() {
     if(!isSpeechSupported) return alert("이 기기에서는 AI 인식을 지원하지 않습니다.");
     
     if(!isRecording) {
-        // 시작
         isRecording = true;
         recognitionResult = "";
         try { recognition.start(); } catch(e) { console.log(e); }
@@ -585,14 +561,12 @@ function startRecognition() {
         btn.classList.add('recording');
         document.getElementById('recStatus').textContent = "듣는 중...";
         
-        // UI 초기화
         document.getElementById('resultBox').style.display='block';
         document.getElementById('sttResult').textContent = "...";
         document.getElementById('accBadge').className = 'accuracy-badge acc-wait';
         document.getElementById('accBadge').textContent = '분석중...';
 
     } else {
-        // 정지 (수동) -> 보통은 자동 종료됨
         try { recognition.stop(); } catch(e) { }
         isRecording = false;
         resetBtn();
@@ -611,11 +585,10 @@ function resetBtn() {
     }
 }
 
-
-/* --- Step 7: 녹음 기능 --- */
+/* Step 7: 녹음 */
 async function toggleRecord() {
     if(window.location.protocol === 'file:') {
-        alert("주의: 로컬 파일에서는 마이크가 작동하지 않습니다.\nNetlify 서버에 올려서 확인해주세요!");
+        alert("주의: 로컬 파일에서는 마이크가 작동하지 않습니다.");
         return;
     }
 
@@ -633,7 +606,7 @@ async function toggleRecord() {
             btn.textContent = '⬛'; 
             btn.classList.add('recording');
             document.getElementById('recStatus').textContent = "녹음 중...";
-            document.getElementById('resultBox').style.display='none'; // 다시 녹음 시 결과창 숨김
+            document.getElementById('resultBox').style.display='none'; 
 
             mediaRecorder.addEventListener("dataavailable", event => {
                 audioChunks.push(event.data);
@@ -647,7 +620,7 @@ async function toggleRecord() {
                 
                 const duration = (Date.now() - startTime) / 1000;
                 document.getElementById('myTime').textContent = duration.toFixed(1) + "s";
-                document.getElementById('resultBox').style.display='block'; // 다 되면 보임
+                document.getElementById('resultBox').style.display='block'; 
                 stream.getTracks().forEach(track => track.stop());
             });
         } catch (e) {
@@ -660,7 +633,6 @@ async function toggleRecord() {
     }
 }
 
-// 음성인식 종료 시 (자동)
 if (isSpeechSupported) {
     recognition.onend = function() {
         isRecording = false;
