@@ -15,6 +15,7 @@
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f5f7fb; margin: 0; color: #333; display: flex; flex-direction: column; min-height: 100vh; }
 .wrapper { max-width: 1200px; width: 95%; margin: 0 auto; flex: 1; padding: 20px 0; }
 
+/* 헤더 & 푸터 */
 header { background: #fff; padding: 15px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; }
 .header-content { max-width: 1200px; width: 100%; display: flex; align-items: center; }
 .logo-img { height: 45px; width: auto; margin-right: 12px; }
@@ -22,6 +23,7 @@ header { background: #fff; padding: 15px 20px; box-shadow: 0 2px 10px rgba(0,0,0
 footer { background: #333; color: #aaa; padding: 30px 20px; text-align: center; font-size: 13px; line-height: 1.6; margin-top: 40px; }
 footer b { color: #fff; font-weight: 700; }
 
+/* 탭 및 공통 UI */
 .tabs { display: flex; gap: 5px; border-bottom: 2px solid #ddd; margin-bottom: 20px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
 .tab { padding: 12px 16px; cursor: pointer; font-weight: 700; color: #666; font-size: 15px; transition: 0.2s; flex-shrink: 0; }
 .tab.active { background: #fff; color: #2ecc71; border: 1px solid #ddd; border-bottom: none; border-radius: 10px 10px 0 0; }
@@ -30,24 +32,36 @@ footer b { color: #fff; font-weight: 700; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 .section { background: #fff; padding: 25px; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
 
+/* 버튼 공통 */
 .btn-row { display: flex; gap: 10px; margin-top: 20px; }
 .btn-row button { flex: 1; padding: 16px; border: none; border-radius: 12px; font-size: 17px; font-weight: 800; cursor: pointer; color: white; transition: 0.1s; box-shadow: 0 4px 0 rgba(0,0,0,0.2); white-space: nowrap; }
 .btn-row button:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
 .btn-gen { background: #2ecc71; } .btn-save { background: #3498db; } .btn-male { background: #3498db; } .btn-female { background: #ff7979; }
-.lock-btn { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.05); border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px; z-index: 10; }
-.lock-btn.locked { background: #ff4757; color: white; opacity: 1; }
 
+/* 잠금 버튼 스타일 */
+.lock-btn { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.05); border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px; z-index: 10; transition: all 0.2s; }
+.lock-btn:hover { background: rgba(0,0,0,0.1); transform: scale(1.1); }
+.lock-btn.locked { background: #ff4757; color: white; opacity: 1; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+
+/* 탭 1: 상황극 UI */
 .scene-main-card { border: 2px solid #f0f0f0; border-radius: 20px; padding: 30px 20px; background: #fff; text-align: center; margin-bottom: 30px; }
-.color-badge-box { width: 100%; height: 80px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 800; color: #fff; margin-bottom: 20px; position: relative; }
+.color-badge-box { width: 100%; height: 80px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 800; color: #fff; margin-bottom: 20px; position: relative; text-shadow: 0 1px 3px rgba(0,0,0,0.2); }
 .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; text-align: left; }
-.info-item { background: #f9f9f9; padding: 15px; border-radius: 14px; position: relative; min-height: 50px; display: flex; flex-direction: column; justify-content: center; }
+.info-item { background: #f9f9f9; padding: 15px; border-radius: 14px; position: relative; min-height: 50px; display: flex; flex-direction: column; justify-content: center; border: 1px solid #eee; }
 .info-label { font-size: 12px; color: #888; font-weight: 700; margin-bottom: 4px; display:block; }
 .info-value { font-size: 17px; font-weight: 700; color: #333; word-break: keep-all; }
 .line-area { padding: 25px; background: #f0fdf4; border-radius: 16px; border: 2px solid #dcfce7; margin-bottom: 20px; position: relative; }
 .line-text { font-size: 24px; font-weight: 900; color: #166534; word-break: keep-all; line-height: 1.4; }
-.mission-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
-.mission-card { background: #fff; border: 1px solid #eee; border-radius: 14px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
 
+/* 저장된 미션 카드 스타일 */
+.mission-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
+.mission-card { background: #fff; border: 1px solid #eee; border-radius: 14px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: transform 0.2s; }
+.mission-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.08); }
+/* 미션 제목 입력창 */
+.mission-title-input { border: none; border-bottom: 1px dashed #ccc; font-size: 16px; font-weight: 800; color: #333; width: 140px; background: transparent; padding: 2px; outline: none; transition: border 0.2s; }
+.mission-title-input:focus { border-bottom: 2px solid #2ecc71; }
+
+/* 탭 2: 캐릭터 UI */
 .char-container { display: flex; flex-direction: column; align-items: center; gap: 20px; }
 .char-img-frame { width: 100%; max-width: 300px; aspect-ratio: 1/1; border-radius: 20px; overflow: hidden; background: #f0f0f0; border: 5px solid #fff; box-shadow: 0 8px 20px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; position: relative; }
 .char-img { width: 100%; height: 100%; object-fit: cover; }
@@ -61,7 +75,7 @@ footer b { color: #fff; font-weight: 700; }
 .mini-char-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; background:#ddd; }
 .mini-char-info { padding: 10px; }
 
-/* 탭 3 발성훈련 UI */
+/* 탭 3: 발성훈련 UI */
 .train-origin-text { 
     font-size: 20px; font-weight: 700; color: #333; text-align: center; 
     margin-bottom: 25px; word-break: keep-all; line-height: 1.5; 
@@ -89,10 +103,10 @@ audio { width: 100%; height: 40px; }
 
 /* 결과 박스 */
 .result-box { margin-top: 20px; background: #fff; border-radius: 15px; border: 1px solid #e0e0e0; display: none; overflow:hidden; }
-.result-section { padding: 20px; border-bottom: 1px solid #f0f0f0; }
+.result-section { padding: 15px; border-bottom: 1px solid #f0f0f0; }
 .result-section:last-child { border-bottom: none; }
-.section-title { font-size: 14px; font-weight: 800; color: #555; margin-bottom: 10px; display: flex; align-items:center; gap:5px; }
-.time-info { margin-top:8px; font-size:14px; color:#555; font-weight:bold; }
+.section-title { font-size: 13px; font-weight: 800; color: #888; margin-bottom: 8px; display: block; }
+.time-info { margin-top:5px; font-size:14px; color:#555; font-weight:bold; }
 .time-val { color: #ff4757; font-weight:900; }
 .stt-text { font-size: 18px; color: #333; line-height: 1.4; background:#f9f9f9; padding:15px; border-radius:10px; border:1px solid #eee; margin-bottom:10px; font-weight:500; min-height: 40px;}
 .accuracy-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 13px; color: white; font-weight:bold; }
@@ -149,6 +163,7 @@ audio { width: 100%; height: 40px; }
             <button class="btn-save" onclick="saveScene()">💾 저장하기</button>
         </div>
       </div>
+      <h3 style="margin-top:40px; margin-bottom:15px; color:#444;">📋 저장된 미션 (제목 수정 가능)</h3>
       <div id="missionGrid" class="mission-grid"></div>
     </div>
   </div>
@@ -189,7 +204,7 @@ audio { width: 100%; height: 40px; }
 
       <div class="record-box" id="recordBox">
         <div class="pro-player-box">
-            <span class="player-label">🎧 프로 성우 예시 듣기 (appdata/audio/1~5.mp3)</span>
+            <span class="player-label">🎧 프로 성우 예시 듣기</span>
             <audio id="proAudio" controls src=""></audio>
         </div>
 
@@ -317,15 +332,24 @@ function spinColor(val, dur){
     });
 }
 
+// 미션 저장하기 (제목 수정 기능 추가)
 function saveScene(){
     if(currentData.l === "버튼을 눌러 시작하세요") return alert("먼저 랜덤 뽑기를 진행해주세요!");
     missionCount++;
     const div = document.createElement("div"); div.className="mission-card";
-    div.innerHTML = `<div><strong>미션 ${missionCount}</strong> <span style="background:${currentData.c.code}; color:#fff; padding:2px 6px; border-radius:4px; font-size:12px;">${currentData.c.name}</span></div>
-    <div style="font-size:14px; color:#555; margin-top:5px;">장소: ${currentData.p} / 감정: ${currentData.e}</div>
-    <div style="font-size:14px; color:#555;">관계: ${currentData.r} / 행동: ${currentData.a}</div>
-    <div style="background:#f5f5f5; padding:8px; margin-top:8px; font-weight:bold;">"${currentData.l}"</div>`;
-    document.getElementById("missionGrid").appendChild(div);
+    
+    div.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:8px;">
+            <input type="text" class="mission-title-input" value="미션 ${missionCount}">
+            <span style="background:${currentData.c.code}; color:#fff; padding:4px 8px; border-radius:8px; font-size:12px; font-weight:bold;">${currentData.c.name}</span>
+        </div>
+        <div style="font-size:14px; color:#555; margin-bottom:4px;"><strong>장소:</strong> ${currentData.p}</div>
+        <div style="font-size:14px; color:#555; margin-bottom:4px;"><strong>감정:</strong> ${currentData.e}</div>
+        <div style="font-size:14px; color:#555; margin-bottom:4px;"><strong>관계:</strong> ${currentData.r}</div>
+        <div style="font-size:14px; color:#555; margin-bottom:10px;"><strong>행동:</strong> ${currentData.a}</div>
+        <div style="background:#f8f9fa; padding:10px; border-radius:8px; font-weight:800; color:#333; word-break:keep-all;">"${currentData.l}"</div>
+    `;
+    document.getElementById("missionGrid").prepend(div); // 최신순으로 위로 추가
 }
 
 /* [탭 2] 캐릭터 로직 (로컬 경로 방식) */
@@ -423,7 +447,7 @@ function editDistance(s1, s2) {
 }
 
 // 2. 음성인식 초기화
-if (isSpeechSupported) {
+if (isSpeechSupported && !isIOS) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SpeechRecognition();
     recognition.lang = 'ko-KR';
@@ -511,8 +535,8 @@ function renderTrain(){
     const box = document.getElementById("train_card");
     const ind = document.getElementById("step_indicator");
     // 총 7단계로 변경
-    const T=["","STEP1 모음을 호흡으로","STEP2 모음을 소리로","STEP3 자음과 함께 호흡으로 읽기","STEP4 자음과 함께 소리내어 읽기","STEP5 자연스럽게 호흡으로 읽기", "STEP6 자연스럽게 소리내어 읽기","STEP7 최종 녹음"];
-    const D=["","모음 입모양 신경쓰며 호흡으로 한글자씩 읽기","모음 입모양 신경쓰며 소리내어 한글자씩 읽기","자음과 함께 입모양을 신경쓰며 한글자씩 호흡으로 읽기","자음과 함께 입모양을 신경쓰며 한글자씩 소리내어로 읽기","자연스럽게 한문장을 한 호흡으로 읽기","AI가 발음 정확도를 평가합니다.","최종 결과물을 녹음하고 들어보세요."];
+    const T=["","STEP1 모음을 호흡으로","STEP2 모음 소리","STEP3 원문 호흡","STEP4 원문 소리","STEP5 자연 호흡","STEP6 발음 AI 체크","STEP7 최종 녹음"];
+    const D=["","모음 입모양 신경쓰며 호흡으로 읽기","소리내기","(발음대로) 호흡","(발음대로) 소리","자연 호흡","AI가 발음 정확도를 평가합니다.","최종 결과물을 녹음하고 들어보세요."];
 
     let showText = "";
     if (step <= 2) { showText = extractVowels(currentTrainObj.text); }
@@ -541,7 +565,8 @@ function renderTrain(){
         micBtn.textContent = '🗣️';
         recStatus.textContent = "버튼을 눌러 AI 체크 시작";
         aiSection.style.display = 'block';
-        recSection.style.display = 'none';
+        recSection.style.display = 'none'; // 녹음 결과 숨김
+        // 결과 초기화
         document.getElementById("resultBox").style.display = 'none';
     } else if (step === 7) {
         // Step 7: 녹음 모드
@@ -549,8 +574,9 @@ function renderTrain(){
         recBox.scrollIntoView({behavior: "smooth"});
         micBtn.textContent = '🎤';
         recStatus.textContent = "버튼을 눌러 녹음 시작";
-        aiSection.style.display = 'none';
+        aiSection.style.display = 'none'; // AI 결과 숨김
         recSection.style.display = 'block';
+        // 결과 초기화
         document.getElementById("resultBox").style.display = 'none';
     } else {
         recBox.style.display = 'none';
@@ -573,6 +599,7 @@ function startRecognition() {
     if(!isSpeechSupported) return alert("이 기기에서는 AI 인식을 지원하지 않습니다.");
     
     if(!isRecording) {
+        // 시작
         isRecording = true;
         recognitionResult = "";
         try { recognition.start(); } catch(e) { console.log(e); }
@@ -582,12 +609,14 @@ function startRecognition() {
         btn.classList.add('recording');
         document.getElementById('recStatus').textContent = "듣는 중...";
         
+        // UI 초기화
         document.getElementById('resultBox').style.display='block';
         document.getElementById('sttResult').textContent = "...";
         document.getElementById('accBadge').className = 'accuracy-badge acc-wait';
         document.getElementById('accBadge').textContent = '분석중...';
 
     } else {
+        // 정지 (수동) -> 보통은 자동 종료됨
         try { recognition.stop(); } catch(e) { }
         isRecording = false;
         resetBtn();
