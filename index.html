@@ -242,7 +242,7 @@ audio { width: 100%; height: 40px; }
     </div>
   </div>
 
-  <div class="tab-content" id="tab4">
+<div class="tab-content" id="tab4">
     <div class="section">
       <div class="past-display-card">
         <div id="pastRoleDisplay" class="past-role">버튼을 눌러 대본을 뽑아주세요</div>
@@ -253,6 +253,25 @@ audio { width: 100%; height: 40px; }
         <button class="btn-male" onclick="rollPastQuestion('male')">👱‍♂️ 남자 기출 뽑기</button>
         <button class="btn-female" onclick="rollPastQuestion('female')">👩 여자 기출 뽑기</button>
       </div>
+
+      <div class="record-box" id="pastRecordBox" style="display:block; margin-top:30px; border-top:2px dashed #eee; padding-top:20px;">
+        <div style="text-align:center; margin-bottom: 20px;">
+            <p style="font-size:16px; font-weight:800; color:#333; margin-bottom:15px;">🎙️ 실전 녹음 연습</p>
+            <button id="pastMicBtn" class="mic-btn" onclick="togglePastRecord()">🎤</button>
+            <p id="pastRecStatus" style="font-size:14px; color:#555; margin-top:10px; font-weight:bold;">버튼을 눌러 녹음 시작</p>
+        </div>
+
+        <div class="result-box" id="pastResultBox" style="display:none;">
+            <div class="result-section">
+                <span class="section-title">📂 내 녹음 확인</span>
+                <audio id="pastAudio" controls src="" style="width:100%;"></audio>
+                <div class="time-info">
+                    녹음 시간: <span id="pastTime" class="time-val">0.0s</span>
+                </div>
+            </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </main>
@@ -631,6 +650,68 @@ function rollPastQuestion(gender) {
     const q = pick(pData[gender]);
     document.getElementById("pastRoleDisplay").textContent = q.role;
     document.getElementById("pastLinesDisplay").textContent = q.lines;
+}
+/* --- [탭 4] 기출문제 녹음 기능 (추가됨) --- */
+let pastMediaRecorder, pastAudioChunks = [], isPastRecording = false, pastStartTime;
+
+async function togglePastRecord() {
+    if(window.location.protocol === 'file:') return alert("브라우저 보안 정책상 서버 환경(http/https)에서만 마이크 사용이 가능합니다.");
+    
+    const btn = document.getElementById('pastMicBtn');
+    const status = document.getElementById('pastRecStatus');
+    const resultBox = document.getElementById('pastResultBox');
+    const timeDisplay = document.getElementById('pastTime');
+    const audioEl = document.getElementById('pastAudio');
+
+    if (!isPastRecording) {
+        // 녹음 시작
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            pastMediaRecorder = new MediaRecorder(stream);
+            pastAudioChunks = [];
+            
+            pastMediaRecorder.start();
+            pastStartTime = Date.now();
+            isPastRecording = true;
+
+            // UI 변경
+            btn.textContent = '⬛'; 
+            btn.classList.add('recording');
+            status.textContent = "녹음 중...";
+            resultBox.style.display = 'none'; // 다시 녹음하면 결과창 숨김
+
+            // 데이터 수집
+            pastMediaRecorder.addEventListener("dataavailable", e => pastAudioChunks.push(e.data));
+
+            // 녹음 종료 시 처리
+            pastMediaRecorder.addEventListener("stop", () => {
+                const audioBlob = new Blob(pastAudioChunks);
+                const audioUrl = URL.createObjectURL(audioBlob);
+                audioEl.src = audioUrl;
+
+                const duration = (Date.now() - pastStartTime) / 1000;
+                timeDisplay.textContent = duration.toFixed(1) + "s";
+                
+                resultBox.style.display = 'block'; // 결과창 표시
+                
+                // 스트림 트랙 종료 (마이크 끄기)
+                stream.getTracks().forEach(track => track.stop());
+            });
+
+        } catch (e) {
+            console.error(e);
+            alert("마이크 권한이 필요합니다.");
+        }
+    } else {
+        // 녹음 중지
+        if(pastMediaRecorder) pastMediaRecorder.stop();
+        isPastRecording = false;
+
+        // UI 원복
+        btn.textContent = '🎤';
+        btn.classList.remove('recording');
+        status.textContent = "버튼을 눌러 녹음 시작";
+    }
 }
 </script>
 </body>
