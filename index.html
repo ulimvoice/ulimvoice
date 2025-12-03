@@ -15,7 +15,6 @@
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f5f7fb; margin: 0; color: #333; display: flex; flex-direction: column; min-height: 100vh; }
 .wrapper { max-width: 1200px; width: 95%; margin: 0 auto; flex: 1; padding: 20px 0; }
 
-/* 헤더 & 푸터 */
 header { background: #fff; padding: 15px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; }
 .header-content { max-width: 1200px; width: 100%; display: flex; align-items: center; }
 .logo-img { height: 45px; width: auto; margin-right: 12px; }
@@ -23,7 +22,6 @@ header { background: #fff; padding: 15px 20px; box-shadow: 0 2px 10px rgba(0,0,0
 footer { background: #333; color: #aaa; padding: 30px 20px; text-align: center; font-size: 13px; line-height: 1.6; margin-top: 40px; }
 footer b { color: #fff; font-weight: 700; }
 
-/* 탭 및 공통 UI */
 .tabs { display: flex; gap: 5px; border-bottom: 2px solid #ddd; margin-bottom: 20px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
 .tab { padding: 12px 16px; cursor: pointer; font-weight: 700; color: #666; font-size: 15px; transition: 0.2s; flex-shrink: 0; }
 .tab.active { background: #fff; color: #2ecc71; border: 1px solid #ddd; border-bottom: none; border-radius: 10px 10px 0 0; }
@@ -32,36 +30,28 @@ footer b { color: #fff; font-weight: 700; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 .section { background: #fff; padding: 25px; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
 
-/* 버튼 공통 */
 .btn-row { display: flex; gap: 10px; margin-top: 20px; }
 .btn-row button { flex: 1; padding: 16px; border: none; border-radius: 12px; font-size: 17px; font-weight: 800; cursor: pointer; color: white; transition: 0.1s; box-shadow: 0 4px 0 rgba(0,0,0,0.2); white-space: nowrap; }
 .btn-row button:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
 .btn-gen { background: #2ecc71; } .btn-save { background: #3498db; } .btn-male { background: #3498db; } .btn-female { background: #ff7979; }
+.lock-btn { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.05); border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px; z-index: 10; }
+.lock-btn.locked { background: #ff4757; color: white; opacity: 1; }
 
-/* 잠금 버튼 스타일 */
-.lock-btn { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.05); border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px; z-index: 10; transition: all 0.2s; }
-.lock-btn:hover { background: rgba(0,0,0,0.1); transform: scale(1.1); }
-.lock-btn.locked { background: #ff4757; color: white; opacity: 1; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-
-/* 탭 1: 상황극 UI */
+/* 탭 1 */
 .scene-main-card { border: 2px solid #f0f0f0; border-radius: 20px; padding: 30px 20px; background: #fff; text-align: center; margin-bottom: 30px; }
-.color-badge-box { width: 100%; height: 80px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 800; color: #fff; margin-bottom: 20px; position: relative; text-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+.color-badge-box { width: 100%; height: 80px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 800; color: #fff; margin-bottom: 20px; position: relative; }
 .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; text-align: left; }
-.info-item { background: #f9f9f9; padding: 15px; border-radius: 14px; position: relative; min-height: 50px; display: flex; flex-direction: column; justify-content: center; border: 1px solid #eee; }
+.info-item { background: #f9f9f9; padding: 15px; border-radius: 14px; position: relative; min-height: 50px; display: flex; flex-direction: column; justify-content: center; }
 .info-label { font-size: 12px; color: #888; font-weight: 700; margin-bottom: 4px; display:block; }
 .info-value { font-size: 17px; font-weight: 700; color: #333; word-break: keep-all; }
 .line-area { padding: 25px; background: #f0fdf4; border-radius: 16px; border: 2px solid #dcfce7; margin-bottom: 20px; position: relative; }
 .line-text { font-size: 24px; font-weight: 900; color: #166534; word-break: keep-all; line-height: 1.4; }
-
-/* 저장된 미션 카드 스타일 */
 .mission-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
-.mission-card { background: #fff; border: 1px solid #eee; border-radius: 14px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: transform 0.2s; }
-.mission-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.08); }
-/* 미션 제목 입력창 */
-.mission-title-input { border: none; border-bottom: 1px dashed #ccc; font-size: 16px; font-weight: 800; color: #333; width: 140px; background: transparent; padding: 2px; outline: none; transition: border 0.2s; }
-.mission-title-input:focus { border-bottom: 2px solid #2ecc71; }
+.mission-card { background: #fff; border: 1px solid #eee; border-radius: 14px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+.mission-title-input { border: none; border-bottom: 1px dashed #ccc; font-size: 16px; font-weight: 800; color: #333; width: 150px; padding: 2px; background: transparent; }
+.mission-title-input:focus { outline: none; border-bottom: 2px solid #2ecc71; }
 
-/* 탭 2: 캐릭터 UI */
+/* 탭 2 */
 .char-container { display: flex; flex-direction: column; align-items: center; gap: 20px; }
 .char-img-frame { width: 100%; max-width: 300px; aspect-ratio: 1/1; border-radius: 20px; overflow: hidden; background: #f0f0f0; border: 5px solid #fff; box-shadow: 0 8px 20px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; position: relative; }
 .char-img { width: 100%; height: 100%; object-fit: cover; }
@@ -75,7 +65,7 @@ footer b { color: #fff; font-weight: 700; }
 .mini-char-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; background:#ddd; }
 .mini-char-info { padding: 10px; }
 
-/* 탭 3: 발성훈련 UI */
+/* 탭 3 발성훈련 UI */
 .train-origin-text { 
     font-size: 20px; font-weight: 700; color: #333; text-align: center; 
     margin-bottom: 25px; word-break: keep-all; line-height: 1.5; 
@@ -99,15 +89,17 @@ audio { width: 100%; height: 40px; }
 }
 .mic-btn:active { transform: scale(0.95); }
 .mic-btn.recording { animation: pulse 1.5s infinite; background: #333; }
-@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(255, 71, 87, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0); } }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(255, 71, 87, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0); } }
 
-/* 결과 박스 */
+/* 통합 결과 박스 */
 .result-box { margin-top: 20px; background: #fff; border-radius: 15px; border: 1px solid #e0e0e0; display: none; overflow:hidden; }
 .result-section { padding: 15px; border-bottom: 1px solid #f0f0f0; }
 .result-section:last-child { border-bottom: none; }
 .section-title { font-size: 13px; font-weight: 800; color: #888; margin-bottom: 8px; display: block; }
+
 .time-info { margin-top:5px; font-size:14px; color:#555; font-weight:bold; }
 .time-val { color: #ff4757; font-weight:900; }
+
 .stt-text { font-size: 18px; color: #333; line-height: 1.4; background:#f9f9f9; padding:15px; border-radius:10px; border:1px solid #eee; margin-bottom:10px; font-weight:500; min-height: 40px;}
 .accuracy-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 13px; color: white; font-weight:bold; }
 .acc-good { background: #2ecc71; } .acc-bad { background: #ff6b6b; } .acc-soso { background: #f1c40f; } .acc-wait { background: #aaa; }
@@ -145,8 +137,9 @@ audio { width: 100%; height: 40px; }
   <div class="tab-content active" id="tab1">
     <div class="section">
       <div class="scene-main-card">
-        <div class="color-badge-box" id="colorDisplay" style="background:#ddd;">
-            색상 <button class="lock-btn" id="lock-color" onclick="toggleLock('color')">🔓</button>
+        <div class="color-badge-box" id="colorBg" style="background:#ddd;">
+            <span id="colorText">색상</span>
+            <button class="lock-btn" id="lock-color" onclick="toggleLock('color')">🔓</button>
         </div>
         <div class="info-grid">
             <div class="info-item"><span class="info-label">장소</span><span class="info-value" id="placeDisplay">-</span><button class="lock-btn" id="lock-place" onclick="toggleLock('place')">🔓</button></div>
@@ -163,7 +156,7 @@ audio { width: 100%; height: 40px; }
             <button class="btn-save" onclick="saveScene()">💾 저장하기</button>
         </div>
       </div>
-      <h3 style="margin-top:40px; margin-bottom:15px; color:#444;">📋 저장된 미션 (제목 수정 가능)</h3>
+      <h3 style="margin-top:30px; color:#555;">📋 저장된 미션</h3>
       <div id="missionGrid" class="mission-grid"></div>
     </div>
   </div>
@@ -300,6 +293,7 @@ async function rollScene(){
     currentData = {c:newC, p:newP, e:newE, r:newR, a:newA, l:newL};
 
     const promises = [];
+    // 색상 변경 로직 수정 (DOM 구조 변경 대응)
     if(!locks.color) promises.push(spinColor(newC, 600));
     if(!locks.place) promises.push(spinText('placeDisplay', eData.places, newP, 1000));
     if(!locks.emotion) promises.push(spinText('emotionDisplay', eData.emotions, newE, 1400));
@@ -321,18 +315,30 @@ function spinText(id, arr, val, dur){
         }, 50);
     });
 }
+
+// 색상 회전 (텍스트 span과 배경 div 분리 업데이트)
 function spinColor(val, dur){
     return new Promise(r => {
-        const el = document.getElementById('colorDisplay');
+        const bg = document.getElementById('colorBg');
+        const text = document.getElementById('colorText');
         const start = Date.now();
         const int = setInterval(()=>{
-            if(Date.now()-start > dur){ clearInterval(int); el.style.backgroundColor=val.code; el.textContent=val.name; r(); }
-            else { const t=pick(eData.colors); el.style.backgroundColor=t.code; el.textContent=t.name; }
+            if(Date.now()-start > dur){ 
+                clearInterval(int); 
+                bg.style.backgroundColor=val.code; 
+                text.textContent=val.name; 
+                r(); 
+            }
+            else { 
+                const t=pick(eData.colors); 
+                bg.style.backgroundColor=t.code; 
+                text.textContent=t.name; 
+            }
         }, 50);
     });
 }
 
-// 미션 저장하기 (제목 수정 기능 추가)
+// 미션 저장 (제목 수정 가능 input 적용)
 function saveScene(){
     if(currentData.l === "버튼을 눌러 시작하세요") return alert("먼저 랜덤 뽑기를 진행해주세요!");
     missionCount++;
@@ -349,7 +355,7 @@ function saveScene(){
         <div style="font-size:14px; color:#555; margin-bottom:10px;"><strong>행동:</strong> ${currentData.a}</div>
         <div style="background:#f8f9fa; padding:10px; border-radius:8px; font-weight:800; color:#333; word-break:keep-all;">"${currentData.l}"</div>
     `;
-    document.getElementById("missionGrid").prepend(div); // 최신순으로 위로 추가
+    document.getElementById("missionGrid").prepend(div);
 }
 
 /* [탭 2] 캐릭터 로직 (로컬 경로 방식) */
@@ -599,7 +605,6 @@ function startRecognition() {
     if(!isSpeechSupported) return alert("이 기기에서는 AI 인식을 지원하지 않습니다.");
     
     if(!isRecording) {
-        // 시작
         isRecording = true;
         recognitionResult = "";
         try { recognition.start(); } catch(e) { console.log(e); }
@@ -609,14 +614,12 @@ function startRecognition() {
         btn.classList.add('recording');
         document.getElementById('recStatus').textContent = "듣는 중...";
         
-        // UI 초기화
         document.getElementById('resultBox').style.display='block';
         document.getElementById('sttResult').textContent = "...";
         document.getElementById('accBadge').className = 'accuracy-badge acc-wait';
         document.getElementById('accBadge').textContent = '분석중...';
 
     } else {
-        // 정지 (수동) -> 보통은 자동 종료됨
         try { recognition.stop(); } catch(e) { }
         isRecording = false;
         resetBtn();
