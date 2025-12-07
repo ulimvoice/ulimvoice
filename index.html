@@ -196,11 +196,25 @@ audio { width: 100%; height: 40px; }
     </div>
   </div>
 
-  <div class="tab-content" id="tab3">
+ <div class="tab-content" id="tab3">
     <div class="section">
       <div class="train-origin-text" id="train_origin">버튼을 눌러 문장을 뽑아주세요</div>
 
-      <button class="btn-gen" style="width:100%; padding:15px; font-size:18px; font-weight:bold; border-radius:12px; border:none; color:white; cursor:pointer; margin-bottom:20px;" onclick="trainNew()">✨ 새 문장 뽑기</button>
+      <div class="btn-row" style="margin-bottom: 20px;">
+        <button class="btn-gen" style="flex: 2;" onclick="trainNew()">✨ 새 문장 뽑기</button>
+        <button class="btn-save" id="btnComplete" style="flex: 1; background: #2980b9; display: none;" onclick="completeTraining()">✅ 연습 완료</button>
+      </div>
+      
+      <button onclick="toggleCalendar()" style="width:100%; padding:10px; margin-top:5px; background:#ddd; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
+        📅 연습 기록 보기/숨기기
+      </button>
+
+      <div id="calendarDisplayArea" style="display: none;">
+        <h3 style="margin-top:20px; color:#555;">📅 연습 기록</h3>
+        <div id="calendarContainer" style="display: flex; justify-content: center; margin-top: 15px;">
+          </div>
+        <p style="font-size:12px; color:#aaa; text-align:center; margin-top:10px;">(O: 완료, X: 미완료)</p>
+      </div>
       
       <div id="train_card" class="train-card">
         <p style="color:#aaa;">'새 문장 뽑기'를 눌러주세요.</p>
@@ -238,7 +252,7 @@ audio { width: 100%; height: 40px; }
             </div>
         </div>
       </div>
-
+      
       <div class="train-nav" style="margin-top:20px;">
         <button id="btn_prev" onclick="trainPrev()" disabled>⬅ 이전</button>
         <div id="step_indicator" style="font-weight:bold; color:#2ecc71; font-size:18px;">STEP 0</div>
@@ -247,6 +261,26 @@ audio { width: 100%; height: 40px; }
     </div>
   </div>
 
+<div id="recordDisplayBox" style="
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+    background: rgba(0,0,0,0.7); display: none; justify-content: center; 
+    align-items: center; z-index: 9999;
+">
+    <div style="
+        background: white; padding: 30px; border-radius: 20px; max-width: 400px; 
+        width: 90%; box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+    ">
+        <h3 id="recordDisplayDate" style="color: #2980b9; margin-top: 0;">기록 상세</h3>
+        <p id="recordDisplayContent" style="
+            background: #f8f8f8; padding: 15px; border-radius: 10px; 
+            font-size: 16px; line-height: 1.5; word-break: break-all;
+        ">선택된 날짜의 기록이 여기에 표시됩니다.</p>
+        <button onclick="document.getElementById('recordDisplayBox').style.display='none';" style="
+            width: 100%; padding: 10px; background: #e74c3c; color: white; border: none; 
+            border-radius: 10px; margin-top: 20px; cursor: pointer; font-weight: bold;
+        ">닫기</button>
+    </div>
+</div>
 <div class="tab-content" id="tab4">
     <div class="section">
       <div class="past-display-card">
@@ -547,8 +581,6 @@ function shareCharacterAsImage() {
         alert('이미지 캡처 중 오류가 발생했습니다. (서버 환경에서 실행했는지 확인해주세요)');
     });
 }
-
-
 /* --- [탭 3] 발성훈련 --- */
 let step=0, currentTrainObj=null;
 let mediaRecorder, audioChunks = [], isRecording = false, startTime;
@@ -556,7 +588,7 @@ let recognition;
 let recognitionResult = "";
 let lastRecordedBlob = null; // 녹음된 오디오 Blob 저장 변수
 
-// 0. 시스템 진단
+// 0. 시스템 진단 (기존 코드 유지)
 const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 const isSpeechSupported = ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
 
@@ -631,14 +663,95 @@ function extractVowels(s){
     return out;
 }
 
-// 훈련 시작 (vocalData 사용)
+// 훈련 데이터 및 로컬 저장소 관련 함수
 const defaultVocalData = [{ id: 1, text: "데이터 로딩중...", pron: "...", audio: "" }];
 let trainDataList = (typeof vocalData !== 'undefined') ? vocalData : defaultVocalData;
 
+// [1] 저장된 문장 ID를 로컬 스토리지에서 불러옴
+function getSavedVocalIds() {
+    const ids = localStorage.getItem('savedVocalIds');
+    return ids ? new Set(JSON.parse(ids)) : new Set();
+}
+
+// [2] 출석 및 문장 기록을 로컬 스토리지에서 불러옴 (Map 형태로 반환)
+function getVocalRecords() {
+    const records = localStorage.getItem('vocalRecords');
+    return records ? new Map(JSON.parse(records)) : new Map();
+}
+
+// [3] 문장 저장 및 연습 완료 기록 (✅ 연습 완료 버튼 클릭 시)
+function completeTraining() {
+    const btnComplete = document.getElementById('btnComplete');
+
+    if (step !== 7 || !currentTrainObj) {
+        return alert("STEP 7(최종 녹음)까지 진행하고 문장을 뽑은 상태에서 눌러주세요.");
+    }
+    
+    // 이전에 alert 경고문을 통해 서버 연동이 불가능함을 사용자에게 명확히 안내했습니다.
+    // 여기서는 로컬 저장소에 기록하는 로직만 실행합니다.
+
+    // 1. 문장 ID를 저장 (다음 뽑기 시 제외)
+    const savedIds = getSavedVocalIds();
+    const currentId = currentTrainObj.id;
+    savedIds.add(currentId);
+    localStorage.setItem('savedVocalIds', JSON.stringify(Array.from(savedIds)));
+    
+    // 2. 출석 및 문장 기록 저장 (날짜: 문장)
+    const records = getVocalRecords();
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    
+    if (records.has(today)) {
+        alert("오늘은 이미 연습을 완료했습니다!");
+        return;
+    }
+
+    records.set(today, { 
+        id: currentTrainObj.id, 
+        text: currentTrainObj.text.substring(0, 30) + "...", // 문장 앞부분 저장
+        completed: true 
+    });
+    localStorage.setItem('vocalRecords', JSON.stringify(Array.from(records.entries())));
+
+    alert(`[${today}] 연습을 완료하고 문장을 저장했습니다! (다음 뽑기 시 제외됨)`);
+    
+    // ⭐ 수정: 완료 후 달력 펼치기 (toggleCalendar 함수 사용) ⭐
+    const calendarArea = document.getElementById('calendarDisplayArea');
+    if (calendarArea.style.display === 'none') {
+        toggleCalendar(); // 달력이 숨겨져 있으면 펼침
+    } else {
+        renderCalendar(); // 이미 열려있으면 렌더링만 다시 함
+    }
+    
+    // 완료 후 버튼 숨기기
+    btnComplete.style.display = 'none';
+}
+
+
 function trainNew(){
     if(typeof vocalData !== 'undefined') trainDataList = vocalData;
-    currentTrainObj = pick(trainDataList); 
+    
+    // ⭐ 추가: 새 문장 뽑을 때 달력 숨기기 ⭐
+    document.getElementById('calendarDisplayArea').style.display = 'none'; 
+    
+    const savedIds = getSavedVocalIds();
+    
+    // ... (나머지 문장 뽑기 로직 유지) ...
+    
+    const availableData = trainDataList.filter(item => !savedIds.has(item.id));
+
+    if (availableData.length === 0) {
+        if (trainDataList.length > 0) {
+            return alert("모든 문장(" + trainDataList.length + "개)을 연습했습니다! [F12] 개발자 도구 > Application > Local Storage 에서 'savedVocalIds'를 삭제해야 초기화됩니다.");
+        }
+        return alert("문장 데이터(appdata/vocalization/data.js)를 찾을 수 없습니다.");
+    }
+    
+    currentTrainObj = pick(availableData); // 제외된 문장 중에서 랜덤으로 뽑기
     step=1;
+    // ⭐ 추가: 새 문장 뽑으면 버튼 활성화 및 UI 렌더링 시작 ⭐
+    document.getElementById("btn_prev").disabled = true; // 이전 버튼 비활성화 (STEP 1)
+    document.getElementById("btn_next").disabled = false; // 다음 버튼 활성화
+    
     document.getElementById("train_origin").textContent = currentTrainObj.text; 
     document.getElementById("recordBox").style.display = 'none';
     const proAudio = document.getElementById("proAudio");
@@ -650,14 +763,43 @@ function trainNew(){
     renderTrain();
 }
 
-function trainPrev(){ if(step>1) {step--; renderTrain();} }
-function trainNext(){ if(step<7) {step++; renderTrain();} }
+// ⭐ 수정: 단계 이동 함수 trainPrev/trainNext는 renderTrain을 호출합니다. ⭐
+function trainPrev(){ 
+    if(step>1) {
+        step--; 
+        renderTrain();
+    } 
+}
+function trainNext(){ 
+    if(step<7) {
+        step++; 
+        renderTrain();
+    }
+}
 
+// ⭐ 수정된 renderTrain 로직 (버튼 활성화/비활성화 로직 추가) ⭐
 function renderTrain(){
     const box = document.getElementById("train_card");
     const ind = document.getElementById("step_indicator");
+    const btnComplete = document.getElementById('btnComplete'); 
+    
+    // ⭐ 추가: 네비게이션 버튼 요소 가져오기 ⭐
+    const btnPrev = document.getElementById("btn_prev");
+    const btnNext = document.getElementById("btn_next");
+
     const T=["","STEP1 모음을 호흡으로","STEP2 모음을 소리로","STEP3 자음과 함께 호흡으로 읽기","STEP4 자음과 함께 소리내어 읽기","STEP5 자연스럽게 호흡으로 읽기", "STEP6 발음 AI 체크","STEP7 최종 녹음"];
     const D=["","모음 입모양 신경쓰며 호흡으로 한글자씩 읽기","모음 입모양 신경쓰며 소리내어 한글자씩 읽기","자음과 함께 입모양을 신경쓰며 한글자씩 호흡으로 읽기","자음과 함께 입모양을 신경쓰며 한글자씩 소리내어로 읽기","자연스럽게 한문장을 한 호흡으로 읽기","AI가 발음 정확도를 평가합니다.","최종 결과물을 녹음하고 들어보세요."];
+
+    // 현재 문장 데이터가 없으면 진행 불가
+    if (!currentTrainObj) {
+        step = 0;
+        ind.textContent="STEP 0";
+        box.innerHTML=`<p style="color:#aaa;">'새 문장 뽑기'를 눌러주세요.</p>`;
+        btnPrev.disabled = true;
+        btnNext.disabled = true;
+        btnComplete.style.display = 'none';
+        return;
+    }
 
     let showText = "";
     if (step <= 2) { showText = extractVowels(currentTrainObj.text); }
@@ -669,14 +811,18 @@ function renderTrain(){
          <div style='color:#666; margin-bottom:20px; font-size:15px;'>${D[step]}</div>
          <div class='train-main-text'>${showText}</div>`;
 
-    document.getElementById("btn_prev").disabled = step===1;
-    document.getElementById("btn_next").disabled = step===7;
+    // ⭐ 버튼 활성화/비활성화 로직 ⭐
+    btnPrev.disabled = (step === 1);
+    btnNext.disabled = (step === 7);
 
     const recBox = document.getElementById("recordBox");
     const micBtn = document.getElementById("micBtn");
     const recStatus = document.getElementById("recStatus");
     const aiSection = document.getElementById("aiSection");
     const recSection = document.getElementById("recSection");
+    
+    // 버튼 표시 제어
+    btnComplete.style.display = (step === 7) ? 'flex' : 'none';
 
     if(step === 6) {
         recBox.style.display = 'block';
@@ -697,44 +843,144 @@ function renderTrain(){
     }
 }
 
-async function handleAction() {
-    if(step === 6) { startRecognition(); }
-    else if (step === 7) { toggleRecord(); }
-}
 
-function startRecognition() {
-    if(!isSpeechSupported) return alert("이 기기에서는 AI 인식을 지원하지 않습니다.");
-    if(!isRecording) {
-        isRecording = true;
-        recognitionResult = "";
-        try { recognition.start(); } catch(e) { }
-        const btn = document.getElementById('micBtn');
-        btn.textContent = '⬛';
-        btn.classList.add('recording');
-        document.getElementById('recStatus').textContent = "듣는 중...";
-        document.getElementById('resultBox').style.display='block';
-        document.getElementById('sttResult').textContent = "...";
-        document.getElementById('accBadge').className = 'accuracy-badge acc-wait';
-        document.getElementById('accBadge').textContent = '분석중...';
+// ⭐ 새로 추가: 달력 펼치기/숨기기 토글 함수 ⭐
+function toggleCalendar() {
+    const calendarArea = document.getElementById('calendarDisplayArea');
+    if (calendarArea.style.display === 'none') {
+        renderCalendar(); // 숨겨져 있으면 렌더링 후 표시
+        calendarArea.style.display = 'block';
     } else {
-        try { recognition.stop(); } catch(e) { }
-        isRecording = false;
-        resetBtn();
+        calendarArea.style.display = 'none'; // 표시되어 있으면 숨김
     }
 }
 
-function resetBtn() {
-    const btn = document.getElementById('micBtn');
-    btn.classList.remove('recording');
-    if(step === 6) {
-        btn.textContent = '🗣️';
-        document.getElementById('recStatus').textContent = "버튼을 눌러 AI 체크 시작";
-    } else {
-        btn.textContent = '🎤';
-        document.getElementById('recStatus').textContent = "버튼을 눌러 녹음 시작";
+
+// ⭐ 수정된 renderCalendar 로직 (클릭 이벤트 유지) ⭐
+function renderCalendar(year, month) {
+    const today = new Date();
+    const currentYear = year || today.getFullYear();
+    const currentMonth = month !== undefined ? month : today.getMonth(); // 0-11
+    
+    const firstDay = new Date(currentYear, currentMonth, 1);
+    const lastDay = new Date(currentYear, currentMonth + 1, 0);
+    const numDays = lastDay.getDate();
+    const startDayOfWeek = firstDay.getDay(); // 0 = Sunday, 1 = Monday
+    
+    const records = getVocalRecords(); // 저장된 기록 불러오기
+    const container = document.getElementById('calendarContainer');
+    container.innerHTML = '';
+    
+    // 월/년 표시 및 네비게이션
+    let table = `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <button onclick="renderCalendar(${currentYear}, ${currentMonth === 0 ? 11 : currentMonth - 1})" style="background:#ddd; border:none; padding:5px 10px; border-radius:5px;">⬅</button>
+        <h2 style="font-size: 18px; margin: 0;">${currentYear}. ${currentMonth + 1}</h2>
+        <button onclick="renderCalendar(${currentYear}, ${currentMonth === 11 ? 0 : currentMonth + 1})" style="background:#ddd; border:none; padding:5px 10px; border-radius:5px;">➡</button>
+    </div>`;
+
+    table += '<table style="width: 100%; border-collapse: collapse; text-align: center; font-size: 15px;">';
+    table += '<thead><tr style="background: #eee; height: 35px;"><th>일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th></tr></thead><tbody><tr>';
+    
+    let day = 1;
+    let cellCount = 0;
+
+    // 1. 첫 주 빈 셀 채우기
+    for (let i = 0; i < startDayOfWeek; i++) {
+        table += '<td style="border: 1px solid #eee; padding: 5px;"></td>';
+        cellCount++;
     }
+
+    // 2. 날짜 채우기
+    for (day = 1; day <= numDays; day++) {
+        if (cellCount % 7 === 0 && cellCount !== 0) {
+            table += '</tr><tr>';
+        }
+        
+        // 날짜를 ISO 형식으로 생성 (YYYY-MM-DD)
+        const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        
+        const currentDate = new Date(currentYear, currentMonth, day);
+        const todayKey = today.toISOString().slice(0, 10);
+        
+        const isToday = dateKey === todayKey;
+        const isPastOrToday = currentDate <= today || isToday; 
+
+        let statusText = day;
+        let background = '#fff';
+        let title = dateKey;
+        let onClickEvent = '';
+        
+        const record = records.get(dateKey); // 해당 날짜의 기록
+
+        if (record) {
+            // 연습 완료 (O)
+            statusText = `<span style="font-weight:900; color:#2ecc71;">O</span>`;
+            background = '#e8f5e9';
+            title += `\n[완료] 문장:\n${record.text}`;
+            // ⭐ 클릭 이벤트 추가: 기록이 있을 때만 클릭 가능
+            onClickEvent = `onclick="displayDayRecord('${dateKey}', true)" style="cursor: pointer;"`;
+        } else if (isPastOrToday && !isToday) {
+             // 과거이고 기록이 없으면 미완료 (X)
+            statusText = `<span style="font-weight:900; color:#ff6b6b;">X</span>`;
+            background = '#fde9e9';
+            title += '\n[미완료]';
+            // ⭐ 클릭 이벤트 추가: 미완료 기록도 클릭 시 정보 표시 가능
+            onClickEvent = `onclick="displayDayRecord('${dateKey}', false)" style="cursor: pointer;"`; 
+        }
+
+        if (isToday) {
+            // 오늘 날짜 강조 (O/X 기록이 없으면 날짜만 표시)
+            background = record ? '#d0e9ff' : '#fffbe5'; // 완료: 하늘색, 미완료: 노란색
+            statusText = statusText === day ? `<span style="font-weight:900; color:#2980b9;">${day}</span>` : statusText;
+            
+            // 오늘 날짜도 클릭 가능하게 설정 (기록이 있든 없든)
+            onClickEvent = `onclick="displayDayRecord('${dateKey}', ${!!record})" style="cursor: pointer;"`; 
+        }
+
+        table += `<td ${onClickEvent} style="border: 1px solid #eee; padding: 5px; background: ${background};" title="${title}">`;
+        table += statusText;
+        table += '</td>';
+        
+        cellCount++;
+    }
+
+    // 3. 마지막 주 빈 셀 채우기
+    while (cellCount % 7 !== 0) {
+        table += '<td style="border: 1px solid #eee; padding: 5px;"></td>';
+        cellCount++;
+    }
+    
+    table += '</tr></tbody></table>';
+    
+    container.innerHTML = table;
 }
 
+// ⭐ 수정된 displayDayRecord 로직: 문장 ID 숨김 ⭐
+function displayDayRecord(dateKey, isCompleted) {
+    const records = getVocalRecords();
+    const record = records.get(dateKey);
+    const box = document.getElementById('recordDisplayBox');
+    const dateEl = document.getElementById('recordDisplayDate');
+    const contentEl = document.getElementById('recordDisplayContent');
+    
+    dateEl.textContent = `${dateKey} 연습 기록`;
+
+    if (isCompleted && record) {
+        contentEl.innerHTML = `
+            <p style="font-weight: bold; color: #2ecc71;">✅ 연습 완료</p>
+            <p><strong>문장 내용:</strong> "${record.text}..."</p>
+            <p style="font-size: 13px; color: #777;">(녹음 파일은 최종 녹음 시에만 일시적으로 저장됩니다.)</p>
+        `;
+    } else {
+        contentEl.innerHTML = `
+            <p style="font-weight: bold; color: #ff6b6b;">${isCompleted ? '❌ 기록 없음' : '❌ 미완료'}</p>
+            <p>해당 날짜에 연습을 완료한 기록이 없습니다. ${dateKey}는 건너뛰거나 연습하지 않은 날입니다.</p>
+        `;
+    }
+
+    box.style.display = 'flex'; // 팝업 표시
+}
+// ... (나머지 기존 JavaScript 함수는 이어서 배치하면 됩니다.) ...
 async function toggleRecord() {
     // 로컬 환경 경고 (이전 응답과 동일)
     if(window.location.protocol === 'file:') return alert("서버 환경(http/https)에서만 마이크 사용 및 파일 공유가 가능합니다.");
@@ -778,18 +1024,25 @@ async function toggleRecord() {
 }
 if (isSpeechSupported) { recognition.onend = function() { isRecording = false; resetBtn(); }; }
 
-// ⭐ 수정된 발성훈련 녹음 파일 공유 함수: 공유 실패 시 다운로드 링크를 제공합니다. ⭐
+// 발성훈련 녹음 파일 공유 함수
 function shareVocalResult() {
     if (!lastRecordedBlob) {
         return alert("먼저 STEP 7에서 녹음을 완료해야 공유할 수 있습니다.");
     }
     const originalText = document.getElementById('train_origin').textContent;
-    const filename = `울림_발성훈련_${new Date().toLocaleDateString()}.${lastRecordedBlob.type.split('/')[1] || 'mp4'}`;
+    const mimeType = lastRecordedBlob.type;
+    const extension = mimeType.split('/')[1] || 'mp4';
+    
+    // 파일명으로 사용할 문장의 앞부분 (최대 20자)을 정리
+    const rawFilenamePart = originalText.substring(0, 20).trim();
+    const sanitizedFilenamePart = rawFilenamePart.replace(/[^가-힣a-zA-Z0-9]/g, '_'); // 특수문자 제거 및 _로 대체
+
+    const filename = `울림_발성훈련_${sanitizedFilenamePart}.${extension}`;
 
     // Web Share API를 지원하고 파일 공유가 가능한지 확인
-    if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([], filename, {type: lastRecordedBlob.type})] })) {
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([], filename, {type: mimeType})] })) {
         
-        const audioFile = new File([lastRecordedBlob], filename, { type: lastRecordedBlob.type });
+        const audioFile = new File([lastRecordedBlob], filename, { type: mimeType });
 
         navigator.share({
             files: [audioFile],
@@ -820,7 +1073,6 @@ function shareVocalResult() {
         alert(`이 기기는 파일 공유 기능을 지원하지 않아 녹음 파일을 다운로드합니다: ${filename}`);
     }
 }
-
 
 /* --- [탭 4] 기출문제 로직 --- */
 // 외부 파일이 로드되지 않았을 경우를 대비한 기본값
@@ -904,6 +1156,21 @@ async function togglePastRecord() {
         status.textContent = "버튼을 눌러 녹음 시작";
     }
 }
+// 페이지 로드 시 달력과 현재 문장 초기화
+window.onload = function() {
+    // 탭 로직 초기화 (기존 코드)
+    document.querySelectorAll('.tab').forEach(t => {
+        t.onclick = () => {
+            document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
+            t.classList.add('active');
+            document.getElementById(t.dataset.tab).classList.add('active');
+        };
+    });
+    
+    // 달력 초기화
+    renderCalendar();
+};
 </script>
 </body>
 </html>
