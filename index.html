@@ -8,6 +8,7 @@
 <script src="appdata/etude/data.js"></script>
 <script src="appdata/vocalization/data.js"></script>
 <script src="appdata/past_questions/data.js"></script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
 <style>
 /* ===========================
@@ -38,6 +39,7 @@ footer b { color: #fff; font-weight: 700; }
 .btn-row button { flex: 1; padding: 16px; border: none; border-radius: 12px; font-size: 17px; font-weight: 800; cursor: pointer; color: white; transition: 0.1s; box-shadow: 0 4px 0 rgba(0,0,0,0.2); white-space: nowrap; }
 .btn-row button:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
 .btn-gen { background: #2ecc71; } .btn-save { background: #3498db; } .btn-male { background: #3498db; } .btn-female { background: #ff7979; }
+.btn-share { background: #e67e22; }
 .lock-btn { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.05); border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px; z-index: 10; }
 .lock-btn.locked { background: #ff4757; color: white; opacity: 1; }
 
@@ -69,7 +71,7 @@ footer b { color: #fff; font-weight: 700; }
 .mini-char-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; background:#ddd; }
 .mini-char-info { padding: 10px; }
 
-/* 탭 3 발성훈련 UI */
+/* 탭 3 */
 .train-origin-text { 
     font-size: 20px; font-weight: 700; color: #333; text-align: center; 
     margin-bottom: 25px; word-break: keep-all; line-height: 1.5; 
@@ -161,6 +163,7 @@ audio { width: 100%; height: 40px; }
         <div class="btn-row">
             <button class="btn-gen" id="btnGen" onclick="rollScene()">🎲 랜덤 뽑기</button>
             <button class="btn-save" onclick="saveScene()">💾 저장하기</button>
+            <button class="btn-share" id="btnShare" onclick="shareSceneAsImage()">🖼️ 이미지/공유</button>
         </div>
       </div>
       <h3 style="margin-top:30px; color:#555;">📋 저장된 미션</h3>
@@ -170,7 +173,7 @@ audio { width: 100%; height: 40px; }
 
   <div class="tab-content" id="tab2">
     <div class="section">
-      <div class="scene-main-card">
+      <div class="scene-main-card" id="characterCard">
         <div class="char-container">
             <div class="char-img-frame">
                 <span class="char-placeholder">뽑기 버튼을 눌러주세요</span>
@@ -186,6 +189,7 @@ audio { width: 100%; height: 40px; }
             <button class="btn-male" onclick="rollCharacter('male')">👱‍♂️ 남자 뽑기</button>
             <button class="btn-female" onclick="rollCharacter('female')">👩 여자 뽑기</button>
             <button class="btn-save" onclick="saveCharacter()">⭐ 저장하기</button>
+            <button class="btn-share" onclick="shareCharacterAsImage()">🖼️ 이미지/공유</button>
         </div>
       </div>
       <div id="charSaveGrid" class="char-save-grid"></div>
@@ -230,6 +234,7 @@ audio { width: 100%; height: 40px; }
                     내 시간: <span id="myTime" class="time-val">0.0s</span> 
                     <span style="font-weight:normal; color:#aaa; margin-left:10px;">(프로: <span id="proTime">0.0s</span>)</span>
                 </div>
+                <button class="btn-save" style="width:100%; margin-top:15px; background:#4CAF50;" onclick="shareVocalResult()">🔗 녹음 파일 공유하기</button>
             </div>
         </div>
       </div>
@@ -295,7 +300,19 @@ document.querySelectorAll('.tab').forEach(t => {
 
 function pick(a){return a[Math.floor(Math.random()*a.length)];}
 
-// --- [탭 1] 상황극 로직 ---
+// 이미지 다운로드를 처리하는 공통 함수
+function downloadImage(dataUrl, filename='울림_미션.png') {
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = dataUrl;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    alert("이미지 파일 다운로드를 시작합니다!");
+}
+
+
+// --- [탭 1] 상황극 로직 (공통 함수 포함) ---
 const defaultEtude = { colors: [], places: [], emotions: [], relations: [], actions: [], lines: [] };
 const eData = (typeof etudeData !== 'undefined') ? etudeData : defaultEtude;
 
@@ -382,54 +399,168 @@ function saveScene(){
     document.getElementById("missionGrid").prepend(div);
 }
 
+// 상황극 미션을 이미지로 저장 및 공유하는 함수
+function shareSceneAsImage() {
+    const targetElement = document.querySelector('.scene-main-card');
+
+    if (currentData.l === "버튼을 눌러 시작하세요") {
+        return alert("먼저 '랜덤 뽑기'를 진행해야 이미지 저장이 가능합니다!");
+    }
+
+    html2canvas(targetElement, {
+        allowTaint: true,
+        useCORS: true,
+        scale: 2
+    }).then(canvas => {
+        const imageURL = canvas.toDataURL("image/png");
+
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([], 'image.png', {type: 'image/png'})] })) {
+            canvas.toBlob(function(blob) {
+                const filesArray = [new File([blob], 'scene-mission.png', {type: 'image/png'})];
+                navigator.share({
+                    files: filesArray,
+                    title: '울림연기학원 상황극 미션',
+                    text: '오늘의 상황극 미션을 공유합니다! 🎭'
+                })
+                .catch(error => {
+                    console.warn('Sharing failed, attempting download:', error);
+                    downloadImage(imageURL, '울림_상황극_미션.png');
+                });
+            }, 'image/png');
+        } else {
+            downloadImage(imageURL, '울림_상황극_미션.png');
+        }
+    });
+}
+
+
 /* [탭 2] 캐릭터 로직 */
-// (생략 - 위와 동일)
 let currentChar = null;
 function rollCharacter(gender) {
     // 임시 데이터 (이미지 없을때 대비)
     const list = gender === 'male' ? [{name:"남성캐릭터", job:"직업", desc:"설명", id:1}] : [{name:"여성캐릭터", job:"직업", desc:"설명", id:1}];
-    // 실제로는 maleCharacters 등 사용
-    const char = pick(list); // 여기서는 간단히 처리, 실제 코드는 이전 코드 참조
-    
-    // ... (이전 코드와 동일하게 유지해주세요. 너무 길어서 생략함) ...
-    // 실제 구현시에는 아까 작성해주신 maleCharacters 배열을 그대로 쓰시면 됩니다.
-    // 여기서는 화면 표시용 로직만 넣겠습니다.
-    
+    const char = pick(list); 
+    currentChar = char; // 캐릭터 정보 저장
+
     const imgEl = document.getElementById("charImgDisplay");
-    imgEl.style.display = 'none';
-    document.querySelector(".char-placeholder").style.display = 'block';
+    const placeholderEl = document.querySelector(".char-placeholder");
     
-    // 로컬 경로 테스트용
+    // 로컬 경로 테스트용 (랜덤 이미지 경로)
     const folder = gender === 'male' ? 'male' : 'female';
-    imgEl.src = `appdata/character/${folder}/${Math.floor(Math.random()*10)+1}.jpg`; 
+    const newSrc = `appdata/character/${folder}/${Math.floor(Math.random()*10)+1}.jpg`; 
+
+    // 이미지 로드 완료 후 표시
     imgEl.onload = function(){
+        placeholderEl.style.display = 'none';
         this.style.display = 'block';
-        document.querySelector(".char-placeholder").style.display = 'none';
     };
+    imgEl.onerror = function(){
+        // 이미지 로드 실패 시 플레이스홀더 표시
+        this.style.display = 'none';
+        placeholderEl.style.display = 'block';
+    };
+    
+    imgEl.src = newSrc; // 새로운 이미지 경로 설정
     
     // 텍스트 랜덤
     document.getElementById("charNameDisplay").textContent = "랜덤 캐릭터";
     document.getElementById("charJobDisplay").textContent = "랜덤 직업";
     document.getElementById("charDescDisplay").textContent = "새로운 캐릭터가 소환되었습니다.";
 }
+
+// ⭐ 수정된 saveCharacter() 함수: 이미지와 이름을 복제하여 저장 그리드에 추가 ⭐
 function saveCharacter(){
+    const charName = document.getElementById("charNameDisplay").textContent;
+    const charImgSrc = document.getElementById("charImgDisplay").src;
+    const isImageVisible = document.getElementById("charImgDisplay").style.display !== 'none';
+    
+    if (charName === "캐릭터 이름") {
+        return alert("먼저 '남자 뽑기' 또는 '여자 뽑기'를 진행해주세요!");
+    }
+    
     const div = document.createElement("div"); div.className="mini-char-card";
-    div.innerHTML = `<div class="mini-char-info">저장됨</div>`;
-    document.getElementById("charSaveGrid").appendChild(div);
+    
+    let imageHtml;
+    if (isImageVisible && charImgSrc) {
+        // 이미지가 정상적으로 표시될 때만 mini-char-img를 사용
+        imageHtml = `<img src="${charImgSrc}" class="mini-char-img" alt="${charName}">`;
+    } else {
+        // 이미지가 없거나 로드되지 않았을 때는 회색 배경 유지
+        imageHtml = `<div class="mini-char-img" style="display:flex; justify-content:center; align-items:center; color:#fff; font-size:10px;">이미지 없음</div>`;
+    }
+
+    div.innerHTML = `
+        ${imageHtml}
+        <div class="mini-char-info">
+            ${charName}
+        </div>
+    `;
+    
+    document.getElementById("charSaveGrid").prepend(div);
+}
+
+// 캐릭터 미션을 이미지로 저장 및 공유하는 함수
+function shareCharacterAsImage() {
+    const targetElement = document.querySelector('#characterCard');
+    const charName = document.getElementById("charNameDisplay").textContent;
+
+    if (charName === "캐릭터 이름") {
+        return alert("먼저 '남자 뽑기' 또는 '여자 뽑기'를 진행해야 이미지 저장이 가능합니다!");
+    }
+    
+    const charImg = document.getElementById("charImgDisplay");
+    
+    // 이미지가 아직 로드되지 않았으면 대기 (안전성 강화)
+    if(charImg.style.display === 'none' || !charImg.complete) {
+        return alert("이미지가 아직 로드되지 않았습니다. 잠시 후 다시 시도해주세요.");
+    }
+    
+    // html2canvas 실행
+    html2canvas(targetElement, {
+        allowTaint: true,
+        useCORS: true,
+        scale: 2
+    }).then(canvas => {
+        const imageURL = canvas.toDataURL("image/png");
+        const filename = `울림_캐릭터_미션_${charName}.png`;
+
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([], filename, {type: 'image/png'})] })) {
+            // Web Share API 지원 시 공유
+            canvas.toBlob(function(blob) {
+                const filesArray = [new File([blob], filename, {type: 'image/png'})];
+                navigator.share({
+                    files: filesArray,
+                    title: '울림연기학원 캐릭터 미션',
+                    text: `오늘의 캐릭터 미션 (${charName})을 공유합니다! 🎨`
+                })
+                .catch(error => {
+                    console.warn('Sharing failed, attempting download:', error);
+                    downloadImage(imageURL, filename);
+                });
+            }, 'image/png');
+        } else {
+            // 지원하지 않을 시 다운로드
+            downloadImage(imageURL, filename);
+        }
+    }).catch(error => {
+        console.error('HTML2Canvas Error:', error);
+        alert('이미지 캡처 중 오류가 발생했습니다. (서버 환경에서 실행했는지 확인해주세요)');
+    });
 }
 
 
-/* --- [탭 3] 발성훈련 (외부 데이터 + 단계별 분리) --- */
+/* --- [탭 3] 발성훈련 --- */
 let step=0, currentTrainObj=null;
 let mediaRecorder, audioChunks = [], isRecording = false, startTime;
 let recognition;
 let recognitionResult = "";
+let lastRecordedBlob = null; // 녹음된 오디오 Blob 저장 변수
 
 // 0. 시스템 진단
 const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 const isSpeechSupported = ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
 
-// 1. 유사도 계산
+// 1. 유사도 계산 (기존 코드 유지)
 function getSimilarity(s1, s2) {
     const longer = s1.length > s2.length ? s1 : s2;
     const shorter = s1.length > s2.length ? s2 : s1;
@@ -457,7 +588,7 @@ function editDistance(s1, s2) {
     return costs[s2.length];
 }
 
-// 2. 음성인식 초기화
+// 2. 음성인식 초기화 (기존 코드 유지)
 if (isSpeechSupported && !isIOS) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SpeechRecognition();
@@ -515,6 +646,7 @@ function trainNew(){
     proAudio.onloadedmetadata = function() {
         document.getElementById("proTime").textContent = proAudio.duration.toFixed(1) + "s";
     };
+    lastRecordedBlob = null; // 새 문장 뽑을 때 녹음 초기화
     renderTrain();
 }
 
@@ -604,11 +736,18 @@ function resetBtn() {
 }
 
 async function toggleRecord() {
-    if(window.location.protocol === 'file:') return alert("서버에 올려야 녹음이 됩니다.");
+    // 로컬 환경 경고 (이전 응답과 동일)
+    if(window.location.protocol === 'file:') return alert("서버 환경(http/https)에서만 마이크 사용 및 파일 공유가 가능합니다.");
     if (!isRecording) {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
+            
+            const options = { mimeType: 'audio/mp4' };
+            if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                 options.mimeType = 'audio/webm'; // fallback
+            }
+            mediaRecorder = new MediaRecorder(stream, options);
+
             audioChunks = [];
             mediaRecorder.start();
             startTime = Date.now();
@@ -620,7 +759,8 @@ async function toggleRecord() {
             document.getElementById('resultBox').style.display='none'; 
             mediaRecorder.addEventListener("dataavailable", e => audioChunks.push(e.data));
             mediaRecorder.addEventListener("stop", () => {
-                const audioBlob = new Blob(audioChunks);
+                const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+                lastRecordedBlob = audioBlob; // 녹음된 Blob 저장
                 const audioUrl = URL.createObjectURL(audioBlob);
                 const audio = document.getElementById('myAudio');
                 audio.src = audioUrl;
@@ -638,7 +778,43 @@ async function toggleRecord() {
 }
 if (isSpeechSupported) { recognition.onend = function() { isRecording = false; resetBtn(); }; }
 
-/* --- [탭 4] 기출문제 로직 (NEW!) --- */
+// 발성훈련 녹음 파일 공유 함수
+function shareVocalResult() {
+    if (!lastRecordedBlob) {
+        return alert("먼저 STEP 7에서 녹음을 완료해야 공유할 수 있습니다.");
+    }
+    const originalText = document.getElementById('train_origin').textContent;
+    const filename = `울림_발성훈련_${new Date().toLocaleDateString()}.mp4`;
+
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([], filename, {type: lastRecordedBlob.type})] })) {
+        
+        // Blob을 File 객체로 변환
+        const audioFile = new File([lastRecordedBlob], filename, { type: lastRecordedBlob.type });
+
+        navigator.share({
+            files: [audioFile],
+            title: '울림연기학원 발성훈련 결과',
+            text: `[울림연기학원 발성훈련 결과]\n\n📄 원본 문장:\n"${originalText}"\n\n🎤 나의 녹음 파일 첨부`,
+        })
+        .catch(error => {
+            console.error('Sharing failed:', error);
+            alert('파일 공유에 실패했습니다. (지원하지 않는 파일 형식일 수 있습니다.)');
+        });
+    } else {
+        // 모바일 파일 공유를 지원하지 않는 경우 다운로드 링크 제공 (PC 환경 기본 동작)
+        const audioUrl = URL.createObjectURL(lastRecordedBlob);
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = audioUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        alert("이 기기는 파일 공유 기능을 지원하지 않아 녹음 파일을 다운로드합니다.");
+    }
+}
+
+
+/* --- [탭 4] 기출문제 로직 --- */
 // 외부 파일이 로드되지 않았을 경우를 대비한 기본값
 const defaultPast = { male: [], female: [] };
 const pData = (typeof pastQuestionData !== 'undefined') ? pastQuestionData : defaultPast;
@@ -651,10 +827,11 @@ function rollPastQuestion(gender) {
     document.getElementById("pastRoleDisplay").textContent = q.role;
     document.getElementById("pastLinesDisplay").textContent = q.lines;
 }
-/* --- [탭 4] 기출문제 녹음 기능 (추가됨) --- */
+/* --- [탭 4] 기출문제 녹음 기능 --- */
 let pastMediaRecorder, pastAudioChunks = [], isPastRecording = false, pastStartTime;
 
 async function togglePastRecord() {
+    // 로컬 환경 경고 (이전 응답과 동일)
     if(window.location.protocol === 'file:') return alert("브라우저 보안 정책상 서버 환경(http/https)에서만 마이크 사용이 가능합니다.");
     
     const btn = document.getElementById('pastMicBtn');
@@ -667,7 +844,13 @@ async function togglePastRecord() {
         // 녹음 시작
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            pastMediaRecorder = new MediaRecorder(stream);
+            
+            const options = { mimeType: 'audio/mp4' };
+            if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                 options.mimeType = 'audio/webm'; 
+            }
+            pastMediaRecorder = new MediaRecorder(stream, options);
+
             pastAudioChunks = [];
             
             pastMediaRecorder.start();
@@ -685,7 +868,7 @@ async function togglePastRecord() {
 
             // 녹음 종료 시 처리
             pastMediaRecorder.addEventListener("stop", () => {
-                const audioBlob = new Blob(pastAudioChunks);
+                const audioBlob = new Blob(pastAudioChunks, { type: pastMediaRecorder.mimeType });
                 const audioUrl = URL.createObjectURL(audioBlob);
                 audioEl.src = audioUrl;
 
