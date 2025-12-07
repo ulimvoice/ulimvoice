@@ -468,7 +468,7 @@ function rollCharacter(gender) {
     document.getElementById("charDescDisplay").textContent = "새로운 캐릭터가 소환되었습니다.";
 }
 
-// ⭐ 수정된 saveCharacter() 함수: 이미지와 이름을 복제하여 저장 그리드에 추가 ⭐
+// 수정된 saveCharacter() 함수: 이미지와 이름을 복제하여 저장 그리드에 추가
 function saveCharacter(){
     const charName = document.getElementById("charNameDisplay").textContent;
     const charImgSrc = document.getElementById("charImgDisplay").src;
@@ -481,7 +481,7 @@ function saveCharacter(){
     const div = document.createElement("div"); div.className="mini-char-card";
     
     let imageHtml;
-    if (isImageVisible && charImgSrc) {
+    if (isImageVisible && charImgSrc && charImgSrc.includes('appdata/character')) {
         // 이미지가 정상적으로 표시될 때만 mini-char-img를 사용
         imageHtml = `<img src="${charImgSrc}" class="mini-char-img" alt="${charName}">`;
     } else {
@@ -778,17 +778,17 @@ async function toggleRecord() {
 }
 if (isSpeechSupported) { recognition.onend = function() { isRecording = false; resetBtn(); }; }
 
-// 발성훈련 녹음 파일 공유 함수
+// ⭐ 수정된 발성훈련 녹음 파일 공유 함수: 공유 실패 시 다운로드 링크를 제공합니다. ⭐
 function shareVocalResult() {
     if (!lastRecordedBlob) {
         return alert("먼저 STEP 7에서 녹음을 완료해야 공유할 수 있습니다.");
     }
     const originalText = document.getElementById('train_origin').textContent;
-    const filename = `울림_발성훈련_${new Date().toLocaleDateString()}.mp4`;
+    const filename = `울림_발성훈련_${new Date().toLocaleDateString()}.${lastRecordedBlob.type.split('/')[1] || 'mp4'}`;
 
+    // Web Share API를 지원하고 파일 공유가 가능한지 확인
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([], filename, {type: lastRecordedBlob.type})] })) {
         
-        // Blob을 File 객체로 변환
         const audioFile = new File([lastRecordedBlob], filename, { type: lastRecordedBlob.type });
 
         navigator.share({
@@ -798,10 +798,18 @@ function shareVocalResult() {
         })
         .catch(error => {
             console.error('Sharing failed:', error);
-            alert('파일 공유에 실패했습니다. (지원하지 않는 파일 형식일 수 있습니다.)');
+            // 공유 실패 시 다운로드로 대체
+            const audioUrl = URL.createObjectURL(lastRecordedBlob);
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = audioUrl;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            alert(`녹음 파일 공유에 실패했습니다. 파일을 다운로드합니다: ${filename}`);
         });
     } else {
-        // 모바일 파일 공유를 지원하지 않는 경우 다운로드 링크 제공 (PC 환경 기본 동작)
+        // Web Share API를 지원하지 않는 경우 다운로드 링크 제공
         const audioUrl = URL.createObjectURL(lastRecordedBlob);
         const link = document.createElement('a');
         link.download = filename;
@@ -809,7 +817,7 @@ function shareVocalResult() {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        alert("이 기기는 파일 공유 기능을 지원하지 않아 녹음 파일을 다운로드합니다.");
+        alert(`이 기기는 파일 공유 기능을 지원하지 않아 녹음 파일을 다운로드합니다: ${filename}`);
     }
 }
 
