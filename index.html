@@ -843,7 +843,6 @@ function renderTrain(){
     }
 }
 
-
 // ⭐ 새로 추가: 달력 펼치기/숨기기 토글 함수 ⭐
 function toggleCalendar() {
     const calendarArea = document.getElementById('calendarDisplayArea');
@@ -980,7 +979,42 @@ function displayDayRecord(dateKey, isCompleted) {
 
     box.style.display = 'flex'; // 팝업 표시
 }
-// ... (나머지 기존 JavaScript 함수는 이어서 배치하면 됩니다.) ...
+async function handleAction() {
+    if(step === 6) { startRecognition(); }
+    else if (step === 7) { toggleRecord(); }
+}
+function startRecognition() {
+    if(!isSpeechSupported) return alert("이 기기에서는 AI 인식을 지원하지 않습니다.");
+    if(!isRecording) {
+        isRecording = true;
+        recognitionResult = "";
+        try { recognition.start(); } catch(e) { }
+        const btn = document.getElementById('micBtn');
+        btn.textContent = '⬛';
+        btn.classList.add('recording');
+        document.getElementById('recStatus').textContent = "듣는 중...";
+        document.getElementById('resultBox').style.display='block';
+        document.getElementById('sttResult').textContent = "...";
+        document.getElementById('accBadge').className = 'accuracy-badge acc-wait';
+        document.getElementById('accBadge').textContent = '분석중...';
+    } else {
+        try { recognition.stop(); } catch(e) { }
+        isRecording = false;
+        resetBtn();
+    }
+}
+
+function resetBtn() {
+    const btn = document.getElementById('micBtn');
+    btn.classList.remove('recording');
+    if(step === 6) {
+        btn.textContent = '🗣️';
+        document.getElementById('recStatus').textContent = "버튼을 눌러 AI 체크 시작";
+    } else {
+        btn.textContent = '🎤';
+        document.getElementById('recStatus').textContent = "버튼을 눌러 녹음 시작";
+    }
+}
 async function toggleRecord() {
     // 로컬 환경 경고 (이전 응답과 동일)
     if(window.location.protocol === 'file:') return alert("서버 환경(http/https)에서만 마이크 사용 및 파일 공유가 가능합니다.");
