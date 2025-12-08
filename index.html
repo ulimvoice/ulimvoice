@@ -320,9 +320,11 @@ const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxx3wLdWp
 // ⭐ 2. 학생/강사 정보 및 공통 유틸리티 ⭐
 // =========================================================================================
 
-let studentName = localStorage.getItem('studentName') || '';
+let studentName = localStorage.getItem('studentName') || '게스트';
 let instructorName = localStorage.getItem('instructorName') || '기본';
 let phoneLast4 = localStorage.getItem('phoneLast4') || '';
+// ⭐ [필수] instructorFolderId 변수 초기화 ⭐
+let instructorFolderId = localStorage.getItem('instructorFolderId') || '13rOhOoNZv3s0n0UWmSx2U9_1lSXaH4_z';
 let currentFilenameBase = `${instructorName}_${studentName}_${phoneLast4}`; 
 
 function pick(a){return a[Math.floor(Math.random()*a.length)];}
@@ -372,9 +374,12 @@ async function promptAndAuthenticate() {
         studentName = "게스트";
         instructorName = "기본";
         phoneLast4 = "0000";
+        // [수정 사항 1/2] 게스트 모드 진입 시 instructorFolderId를 기본값으로 설정 및 저장
+        instructorFolderId = '13rOhOoNZv3s0n0UWmSx2U9_1lSXaH4_z'; // 기본 폴더 ID (GAS와 동일)
         localStorage.setItem('studentName', studentName);
         localStorage.setItem('instructorName', instructorName);
         localStorage.setItem('phoneLast4', phoneLast4);
+        localStorage.setItem('instructorFolderId', instructorFolderId); 
         return;
     }
     
@@ -393,22 +398,34 @@ async function promptAndAuthenticate() {
             instructorName = result.instructor;
             phoneLast4 = result.phoneLast4;
             
+            // ⭐⭐⭐ [핵심 추가] 폴더 ID 변수 및 localStorage 저장 ⭐⭐⭐
+            instructorFolderId = result.instructorFolderId; 
+            
             localStorage.setItem('studentName', studentName);
             localStorage.setItem('instructorName', instructorName);
             localStorage.setItem('phoneLast4', phoneLast4);
+            localStorage.setItem('instructorFolderId', instructorFolderId); // 폴더 ID 저장
+            
             alert(`인증 성공: ${studentName}님 (${instructorName} 강사)`);
         } else {
             alert(`인증 실패: ${result.message}\n게스트 모드로 진행합니다.`);
             studentName = "게스트"; instructorName = "기본"; phoneLast4 = "0000";
+            // [수정 사항 2/2] 인증 실패 시에도 기본 폴더 ID 저장
+            instructorFolderId = '13rOhOoNZv3s0n0UWmSx2U9_1lSXaH4_z'; 
             localStorage.setItem('studentName', studentName);
             localStorage.setItem('instructorName', instructorName);
             localStorage.setItem('phoneLast4', phoneLast4);
+            localStorage.setItem('instructorFolderId', instructorFolderId); 
         }
     } catch (e) {
         alert(`인증 시스템 오류 발생: ${e.message}. 관리자에게 문의하세요.`);
         studentName = "게스트"; instructorName = "기본"; phoneLast4 = "0000";
+        // [수정 사항 2/2] 통신 오류 시에도 기본 폴더 ID 저장
+        instructorFolderId = '13rOhOoNZv3s0n0UWmSx2U9_1lSXaH4_z'; 
         localStorage.setItem('studentName', studentName);
         localStorage.setItem('instructorName', instructorName);
+        localStorage.setItem('phoneLast4', phoneLast4);
+        localStorage.setItem('instructorFolderId', instructorFolderId); 
     }
 }
 
@@ -419,8 +436,6 @@ function updateFilenameConstants() {
     // 최종 파일명 베이스 설정 (특수문자 및 공백 제거)
     currentFilenameBase = filenameBase.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_\uAC00-\uD7A3]/g, '');
 }
-
-
 // =========================================================================================
 // ⭐ 4. GAS 통신 함수 (Base64 인코딩 및 업로드 로직 포함) ⭐
 // =========================================================================================
