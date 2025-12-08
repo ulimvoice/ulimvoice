@@ -321,75 +321,77 @@ audio { width: 100%; height: 40px; }
     Copyright © 울림연기학원. All rights reserved.
 </footer>
 <script>
-// ⭐ 사용자님이 제공한 GAS URL을 여기에 정확히 삽입했습니다. ⭐
+
+// ⭐ 1. 새로운 GAS 인증 API URL (1단계에서 복사한 URL로 교체) ⭐
+const GET_API_URL = 'https://script.google.com/macros/s/AKfycbwF5bgM15euvMN0mxQOi_B3q6YQnDIbMHr0G1lGGeIuqQ2gJAzN2giQ5cBzrB82Dt24XQ/exec'; 
+
+// ⭐ 2. 기존 데이터 전송 GAS URL은 그대로 유지 (덮어쓰기 금지) ⭐
 const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzUZ5JUmeRTz3HU7r8fX4urykKE-wNH9VTwSsoovIJfBJOFOFIxOJvp6cfHikexZoI0Xg/exec';
 
-// ⭐ 수정된: 구글 시트로 데이터 전송 함수 ⭐
-async function sendToGoogleSheet(vocalId, sentenceText, action) {
-    if (!GOOGLE_APP_SCRIPT_URL || GOOGLE_APP_SCRIPT_URL.includes('YOUR_DEPLOYED_GAS_URL_HERE')) {
-        console.warn("Google Apps Script URL이 설정되지 않아 데이터 전송을 건너뜁니다.");
+// 페이지 로드 시 학생 이름 및 인증 확인
+async function checkStudentName() {
+    if (!studentName || !phoneLast4 || instructorName === '기본') {
+        await promptAndAuthenticate();
+    }
+    // 페이지 로드 시 파일명을 업데이트할 준비
+    updateFilenameConstants();
+}
+
+// ⭐ 새로 추가/수정: 인증 프롬프트 및 GAS 인증 요청 함수 ⭐
+async function promptAndAuthenticate() {
+    let name = prompt("학생 이름을 입력해주세요.");
+    let phone = prompt("출결번호 (휴대폰 번호 뒤 네 자리)를 입력해주세요.");
+
+    if (!name || !phone || phone.length !== 4) {
+        alert("인증 정보가 부족합니다. 게스트 모드로 진행합니다. (파일 이름: 게스트_기본_0000)");
+        studentName = "게스트";
+        instructorName = "기본";
+        phoneLast4 = "0000";
+        localStorage.setItem('studentName', studentName);
+        localStorage.setItem('instructorName', instructorName);
+        localStorage.setItem('phoneLast4', phoneLast4);
         return;
     }
     
-    const payload = {
-        name: studentName,
-        vocalId: vocalId,
-        sentence: sentenceText,
-        action: action // 기록 유형: "연습 완료 체크" 또는 "녹음 파일 공유 시도"
-    };
-
+    // GAS 인증 API 호출
+    const url = `${GET_API_URL}?name=${encodeURIComponent(name)}&phoneLast4=${phone}`;
     try {
-        // no-cors 모드로 외부 POST 요청을 실행
-        await fetch(GOOGLE_APP_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors', 
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        console.log('Google Sheet submission attempted.');
-    } catch (error) {
-        console.error('Google Sheet submission failed:', error);
-    }
-}
-// --- 탭 로직 ---
-document.querySelectorAll('.tab').forEach(t => {
-    t.onclick = () => {
-        document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
-        t.classList.add('active');
-        document.getElementById(t.dataset.tab).classList.add('active');
-    };
-});
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("네트워크 오류 또는 GAS 서버 오류.");
+        
+        const result = await response.json();
 
-function pick(a){return a[Math.floor(Math.random()*a.length)];}
-
-// 이미지 다운로드를 처리하는 공통 함수
-function downloadImage(dataUrl, filename='울림_미션.png') {
-    const link = document.createElement('a');
-    link.download = filename;
-    link.href = dataUrl;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    alert("이미지 파일 다운로드를 시작합니다!");
-}
-
-// --- 학생 이름 관리 변수 및 함수 ---
-let studentName = localStorage.getItem('studentName') || '';
-
-// 페이지 로드 시 학생 이름 확인
-function checkStudentName() {
-    if (!studentName || studentName === '게스트') {
-        let name = prompt("학생 이름을 입력해주세요. (예: 홍길동)");
-        if (name) {
-            studentName = name.trim();
+        if (result.status === 'success') {
+            studentName = result.name;
+            instructorName = result.instructor;
+            phoneLast4 = result.phoneLast4;
+            
             localStorage.setItem('studentName', studentName);
-            alert(`환영합니다, ${studentName}님! 이제부터 모든 기록은 ${studentName}님 이름으로 저장됩니다.`);
+            localStorage.setItem('instructorName', instructorName);
+            localStorage.setItem('phoneLast4', phoneLast4);
+            alert(`인증 성공: ${studentName}님 (${instructorName} 강사)`);
         } else {
-            studentName = "게스트";
+            alert(`인증 실패: ${result.message}\n게스트 모드로 진행합니다.`);
+            studentName = "게스트"; instructorName = "기본"; phoneLast4 = "0000";
             localStorage.setItem('studentName', studentName);
+            localStorage.setItem('instructorName', instructorName);
+            localStorage.setItem('phoneLast4', phoneLast4);
         }
+    } catch (e) {
+        alert(`인증 시스템 오류. 잠시 후 다시 시도하거나 관리자에게 문의하세요.`);
+        studentName = "게스트"; instructorName = "기본"; phoneLast4 = "0000";
+        localStorage.setItem('studentName', studentName);
+        localStorage.setItem('instructorName', instructorName);
     }
+}
+
+// ⭐ 새로 추가: 파일명 베이스를 전역 변수에 저장 (인증 후 호출됨) ⭐
+function updateFilenameConstants() {
+    // 최종 파일명 형식: 강사이름_학생이름_출결번호.mp4
+    const filenameBase = `${instructorName}_${studentName}_${phoneLast4}`;
+    
+    // 특수문자 및 공백 제거
+    currentFilenameBase = filenameBase.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_\uAC00-\uD7A3]/g, '');
 }
 // --- [탭 1] 상황극 로직 (공통 함수 포함) ---
 const defaultEtude = { colors: [], places: [], emotions: [], relations: [], actions: [], lines: [] };
@@ -1104,58 +1106,54 @@ async function toggleRecord() {
 if (isSpeechSupported) { recognition.onend = function() { isRecording = false; resetBtn(); }; }
 
 // 발성훈련 녹음 파일 공유 함수
-function shareVocalResult() {
-    if (!lastRecordedBlob) {
-        return alert("먼저 STEP 7에서 녹음을 완료해야 공유할 수 있습니다.");
+async function shareVocalResult() {
+    if (!lastRecordedBlob || !currentTrainObj) {
+        return alert("먼저 STEP 7에서 녹음을 완료하고 문장을 뽑아야 공유할 수 있습니다.");
     }
+    
+    // 파일명이 설정되지 않았다면 인증 필요
+    if (!currentFilenameBase || instructorName === '기본') {
+         await promptAndAuthenticate();
+         if (instructorName === '기본') return alert("인증 후 다시 시도해주세요. 인증 없이는 드라이브 업로드가 제한됩니다.");
+    }
+
     const originalText = document.getElementById('train_origin').textContent;
     const mimeType = lastRecordedBlob.type;
-    const extension = mimeType.split('/')[1] || 'mp4';
+    // ... (Base64 인코딩 로직 유지) ...
+    const base64Data = await blobToBase64(lastRecordedBlob).catch(err => { /* ... */ });
+    if (!base64Data) return;
+
+ // 녹음 파일을 드라이브에 업로드하고 시트에 링크를 기록하는 함수
+async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeType, action) {
+    if (!GOOGLE_APP_SCRIPT_URL || GOOGLE_APP_SCRIPT_URL.includes('https://script.google.com/macros/s/AKfycbwF5bgM15euvMN0mxQOi_B3q6YQnDIbMHr0G1lGGeIuqQ2gJAzN2giQ5cBzrB82Dt24XQ/exec')) {
+        console.warn("Google Apps Script URL이 설정되지 않아 데이터 전송을 건너뜁니다.");
+        return;
+    }
     
-    // 파일명으로 사용할 문장의 앞부분 (최대 20자)을 정리
-    const rawFilenamePart = originalText.substring(0, 20).trim();
-    const sanitizedFilenamePart = rawFilenamePart.replace(/[^가-힣a-zA-Z0-9]/g, '_'); // 특수문자 제거 및 _로 대체
+    const payload = {
+        name: studentName,
+        vocalId: vocalId,
+        sentence: sentenceText,
+        action: action, 
+        audioData: base64Data, 
+        mimeType: mimeType,
+        // ⭐ 추가 전송 데이터 ⭐
+        fileNameBase: currentFilenameBase, // GAS가 사용할 파일명 베이스
+        instructor: instructorName       // GAS가 폴더를 선택할 강사 이름
+    };
 
-    const filename = `울림_발성훈련_${sanitizedFilenamePart}.${extension}`;
-    
-    // ⭐ 구글 시트로 공유 정보 전송 ⭐
-    sendToGoogleSheet(currentTrainObj.id, originalText.substring(0, 30) + "...", "녹음 파일 공유 시도"); 
-
-    // Web Share API를 지원하고 파일 공유가 가능한지 확인
-    if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([], filename, {type: mimeType})] })) {
-        
-        const audioFile = new File([lastRecordedBlob], filename, { type: mimeType });
-
-        navigator.share({
-            files: [audioFile],
-            title: '울림연기학원 발성훈련 결과',
-            text: `[울림연기학원 발성훈련 결과]\n\n📄 원본 문장:\n"${originalText}"\n\n🎤 나의 녹음 파일 첨부`,
-        })
-        .catch(error => {
-            console.error('Sharing failed:', error);
-            // 공유 실패 시 다운로드로 대체
-            const audioUrl = URL.createObjectURL(lastRecordedBlob);
-            const link = document.createElement('a');
-            link.download = filename;
-            link.href = audioUrl;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            alert(`녹음 파일 공유에 실패했습니다. 파일을 다운로드합니다: ${filename}`);
+    try {
+        await fetch(GOOGLE_APP_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors', 
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
         });
-    } else {
-        // Web Share API를 지원하지 않는 경우 다운로드 링크 제공
-        const audioUrl = URL.createObjectURL(lastRecordedBlob);
-        const link = document.createElement('a');
-        link.download = filename;
-        link.href = audioUrl;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        alert(`이 기기는 파일 공유 기능을 지원하지 않아 녹음 파일을 다운로드합니다: ${filename}`);
+        console.log('Drive upload and Sheet logging attempted.');
+    } catch (error) {
+        console.error('Drive upload failed:', error);
     }
 }
-
 /* --- [탭 4] 기출문제 로직 --- */
 // 외부 파일이 로드되지 않았을 경우를 대비한 기본값
 const defaultPast = { male: [], female: [] };
