@@ -1,345 +1,62 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<script src="appdata/etude/data.js"></script>
-<script src="appdata/vocalization/data.js"></script>
-<script src="appdata/past_questions/data.js"></script>
-<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-
-<style>
-/* ===========================
-   기본 스타일
-   =========================== */
-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f5f7fb; margin: 0; color: #333; display: flex; flex-direction: column; min-height: 100vh; }
-.wrapper { max-width: 1200px; width: 95%; margin: 0 auto; flex: 1; padding: 20px 0; }
-
-/* 헤더 & 푸터 */
-header { background: #fff; padding: 15px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; }
-.header-content { max-width: 1200px; width: 100%; display: flex; align-items: center; }
-.logo-img { height: 45px; width: auto; margin-right: 12px; }
-.header-title { font-size: 20px; font-weight: 800; color: #2ecc71; margin: 0; word-break: keep-all; }
-footer { background: #333; color: #aaa; padding: 30px 20px; text-align: center; font-size: 13px; line-height: 1.6; margin-top: 40px; }
-footer b { color: #fff; font-weight: 700; }
-
-/* 탭 및 공통 UI */
-.tabs { display: flex; gap: 5px; border-bottom: 2px solid #ddd; margin-bottom: 20px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
-.tab { padding: 12px 16px; cursor: pointer; font-weight: 700; color: #666; font-size: 15px; transition: 0.2s; flex-shrink: 0; }
-.tab.active { background: #fff; color: #2ecc71; border: 1px solid #ddd; border-bottom: none; border-radius: 10px 10px 0 0; }
-.tab-content { display: none; animation: fadeIn 0.3s; }
-.tab-content.active { display: block; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-.section { background: #fff; padding: 25px; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
-
-/* 버튼 공통 */
-.btn-row { display: flex; gap: 10px; margin-top: 20px; }
-.btn-row button { flex: 1; padding: 16px; border: none; border-radius: 12px; font-size: 17px; font-weight: 800; cursor: pointer; color: white; transition: 0.1s; box-shadow: 0 4px 0 rgba(0,0,0,0.2); white-space: nowrap; }
-.btn-row button:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
-.btn-gen { background: #2ecc71; } .btn-save { background: #3498db; } .btn-male { background: #3498db; } .btn-female { background: #ff7979; }
-.btn-share { background: #e67e22; }
-.lock-btn { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.05); border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px; z-index: 10; }
-.lock-btn.locked { background: #ff4757; color: white; opacity: 1; }
-
-/* 탭 1 */
-.scene-main-card { border: 2px solid #f0f0f0; border-radius: 20px; padding: 30px 20px; background: #fff; text-align: center; margin-bottom: 30px; }
-.color-badge-box { width: 100%; height: 80px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 800; color: #fff; margin-bottom: 20px; position: relative; }
-.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; text-align: left; }
-.info-item { background: #f9f9f9; padding: 15px; border-radius: 14px; position: relative; min-height: 50px; display: flex; flex-direction: column; justify-content: center; }
-.info-label { font-size: 12px; color: #888; font-weight: 700; margin-bottom: 4px; display:block; }
-.info-value { font-size: 17px; font-weight: 700; color: #333; word-break: keep-all; }
-.line-area { padding: 25px; background: #f0fdf4; border-radius: 16px; border: 2px solid #dcfce7; margin-bottom: 20px; position: relative; }
-.line-text { font-size: 24px; font-weight: 900; color: #166534; word-break: keep-all; line-height: 1.4; }
-.mission-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
-.mission-card { background: #fff; border: 1px solid #eee; border-radius: 14px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-.mission-title-input { border: none; border-bottom: 1px dashed #ccc; font-size: 16px; font-weight: 800; color: #333; width: 150px; padding: 2px; background: transparent; }
-.mission-title-input:focus { outline: none; border-bottom: 2px solid #2ecc71; }
-
-/* 탭 2 */
-.char-container { display: flex; flex-direction: column; align-items: center; gap: 20px; }
-.char-img-frame { width: 100%; max-width: 300px; aspect-ratio: 1/1; border-radius: 20px; overflow: hidden; background: #f0f0f0; border: 5px solid #fff; box-shadow: 0 8px 20px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; position: relative; }
-.char-img { width: 100%; height: 100%; object-fit: cover; }
-.char-placeholder { color: #aaa; text-align: center; font-size: 14px; padding: 20px; }
-.char-info-box { text-align: center; width: 100%; }
-.char-name { font-size: 26px; font-weight: 900; color: #333; margin-bottom: 5px; }
-.char-job { font-size: 17px; color: #2ecc71; font-weight: 700; margin-bottom: 15px; }
-.char-desc { background: #f8f9fa; padding: 20px; border-radius: 14px; font-size: 16px; color: #555; line-height: 1.6; border: 1px solid #eee; word-break: keep-all; }
-.char-save-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-top: 30px; }
-.mini-char-card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; font-size: 13px; border:1px solid #eee; }
-.mini-char-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; background:#ddd; }
-.mini-char-info { padding: 10px; }
-
-/* 탭 3 */
-.train-origin-text { 
-    font-size: 20px; font-weight: 700; color: #333; text-align: center; 
-    margin-bottom: 25px; word-break: keep-all; line-height: 1.5; 
-    min-height: 30px; padding: 15px; background: #e8f5e9; border-radius: 12px; border: 1px solid #c8e6c9;
-}
-.train-card { background: #fff; border: 2px solid #eee; border-radius: 20px; padding: 30px 15px; text-align: center; margin-bottom: 20px; }
-.train-main-text { font-size: 32px; font-weight: 900; color: #2ecc71; word-break: keep-all; line-height: 1.3; margin: 20px 0; }
-.train-nav { display: flex; justify-content: space-between; align-items: center; gap:10px; margin-top:20px;}
-.train-nav button { background: #333; color: #fff; padding: 12px 20px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; font-size: 15px; }
-.train-nav button:disabled { background: #ddd; cursor: not-allowed; }
-
-.record-box { margin-top: 10px; padding-top: 20px; border-top: 2px dashed #eee; display: none; }
-.pro-player-box { background: #f0fdf4; padding: 15px; border-radius: 12px; margin-bottom: 15px; text-align: left; }
-.player-label { font-size: 12px; font-weight: 800; color: #2ecc71; margin-bottom: 5px; display: block; }
-audio { width: 100%; height: 40px; }
-
-.mic-btn {
-    width: 80px; height: 80px; border-radius: 50%; background: #ff4757; color: white; border: none;
-    font-size: 34px; cursor: pointer; box-shadow: 0 4px 15px rgba(255, 71, 87, 0.5); display: flex; align-items: center; justify-content: center; margin: 0 auto;
-    transition: transform 0.1s;
-}
-.mic-btn:active { transform: scale(0.95); }
-.mic-btn.recording { animation: pulse 1.5s infinite; background: #333; }
-@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(255, 71, 87, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0); } }
-
-/* 통합 결과 박스 */
-.result-box { margin-top: 20px; background: #fff; border-radius: 15px; border: 1px solid #e0e0e0; display: none; overflow:hidden; }
-.result-section { padding: 20px; border-bottom: 1px solid #f0f0f0; }
-.result-section:last-child { border-bottom: none; }
-.section-title { font-size: 14px; font-weight: 800; color: #555; margin-bottom: 10px; display: flex; align-items:center; gap:5px; }
-.time-info { margin-top:8px; font-size:14px; color:#555; font-weight:bold; }
-.time-val { color: #ff4757; font-weight:900; }
-.stt-text { font-size: 18px; color: #333; line-height: 1.4; background:#f9f9f9; padding:15px; border-radius:10px; border:1px solid #eee; margin-bottom:10px; font-weight:500; min-height: 40px;}
-.accuracy-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 13px; color: white; font-weight:bold; }
-.acc-good { background: #2ecc71; } .acc-bad { background: #ff6b6b; } .acc-soso { background: #f1c40f; } .acc-wait { background: #aaa; }
-.guide-text { font-size:12px; color:#999; margin-top:5px; }
-
-/* 탭 4: 기출문제 UI */
-.past-display-card { border: 2px solid #ddd; border-radius: 20px; padding: 30px; background: #fff; min-height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; word-break: keep-all; margin-bottom:20px; }
-.past-role { font-size: 20px; font-weight: 900; color: #2ecc71; margin-bottom: 20px; }
-.past-lines { font-size: 18px; line-height: 1.8; color: #333; white-space: pre-wrap; font-family: 'KoPub Batang', serif; }
-
-@media (max-width: 600px) {
-    .section { padding: 20px; }
-    .info-grid { grid-template-columns: 1fr; }
-    .line-text { font-size: 22px; }
-    .train-main-text { font-size: 28px; }
-    .header-title { font-size: 18px; }
-    .logo-img { height: 35px; }
-    .btn-row { flex-wrap: wrap; }
-    .btn-row button { min-width: 45%; }
-}
-</style>
-</head>
-<body>
-
-<header>
-    <div class="header-content">
-        <img src="appdata/logo.png" class="logo-img" alt="울림연기학원" onerror="this.style.display='none';">
-        <h1 class="header-title">울림연기학원 연습 프로그램</h1>
-    </div>
-</header>
-
-<main class="wrapper">
-  <div class="tabs">
-    <div class="tab active" data-tab="tab1">🎭 상황극</div>
-    <div class="tab" data-tab="tab2">🎨 캐릭터</div>
-    <div class="tab" data-tab="tab3">🎤 발성훈련</div>
-    <div class="tab" data-tab="tab4">📄 기출문제</div>
-  </div>
-
-  <div class="tab-content active" id="tab1">
-    <div class="section">
-      <div class="scene-main-card">
-        <div class="color-badge-box" id="colorBg" style="background:#ddd;">
-            <span id="colorText">색상</span>
-            <button class="lock-btn" id="lock-color" onclick="toggleLock('color')">🔓</button>
-        </div>
-        <div class="info-grid">
-            <div class="info-item"><span class="info-label">장소</span><span class="info-value" id="placeDisplay">-</span><button class="lock-btn" id="lock-place" onclick="toggleLock('place')">🔓</button></div>
-            <div class="info-item"><span class="info-label">감정</span><span class="info-value" id="emotionDisplay">-</span><button class="lock-btn" id="lock-emotion" onclick="toggleLock('emotion')">🔓</button></div>
-            <div class="info-item"><span class="info-label">관계</span><span class="info-value" id="relationDisplay">-</span><button class="lock-btn" id="lock-relation" onclick="toggleLock('relation')">🔓</button></div>
-            <div class="info-item"><span class="info-label">행동</span><span class="info-value" id="actionDisplay">-</span><button class="lock-btn" id="lock-action" onclick="toggleLock('action')">🔓</button></div>
-        </div>
-        <div class="line-area">
-            <div class="line-text" id="lineDisplay">버튼을 눌러 시작하세요</div>
-            <button class="lock-btn" id="lock-line" onclick="toggleLock('line')">🔓</button>
-        </div>
-        <div class="btn-row">
-            <button class="btn-gen" id="btnGen" onclick="rollScene()">🎲 랜덤 뽑기</button>
-            <button class="btn-save" onclick="saveScene()">💾 저장하기</button>
-            <button class="btn-share" id="btnShare" onclick="shareSceneAsImage()">🖼️ 이미지/공유</button>
-        </div>
-      </div>
-      <h3 style="margin-top:30px; color:#555;">📋 저장된 미션</h3>
-      <div id="missionGrid" class="mission-grid"></div>
-    </div>
-  </div>
-
-  <div class="tab-content" id="tab2">
-    <div class="section">
-      <div class="scene-main-card" id="characterCard">
-        <div class="char-container">
-            <div class="char-img-frame">
-                <span class="char-placeholder">뽑기 버튼을 눌러주세요</span>
-                <img id="charImgDisplay" class="char-img" src="" style="display:none;" onerror="this.style.display='none'; this.previousElementSibling.style.display='block';">
-            </div>
-            <div class="char-info-box">
-                <div id="charNameDisplay" class="char-name">캐릭터 이름</div>
-                <div id="charJobDisplay" class="char-job">직업</div>
-                <div id="charDescDisplay" class="char-desc">버튼을 눌러 캐릭터를 소환하세요.</div>
-            </div>
-        </div>
-        <div class="btn-row">
-            <button class="btn-male" onclick="rollCharacter('male')">👱‍♂️ 남자 뽑기</button>
-            <button class="btn-female" onclick="rollCharacter('female')">👩 여자 뽑기</button>
-            <button class="btn-save" onclick="saveCharacter()">⭐ 저장하기</button>
-            <button class="btn-share" onclick="shareCharacterAsImage()">🖼️ 이미지/공유</button>
-        </div>
-      </div>
-      <div id="charSaveGrid" class="char-save-grid"></div>
-    </div>
-  </div>
-
- <div class="tab-content" id="tab3">
-    <div class="section">
-      <div class="train-origin-text" id="train_origin">버튼을 눌러 문장을 뽑아주세요</div>
-
-      <div class="btn-row" style="margin-bottom: 20px;">
-        <button class="btn-gen" style="flex: 2;" onclick="trainNew()">✨ 새 문장 뽑기</button>
-        <button class="btn-save" id="btnComplete" style="flex: 1; background: #2980b9; display: none;" onclick="completeTraining()">✅ 연습 완료</button>
-      </div>
-      
-      <button onclick="toggleCalendar()" style="width:100%; padding:10px; margin-top:5px; background:#ddd; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
-        📅 연습 기록 보기/숨기기
-      </button>
-
-      <div id="calendarDisplayArea" style="display: none;">
-        <h3 style="margin-top:20px; color:#555;">📅 연습 기록</h3>
-        <div id="calendarContainer" style="display: flex; justify-content: center; margin-top: 15px;">
-          </div>
-        <p style="font-size:12px; color:#aaa; text-align:center; margin-top:10px;">(O: 완료, X: 미완료)</p>
-      </div>
-      
-      <div id="train_card" class="train-card">
-        <p style="color:#aaa;">'새 문장 뽑기'를 눌러주세요.</p>
-      </div>
-
-      <div class="record-box" id="recordBox">
-        <div class="pro-player-box">
-            <span class="player-label">🎧 프로 성우 예시 듣기</span>
-            <audio id="proAudio" controls src=""></audio>
-        </div>
-
-        <div style="text-align:center; margin: 30px 0;">
-            <button id="micBtn" class="mic-btn" onclick="handleAction()">🎤</button>
-            <p id="recStatus" style="font-size:14px; color:#555; margin-top:10px; font-weight:bold;">버튼을 눌러 시작</p>
-        </div>
-
-        <div class="result-box" id="resultBox">
-            <div class="result-section" id="aiSection" style="display:none;">
-                <span class="section-title">🤖 AI 발음 체크</span>
-                <div class="stt-result-box">
-                    <div id="sttResult" class="stt-text">...</div>
-                    <span id="accBadge" class="accuracy-badge acc-wait">분석 대기중</span>
-                </div>
-                <p class="guide-text">* 정확도 30% 이상이면 통과입니다.</p>
-            </div>
-
-            <div class="result-section" id="recSection" style="display:none;">
-                <span class="section-title">📂 내 녹음 확인</span>
-                <audio id="myAudio" controls src="" style="width:100%;"></audio>
-                <div class="time-info">
-                    내 시간: <span id="myTime" class="time-val">0.0s</span> 
-                    <span style="font-weight:normal; color:#aaa; margin-left:10px;">(프로: <span id="proTime">0.0s</span>)</span>
-                </div>
-                <button class="btn-save" style="width:100%; margin-top:15px; background:#4CAF50;" onclick="shareVocalResult()">🔗 녹음 파일 공유하기</button>
-            </div>
-        </div>
-      </div>
-      
-      <div class="train-nav" style="margin-top:20px;">
-        <button id="btn_prev" onclick="trainPrev()" disabled>⬅ 이전</button>
-        <div id="step_indicator" style="font-weight:bold; color:#2ecc71; font-size:18px;">STEP 0</div>
-        <button id="btn_next" onclick="trainNext()" disabled>다음 ➡</button>
-      </div>
-    </div>
-  </div>
-
-<div id="recordDisplayBox" style="
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-    background: rgba(0,0,0,0.7); display: none; justify-content: center; 
-    align-items: center; z-index: 9999;
-">
-    <div style="
-        background: white; padding: 30px; border-radius: 20px; max-width: 400px; 
-        width: 90%; box-shadow: 0 4px 30px rgba(0,0,0,0.5);
-    ">
-        <h3 id="recordDisplayDate" style="color: #2980b9; margin-top: 0;">기록 상세</h3>
-        <p id="recordDisplayContent" style="
-            background: #f8f8f8; padding: 15px; border-radius: 10px; 
-            font-size: 16px; line-height: 1.5; word-break: break-all;
-        ">선택된 날짜의 기록이 여기에 표시됩니다.</p>
-        <button onclick="document.getElementById('recordDisplayBox').style.display='none';" style="
-            width: 100%; padding: 10px; background: #e74c3c; color: white; border: none; 
-            border-radius: 10px; margin-top: 20px; cursor: pointer; font-weight: bold;
-        ">닫기</button>
-    </div>
-</div>
-<div class="tab-content" id="tab4">
-    <div class="section">
-      <div class="past-display-card">
-        <div id="pastRoleDisplay" class="past-role">버튼을 눌러 대본을 뽑아주세요</div>
-        <div id="pastLinesDisplay" class="past-lines">-</div>
-      </div>
-
-      <div class="btn-row">
-        <button class="btn-male" onclick="rollPastQuestion('male')">👱‍♂️ 남자 기출 뽑기</button>
-        <button class="btn-female" onclick="rollPastQuestion('female')">👩 여자 기출 뽑기</button>
-      </div>
-
-      <div class="record-box" id="pastRecordBox" style="display:block; margin-top:30px; border-top:2px dashed #eee; padding-top:20px;">
-        <div style="text-align:center; margin-bottom: 20px;">
-            <p style="font-size:16px; font-weight:800; color:#333; margin-bottom:15px;">🎙️ 실전 녹음 연습</p>
-            <button id="pastMicBtn" class="mic-btn" onclick="togglePastRecord()">🎤</button>
-            <p id="pastRecStatus" style="font-size:14px; color:#555; margin-top:10px; font-weight:bold;">버튼을 눌러 녹음 시작</p>
-        </div>
-
-        <div class="result-box" id="pastResultBox" style="display:none;">
-            <div class="result-section">
-                <span class="section-title">📂 내 녹음 확인</span>
-                <audio id="pastAudio" controls src="" style="width:100%;"></audio>
-                <div class="time-info">
-                    녹음 시간: <span id="pastTime" class="time-val">0.0s</span>
-                </div>
-            </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</main>
-
-<footer>
-    <b>상담전화</b> : 010-7372-5875 <br>
-    <b>주소</b> : 수원시 영통구 청명남로 28번길 2 아이텐텐빌딩 502호 <br>
-    Copyright © 울림연기학원. All rights reserved.
-</footer>
 <script>
+// =========================================================================================
+// ⭐ 1. GAS URL 정의 (제공해주신 배포 주소로 설정 완료) ⭐
+// =========================================================================================
 
-// ⭐ 1. 학생부 GAS URL (인증 및 강사 정보 조회) ⭐
-// GET 요청을 처리하며, promptAndAuthenticate 함수에서 사용됩니다.
-const GET_API_URL = 'https://script.google.com/macros/s/AKfycbwF5bgM15euvMN0mxQOi_B3q6YQnDIbMHr0G1lGGeIuqQ2gJAzN2giQ5cBzrB82Dt24XQ/exec'; 
+// 학생부 GAS URL (인증 및 강사 정보 조회)
+const GET_API_URL = 'https://script.google.com/macros/s/AKfycbxGRdT0dmwKbMLSvwWvwqlmbxB-IUj7jvkXly4OTw2kkfm8Gu-siGt80hgsrqZQQbx38Q/exec'; 
 
-// ⭐ 2. 연습일지 GAS URL (데이터 전송 및 드라이브 업로드) ⭐
-// POST 요청을 처리하며, uploadAudioToDriveAndLog 함수에서 사용됩니다.
-const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzmcxw7-gNQF9Y6TG7jnWeZQGKyKfWfHou015PHVCrJXuwpgEy6ZNy5RywJ1bDhoAhBAA/exec';
+// 연습일지 GAS URL (데이터 전송 및 드라이브 업로드)
+const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx9x9lkbgjkWC6GxTgtJogcH6TaV0JwAczObuy1PoNjN8CVKuOOHMKcnfd1WlRPoBQBjQ/exec';
 
-// --- 학생 이름 관리 변수 및 함수 수정 (이전에 안내된 내용과 동일) ---
+
+// =========================================================================================
+// ⭐ 2. 학생/강사 정보 및 공통 유틸리티 ⭐
+// =========================================================================================
+
 let studentName = localStorage.getItem('studentName') || '';
 let instructorName = localStorage.getItem('instructorName') || '기본';
 let phoneLast4 = localStorage.getItem('phoneLast4') || '';
-let currentFilenameBase = `${instructorName}_${studentName}_${phoneLast4}`;
-    // 페이지 로드 시 파일명을 업데이트할 준비
+let currentFilenameBase = `${instructorName}_${studentName}_${phoneLast4}`; 
+
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+
+// 이미지 다운로드를 처리하는 공통 함수
+function downloadImage(dataUrl, filename='울림_미션.png') {
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = dataUrl;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    alert("이미지 파일 다운로드를 시작합니다!");
+}
+
+// 탭 로직
+document.querySelectorAll('.tab').forEach(t => {
+    t.onclick = () => {
+        document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
+        t.classList.add('active');
+        document.getElementById(t.dataset.tab).classList.add('active');
+    };
+});
+
+
+// =========================================================================================
+// ⭐ 3. 학생 인증 로직 (checkStudentName, promptAndAuthenticate) ⭐
+// =========================================================================================
+
+// 페이지 로드 시 학생 이름 및 인증 확인
+async function checkStudentName() {
+    if (!studentName || !phoneLast4 || instructorName === '기본') {
+        await promptAndAuthenticate();
+    }
+    // 페이지 로드 시 파일명을 업데이트
     updateFilenameConstants();
 }
 
-// ⭐ 새로 추가/수정: 인증 프롬프트 및 GAS 인증 요청 함수 ⭐
+// 인증 프롬프트 및 GAS 인증 요청 함수
 async function promptAndAuthenticate() {
     let name = prompt("학생 이름을 입력해주세요.");
     let phone = prompt("출결번호 (휴대폰 번호 뒤 네 자리)를 입력해주세요.");
@@ -355,11 +72,13 @@ async function promptAndAuthenticate() {
         return;
     }
     
-    // GAS 인증 API 호출
+    // GAS 인증 API 호출 (GET_API_URL 사용)
     const url = `${GET_API_URL}?name=${encodeURIComponent(name)}&phoneLast4=${phone}`;
     try {
         const response = await fetch(url);
-        if (!response.ok) throw new Error("네트워크 오류 또는 GAS 서버 오류.");
+        
+        // GAS가 404가 아닌 다른 오류를 반환할 수 있으므로 response.ok 체크
+        if (!response.ok) throw new Error(`GAS 서버 응답 오류: ${response.status}`);
         
         const result = await response.json();
 
@@ -380,22 +99,109 @@ async function promptAndAuthenticate() {
             localStorage.setItem('phoneLast4', phoneLast4);
         }
     } catch (e) {
-        alert(`인증 시스템 오류. 잠시 후 다시 시도하거나 관리자에게 문의하세요.`);
+        alert(`인증 시스템 오류 발생: ${e.message}. 관리자에게 문의하세요.`);
         studentName = "게스트"; instructorName = "기본"; phoneLast4 = "0000";
         localStorage.setItem('studentName', studentName);
         localStorage.setItem('instructorName', instructorName);
     }
 }
 
-// ⭐ 새로 추가: 파일명 베이스를 전역 변수에 저장 (인증 후 호출됨) ⭐
+// 파일명 베이스를 전역 변수에 저장 (강사이름_학생이름_출결4자리)
 function updateFilenameConstants() {
-    // 최종 파일명 형식: 강사이름_학생이름_출결번호.mp4
     const filenameBase = `${instructorName}_${studentName}_${phoneLast4}`;
     
-    // 특수문자 및 공백 제거
+    // 최종 파일명 베이스 설정 (특수문자 및 공백 제거)
     currentFilenameBase = filenameBase.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_\uAC00-\uD7A3]/g, '');
 }
-// --- [탭 1] 상황극 로직 (공통 함수 포함) ---
+
+
+// =========================================================================================
+// ⭐ 4. GAS 통신 함수 (Base64 인코딩 및 업로드 로직 포함) ⭐
+// =========================================================================================
+
+// Blob 데이터를 Base64 문자열로 변환하는 함수
+function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(blob);
+        reader.onloadend = () => {
+            const base64String = reader.result.split(',')[1];
+            // GAS는 약 50MB 제한 (Base64 인코딩 후 크기)
+            if (base64String.length * 0.75 > 45 * 1024 * 1024) { 
+                reject(new Error("File size is too large for GAS limit."));
+            }
+            resolve(base64String);
+        };
+        reader.onerror = reject;
+    });
+}
+
+// 녹음 파일을 드라이브에 업로드하고 시트에 링크를 기록하는 함수
+async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeType, action) {
+    if (!GOOGLE_APP_SCRIPT_URL || GOOGLE_APP_SCRIPT_URL.includes('YOUR_DEPLOYED_GAS_URL_HERE')) {
+        console.warn("Google Apps Script URL이 설정되지 않아 데이터 전송을 건너뜁니다.");
+        return;
+    }
+    
+    // GAS로 전송할 페이로드 구성
+    const payload = {
+        name: studentName,
+        vocalId: vocalId,
+        sentence: sentenceText,
+        action: action, 
+        audioData: base64Data, 
+        mimeType: mimeType,
+        // ⭐ GAS가 폴더 및 파일명 생성을 위해 사용할 데이터 ⭐
+        fileNameBase: currentFilenameBase, 
+        instructor: instructorName       
+    };
+
+    try {
+        await fetch(GOOGLE_APP_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors', 
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        console.log('Drive upload and Sheet logging attempted.');
+    } catch (error) {
+        console.error('Drive upload failed:', error);
+    }
+}
+
+// 파일 업로드 없이 메타데이터만 전송하는 함수 (연습 완료 버튼 용)
+async function sendToGoogleSheet(vocalId, sentenceText, action) {
+    if (!GOOGLE_APP_SCRIPT_URL || GOOGLE_APP_SCRIPT_URL.includes('YOUR_DEPLOYED_GAS_URL_HERE')) {
+        console.warn("Google Apps Script URL이 설정되지 않아 데이터 전송을 건너뜁니다.");
+        return;
+    }
+    
+    const payload = {
+        name: studentName,
+        vocalId: vocalId,
+        sentence: sentenceText,
+        action: action, 
+        // 오디오 데이터는 포함하지 않음
+    };
+
+    try {
+        await fetch(GOOGLE_APP_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors', 
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        console.log('Google Sheet submission attempted.');
+    } catch (error) {
+        console.error('Google Sheet submission failed:', error);
+    }
+}
+
+
+// =========================================================================================
+// ⭐ 5. 탭 1 (상황극) 로직 ⭐
+// =========================================================================================
+
 const defaultEtude = { colors: [], places: [], emotions: [], relations: [], actions: [], lines: [] };
 const eData = (typeof etudeData !== 'undefined') ? etudeData : defaultEtude;
 
@@ -517,7 +323,10 @@ function shareSceneAsImage() {
 }
 
 
-/* [탭 2] 캐릭터 로직 */
+// =========================================================================================
+// ⭐ 6. 탭 2 (캐릭터) 로직 ⭐
+// =========================================================================================
+
 let currentChar = null;
 function rollCharacter(gender) {
     // 임시 데이터 (이미지 없을때 대비)
@@ -630,7 +439,12 @@ function shareCharacterAsImage() {
         alert('이미지 캡처 중 오류가 발생했습니다. (서버 환경에서 실행했는지 확인해주세요)');
     });
 }
-/* --- [탭 3] 발성훈련 --- */
+
+
+// =========================================================================================
+// ⭐ 7. 탭 3 (발성훈련) 로직 ⭐
+// =========================================================================================
+
 let step=0, currentTrainObj=null;
 let mediaRecorder, audioChunks = [], isRecording = false, startTime;
 let recognition;
@@ -758,16 +572,17 @@ function completeTraining() {
     localStorage.setItem('vocalRecords', JSON.stringify(Array.from(records.entries())));
 
     // ⭐ 구글 시트로 연습 완료 정보 전송 ⭐
+    // 파일 업로드 없이 메타데이터만 전송
     sendToGoogleSheet(currentTrainObj.id, currentTrainObj.text.substring(0, 30) + "...", "연습 완료 체크"); 
 
     alert(`[${today}] 연습을 완료하고 문장을 저장했습니다! (다음 뽑기 시 제외됨)`);
     
-    // ⭐ 수정: 완료 후 달력 펼치기 (toggleCalendar 함수 사용) ⭐
+    // 완료 후 달력 펼치기
     const calendarArea = document.getElementById('calendarDisplayArea');
     if (calendarArea.style.display === 'none') {
-        toggleCalendar(); // 달력이 숨겨져 있으면 펼침
+        toggleCalendar(); 
     } else {
-        renderCalendar(); // 이미 열려있으면 렌더링만 다시 함
+        renderCalendar(); 
     }
     
     // 완료 후 버튼 숨기기
@@ -778,12 +593,10 @@ function completeTraining() {
 function trainNew(){
     if(typeof vocalData !== 'undefined') trainDataList = vocalData;
     
-    // ⭐ 추가: 새 문장 뽑을 때 달력 숨기기 ⭐
+    // 새 문장 뽑을 때 달력 숨기기
     document.getElementById('calendarDisplayArea').style.display = 'none'; 
     
     const savedIds = getSavedVocalIds();
-    
-    // ... (나머지 문장 뽑기 로직 유지) ...
     
     const availableData = trainDataList.filter(item => !savedIds.has(item.id));
 
@@ -796,7 +609,7 @@ function trainNew(){
     
     currentTrainObj = pick(availableData); // 제외된 문장 중에서 랜덤으로 뽑기
     step=1;
-    // ⭐ 추가: 새 문장 뽑으면 버튼 활성화 및 UI 렌더링 시작 ⭐
+    // 새 문장 뽑으면 버튼 활성화 및 UI 렌더링 시작
     document.getElementById("btn_prev").disabled = true; // 이전 버튼 비활성화 (STEP 1)
     document.getElementById("btn_next").disabled = false; // 다음 버튼 활성화
     
@@ -811,7 +624,7 @@ function trainNew(){
     renderTrain();
 }
 
-// ⭐ 수정: 단계 이동 함수 trainPrev/trainNext는 renderTrain을 호출합니다. ⭐
+// 단계 이동 함수
 function trainPrev(){ 
     if(step>1) {
         step--; 
@@ -825,20 +638,18 @@ function trainNext(){
     }
 }
 
-// ⭐ 수정된 renderTrain 로직 (버튼 활성화/비활성화 로직 추가) ⭐
+// 버튼 활성화/비활성화 및 UI 렌더링
 function renderTrain(){
     const box = document.getElementById("train_card");
     const ind = document.getElementById("step_indicator");
     const btnComplete = document.getElementById('btnComplete'); 
     
-    // ⭐ 추가: 네비게이션 버튼 요소 가져오기 ⭐
     const btnPrev = document.getElementById("btn_prev");
     const btnNext = document.getElementById("btn_next");
 
     const T=["","STEP1 모음을 호흡으로","STEP2 모음을 소리로","STEP3 자음과 함께 호흡으로 읽기","STEP4 자음과 함께 소리내어 읽기","STEP5 자연스럽게 호흡으로 읽기", "STEP6 발음 AI 체크","STEP7 최종 녹음"];
     const D=["","모음 입모양 신경쓰며 호흡으로 한글자씩 읽기","모음 입모양 신경쓰며 소리내어 한글자씩 읽기","자음과 함께 입모양을 신경쓰며 한글자씩 호흡으로 읽기","자음과 함께 입모양을 신경쓰며 한글자씩 소리내어로 읽기","자연스럽게 한문장을 한 호흡으로 읽기","AI가 발음 정확도를 평가합니다.","최종 결과물을 녹음하고 들어보세요."];
 
-    // 현재 문장 데이터가 없으면 진행 불가
     if (!currentTrainObj) {
         step = 0;
         ind.textContent="STEP 0";
@@ -859,7 +670,6 @@ function renderTrain(){
          <div style='color:#666; margin-bottom:20px; font-size:15px;'>${D[step]}</div>
          <div class='train-main-text'>${showText}</div>`;
 
-    // ⭐ 버튼 활성화/비활성화 로직 ⭐
     btnPrev.disabled = (step === 1);
     btnNext.disabled = (step === 7);
 
@@ -869,7 +679,6 @@ function renderTrain(){
     const aiSection = document.getElementById("aiSection");
     const recSection = document.getElementById("recSection");
     
-    // 버튼 표시 제어
     btnComplete.style.display = (step === 7) ? 'flex' : 'none';
 
     if(step === 6) {
@@ -891,34 +700,33 @@ function renderTrain(){
     }
 }
 
-// ⭐ 새로 추가: 달력 펼치기/숨기기 토글 함수 ⭐
+// 달력 펼치기/숨기기 토글 함수
 function toggleCalendar() {
     const calendarArea = document.getElementById('calendarDisplayArea');
     if (calendarArea.style.display === 'none') {
-        renderCalendar(); // 숨겨져 있으면 렌더링 후 표시
+        renderCalendar(); 
         calendarArea.style.display = 'block';
     } else {
-        calendarArea.style.display = 'none'; // 표시되어 있으면 숨김
+        calendarArea.style.display = 'none'; 
     }
 }
 
 
-// ⭐ 수정된 renderCalendar 로직 (클릭 이벤트 유지) ⭐
+// 달력 렌더링 로직
 function renderCalendar(year, month) {
     const today = new Date();
     const currentYear = year || today.getFullYear();
-    const currentMonth = month !== undefined ? month : today.getMonth(); // 0-11
+    const currentMonth = month !== undefined ? month : today.getMonth(); 
     
     const firstDay = new Date(currentYear, currentMonth, 1);
     const lastDay = new Date(currentYear, currentMonth + 1, 0);
     const numDays = lastDay.getDate();
-    const startDayOfWeek = firstDay.getDay(); // 0 = Sunday, 1 = Monday
+    const startDayOfWeek = firstDay.getDay(); 
     
-    const records = getVocalRecords(); // 저장된 기록 불러오기
+    const records = getVocalRecords(); 
     const container = document.getElementById('calendarContainer');
     container.innerHTML = '';
     
-    // 월/년 표시 및 네비게이션
     let table = `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
         <button onclick="renderCalendar(${currentYear}, ${currentMonth === 0 ? 11 : currentMonth - 1})" style="background:#ddd; border:none; padding:5px 10px; border-radius:5px;">⬅</button>
         <h2 style="font-size: 18px; margin: 0;">${currentYear}. ${currentMonth + 1}</h2>
@@ -931,19 +739,16 @@ function renderCalendar(year, month) {
     let day = 1;
     let cellCount = 0;
 
-    // 1. 첫 주 빈 셀 채우기
     for (let i = 0; i < startDayOfWeek; i++) {
         table += '<td style="border: 1px solid #eee; padding: 5px;"></td>';
         cellCount++;
     }
 
-    // 2. 날짜 채우기
     for (day = 1; day <= numDays; day++) {
         if (cellCount % 7 === 0 && cellCount !== 0) {
             table += '</tr><tr>';
         }
         
-        // 날짜를 ISO 형식으로 생성 (YYYY-MM-DD)
         const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         
         const currentDate = new Date(currentYear, currentMonth, day);
@@ -957,30 +762,23 @@ function renderCalendar(year, month) {
         let title = dateKey;
         let onClickEvent = '';
         
-        const record = records.get(dateKey); // 해당 날짜의 기록
+        const record = records.get(dateKey); 
 
         if (record) {
-            // 연습 완료 (O)
             statusText = `<span style="font-weight:900; color:#2ecc71;">O</span>`;
             background = '#e8f5e9';
             title += `\n[완료] 문장:\n${record.text}`;
-            // ⭐ 클릭 이벤트 추가: 기록이 있을 때만 클릭 가능
             onClickEvent = `onclick="displayDayRecord('${dateKey}', true)" style="cursor: pointer;"`;
         } else if (isPastOrToday && !isToday) {
-             // 과거이고 기록이 없으면 미완료 (X)
             statusText = `<span style="font-weight:900; color:#ff6b6b;">X</span>`;
             background = '#fde9e9';
             title += '\n[미완료]';
-            // ⭐ 클릭 이벤트 추가: 미완료 기록도 클릭 시 정보 표시 가능
             onClickEvent = `onclick="displayDayRecord('${dateKey}', false)" style="cursor: pointer;"`; 
         }
 
         if (isToday) {
-            // 오늘 날짜 강조 (O/X 기록이 없으면 날짜만 표시)
-            background = record ? '#d0e9ff' : '#fffbe5'; // 완료: 하늘색, 미완료: 노란색
+            background = record ? '#d0e9ff' : '#fffbe5'; 
             statusText = statusText === day ? `<span style="font-weight:900; color:#2980b9;">${day}</span>` : statusText;
-            
-            // 오늘 날짜도 클릭 가능하게 설정 (기록이 있든 없든)
             onClickEvent = `onclick="displayDayRecord('${dateKey}', ${!!record})" style="cursor: pointer;"`; 
         }
 
@@ -991,7 +789,6 @@ function renderCalendar(year, month) {
         cellCount++;
     }
 
-    // 3. 마지막 주 빈 셀 채우기
     while (cellCount % 7 !== 0) {
         table += '<td style="border: 1px solid #eee; padding: 5px;"></td>';
         cellCount++;
@@ -1002,7 +799,7 @@ function renderCalendar(year, month) {
     container.innerHTML = table;
 }
 
-// ⭐ 수정된 displayDayRecord 로직: 문장 ID 숨김 ⭐
+// 문장 상세 기록 팝업
 function displayDayRecord(dateKey, isCompleted) {
     const records = getVocalRecords();
     const record = records.get(dateKey);
@@ -1027,7 +824,8 @@ function displayDayRecord(dateKey, isCompleted) {
 
     box.style.display = 'flex'; // 팝업 표시
 }
-// ⭐ AI 체크 또는 녹음 실행을 분기하는 함수 (누락 복구됨) ⭐
+
+// AI 체크 또는 녹음 실행을 분기하는 함수
 async function handleAction() {
     if(step === 6) { startRecognition(); }
     else if (step === 7) { toggleRecord(); }
@@ -1065,7 +863,6 @@ function resetBtn() {
     }
 }
 async function toggleRecord() {
-    // 로컬 환경 경고 (이전 응답과 동일)
     if(window.location.protocol === 'file:') return alert("서버 환경(http/https)에서만 마이크 사용 및 파일 공유가 가능합니다.");
     if (!isRecording) {
         try {
@@ -1073,7 +870,7 @@ async function toggleRecord() {
             
             const options = { mimeType: 'audio/mp4' };
             if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-                 options.mimeType = 'audio/webm'; // fallback
+                 options.mimeType = 'audio/webm'; 
             }
             mediaRecorder = new MediaRecorder(stream, options);
 
@@ -1089,7 +886,7 @@ async function toggleRecord() {
             mediaRecorder.addEventListener("dataavailable", e => audioChunks.push(e.data));
             mediaRecorder.addEventListener("stop", () => {
                 const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
-                lastRecordedBlob = audioBlob; // 녹음된 Blob 저장
+                lastRecordedBlob = audioBlob; 
                 const audioUrl = URL.createObjectURL(audioBlob);
                 const audio = document.getElementById('myAudio');
                 audio.src = audioUrl;
@@ -1107,13 +904,13 @@ async function toggleRecord() {
 }
 if (isSpeechSupported) { recognition.onend = function() { isRecording = false; resetBtn(); }; }
 
-// 발성훈련 녹음 파일 공유 함수
+// 발성훈련 녹음 파일 공유 함수 (드라이브 업로드 포함)
 async function shareVocalResult() {
     if (!lastRecordedBlob || !currentTrainObj) {
         return alert("먼저 STEP 7에서 녹음을 완료하고 문장을 뽑아야 공유할 수 있습니다.");
     }
     
-    // 파일명이 설정되지 않았다면 인증 필요
+    // 인증 확인 및 파일명 베이스 업데이트
     if (!currentFilenameBase || instructorName === '기본') {
          await promptAndAuthenticate();
          if (instructorName === '기본') return alert("인증 후 다시 시도해주세요. 인증 없이는 드라이브 업로드가 제한됩니다.");
@@ -1121,43 +918,65 @@ async function shareVocalResult() {
 
     const originalText = document.getElementById('train_origin').textContent;
     const mimeType = lastRecordedBlob.type;
-    // ... (Base64 인코딩 로직 유지) ...
-    const base64Data = await blobToBase64(lastRecordedBlob).catch(err => { /* ... */ });
+    const extension = mimeType.split('/')[1] || 'mp4';
+    
+    const sanitizedFilenamePart = currentFilenameBase.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_\uAC00-\uD7A3]/g, '');
+    const filename = `울림_발성훈련_${sanitizedFilenamePart}.${extension}`;
+    
+    // 1. 녹음 파일을 Base64로 인코딩 (GAS 전송 준비)
+    const base64Data = await blobToBase64(lastRecordedBlob).catch(err => {
+        console.error("Base64 Encoding Failed:", err);
+        alert(`파일 인코딩 중 오류가 발생했습니다. (${err.message}) 전송을 중단합니다.`);
+        return null;
+    });
+
     if (!base64Data) return;
 
- // 녹음 파일을 드라이브에 업로드하고 시트에 링크를 기록하는 함수
-async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeType, action) {
-    if (!GOOGLE_APP_SCRIPT_URL || GOOGLE_APP_SCRIPT_URL.includes('https://script.google.com/macros/s/AKfycbwF5bgM15euvMN0mxQOi_B3q6YQnDIbMHr0G1lGGeIuqQ2gJAzN2giQ5cBzrB82Dt24XQ/exec')) {
-        console.warn("Google Apps Script URL이 설정되지 않아 데이터 전송을 건너뜁니다.");
-        return;
-    }
-    
-    const payload = {
-        name: studentName,
-        vocalId: vocalId,
-        sentence: sentenceText,
-        action: action, 
-        audioData: base64Data, 
-        mimeType: mimeType,
-        // ⭐ 추가 전송 데이터 ⭐
-        fileNameBase: currentFilenameBase, // GAS가 사용할 파일명 베이스
-        instructor: instructorName       // GAS가 폴더를 선택할 강사 이름
-    };
+    // 2. 구글 드라이브에 업로드 및 시트에 링크 기록
+    await uploadAudioToDriveAndLog(
+        currentTrainObj.id, 
+        originalText.substring(0, 30) + "...", 
+        base64Data, 
+        mimeType,
+        "녹음 파일 업로드 및 링크 기록"
+    ); 
 
-    try {
-        await fetch(GOOGLE_APP_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors', 
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+    alert("녹음 파일 업로드 및 시트 기록을 시도했습니다. 드라이브 폴더와 시트(F열)를 확인하세요.");
+    
+    // 3. (기존) 웹 공유 또는 다운로드 로직
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([], filename, {type: mimeType})] })) {
+        
+        const audioFile = new File([lastRecordedBlob], filename, { type: mimeType });
+
+        navigator.share({
+            files: [audioFile],
+            title: '울림연기학원 발성훈련 결과',
+            text: `[울림연기학원 발성훈련 결과]\n\n📄 원본 문장:\n"${originalText}"\n\n🎤 나의 녹음 파일 첨부`,
+        })
+        .catch(error => {
+            console.error('Sharing failed:', error);
+            // 공유 실패 시 다운로드로 대체
+            const audioUrl = URL.createObjectURL(lastRecordedBlob);
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = audioUrl;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            alert(`Web Share API 공유에 실패했습니다. 파일을 다운로드합니다: ${filename}`);
         });
-        console.log('Drive upload and Sheet logging attempted.');
-    } catch (error) {
-        console.error('Drive upload failed:', error);
+    } else {
+        const audioUrl = URL.createObjectURL(lastRecordedBlob);
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = audioUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 }
+
 /* --- [탭 4] 기출문제 로직 --- */
-// 외부 파일이 로드되지 않았을 경우를 대비한 기본값
 const defaultPast = { male: [], female: [] };
 const pData = (typeof pastQuestionData !== 'undefined') ? pastQuestionData : defaultPast;
 
@@ -1173,7 +992,6 @@ function rollPastQuestion(gender) {
 let pastMediaRecorder, pastAudioChunks = [], isPastRecording = false, pastStartTime;
 
 async function togglePastRecord() {
-    // 로컬 환경 경고 (이전 응답과 동일)
     if(window.location.protocol === 'file:') return alert("브라우저 보안 정책상 서버 환경(http/https)에서만 마이크 사용이 가능합니다.");
     
     const btn = document.getElementById('pastMicBtn');
@@ -1183,7 +1001,6 @@ async function togglePastRecord() {
     const audioEl = document.getElementById('pastAudio');
 
     if (!isPastRecording) {
-        // 녹음 시작
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             
@@ -1199,16 +1016,13 @@ async function togglePastRecord() {
             pastStartTime = Date.now();
             isPastRecording = true;
 
-            // UI 변경
             btn.textContent = '⬛'; 
             btn.classList.add('recording');
             status.textContent = "녹음 중...";
-            resultBox.style.display = 'none'; // 다시 녹음하면 결과창 숨김
+            resultBox.style.display = 'none'; 
 
-            // 데이터 수집
             pastMediaRecorder.addEventListener("dataavailable", e => pastAudioChunks.push(e.data));
 
-            // 녹음 종료 시 처리
             pastMediaRecorder.addEventListener("stop", () => {
                 const audioBlob = new Blob(pastAudioChunks, { type: pastMediaRecorder.mimeType });
                 const audioUrl = URL.createObjectURL(audioBlob);
@@ -1217,9 +1031,8 @@ async function togglePastRecord() {
                 const duration = (Date.now() - pastStartTime) / 1000;
                 timeDisplay.textContent = duration.toFixed(1) + "s";
                 
-                resultBox.style.display = 'block'; // 결과창 표시
+                resultBox.style.display = 'block'; 
                 
-                // 스트림 트랙 종료 (마이크 끄기)
                 stream.getTracks().forEach(track => track.stop());
             });
 
@@ -1228,11 +1041,9 @@ async function togglePastRecord() {
             alert("마이크 권한이 필요합니다.");
         }
     } else {
-        // 녹음 중지
         if(pastMediaRecorder) pastMediaRecorder.stop();
         isPastRecording = false;
 
-        // UI 원복
         btn.textContent = '🎤';
         btn.classList.remove('recording');
         status.textContent = "버튼을 눌러 녹음 시작";
@@ -1240,10 +1051,8 @@ async function togglePastRecord() {
 }
 // 페이지 로드 시 달력과 현재 문장 초기화
 window.onload = function() {
-// ⭐ 추가: 학생 이름 확인 및 설정 ⭐
     checkStudentName();
 
-    // 탭 로직 초기화 (기존 코드)
     document.querySelectorAll('.tab').forEach(t => {
         t.onclick = () => {
             document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
@@ -1253,9 +1062,6 @@ window.onload = function() {
         };
     });
     
-    // 달력 초기화
     renderCalendar();
 };
 </script>
-</body>
-</html>
