@@ -321,12 +321,12 @@ audio { width: 100%; height: 40px; }
     Copyright © 울림연기학원. All rights reserved.
 </footer>
 <script>
-// ⭐ 새로 추가: 구글 시트로 데이터 전송 함수 ⭐
-async function sendToGoogleSheet(vocalId, sentenceText, shareInfo) {
-    // 여기에 실제 Google Apps Script URL을 넣어주세요.
-    const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzUZ5JUmeRTz3HU7r8fX4urykKE-wNH9VTwSsoovIJfBJOFOFIxOJvp6cfHikexZoI0Xg/exec'; 
-    
-    if (GOOGLE_APP_SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbzUZ5JUmeRTz3HU7r8fX4urykKE-wNH9VTwSsoovIJfBJOFOFIxOJvp6cfHikexZoI0Xg/exec) {
+// ⭐ 사용자님이 제공한 GAS URL을 여기에 정확히 삽입했습니다. ⭐
+const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzUZ5JUmeRTz3HU7r8fX4urykKE-wNH9VTwSsoovIJfBJOFOFIxOJvp6cfHikexZoI0Xg/exec';
+
+// ⭐ 수정된: 구글 시트로 데이터 전송 함수 ⭐
+async function sendToGoogleSheet(vocalId, sentenceText, action) {
+    if (!GOOGLE_APP_SCRIPT_URL || GOOGLE_APP_SCRIPT_URL.includes('YOUR_DEPLOYED_GAS_URL_HERE')) {
         console.warn("Google Apps Script URL이 설정되지 않아 데이터 전송을 건너뜁니다.");
         return;
     }
@@ -335,11 +335,12 @@ async function sendToGoogleSheet(vocalId, sentenceText, shareInfo) {
         name: studentName,
         vocalId: vocalId,
         sentence: sentenceText,
-        shareInfo: shareInfo 
+        action: action // 기록 유형: "연습 완료 체크" 또는 "녹음 파일 공유 시도"
     };
 
     try {
-        const response = await fetch(GOOGLE_APP_SCRIPT_URL, {
+        // no-cors 모드로 외부 POST 요청을 실행
+        await fetch(GOOGLE_APP_SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors', 
             headers: { 'Content-Type': 'application/json' },
@@ -373,13 +374,12 @@ function downloadImage(dataUrl, filename='울림_미션.png') {
     alert("이미지 파일 다운로드를 시작합니다!");
 }
 
-// --- 학생 이름 관리 변수 및 함수 (NEW!) ---
+// --- 학생 이름 관리 변수 및 함수 ---
 let studentName = localStorage.getItem('studentName') || '';
-const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzUZ5JUmeRTz3HU7r8fX4urykKE-wNH9VTwSsoovIJfBJOFOFIxOJvp6cfHikexZoI0Xg/exec'; // ⭐ 1.2단계에서 복사한 URL로 교체 ⭐
 
 // 페이지 로드 시 학생 이름 확인
 function checkStudentName() {
-    if (!studentName) {
+    if (!studentName || studentName === '게스트') {
         let name = prompt("학생 이름을 입력해주세요. (예: 홍길동)");
         if (name) {
             studentName = name.trim();
@@ -390,8 +390,6 @@ function checkStudentName() {
             localStorage.setItem('studentName', studentName);
         }
     }
-    // 페이지 상단에 이름 표시 (선택 사항)
-    // document.querySelector('.header-title').textContent = `${studentName}님의 연습 프로그램`;
 }
 // --- [탭 1] 상황극 로직 (공통 함수 포함) ---
 const defaultEtude = { colors: [], places: [], emotions: [], relations: [], actions: [], lines: [] };
@@ -755,8 +753,8 @@ function completeTraining() {
     });
     localStorage.setItem('vocalRecords', JSON.stringify(Array.from(records.entries())));
 
-    // ⭐ 추가: 구글 시트로 연습 완료 정보 전송 ⭐
-    sendToGoogleSheet(currentTrainObj.id, currentTrainObj.text, "연습 완료 체크"); 
+    // ⭐ 구글 시트로 연습 완료 정보 전송 ⭐
+    sendToGoogleSheet(currentTrainObj.id, currentTrainObj.text.substring(0, 30) + "...", "연습 완료 체크"); 
 
     alert(`[${today}] 연습을 완료하고 문장을 저장했습니다! (다음 뽑기 시 제외됨)`);
     
@@ -1025,6 +1023,7 @@ function displayDayRecord(dateKey, isCompleted) {
 
     box.style.display = 'flex'; // 팝업 표시
 }
+// ⭐ AI 체크 또는 녹음 실행을 분기하는 함수 (누락 복구됨) ⭐
 async function handleAction() {
     if(step === 6) { startRecognition(); }
     else if (step === 7) { toggleRecord(); }
@@ -1118,8 +1117,9 @@ function shareVocalResult() {
     const sanitizedFilenamePart = rawFilenamePart.replace(/[^가-힣a-zA-Z0-9]/g, '_'); // 특수문자 제거 및 _로 대체
 
     const filename = `울림_발성훈련_${sanitizedFilenamePart}.${extension}`;
-// ⭐ 추가: 구글 시트로 공유 정보 전송 ⭐
-    sendToGoogleSheet(currentTrainObj.id, originalText, "녹음 파일 공유 시도"); 
+    
+    // ⭐ 구글 시트로 공유 정보 전송 ⭐
+    sendToGoogleSheet(currentTrainObj.id, originalText.substring(0, 30) + "...", "녹음 파일 공유 시도"); 
 
     // Web Share API를 지원하고 파일 공유가 가능한지 확인
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([], filename, {type: mimeType})] })) {
