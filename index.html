@@ -320,8 +320,36 @@ audio { width: 100%; height: 40px; }
     <b>주소</b> : 수원시 영통구 청명남로 28번길 2 아이텐텐빌딩 502호 <br>
     Copyright © 울림연기학원. All rights reserved.
 </footer>
-
 <script>
+// ⭐ 새로 추가: 구글 시트로 데이터 전송 함수 ⭐
+async function sendToGoogleSheet(vocalId, sentenceText, shareInfo) {
+    // 여기에 실제 Google Apps Script URL을 넣어주세요.
+    const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzUZ5JUmeRTz3HU7r8fX4urykKE-wNH9VTwSsoovIJfBJOFOFIxOJvp6cfHikexZoI0Xg/exec'; 
+    
+    if (GOOGLE_APP_SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbzUZ5JUmeRTz3HU7r8fX4urykKE-wNH9VTwSsoovIJfBJOFOFIxOJvp6cfHikexZoI0Xg/exec) {
+        console.warn("Google Apps Script URL이 설정되지 않아 데이터 전송을 건너뜁니다.");
+        return;
+    }
+    
+    const payload = {
+        name: studentName,
+        vocalId: vocalId,
+        sentence: sentenceText,
+        shareInfo: shareInfo 
+    };
+
+    try {
+        const response = await fetch(GOOGLE_APP_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors', 
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        console.log('Google Sheet submission attempted.');
+    } catch (error) {
+        console.error('Google Sheet submission failed:', error);
+    }
+}
 // --- 탭 로직 ---
 document.querySelectorAll('.tab').forEach(t => {
     t.onclick = () => {
@@ -345,7 +373,26 @@ function downloadImage(dataUrl, filename='울림_미션.png') {
     alert("이미지 파일 다운로드를 시작합니다!");
 }
 
+// --- 학생 이름 관리 변수 및 함수 (NEW!) ---
+let studentName = localStorage.getItem('studentName') || '';
+const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzUZ5JUmeRTz3HU7r8fX4urykKE-wNH9VTwSsoovIJfBJOFOFIxOJvp6cfHikexZoI0Xg/exec'; // ⭐ 1.2단계에서 복사한 URL로 교체 ⭐
 
+// 페이지 로드 시 학생 이름 확인
+function checkStudentName() {
+    if (!studentName) {
+        let name = prompt("학생 이름을 입력해주세요. (예: 홍길동)");
+        if (name) {
+            studentName = name.trim();
+            localStorage.setItem('studentName', studentName);
+            alert(`환영합니다, ${studentName}님! 이제부터 모든 기록은 ${studentName}님 이름으로 저장됩니다.`);
+        } else {
+            studentName = "게스트";
+            localStorage.setItem('studentName', studentName);
+        }
+    }
+    // 페이지 상단에 이름 표시 (선택 사항)
+    // document.querySelector('.header-title').textContent = `${studentName}님의 연습 프로그램`;
+}
 // --- [탭 1] 상황극 로직 (공통 함수 포함) ---
 const defaultEtude = { colors: [], places: [], emotions: [], relations: [], actions: [], lines: [] };
 const eData = (typeof etudeData !== 'undefined') ? etudeData : defaultEtude;
@@ -687,9 +734,6 @@ function completeTraining() {
         return alert("STEP 7(최종 녹음)까지 진행하고 문장을 뽑은 상태에서 눌러주세요.");
     }
     
-    // 이전에 alert 경고문을 통해 서버 연동이 불가능함을 사용자에게 명확히 안내했습니다.
-    // 여기서는 로컬 저장소에 기록하는 로직만 실행합니다.
-
     // 1. 문장 ID를 저장 (다음 뽑기 시 제외)
     const savedIds = getSavedVocalIds();
     const currentId = currentTrainObj.id;
@@ -699,18 +743,20 @@ function completeTraining() {
     // 2. 출석 및 문장 기록 저장 (날짜: 문장)
     const records = getVocalRecords();
     const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-    
     if (records.has(today)) {
         alert("오늘은 이미 연습을 완료했습니다!");
         return;
     }
 
-    records.set(today, { 
+ records.set(today, { 
         id: currentTrainObj.id, 
-        text: currentTrainObj.text.substring(0, 30) + "...", // 문장 앞부분 저장
+        text: currentTrainObj.text.substring(0, 30) + "...", 
         completed: true 
     });
     localStorage.setItem('vocalRecords', JSON.stringify(Array.from(records.entries())));
+
+    // ⭐ 추가: 구글 시트로 연습 완료 정보 전송 ⭐
+    sendToGoogleSheet(currentTrainObj.id, currentTrainObj.text, "연습 완료 체크"); 
 
     alert(`[${today}] 연습을 완료하고 문장을 저장했습니다! (다음 뽑기 시 제외됨)`);
     
@@ -1072,6 +1118,8 @@ function shareVocalResult() {
     const sanitizedFilenamePart = rawFilenamePart.replace(/[^가-힣a-zA-Z0-9]/g, '_'); // 특수문자 제거 및 _로 대체
 
     const filename = `울림_발성훈련_${sanitizedFilenamePart}.${extension}`;
+// ⭐ 추가: 구글 시트로 공유 정보 전송 ⭐
+    sendToGoogleSheet(currentTrainObj.id, originalText, "녹음 파일 공유 시도"); 
 
     // Web Share API를 지원하고 파일 공유가 가능한지 확인
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([], filename, {type: mimeType})] })) {
@@ -1192,6 +1240,9 @@ async function togglePastRecord() {
 }
 // 페이지 로드 시 달력과 현재 문장 초기화
 window.onload = function() {
+// ⭐ 추가: 학생 이름 확인 및 설정 ⭐
+    checkStudentName();
+
     // 탭 로직 초기화 (기존 코드)
     document.querySelectorAll('.tab').forEach(t => {
         t.onclick = () => {
