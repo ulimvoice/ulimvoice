@@ -1,3 +1,307 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="appdata/etude/data.js"></script>
+<script src="appdata/vocalization/data.js"></script>
+<script src="appdata/past_questions/data.js"></script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
+<style>
+/* ===========================
+   기본 스타일 (생략)
+   =========================== */
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f5f7fb; margin: 0; color: #333; display: flex; flex-direction: column; min-height: 100vh; }
+.wrapper { max-width: 1200px; width: 95%; margin: 0 auto; flex: 1; padding: 20px 0; }
+header { background: #fff; padding: 15px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; }
+.header-content { max-width: 1200px; width: 100%; display: flex; align-items: center; }
+.logo-img { height: 45px; width: auto; margin-right: 12px; }
+.header-title { font-size: 20px; font-weight: 800; color: #2ecc71; margin: 0; word-break: keep-all; }
+footer { background: #333; color: #aaa; padding: 30px 20px; text-align: center; font-size: 13px; line-height: 1.6; margin-top: 40px; }
+footer b { color: #fff; font-weight: 700; }
+.tabs { display: flex; gap: 5px; border-bottom: 2px solid #ddd; margin-bottom: 20px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+.tab { padding: 12px 16px; cursor: pointer; font-weight: 700; color: #666; font-size: 15px; transition: 0.2s; flex-shrink: 0; }
+.tab.active { background: #fff; color: #2ecc71; border: 1px solid #ddd; border-bottom: none; border-radius: 10px 10px 0 0; }
+.tab-content { display: none; animation: fadeIn 0.3s; }
+.tab-content.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+.section { background: #fff; padding: 25px; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+.btn-row { display: flex; gap: 10px; margin-top: 20px; }
+.btn-row button { flex: 1; padding: 16px; border: none; border-radius: 12px; font-size: 17px; font-weight: 800; cursor: pointer; color: white; transition: 0.1s; box-shadow: 0 4px 0 rgba(0,0,0,0.2); white-space: nowrap; }
+.btn-row button:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+.btn-gen { background: #2ecc71; } .btn-save { background: #3498db; } .btn-male { background: #3498db; } .btn-female { background: #ff7979; }
+.btn-share { background: #e67e22; }
+.lock-btn { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.05); border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px; z-index: 10; }
+.lock-btn.locked { background: #ff4757; color: white; opacity: 1; }
+.scene-main-card { border: 2px solid #f0f0f0; border-radius: 20px; padding: 30px 20px; background: #fff; text-align: center; margin-bottom: 30px; }
+.color-badge-box { width: 100%; height: 80px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 800; color: #fff; margin-bottom: 20px; position: relative; }
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; text-align: left; }
+.info-item { background: #f9f9f9; padding: 15px; border-radius: 14px; position: relative; min-height: 50px; display: flex; flex-direction: column; justify-content: center; }
+.info-label { font-size: 12px; color: #888; font-weight: 700; margin-bottom: 4px; display:block; }
+.info-value { font-size: 17px; font-weight: 700; color: #333; word-break: keep-all; }
+.line-area { padding: 25px; background: #f0fdf4; border-radius: 16px; border: 2px solid #dcfce7; margin-bottom: 20px; position: relative; }
+.line-text { font-size: 24px; font-weight: 900; color: #166534; word-break: keep-all; line-height: 1.4; }
+.mission-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
+.mission-card { background: #fff; border: 1px solid #eee; border-radius: 14px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+.mission-title-input { border: none; border-bottom: 1px dashed #ccc; font-size: 16px; font-weight: 800; color: #333; width: 150px; padding: 2px; background: transparent; }
+.mission-title-input:focus { outline: none; border-bottom: 2px solid #2ecc71; }
+.char-container { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+.char-img-frame { width: 100%; max-width: 300px; aspect-ratio: 1/1; border-radius: 20px; overflow: hidden; background: #f0f0f0; border: 5px solid #fff; box-shadow: 0 8px 20px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; position: relative; }
+.char-img { width: 100%; height: 100%; object-fit: cover; }
+.char-placeholder { color: #aaa; text-align: center; font-size: 14px; padding: 20px; }
+.char-info-box { text-align: center; width: 100%; }
+.char-name { font-size: 26px; font-weight: 900; color: #333; margin-bottom: 5px; }
+.char-job { font-size: 17px; color: #2ecc71; font-weight: 700; margin-bottom: 15px; }
+.char-desc { background: #f8f9fa; padding: 20px; border-radius: 14px; font-size: 16px; color: #555; line-height: 1.6; border: 1px solid #eee; word-break: keep-all; }
+.char-save-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-top: 30px; }
+.mini-char-card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; font-size: 13px; border:1px solid #eee; }
+.mini-char-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; background:#ddd; }
+.mini-char-info { padding: 10px; }
+.train-origin-text { 
+    font-size: 20px; font-weight: 700; color: #333; text-align: center; 
+    margin-bottom: 25px; word-break: keep-all; line-height: 1.5; 
+    min-height: 30px; padding: 15px; background: #e8f5e9; border-radius: 12px; border: 1px solid #c8e6c9;
+}
+.train-card { background: #fff; border: 2px solid #eee; border-radius: 20px; padding: 30px 15px; text-align: center; margin-bottom: 20px; }
+.train-main-text { font-size: 32px; font-weight: 900; color: #2ecc71; word-break: keep-all; line-height: 1.3; margin: 20px 0; }
+.train-nav { display: flex; justify-content: space-between; align-items: center; gap:10px; margin-top:20px;}
+.train-nav button { background: #333; color: #fff; padding: 12px 20px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; font-size: 15px; }
+.train-nav button:disabled { background: #ddd; cursor: not-allowed; }
+.record-box { margin-top: 10px; padding-top: 20px; border-top: 2px dashed #eee; display: none; }
+.pro-player-box { background: #f0fdf4; padding: 15px; border-radius: 12px; margin-bottom: 15px; text-align: left; }
+.player-label { font-size: 12px; font-weight: 800; color: #2ecc71; margin-bottom: 5px; display: block; }
+audio { width: 100%; height: 40px; }
+.mic-btn {
+    width: 80px; height: 80px; border-radius: 50%; background: #ff4757; color: white; border: none;
+    font-size: 34px; cursor: pointer; box-shadow: 0 4px 15px rgba(255, 71, 87, 0.5); display: flex; align-items: center; justify-content: center; margin: 0 auto;
+    transition: transform 0.1s;
+}
+.mic-btn:active { transform: scale(0.95); }
+.mic-btn.recording { animation: pulse 1.5s infinite; background: #333; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(255, 71, 87, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0); } }
+.result-box { margin-top: 20px; background: #fff; border-radius: 15px; border: 1px solid #e0e0e0; display: none; overflow:hidden; }
+.result-section { padding: 20px; border-bottom: 1px solid #f0f0f0; }
+.result-section:last-child { border-bottom: none; }
+.section-title { font-size: 14px; font-weight: 800; color: #555; margin-bottom: 10px; display: flex; align-items:center; gap:5px; }
+.time-info { margin-top:8px; font-size:14px; color:#555; font-weight:bold; }
+.time-val { color: #ff4757; font-weight:900; }
+.stt-text { font-size: 18px; color: #333; line-height: 1.4; background:#f9f9f9; padding:15px; border-radius:10px; border:1px solid #eee; margin-bottom:10px; font-weight:500; min-height: 40px;}
+.accuracy-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 13px; color: white; font-weight:bold; }
+.acc-good { background: #2ecc71; } .acc-bad { background: #ff6b6b; } .acc-soso { background: #f1c40f; } .acc-wait { background: #aaa; }
+.guide-text { font-size:12px; color:#999; margin-top:5px; }
+.past-display-card { border: 2px solid #ddd; border-radius: 20px; padding: 30px; background: #fff; min-height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; word-break: keep-all; margin-bottom:20px; }
+.past-role { font-size: 20px; font-weight: 900; color: #2ecc71; margin-bottom: 20px; }
+.past-lines { font-size: 18px; line-height: 1.8; color: #333; white-space: pre-wrap; font-family: 'KoPub Batang', serif; }
+@media (max-width: 600px) {
+    .section { padding: 20px; }
+    .info-grid { grid-template-columns: 1fr; }
+    .line-text { font-size: 22px; }
+    .train-main-text { font-size: 28px; }
+    .header-title { font-size: 18px; }
+    .logo-img { height: 35px; }
+    .btn-row { flex-wrap: wrap; }
+    .btn-row button { min-width: 45%; }
+}
+</style>
+</head>
+<body>
+
+<header>
+    <div class="header-content">
+        <img src="appdata/logo.png" class="logo-img" alt="울림연기학원" onerror="this.style.display='none';">
+        <h1 class="header-title">울림연기학원 연습 프로그램</h1>
+    </div>
+</header>
+
+<main class="wrapper">
+  <div class="tabs">
+    <div class="tab active" data-tab="tab1">🎭 상황극</div>
+    <div class="tab" data-tab="tab2">🎨 캐릭터</div>
+    <div class="tab" data-tab="tab3">🎤 발성훈련</div>
+    <div class="tab" data-tab="tab4">📄 기출문제</div>
+  </div>
+
+  <div class="tab-content active" id="tab1">
+    <div class="section">
+      <div class="scene-main-card">
+        <div class="color-badge-box" id="colorBg" style="background:#ddd;">
+            <span id="colorText">색상</span>
+            <button class="lock-btn" id="lock-color" onclick="toggleLock('color')">🔓</button>
+        </div>
+        <div class="info-grid">
+            <div class="info-item"><span class="info-label">장소</span><span class="info-value" id="placeDisplay">-</span><button class="lock-btn" id="lock-place" onclick="toggleLock('place')">🔓</button></div>
+            <div class="info-item"><span class="info-label">감정</span><span class="info-value" id="emotionDisplay">-</span><button class="lock-btn" id="lock-emotion" onclick="toggleLock('emotion')">🔓</button></div>
+            <div class="info-item"><span class="info-label">관계</span><span class="info-value" id="relationDisplay">-</span><button class="lock-btn" id="lock-relation" onclick="toggleLock('relation')">🔓</button></div>
+            <div class="info-item"><span class="info-label">행동</span><span class="info-value" id="actionDisplay">-</span><button class="lock-btn" id="lock-action" onclick="toggleLock('action')">🔓</button></div>
+        </div>
+        <div class="line-area">
+            <div class="line-text" id="lineDisplay">버튼을 눌러 시작하세요</div>
+            <button class="lock-btn" id="lock-line" onclick="toggleLock('line')">🔓</button>
+        </div>
+        <div class="btn-row">
+            <button class="btn-gen" id="btnGen" onclick="rollScene()">🎲 랜덤 뽑기</button>
+            <button class="btn-save" onclick="saveScene()">💾 저장하기</button>
+            <button class="btn-share" id="btnShare" onclick="shareSceneAsImage()">🖼️ 이미지/공유</button>
+        </div>
+      </div>
+      <h3 style="margin-top:30px; color:#555;">📋 저장된 미션</h3>
+      <div id="missionGrid" class="mission-grid"></div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab2">
+    <div class="section">
+      <div class="scene-main-card" id="characterCard">
+        <div class="char-container">
+            <div class="char-img-frame">
+                <span class="char-placeholder">뽑기 버튼을 눌러주세요</span>
+                <img id="charImgDisplay" class="char-img" src="" style="display:none;" onerror="this.style.display='none'; this.previousElementSibling.style.display='block';">
+            </div>
+            <div class="char-info-box">
+                <div id="charNameDisplay" class="char-name">캐릭터 이름</div>
+                <div id="charJobDisplay" class="char-job">직업</div>
+                <div id="charDescDisplay" class="char-desc">버튼을 눌러 캐릭터를 소환하세요.</div>
+            </div>
+        </div>
+        <div class="btn-row">
+            <button class="btn-male" onclick="rollCharacter('male')">👱‍♂️ 남자 뽑기</button>
+            <button class="btn-female" onclick="rollCharacter('female')">👩 여자 뽑기</button>
+            <button class="btn-save" onclick="saveCharacter()">⭐ 저장하기</button>
+            <button class="btn-share" onclick="shareCharacterAsImage()">🖼️ 이미지/공유</button>
+        </div>
+      </div>
+      <div id="charSaveGrid" class="char-save-grid"></div>
+    </div>
+  </div>
+
+ <div class="tab-content" id="tab3">
+    <div class="section">
+      <div class="train-origin-text" id="train_origin">버튼을 눌러 문장을 뽑아주세요</div>
+
+      <div class="btn-row" style="margin-bottom: 20px;">
+        <button class="btn-gen" style="flex: 2;" onclick="trainNew()">✨ 새 문장 뽑기</button>
+        <button class="btn-save" id="btnComplete" style="flex: 1; background: #2980b9; display: none;" onclick="completeTraining()">✅ 연습 완료</button>
+      </div>
+      
+      <button onclick="toggleCalendar()" style="width:100%; padding:10px; margin-top:5px; background:#ddd; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
+        📅 연습 기록 보기/숨기기
+      </button>
+
+      <div id="calendarDisplayArea" style="display: none;">
+        <h3 style="margin-top:20px; color:#555;">📅 연습 기록</h3>
+        <div id="calendarContainer" style="display: flex; justify-content: center; margin-top: 15px;">
+          </div>
+        <p style="font-size:12px; color:#aaa; text-align:center; margin-top:10px;">(O: 완료, X: 미완료)</p>
+      </div>
+      
+      <div id="train_card" class="train-card">
+        <p style="color:#aaa;">'새 문장 뽑기'를 눌러주세요.</p>
+      </div>
+
+      <div class="record-box" id="recordBox">
+        <div class="pro-player-box">
+            <span class="player-label">🎧 프로 성우 예시 듣기</span>
+            <audio id="proAudio" controls src=""></audio>
+        </div>
+
+        <div style="text-align:center; margin: 30px 0;">
+            <button id="micBtn" class="mic-btn" onclick="handleAction()">🎤</button>
+            <p id="recStatus" style="font-size:14px; color:#555; margin-top:10px; font-weight:bold;">버튼을 눌러 시작</p>
+        </div>
+
+        <div class="result-box" id="resultBox">
+            <div class="result-section" id="aiSection" style="display:none;">
+                <span class="section-title">🤖 AI 발음 체크</span>
+                <div class="stt-result-box">
+                    <div id="sttResult" class="stt-text">...</div>
+                    <span id="accBadge" class="accuracy-badge acc-wait">분석 대기중</span>
+                </div>
+                <p class="guide-text">* 정확도 30% 이상이면 통과입니다.</p>
+            </div>
+
+            <div class="result-section" id="recSection" style="display:none;">
+                <span class="section-title">📂 내 녹음 확인</span>
+                <audio id="myAudio" controls src="" style="width:100%;"></audio>
+                <div class="time-info">
+                    내 시간: <span id="myTime" class="time-val">0.0s</span> 
+                    <span style="font-weight:normal; color:#aaa; margin-left:10px;">(프로: <span id="proTime">0.0s</span>)</span>
+                </div>
+                <button class="btn-save" style="width:100%; margin-top:15px; background:#4CAF50;" onclick="shareVocalResult()">🔗 녹음 파일 공유하기</button>
+            </div>
+        </div>
+      </div>
+      
+      <div class="train-nav" style="margin-top:20px;">
+        <button id="btn_prev" onclick="trainPrev()" disabled>⬅ 이전</button>
+        <div id="step_indicator" style="font-weight:bold; color:#2ecc71; font-size:18px;">STEP 0</div>
+        <button id="btn_next" onclick="trainNext()" disabled>다음 ➡</button>
+      </div>
+    </div>
+  </div>
+
+<div id="recordDisplayBox" style="
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+    background: rgba(0,0,0,0.7); display: none; justify-content: center; 
+    align-items: center; z-index: 9999;
+">
+    <div style="
+        background: white; padding: 30px; border-radius: 20px; max-width: 400px; 
+        width: 90%; box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+    ">
+        <h3 id="recordDisplayDate" style="color: #2980b9; margin-top: 0;">기록 상세</h3>
+        <p id="recordDisplayContent" style="
+            background: #f8f8f8; padding: 15px; border-radius: 10px; 
+            font-size: 16px; line-height: 1.5; word-break: break-all;
+        ">선택된 날짜의 기록이 여기에 표시됩니다.</p>
+        <button onclick="document.getElementById('recordDisplayBox').style.display='none';" style="
+            width: 100%; padding: 10px; background: #e74c3c; color: white; border: none; 
+            border-radius: 10px; margin-top: 20px; cursor: pointer; font-weight: bold;
+        ">닫기</button>
+    </div>
+</div>
+<div class="tab-content" id="tab4">
+    <div class="section">
+      <div class="past-display-card">
+        <div id="pastRoleDisplay" class="past-role">버튼을 눌러 대본을 뽑아주세요</div>
+        <div id="pastLinesDisplay" class="past-lines">-</div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-male" onclick="rollPastQuestion('male')">👱‍♂️ 남자 기출 뽑기</button>
+        <button class="btn-female" onclick="rollPastQuestion('female')">👩 여자 기출 뽑기</button>
+      </div>
+
+      <div class="record-box" id="pastRecordBox" style="display:block; margin-top:30px; border-top:2px dashed #eee; padding-top:20px;">
+        <div style="text-align:center; margin-bottom: 20px;">
+            <p style="font-size:16px; font-weight:800; color:#333; margin-bottom:15px;">🎙️ 실전 녹음 연습</p>
+            <button id="pastMicBtn" class="mic-btn" onclick="togglePastRecord()">🎤</button>
+            <p id="pastRecStatus" style="font-size:14px; color:#555; margin-top:10px; font-weight:bold;">버튼을 눌러 녹음 시작</p>
+        </div>
+
+        <div class="result-box" id="pastResultBox" style="display:none;">
+            <div class="result-section">
+                <span class="section-title">📂 내 녹음 확인</span>
+                <audio id="pastAudio" controls src="" style="width:100%;"></audio>
+                <div class="time-info">
+                    녹음 시간: <span id="pastTime" class="time-val">0.0s</span>
+                </div>
+            </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<footer>
+    <b>상담전화</b> : 010-7372-5875 <br>
+    <b>주소</b> : 수원시 영통구 청명남로 28번길 2 아이텐텐빌딩 502호 <br>
+    Copyright © 울림연기학원. All rights reserved.
+</footer>
+---
 <script>
 // =========================================================================================
 // ⭐ 1. GAS URL 정의 (제공해주신 배포 주소로 설정 완료) ⭐
@@ -7,7 +311,7 @@
 const GET_API_URL = 'https://script.google.com/macros/s/AKfycbxGRdT0dmwKbMLSvwWvwqlmbxB-IUj7jvkXly4OTw2kkfm8Gu-siGt80hgsrqZQQbx38Q/exec'; 
 
 // 연습일지 GAS URL (데이터 전송 및 드라이브 업로드)
-const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx9x9lkbgjkWC6GxTgtJogcH6TaV0JwAczObuy1PoNjN8CVKuOOHMKcnfd1WlRPoBQBjQ/exec';
+const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxx3wLdWpBZ42mr8PDo9q2aCITO5kfeI7zGH2GHnXBDogYgwd_fYhsgc2jij120GbliZg/exec';
 
 
 // =========================================================================================
