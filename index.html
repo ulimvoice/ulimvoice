@@ -322,17 +322,19 @@ audio { width: 100%; height: 40px; }
 </footer>
 <script>
 
-// ⭐ 1. 새로운 GAS 인증 API URL (1단계에서 복사한 URL로 교체) ⭐
+// ⭐ 1. 학생부 GAS URL (인증 및 강사 정보 조회) ⭐
+// GET 요청을 처리하며, promptAndAuthenticate 함수에서 사용됩니다.
 const GET_API_URL = 'https://script.google.com/macros/s/AKfycbwF5bgM15euvMN0mxQOi_B3q6YQnDIbMHr0G1lGGeIuqQ2gJAzN2giQ5cBzrB82Dt24XQ/exec'; 
 
-// ⭐ 2. 기존 데이터 전송 GAS URL은 그대로 유지 (덮어쓰기 금지) ⭐
-const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzUZ5JUmeRTz3HU7r8fX4urykKE-wNH9VTwSsoovIJfBJOFOFIxOJvp6cfHikexZoI0Xg/exec';
+// ⭐ 2. 연습일지 GAS URL (데이터 전송 및 드라이브 업로드) ⭐
+// POST 요청을 처리하며, uploadAudioToDriveAndLog 함수에서 사용됩니다.
+const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzmcxw7-gNQF9Y6TG7jnWeZQGKyKfWfHou015PHVCrJXuwpgEy6ZNy5RywJ1bDhoAhBAA/exec';
 
-// 페이지 로드 시 학생 이름 및 인증 확인
-async function checkStudentName() {
-    if (!studentName || !phoneLast4 || instructorName === '기본') {
-        await promptAndAuthenticate();
-    }
+// --- 학생 이름 관리 변수 및 함수 수정 (이전에 안내된 내용과 동일) ---
+let studentName = localStorage.getItem('studentName') || '';
+let instructorName = localStorage.getItem('instructorName') || '기본';
+let phoneLast4 = localStorage.getItem('phoneLast4') || '';
+let currentFilenameBase = `${instructorName}_${studentName}_${phoneLast4}`;
     // 페이지 로드 시 파일명을 업데이트할 준비
     updateFilenameConstants();
 }
