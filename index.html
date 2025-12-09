@@ -1227,8 +1227,11 @@ async function shareVocalResult() {
 
     const originalText = document.getElementById('train_origin').textContent;
     const mimeType = lastRecordedBlob.type;
-    const extension = mimeType.split('/')[1] || 'mp4';
-    
+    let extension = mimeType.split('/')[1] || 'mp4'; // 1차 추출
+    // 부가 정보(예: ;codecs=opus)가 포함되어 있다면 해당 부분만 제거
+    if (extension.includes(';')) {
+        extension = extension.split(';')[0].trim();
+    }
     const sanitizedFilenamePart = currentFilenameBase.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_\uAC00-\uD7A3]/g, '');
     const filename = `울림_발성훈련_${sanitizedFilenamePart}.${extension}`;
     
