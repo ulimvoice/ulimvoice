@@ -472,10 +472,9 @@ async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeT
         action: action, 
         audioData: base64Data, 
         mimeType: mimeType,
-        // ⭐ GAS가 폴더 및 파일명 생성을 위해 사용할 데이터 ⭐
         fileNameBase: currentFilenameBase, 
         instructor: instructorName,
-        // ⭐ [추가] 폴더 ID를 POST 페이로드에 포함하여 GAS로 전송 ⭐
+        // ⭐ 이 값이 GAS로 전송되어 시트 탭을 찾고 폴더에 업로드합니다. ⭐
         instructorFolderId: instructorFolderId 
     };
 
@@ -1256,7 +1255,7 @@ async function shareVocalResult() {
     if (!base64Data) return;
 
     // 2. 구글 드라이브에 업로드 및 시트에 링크 기록
- await uploadAudioToDriveAndLog(
+await uploadAudioToDriveAndLog(
     currentTrainObj.id, 
     originalText.substring(0, 30) + "...", 
     base64Data, 
