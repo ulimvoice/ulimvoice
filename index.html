@@ -398,9 +398,13 @@ async function promptAndAuthenticate() {
             localStorage.setItem('studentName', studentName);
             localStorage.setItem('instructorName', instructorName);
             localStorage.setItem('phoneLast4', phoneLast4);
-			localStorage.setItem('instructorFolderId', instructorFolderId);
-            alert(`인증 성공: ${studentName}님 (${instructorName} 강사)`);
-        } else {
+			if (instructorFolderId && instructorFolderId.length > 10) {
+                 localStorage.setItem('instructorFolderId', instructorFolderId);
+            } else {
+                 // ID가 유효하지 않으면 기본값 저장 (나중에 디버깅 용이)
+                 localStorage.setItem('instructorFolderId', 'ERROR_ID_NOT_FOUND');
+                 instructorFolderId = ''; // 전역 변수 초기화
+            }
             alert(`인증 실패: ${result.message}\n게스트 모드로 진행합니다.`);
             studentName = "게스트"; instructorName = "기본"; phoneLast4 = "0000";
             localStorage.setItem('studentName', studentName);
