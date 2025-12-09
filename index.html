@@ -458,7 +458,7 @@ function blobToBase64(blob) {
 }
 
 // 녹음 파일을 드라이브에 업로드하고 시트에 링크를 기록하는 함수
-async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeType, action) {
+async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeType, action, instructorFolderId) {
     if (!GOOGLE_APP_SCRIPT_URL || GOOGLE_APP_SCRIPT_URL.includes('YOUR_DEPLOYED_GAS_URL_HERE')) {
         console.warn("Google Apps Script URL이 설정되지 않아 데이터 전송을 건너뜁니다.");
         return;
@@ -474,7 +474,9 @@ async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeT
         mimeType: mimeType,
         // ⭐ GAS가 폴더 및 파일명 생성을 위해 사용할 데이터 ⭐
         fileNameBase: currentFilenameBase, 
-        instructor: instructorName       
+        instructor: instructorName,
+        // ⭐ [추가] 폴더 ID를 POST 페이로드에 포함하여 GAS로 전송 ⭐
+        instructorFolderId: instructorFolderId 
     };
 
     try {
@@ -1254,13 +1256,15 @@ async function shareVocalResult() {
     if (!base64Data) return;
 
     // 2. 구글 드라이브에 업로드 및 시트에 링크 기록
-    await uploadAudioToDriveAndLog(
-        currentTrainObj.id, 
-        originalText.substring(0, 30) + "...", 
-        base64Data, 
-        mimeType,
-        "녹음 파일 업로드 및 링크 기록"
-    ); 
+ await uploadAudioToDriveAndLog(
+    currentTrainObj.id, 
+    originalText.substring(0, 30) + "...", 
+    base64Data, 
+    mimeType,
+    "녹음 파일 업로드 및 링크 기록",
+    // ⭐ [필수 추가] 전역 변수에 저장된 폴더 ID를 인수로 전달 ⭐
+    instructorFolderId 
+);
 
     alert("녹음 파일 업로드 및 시트 기록을 시도했습니다. 드라이브 폴더와 시트(F열)를 확인하세요.");
     
