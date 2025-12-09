@@ -12,7 +12,7 @@
 
 <style>
 /* ===========================
-   기본 스타일 (전체 유지)
+   기본 스타일 (생략)
    =========================== */
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f5f7fb; margin: 0; color: #333; display: flex; flex-direction: column; min-height: 100vh; }
 .wrapper { max-width: 1200px; width: 95%; margin: 0 auto; flex: 1; padding: 20px 0; }
@@ -111,7 +111,7 @@ audio { width: 100%; height: 40px; }
 
 <header>
     <div class="header-content">
-        <img src="/ulimvoice/appdata/logo.png" class="logo-img" alt="울림연기학원" onerror="this.style.display='none';">
+        <img src="appdata/logo.png" class="logo-img" alt="울림연기학원" onerror="this.style.display='none';">
         <h1 class="header-title">울림연기학원 연습 프로그램</h1>
     </div>
 </header>
@@ -301,28 +301,26 @@ audio { width: 100%; height: 40px; }
     <b>주소</b> : 수원시 영통구 청명남로 28번길 2 아이텐텐빌딩 502호 <br>
     Copyright © 울림연기학원. All rights reserved.
 </footer>
-
+---
 <script>
 // =========================================================================================
-// ⭐ 1. GAS URL 정의 (최신 주소로 설정 완료) ⭐
+// ⭐ 1. GAS URL 정의 (제공해주신 배포 주소로 설정 완료) ⭐
 // =========================================================================================
 
 // 학생부 GAS URL (인증 및 강사 정보 조회)
-const GET_API_URL = 'https://script.google.com/macros/s/AKfycbz5M-B0ogXDLiiV86KVPqRkmrIYJlSgWFf973t7MbPWM0wxjF5L8ubDWSZdlZazhe04sQ/exec'; 
+const GET_API_URL = 'https://script.google.com/macros/s/AKfycbwF5bgM15euvMN0mxQOi_B3q6YQnDIbMHr0G1lGGeIuqQ2gJAzN2giQ5cBzrB82Dt24XQ/exec'; 
 
-// ⭐⭐ 연습일지 GAS URL (사용자님이 최종 제공한 최신 주소로 교체) ⭐⭐
-const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyilq7vdKPcd1AphhPUFPE8Xmezr1Gq_GHK_9W3bcXka9kVQb2L5WrsVccRqkHLITmVjg/exec';
+// 연습일지 GAS URL (데이터 전송 및 드라이브 업로드)
+const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzmcxw7-gNQF9Y6TG7jnWeZQGKyKfWfHou015PHVCrJXuwpgEy6ZNy5RywJ1bDhoAhBAA/exec';
 
 
 // =========================================================================================
 // ⭐ 2. 학생/강사 정보 및 공통 유틸리티 ⭐
 // =========================================================================================
 
-let studentName = localStorage.getItem('studentName') || '게스트';
+let studentName = localStorage.getItem('studentName') || '';
 let instructorName = localStorage.getItem('instructorName') || '기본';
 let phoneLast4 = localStorage.getItem('phoneLast4') || '';
-// ⭐ instructorFolderId 변수 초기화 (인증 성공 시 여기에 폴더 ID 저장) ⭐
-let instructorFolderId = localStorage.getItem('instructorFolderId') || '13rOhOoNZv3s0n0UWmSx2U9_1lSXaH4_z';
 let currentFilenameBase = `${instructorName}_${studentName}_${phoneLast4}`; 
 
 function pick(a){return a[Math.floor(Math.random()*a.length)];}
@@ -338,7 +336,7 @@ function downloadImage(dataUrl, filename='울림_미션.png') {
     alert("이미지 파일 다운로드를 시작합니다!");
 }
 
-// 탭 로직 (생략)
+// 탭 로직
 document.querySelectorAll('.tab').forEach(t => {
     t.onclick = () => {
         document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
@@ -372,12 +370,9 @@ async function promptAndAuthenticate() {
         studentName = "게스트";
         instructorName = "기본";
         phoneLast4 = "0000";
-        // 게스트 모드 진입 시 instructorFolderId를 기본값으로 설정 및 저장
-        instructorFolderId = '13rOhOoNZv3s0n0UWmSx2U9_1lSXaH4_z'; // 기본 폴더 ID (GAS와 동일)
         localStorage.setItem('studentName', studentName);
         localStorage.setItem('instructorName', instructorName);
         localStorage.setItem('phoneLast4', phoneLast4);
-        localStorage.setItem('instructorFolderId', instructorFolderId); 
         return;
     }
     
@@ -396,34 +391,22 @@ async function promptAndAuthenticate() {
             instructorName = result.instructor;
             phoneLast4 = result.phoneLast4;
             
-            // ⭐⭐⭐ [핵심 추가] 폴더 ID 변수 및 localStorage 저장 ⭐⭐⭐
-            instructorFolderId = result.instructorFolderId; 
-            
             localStorage.setItem('studentName', studentName);
             localStorage.setItem('instructorName', instructorName);
             localStorage.setItem('phoneLast4', phoneLast4);
-            localStorage.setItem('instructorFolderId', instructorFolderId); // 폴더 ID 저장
-            
             alert(`인증 성공: ${studentName}님 (${instructorName} 강사)`);
         } else {
             alert(`인증 실패: ${result.message}\n게스트 모드로 진행합니다.`);
             studentName = "게스트"; instructorName = "기본"; phoneLast4 = "0000";
-            // 인증 실패 시에도 기본 폴더 ID 저장
-            instructorFolderId = '13rOhOoNZv3s0n0UWmSx2U9_1lSXaH4_z'; 
             localStorage.setItem('studentName', studentName);
             localStorage.setItem('instructorName', instructorName);
             localStorage.setItem('phoneLast4', phoneLast4);
-            localStorage.setItem('instructorFolderId', instructorFolderId); 
         }
     } catch (e) {
         alert(`인증 시스템 오류 발생: ${e.message}. 관리자에게 문의하세요.`);
         studentName = "게스트"; instructorName = "기본"; phoneLast4 = "0000";
-        // 통신 오류 시에도 기본 폴더 ID 저장
-        instructorFolderId = '13rOhOoNZv3s0n0UWmSx2U9_1lSXaH4_z'; 
         localStorage.setItem('studentName', studentName);
         localStorage.setItem('instructorName', instructorName);
-        localStorage.setItem('phoneLast4', phoneLast4);
-        localStorage.setItem('instructorFolderId', instructorFolderId); 
     }
 }
 
@@ -437,7 +420,7 @@ function updateFilenameConstants() {
 
 
 // =========================================================================================
-// ⭐ 4. GAS 통신 함수 (Base64 인코딩 및 업로드 로직 포함 - 최종 수정) ⭐
+// ⭐ 4. GAS 통신 함수 (Base64 인코딩 및 업로드 로직 포함) ⭐
 // =========================================================================================
 
 // Blob 데이터를 Base64 문자열로 변환하는 함수
@@ -458,9 +441,9 @@ function blobToBase64(blob) {
 }
 
 // 녹음 파일을 드라이브에 업로드하고 시트에 링크를 기록하는 함수
-async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeType, action, instructorFolderId) {
+async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeType, action) {
     if (!GOOGLE_APP_SCRIPT_URL || GOOGLE_APP_SCRIPT_URL.includes('YOUR_DEPLOYED_GAS_URL_HERE')) {
-        console.warn("Google Apps Script URL이 설정되지 않아 데이터 전송을 건너뛰겠습니다.");
+        console.warn("Google Apps Script URL이 설정되지 않아 데이터 전송을 건너뜁니다.");
         return;
     }
     
@@ -472,16 +455,15 @@ async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeT
         action: action, 
         audioData: base64Data, 
         mimeType: mimeType,
+        // ⭐ GAS가 폴더 및 파일명 생성을 위해 사용할 데이터 ⭐
         fileNameBase: currentFilenameBase, 
-        instructor: instructorName,
-        // ⭐⭐ [핵심] 폴더 ID를 POST 페이로드에 포함하여 GAS로 전송 ⭐⭐
-        instructorFolderId: instructorFolderId 
+        instructor: instructorName       
     };
 
     try {
         await fetch(GOOGLE_APP_SCRIPT_URL, {
             method: 'POST',
-            // ⭐ no-cors 옵션 제거 (GAS 통신 안정화) ⭐
+            mode: 'no-cors', 
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
@@ -494,7 +476,7 @@ async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeT
 // 파일 업로드 없이 메타데이터만 전송하는 함수 (연습 완료 버튼 용)
 async function sendToGoogleSheet(vocalId, sentenceText, action) {
     if (!GOOGLE_APP_SCRIPT_URL || GOOGLE_APP_SCRIPT_URL.includes('YOUR_DEPLOYED_GAS_URL_HERE')) {
-        console.warn("Google Apps Script URL이 설정되지 않아 데이터 전송을 건너뛰겠습니다.");
+        console.warn("Google Apps Script URL이 설정되지 않아 데이터 전송을 건너뜁니다.");
         return;
     }
     
@@ -503,14 +485,13 @@ async function sendToGoogleSheet(vocalId, sentenceText, action) {
         vocalId: vocalId,
         sentence: sentenceText,
         action: action, 
-        instructor: instructorName, // 시트 탭 이름 전달
-        instructorFolderId: instructorFolderId // 폴더 ID 전달
+        // 오디오 데이터는 포함하지 않음
     };
 
     try {
         await fetch(GOOGLE_APP_SCRIPT_URL, {
             method: 'POST',
-            // ⭐ no-cors 옵션 제거 ⭐
+            mode: 'no-cors', 
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
@@ -522,7 +503,7 @@ async function sendToGoogleSheet(vocalId, sentenceText, action) {
 
 
 // =========================================================================================
-// ⭐ 5. 탭 1 (상황극) 로직 (RollScene, SaveScene, ShareSceneAsImage) ⭐
+// ⭐ 5. 탭 1 (상황극) 로직 ⭐
 // =========================================================================================
 
 const defaultEtude = { colors: [], places: [], emotions: [], relations: [], actions: [], lines: [] };
@@ -540,9 +521,6 @@ function toggleLock(key){
 }
 
 async function rollScene(){
-    // ⭐⭐ 데이터 로드 실패 시 경고 ⭐⭐
-    if (eData.lines.length === 0) return alert("상황극 데이터(data.js)를 찾을 수 없습니다. 파일 경로를 확인해주세요.");
-
     const btn = document.getElementById('btnGen'); btn.disabled = true;
     const newC = locks.color ? currentData.c : pick(eData.colors || []);
     const newP = locks.place ? currentData.p : pick(eData.places || []);
@@ -654,55 +632,219 @@ function shareSceneAsImage() {
 // =========================================================================================
 
 let currentChar = null;
-const defaultCharData = { male: [], female: [] };
-const charData = (typeof characterData !== 'undefined') ? characterData : defaultCharData;
-
 function rollCharacter(gender) {
-    // ⭐⭐ 데이터 로드 실패 시 경고 ⭐⭐
-    if (charData.male.length === 0 && charData.female.length === 0) return alert("캐릭터 데이터(data.js)를 찾을 수 없습니다. 파일 경로를 확인해주세요.");
-
-    const list = charData[gender] || defaultCharData[gender];
+    // 임시 데이터 (이미지 없을때 대비)
+    const list = gender === 'male' ? [{name:"남성캐릭터", job:"직업", desc:"설명", id:1}] : [{name:"여성캐릭터", job:"직업", desc:"설명", id:1}];
     const char = pick(list); 
-    currentChar = char; 
+    currentChar = char; // 캐릭터 정보 저장
 
     const imgEl = document.getElementById("charImgDisplay");
     const placeholderEl = document.querySelector(".char-placeholder");
     
+    // 로컬 경로 테스트용 (랜덤 이미지 경로)
     const folder = gender === 'male' ? 'male' : 'female';
-    // 이미지 파일 경로 수정 (GitHub Pages)
-    const newSrc = `/ulimvoice/appdata/character/${folder}/${char.id}.jpg`; 
+    const newSrc = `appdata/character/${folder}/${Math.floor(Math.random()*10)+1}.jpg`; 
 
+    // 이미지 로드 완료 후 표시
     imgEl.onload = function(){
         placeholderEl.style.display = 'none';
         this.style.display = 'block';
     };
     imgEl.onerror = function(){
+        // 이미지 로드 실패 시 플레이스홀더 표시
         this.style.display = 'none';
         placeholderEl.style.display = 'block';
-        alert("캐릭터 이미지 파일을 로드하지 못했습니다.");
     };
     
-    imgEl.src = newSrc; 
+    imgEl.src = newSrc; // 새로운 이미지 경로 설정
     
-    document.getElementById("charNameDisplay").textContent = char.name;
-    document.getElementById("charJobDisplay").textContent = char.job;
-    document.getElementById("charDescDisplay").textContent = char.desc;
+    // 텍스트 랜덤
+    document.getElementById("charNameDisplay").textContent = "랜덤 캐릭터";
+    document.getElementById("charJobDisplay").textContent = "랜덤 직업";
+    document.getElementById("charDescDisplay").textContent = "새로운 캐릭터가 소환되었습니다.";
 }
 
-// ... (saveCharacter, shareCharacterAsImage 로직은 그대로 유지) ...
+// 수정된 saveCharacter() 함수: 이미지와 이름을 복제하여 저장 그리드에 추가
+function saveCharacter(){
+    const charName = document.getElementById("charNameDisplay").textContent;
+    const charImgSrc = document.getElementById("charImgDisplay").src;
+    const isImageVisible = document.getElementById("charImgDisplay").style.display !== 'none';
+    
+    if (charName === "캐릭터 이름") {
+        return alert("먼저 '남자 뽑기' 또는 '여자 뽑기'를 진행해주세요!");
+    }
+    
+    const div = document.createElement("div"); div.className="mini-char-card";
+    
+    let imageHtml;
+    if (isImageVisible && charImgSrc && charImgSrc.includes('appdata/character')) {
+        // 이미지가 정상적으로 표시될 때만 mini-char-img를 사용
+        imageHtml = `<img src="${charImgSrc}" class="mini-char-img" alt="${charName}">`;
+    } else {
+        // 이미지가 없거나 로드되지 않았을 때는 회색 배경 유지
+        imageHtml = `<div class="mini-char-img" style="display:flex; justify-content:center; align-items:center; color:#fff; font-size:10px;">이미지 없음</div>`;
+    }
+
+    div.innerHTML = `
+        ${imageHtml}
+        <div class="mini-char-info">
+            ${charName}
+        </div>
+    `;
+    
+    document.getElementById("charSaveGrid").prepend(div);
+}
+
+// 캐릭터 미션을 이미지로 저장 및 공유하는 함수
+function shareCharacterAsImage() {
+    const targetElement = document.querySelector('#characterCard');
+    const charName = document.getElementById("charNameDisplay").textContent;
+
+    if (charName === "캐릭터 이름") {
+        return alert("먼저 '남자 뽑기' 또는 '여자 뽑기'를 진행해야 이미지 저장이 가능합니다!");
+    }
+    
+    const charImg = document.getElementById("charImgDisplay");
+    
+    // 이미지가 아직 로드되지 않았으면 대기 (안전성 강화)
+    if(charImg.style.display === 'none' || !charImg.complete) {
+        return alert("이미지가 아직 로드되지 않았습니다. 잠시 후 다시 시도해주세요.");
+    }
+    
+    // html2canvas 실행
+    html2canvas(targetElement, {
+        allowTaint: true,
+        useCORS: true,
+        scale: 2
+    }).then(canvas => {
+        const imageURL = canvas.toDataURL("image/png");
+        const filename = `울림_캐릭터_미션_${charName}.png`;
+
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([], filename, {type: 'image/png'})] })) {
+            // Web Share API 지원 시 공유
+            canvas.toBlob(function(blob) {
+                const filesArray = [new File([blob], filename, {type: 'image/png'})];
+                navigator.share({
+                    files: filesArray,
+                    title: '울림연기학원 캐릭터 미션',
+                    text: `오늘의 캐릭터 미션 (${charName})을 공유합니다! 🎨`
+                })
+                .catch(error => {
+                    console.warn('Sharing failed, attempting download:', error);
+                    downloadImage(imageURL, filename);
+                });
+            }, 'image/png');
+        } else {
+            // 지원하지 않을 시 다운로드
+            downloadImage(imageURL, filename);
+        }
+    }).catch(error => {
+        console.error('HTML2Canvas Error:', error);
+        alert('이미지 캡처 중 오류가 발생했습니다. (서버 환경에서 실행했는지 확인해주세요)');
+    });
+}
 
 
 // =========================================================================================
-// ⭐ 7. 탭 3 (발성훈련) 로직 (shareVocalResult 호출 수정) ⭐
+// ⭐ 7. 탭 3 (발성훈련) 로직 ⭐
 // =========================================================================================
 
 let step=0, currentTrainObj=null;
 let mediaRecorder, audioChunks = [], isRecording = false, startTime;
 let recognition;
 let recognitionResult = "";
-let lastRecordedBlob = null; 
+let lastRecordedBlob = null; // 녹음된 오디오 Blob 저장 변수
 
-// ... (기존의 모든 발성훈련 로직은 그대로 유지) ...
+// 0. 시스템 진단 (기존 코드 유지)
+const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+const isSpeechSupported = ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
+
+// 1. 유사도 계산 (기존 코드 유지)
+function getSimilarity(s1, s2) {
+    const longer = s1.length > s2.length ? s1 : s2;
+    const shorter = s1.length > s2.length ? s2 : s1;
+    if (longer.length === 0) return 1.0;
+    return (longer.length - editDistance(longer, shorter)) / parseFloat(longer.length);
+}
+function editDistance(s1, s2) {
+    s1 = s1.toLowerCase(); s2 = s2.toLowerCase();
+    const costs = new Array();
+    for (let i = 0; i <= s1.length; i++) {
+        let lastValue = i;
+        for (let j = 0; j <= s2.length; j++) {
+            if (i == 0) costs[j] = j;
+            else {
+                if (j > 0) {
+                    let newValue = costs[j - 1];
+                    if (s1.charAt(i - 1) != s2.charAt(j - 1)) newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
+                    costs[j - 1] = lastValue;
+                    lastValue = newValue;
+                }
+            }
+        }
+        if (i > 0) costs[s2.length] = lastValue;
+    }
+    return costs[s2.length];
+}
+
+// 2. 음성인식 초기화 (기존 코드 유지)
+if (isSpeechSupported && !isIOS) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.lang = 'ko-KR';
+    recognition.interimResults = false;
+    recognition.continuous = false; 
+
+    recognition.onresult = function(event) {
+        recognitionResult = event.results[0][0].transcript;
+        updateRecognitionUI(); 
+    };
+    recognition.onerror = function(event) { console.log("STT error:", event.error); };
+}
+
+function updateRecognitionUI() {
+    if(recognitionResult) {
+        document.getElementById('sttResult').textContent = `"${recognitionResult}"`;
+        const targetClean = currentTrainObj.text.replace(/[^가-힣]/g, '');
+        const inputClean = recognitionResult.replace(/[^가-힣]/g, '');
+        const similarity = getSimilarity(targetClean, inputClean);
+        const badge = document.getElementById('accBadge');
+        if (similarity >= 0.7) { 
+            badge.className = 'accuracy-badge acc-good'; badge.textContent = '완벽합니다! (70%↑)';
+        } else if (similarity >= 0.3) { 
+            badge.className = 'accuracy-badge acc-soso'; badge.textContent = '통과 (30%↑)';
+        } else {
+            badge.className = 'accuracy-badge acc-bad'; badge.textContent = '다시 시도';
+        }
+    }
+}
+
+function extractVowels(s){
+    const V=["ㅏ","ㅐ","ㅑ","ㅒ","ㅓ","ㅔ","ㅕ","ㅖ","ㅗ","ㅘ","ㅙ","ㅚ","ㅛ","ㅜ","ㅝ","ㅞ","ㅟ","ㅠ","ㅡ","ㅢ","ㅣ"];
+    let out="";
+    for(let ch of s){
+        const code = ch.charCodeAt(0);
+        if(code<0xac00||code>0xd7a3) { out+=ch; continue; }
+        out+=V[Math.floor((code-0xac00)/28)%21];
+    }
+    return out;
+}
+
+// 훈련 데이터 및 로컬 저장소 관련 함수
+const defaultVocalData = [{ id: 1, text: "데이터 로딩중...", pron: "...", audio: "" }];
+let trainDataList = (typeof vocalData !== 'undefined') ? vocalData : defaultVocalData;
+
+// [1] 저장된 문장 ID를 로컬 스토리지에서 불러옴
+function getSavedVocalIds() {
+    const ids = localStorage.getItem('savedVocalIds');
+    return ids ? new Set(JSON.parse(ids)) : new Set();
+}
+
+// [2] 출석 및 문장 기록을 로컬 스토리지에서 불러옴 (Map 형태로 반환)
+function getVocalRecords() {
+    const records = localStorage.getItem('vocalRecords');
+    return records ? new Map(JSON.parse(records)) : new Map();
+}
 
 // [3] 문장 저장 및 연습 완료 기록 (✅ 연습 완료 버튼 클릭 시)
 function completeTraining() {
@@ -712,31 +854,386 @@ function completeTraining() {
         return alert("STEP 7(최종 녹음)까지 진행하고 문장을 뽑은 상태에서 눌러주세요.");
     }
     
-    // ... (로컬 저장소 기록 로직 유지) ...
+    // 1. 문장 ID를 저장 (다음 뽑기 시 제외)
+    const savedIds = getSavedVocalIds();
+    const currentId = currentTrainObj.id;
+    savedIds.add(currentId);
+    localStorage.setItem('savedVocalIds', JSON.stringify(Array.from(savedIds)));
     
+    // 2. 출석 및 문장 기록 저장 (날짜: 문장)
+    const records = getVocalRecords();
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    if (records.has(today)) {
+        alert("오늘은 이미 연습을 완료했습니다!");
+        return;
+    }
+
+ records.set(today, { 
+        id: currentTrainObj.id, 
+        text: currentTrainObj.text.substring(0, 30) + "...", 
+        completed: true 
+    });
+    localStorage.setItem('vocalRecords', JSON.stringify(Array.from(records.entries())));
+
     // ⭐ 구글 시트로 연습 완료 정보 전송 ⭐
+    // 파일 업로드 없이 메타데이터만 전송
     sendToGoogleSheet(currentTrainObj.id, currentTrainObj.text.substring(0, 30) + "...", "연습 완료 체크"); 
 
     alert(`[${today}] 연습을 완료하고 문장을 저장했습니다! (다음 뽑기 시 제외됨)`);
     
-    // ... (나머지 로직 유지) ...
+    // 완료 후 달력 펼치기
+    const calendarArea = document.getElementById('calendarDisplayArea');
+    if (calendarArea.style.display === 'none') {
+        toggleCalendar(); 
+    } else {
+        renderCalendar(); 
+    }
+    
+    // 완료 후 버튼 숨기기
+    btnComplete.style.display = 'none';
 }
+
 
 function trainNew(){
     if(typeof vocalData !== 'undefined') trainDataList = vocalData;
     
-    // ⭐⭐ 데이터 로드 실패 시 경고 ⭐⭐
-    if (trainDataList.length === 1 && trainDataList[0].text === "데이터 로딩중...") {
-        return alert("문장 데이터(data.js)를 찾을 수 없습니다. 파일 경로를 확인해주세요.");
+    // 새 문장 뽑을 때 달력 숨기기
+    document.getElementById('calendarDisplayArea').style.display = 'none'; 
+    
+    const savedIds = getSavedVocalIds();
+    
+    const availableData = trainDataList.filter(item => !savedIds.has(item.id));
+
+    if (availableData.length === 0) {
+        if (trainDataList.length > 0) {
+            return alert("모든 문장(" + trainDataList.length + "개)을 연습했습니다! [F12] 개발자 도구 > Application > Local Storage 에서 'savedVocalIds'를 삭제해야 초기화됩니다.");
+        }
+        return alert("문장 데이터(appdata/vocalization/data.js)를 찾을 수 없습니다.");
     }
     
-    // ... (나머지 trainNew 로직 유지) ...
+    currentTrainObj = pick(availableData); // 제외된 문장 중에서 랜덤으로 뽑기
+    step=1;
+    // 새 문장 뽑으면 버튼 활성화 및 UI 렌더링 시작
+    document.getElementById("btn_prev").disabled = true; // 이전 버튼 비활성화 (STEP 1)
+    document.getElementById("btn_next").disabled = false; // 다음 버튼 활성화
+    
+    document.getElementById("train_origin").textContent = currentTrainObj.text; 
+    document.getElementById("recordBox").style.display = 'none';
+    const proAudio = document.getElementById("proAudio");
+    proAudio.src = currentTrainObj.audio || ""; 
+    proAudio.onloadedmetadata = function() {
+        document.getElementById("proTime").textContent = proAudio.duration.toFixed(1) + "s";
+    };
+    lastRecordedBlob = null; // 새 문장 뽑을 때 녹음 초기화
+    renderTrain();
 }
+
+// 단계 이동 함수
+function trainPrev(){ 
+    if(step>1) {
+        step--; 
+        renderTrain();
+    } 
+}
+function trainNext(){ 
+    if(step<7) {
+        step++; 
+        renderTrain();
+    }
+}
+
+// 버튼 활성화/비활성화 및 UI 렌더링
+function renderTrain(){
+    const box = document.getElementById("train_card");
+    const ind = document.getElementById("step_indicator");
+    const btnComplete = document.getElementById('btnComplete'); 
+    
+    const btnPrev = document.getElementById("btn_prev");
+    const btnNext = document.getElementById("btn_next");
+
+    const T=["","STEP1 모음을 호흡으로","STEP2 모음을 소리로","STEP3 자음과 함께 호흡으로 읽기","STEP4 자음과 함께 소리내어 읽기","STEP5 자연스럽게 호흡으로 읽기", "STEP6 발음 AI 체크","STEP7 최종 녹음"];
+    const D=["","모음 입모양 신경쓰며 호흡으로 한글자씩 읽기","모음 입모양 신경쓰며 소리내어 한글자씩 읽기","자음과 함께 입모양을 신경쓰며 한글자씩 호흡으로 읽기","자음과 함께 입모양을 신경쓰며 한글자씩 소리내어로 읽기","자연스럽게 한문장을 한 호흡으로 읽기","AI가 발음 정확도를 평가합니다.","최종 결과물을 녹음하고 들어보세요."];
+
+    if (!currentTrainObj) {
+        step = 0;
+        ind.textContent="STEP 0";
+        box.innerHTML=`<p style="color:#aaa;">'새 문장 뽑기'를 눌러주세요.</p>`;
+        btnPrev.disabled = true;
+        btnNext.disabled = true;
+        btnComplete.style.display = 'none';
+        return;
+    }
+
+    let showText = "";
+    if (step <= 2) { showText = extractVowels(currentTrainObj.text); }
+    else if (step <= 7) { showText = currentTrainObj.pron; } 
+
+    ind.textContent="STEP "+step;
+    box.innerHTML=
+        `<div style='font-size:20px; font-weight:900; margin-bottom:10px;'>${T[step]}</div>
+         <div style='color:#666; margin-bottom:20px; font-size:15px;'>${D[step]}</div>
+         <div class='train-main-text'>${showText}</div>`;
+
+    btnPrev.disabled = (step === 1);
+    btnNext.disabled = (step === 7);
+
+    const recBox = document.getElementById("recordBox");
+    const micBtn = document.getElementById("micBtn");
+    const recStatus = document.getElementById("recStatus");
+    const aiSection = document.getElementById("aiSection");
+    const recSection = document.getElementById("recSection");
+    
+    btnComplete.style.display = (step === 7) ? 'flex' : 'none';
+
+    if(step === 6) {
+        recBox.style.display = 'block';
+        micBtn.textContent = '🗣️';
+        recStatus.textContent = "버튼을 눌러 AI 체크 시작";
+        aiSection.style.display = 'block';
+        recSection.style.display = 'none';
+        document.getElementById("resultBox").style.display = 'none';
+    } else if (step === 7) {
+        recBox.style.display = 'block';
+        micBtn.textContent = '🎤';
+        recStatus.textContent = "버튼을 눌러 녹음 시작";
+        aiSection.style.display = 'none';
+        recSection.style.display = 'block';
+        document.getElementById("resultBox").style.display = 'none';
+    } else {
+        recBox.style.display = 'none';
+    }
+}
+
+// 달력 펼치기/숨기기 토글 함수
+function toggleCalendar() {
+    const calendarArea = document.getElementById('calendarDisplayArea');
+    if (calendarArea.style.display === 'none') {
+        renderCalendar(); 
+        calendarArea.style.display = 'block';
+    } else {
+        calendarArea.style.display = 'none'; 
+    }
+}
+
+
+// 달력 렌더링 로직
+function renderCalendar(year, month) {
+    const today = new Date();
+    const currentYear = year || today.getFullYear();
+    const currentMonth = month !== undefined ? month : today.getMonth(); 
+    
+    const firstDay = new Date(currentYear, currentMonth, 1);
+    const lastDay = new Date(currentYear, currentMonth + 1, 0);
+    const numDays = lastDay.getDate();
+    const startDayOfWeek = firstDay.getDay(); 
+    
+    const records = getVocalRecords(); 
+    const container = document.getElementById('calendarContainer');
+    container.innerHTML = '';
+    
+    let table = `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <button onclick="renderCalendar(${currentYear}, ${currentMonth === 0 ? 11 : currentMonth - 1})" style="background:#ddd; border:none; padding:5px 10px; border-radius:5px;">⬅</button>
+        <h2 style="font-size: 18px; margin: 0;">${currentYear}. ${currentMonth + 1}</h2>
+        <button onclick="renderCalendar(${currentYear}, ${currentMonth === 11 ? 0 : currentMonth + 1})" style="background:#ddd; border:none; padding:5px 10px; border-radius:5px;">➡</button>
+    </div>`;
+
+    table += '<table style="width: 100%; border-collapse: collapse; text-align: center; font-size: 15px;">';
+    table += '<thead><tr style="background: #eee; height: 35px;"><th>일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th></tr></thead><tbody><tr>';
+    
+    let day = 1;
+    let cellCount = 0;
+
+    for (let i = 0; i < startDayOfWeek; i++) {
+        table += '<td style="border: 1px solid #eee; padding: 5px;"></td>';
+        cellCount++;
+    }
+
+    for (day = 1; day <= numDays; day++) {
+        if (cellCount % 7 === 0 && cellCount !== 0) {
+            table += '</tr><tr>';
+        }
+        
+        const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        
+        const currentDate = new Date(currentYear, currentMonth, day);
+        const todayKey = today.toISOString().slice(0, 10);
+        
+        const isToday = dateKey === todayKey;
+        const isPastOrToday = currentDate <= today || isToday; 
+
+        let statusText = day;
+        let background = '#fff';
+        let title = dateKey;
+        let onClickEvent = '';
+        
+        const record = records.get(dateKey); 
+
+        if (record) {
+            statusText = `<span style="font-weight:900; color:#2ecc71;">O</span>`;
+            background = '#e8f5e9';
+            title += `\n[완료] 문장:\n${record.text}`;
+            onClickEvent = `onclick="displayDayRecord('${dateKey}', true)" style="cursor: pointer;"`;
+        } else if (isPastOrToday && !isToday) {
+            statusText = `<span style="font-weight:900; color:#ff6b6b;">X</span>`;
+            background = '#fde9e9';
+            title += '\n[미완료]';
+            onClickEvent = `onclick="displayDayRecord('${dateKey}', false)" style="cursor: pointer;"`; 
+        }
+
+        if (isToday) {
+            background = record ? '#d0e9ff' : '#fffbe5'; 
+            statusText = statusText === day ? `<span style="font-weight:900; color:#2980b9;">${day}</span>` : statusText;
+            onClickEvent = `onclick="displayDayRecord('${dateKey}', ${!!record})" style="cursor: pointer;"`; 
+        }
+
+        table += `<td ${onClickEvent} style="border: 1px solid #eee; padding: 5px; background: ${background};" title="${title}">`;
+        table += statusText;
+        table += '</td>';
+        
+        cellCount++;
+    }
+
+    while (cellCount % 7 !== 0) {
+        table += '<td style="border: 1px solid #eee; padding: 5px;"></td>';
+        cellCount++;
+    }
+    
+    table += '</tr></tbody></table>';
+    
+    container.innerHTML = table;
+}
+
+// 문장 상세 기록 팝업
+function displayDayRecord(dateKey, isCompleted) {
+    const records = getVocalRecords();
+    const record = records.get(dateKey);
+    const box = document.getElementById('recordDisplayBox');
+    const dateEl = document.getElementById('recordDisplayDate');
+    const contentEl = document.getElementById('recordDisplayContent');
+    
+    dateEl.textContent = `${dateKey} 연습 기록`;
+
+    if (isCompleted && record) {
+        contentEl.innerHTML = `
+            <p style="font-weight: bold; color: #2ecc71;">✅ 연습 완료</p>
+            <p><strong>문장 내용:</strong> "${record.text}..."</p>
+            <p style="font-size: 13px; color: #777;">(녹음 파일은 최종 녹음 시에만 일시적으로 저장됩니다.)</p>
+        `;
+    } else {
+        contentEl.innerHTML = `
+            <p style="font-weight: bold; color: #ff6b6b;">${isCompleted ? '❌ 기록 없음' : '❌ 미완료'}</p>
+            <p>해당 날짜에 연습을 완료한 기록이 없습니다. ${dateKey}는 건너뛰거나 연습하지 않은 날입니다.</p>
+        `;
+    }
+
+    box.style.display = 'flex'; // 팝업 표시
+}
+
+// AI 체크 또는 녹음 실행을 분기하는 함수
+async function handleAction() {
+    if(step === 6) { startRecognition(); }
+    else if (step === 7) { toggleRecord(); }
+}
+function startRecognition() {
+    if(!isSpeechSupported) return alert("이 기기에서는 AI 인식을 지원하지 않습니다.");
+    if(!isRecording) {
+        isRecording = true;
+        recognitionResult = "";
+        try { recognition.start(); } catch(e) { }
+        const btn = document.getElementById('micBtn');
+        btn.textContent = '⬛';
+        btn.classList.add('recording');
+        document.getElementById('recStatus').textContent = "듣는 중...";
+        document.getElementById('resultBox').style.display='block';
+        document.getElementById('sttResult').textContent = "...";
+        document.getElementById('accBadge').className = 'accuracy-badge acc-wait';
+        document.getElementById('accBadge').textContent = '분석중...';
+    } else {
+        try { recognition.stop(); } catch(e) { }
+        isRecording = false;
+        resetBtn();
+    }
+}
+
+function resetBtn() {
+    const btn = document.getElementById('micBtn');
+    btn.classList.remove('recording');
+    if(step === 6) {
+        btn.textContent = '🗣️';
+        document.getElementById('recStatus').textContent = "버튼을 눌러 AI 체크 시작";
+    } else {
+        btn.textContent = '🎤';
+        document.getElementById('recStatus').textContent = "버튼을 눌러 녹음 시작";
+    }
+}
+async function toggleRecord() {
+    if(window.location.protocol === 'file:') return alert("서버 환경(http/https)에서만 마이크 사용 및 파일 공유가 가능합니다.");
+    if (!isRecording) {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            
+            const options = { mimeType: 'audio/mp4' };
+            if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                 options.mimeType = 'audio/webm'; 
+            }
+            mediaRecorder = new MediaRecorder(stream, options);
+
+            audioChunks = [];
+            mediaRecorder.start();
+            startTime = Date.now();
+            isRecording = true;
+            const btn = document.getElementById('micBtn');
+            btn.textContent = '⬛'; 
+            btn.classList.add('recording');
+            document.getElementById('recStatus').textContent = "녹음 중...";
+            document.getElementById('resultBox').style.display='none'; 
+            mediaRecorder.addEventListener("dataavailable", e => audioChunks.push(e.data));
+            mediaRecorder.addEventListener("stop", () => {
+                const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+                lastRecordedBlob = audioBlob; 
+                const audioUrl = URL.createObjectURL(audioBlob);
+                const audio = document.getElementById('myAudio');
+                audio.src = audioUrl;
+                const duration = (Date.now() - startTime) / 1000;
+                document.getElementById('myTime').textContent = duration.toFixed(1) + "s";
+                document.getElementById('resultBox').style.display='block'; 
+                stream.getTracks().forEach(track => track.stop());
+            });
+        } catch (e) { alert("마이크 권한 필요"); }
+    } else {
+        if(mediaRecorder) mediaRecorder.stop();
+        isRecording = false;
+        resetBtn();
+    }
+}
+if (isSpeechSupported) { recognition.onend = function() { isRecording = false; resetBtn(); }; }
 
 // 발성훈련 녹음 파일 공유 함수 (드라이브 업로드 포함)
 async function shareVocalResult() {
-    // ... (상단 필수 검증 로직 유지) ...
+    if (!lastRecordedBlob || !currentTrainObj) {
+        return alert("먼저 STEP 7에서 녹음을 완료하고 문장을 뽑아야 공유할 수 있습니다.");
+    }
     
+    // 인증 확인 및 파일명 베이스 업데이트
+    if (!currentFilenameBase || instructorName === '기본') {
+         await promptAndAuthenticate();
+         if (instructorName === '기본') return alert("인증 후 다시 시도해주세요. 인증 없이는 드라이브 업로드가 제한됩니다.");
+    }
+
+    const originalText = document.getElementById('train_origin').textContent;
+    const mimeType = lastRecordedBlob.type;
+    const extension = mimeType.split('/')[1] || 'mp4';
+    
+    const sanitizedFilenamePart = currentFilenameBase.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_\uAC00-\uD7A3]/g, '');
+    const filename = `울림_발성훈련_${sanitizedFilenamePart}.${extension}`;
+    
+    // 1. 녹음 파일을 Base64로 인코딩 (GAS 전송 준비)
+    const base64Data = await blobToBase64(lastRecordedBlob).catch(err => {
+        console.error("Base64 Encoding Failed:", err);
+        alert(`파일 인코딩 중 오류가 발생했습니다. (${err.message}) 전송을 중단합니다.`);
+        return null;
+    });
+
     if (!base64Data) return;
 
     // 2. 구글 드라이브에 업로드 및 시트에 링크 기록
@@ -745,19 +1242,118 @@ async function shareVocalResult() {
         originalText.substring(0, 30) + "...", 
         base64Data, 
         mimeType,
-        "녹음 파일 업로드 및 링크 기록",
-        // ⭐⭐ [최종 수정] 폴더 ID를 인수로 전달합니다. ⭐⭐
-        instructorFolderId 
+        "녹음 파일 업로드 및 링크 기록"
     ); 
 
     alert("녹음 파일 업로드 및 시트 기록을 시도했습니다. 드라이브 폴더와 시트(F열)를 확인하세요.");
     
-    // ... (하단 공유 로직은 그대로 유지) ...
+    // 3. (기존) 웹 공유 또는 다운로드 로직
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([], filename, {type: mimeType})] })) {
+        
+        const audioFile = new File([lastRecordedBlob], filename, { type: mimeType });
+
+        navigator.share({
+            files: [audioFile],
+            title: '울림연기학원 발성훈련 결과',
+            text: `[울림연기학원 발성훈련 결과]\n\n📄 원본 문장:\n"${originalText}"\n\n🎤 나의 녹음 파일 첨부`,
+        })
+        .catch(error => {
+            console.error('Sharing failed:', error);
+            // 공유 실패 시 다운로드로 대체
+            const audioUrl = URL.createObjectURL(lastRecordedBlob);
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = audioUrl;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            alert(`Web Share API 공유에 실패했습니다. 파일을 다운로드합니다: ${filename}`);
+        });
+    } else {
+        const audioUrl = URL.createObjectURL(lastRecordedBlob);
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = audioUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
 }
-// ... (나머지 모든 JS 로직은 그대로 유지) ...
 
+/* --- [탭 4] 기출문제 로직 --- */
+const defaultPast = { male: [], female: [] };
+const pData = (typeof pastQuestionData !== 'undefined') ? pastQuestionData : defaultPast;
 
-// ⭐ window.onload 함수는 그대로 유지하며, 이전에 누락되었던 부분들만 상단에 보강했습니다. ⭐
+function rollPastQuestion(gender) {
+    if (!pData[gender] || pData[gender].length === 0) {
+        return alert("해당 성별의 기출문제가 없습니다.");
+    }
+    const q = pick(pData[gender]);
+    document.getElementById("pastRoleDisplay").textContent = q.role;
+    document.getElementById("pastLinesDisplay").textContent = q.lines;
+}
+/* --- [탭 4] 기출문제 녹음 기능 --- */
+let pastMediaRecorder, pastAudioChunks = [], isPastRecording = false, pastStartTime;
+
+async function togglePastRecord() {
+    if(window.location.protocol === 'file:') return alert("브라우저 보안 정책상 서버 환경(http/https)에서만 마이크 사용이 가능합니다.");
+    
+    const btn = document.getElementById('pastMicBtn');
+    const status = document.getElementById('pastRecStatus');
+    const resultBox = document.getElementById('pastResultBox');
+    const timeDisplay = document.getElementById('pastTime');
+    const audioEl = document.getElementById('pastAudio');
+
+    if (!isPastRecording) {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            
+            const options = { mimeType: 'audio/mp4' };
+            if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                 options.mimeType = 'audio/webm'; 
+            }
+            pastMediaRecorder = new MediaRecorder(stream, options);
+
+            pastAudioChunks = [];
+            
+            pastMediaRecorder.start();
+            pastStartTime = Date.now();
+            isPastRecording = true;
+
+            btn.textContent = '⬛'; 
+            btn.classList.add('recording');
+            status.textContent = "녹음 중...";
+            resultBox.style.display = 'none'; 
+
+            pastMediaRecorder.addEventListener("dataavailable", e => pastAudioChunks.push(e.data));
+
+            pastMediaRecorder.addEventListener("stop", () => {
+                const audioBlob = new Blob(pastAudioChunks, { type: pastMediaRecorder.mimeType });
+                const audioUrl = URL.createObjectURL(audioBlob);
+                audioEl.src = audioUrl;
+
+                const duration = (Date.now() - pastStartTime) / 1000;
+                timeDisplay.textContent = duration.toFixed(1) + "s";
+                
+                resultBox.style.display = 'block'; 
+                
+                stream.getTracks().forEach(track => track.stop());
+            });
+
+        } catch (e) {
+            console.error(e);
+            alert("마이크 권한이 필요합니다.");
+        }
+    } else {
+        if(pastMediaRecorder) pastMediaRecorder.stop();
+        isPastRecording = false;
+
+        btn.textContent = '🎤';
+        btn.classList.remove('recording');
+        status.textContent = "버튼을 눌러 녹음 시작";
+    }
+}
+// 페이지 로드 시 달력과 현재 문장 초기화
 window.onload = function() {
     checkStudentName();
 
