@@ -398,6 +398,7 @@ async function promptAndAuthenticate() {
             localStorage.setItem('studentName', studentName);
             localStorage.setItem('instructorName', instructorName);
             localStorage.setItem('phoneLast4', phoneLast4);
+			localStorage.setItem('instructorFolderId', instructorFolderId);
             alert(`인증 성공: ${studentName}님 (${instructorName} 강사)`);
         } else {
             alert(`인증 실패: ${result.message}\n게스트 모드로 진행합니다.`);
