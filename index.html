@@ -366,59 +366,61 @@ async function checkStudentName() {
 
 // 인증 프롬프트 및 GAS 인증 요청 함수
 async function promptAndAuthenticate() {
-    let name = prompt("학생 이름을 입력해주세요.");
-    let phone = prompt("출결번호 (휴대폰 번호 뒤 네 자리)를 입력해주세요.");
+    let name = prompt("학생 이름을 입력해주세요.");
+    let phone = prompt("출결번호 (휴대폰 번호 뒤 네 자리)를 입력해주세요.");
 
-    if (!name || !phone || phone.length !== 4) {
-        alert("인증 정보가 부족합니다. 게스트 모드로 진행합니다. (파일 이름: 게스트_기본_0000)");
-        studentName = "게스트";
-        instructorName = "기본";
-        phoneLast4 = "0000";
-        localStorage.setItem('studentName', studentName);
-        localStorage.setItem('instructorName', instructorName);
-        localStorage.setItem('phoneLast4', phoneLast4);
-        return;
-    }
-    
+    if (!name || !phone || phone.length !== 4) {
+        alert("인증 정보가 부족합니다. 게스트 모드로 진행합니다. (파일 이름: 게스트_기본_0000)");
+        studentName = "게스트";
+        instructorName = "기본";
+        phoneLast4 = "0000";
+        localStorage.setItem('studentName', studentName);
+        localStorage.setItem('instructorName', instructorName);
+        localStorage.setItem('phoneLast4', phoneLast4);
+        return;
+    }
     // GAS 인증 API 호출 (GET_API_URL 사용)
-    const url = `${GET_API_URL}?name=${encodeURIComponent(name)}&phoneLast4=${phone}`;
-    try {
-        const response = await fetch(url);
-        
-        // GAS가 404가 아닌 다른 오류를 반환할 수 있으므로 response.ok 체크
-        if (!response.ok) throw new Error(`GAS 서버 응답 오류: ${response.status}`);
-        
-        const result = await response.json();
+   const url = `${GET_API_URL}?name=${encodeURIComponent(name)}&phoneLast4=${phone}`;
+    try {
+        const response = await fetch(url);
+        
+        if (!response.ok) throw new Error(`GAS 서버 응답 오류: ${response.status}`);
+        
+        const result = await response.json();
 
-        if (result.status === 'success') {
-            studentName = result.name;
-            instructorName = result.instructor;
-            phoneLast4 = result.phoneLast4;
-            instructorFolderId = result.instructorFolderId;
-            localStorage.setItem('studentName', studentName);
-            localStorage.setItem('instructorName', instructorName);
-            localStorage.setItem('phoneLast4', phoneLast4);
-			if (instructorFolderId && instructorFolderId.length > 10) {
-                 localStorage.setItem('instructorFolderId', instructorFolderId);
-            } else {
-                 // ID가 유효하지 않으면 기본값 저장 (나중에 디버깅 용이)
-                 localStorage.setItem('instructorFolderId', 'ERROR_ID_NOT_FOUND');
-                 instructorFolderId = ''; // 전역 변수 초기화
-            }
-            alert(`인증 실패: ${result.message}\n게스트 모드로 진행합니다.`);
-            studentName = "게스트"; instructorName = "기본"; phoneLast4 = "0000";
-            localStorage.setItem('studentName', studentName);
-            localStorage.setItem('instructorName', instructorName);
-            localStorage.setItem('phoneLast4', phoneLast4);
-        }
-    } catch (e) {
-        alert(`인증 시스템 오류 발생: ${e.message}. 관리자에게 문의하세요.`);
-        studentName = "게스트"; instructorName = "기본"; phoneLast4 = "0000";
-        localStorage.setItem('studentName', studentName);
-        localStorage.setItem('instructorName', instructorName);
-    }
+        if (result.status === 'success') { // 🚨 성공 블록 시작
+            studentName = result.name;
+            instructorName = result.instructor;
+            phoneLast4 = result.phoneLast4;
+            instructorFolderId = result.instructorFolderId;
+
+                // ID 유효성 검사 및 저장 로직 (이전에 추가된 디버깅 코드 유지)
+            if (instructorFolderId && instructorFolderId.length > 10) {
+                 localStorage.setItem('instructorFolderId', instructorFolderId);
+            } else {
+                 localStorage.setItem('instructorFolderId', 'ERROR_ID_NOT_FOUND');
+            }
+            
+                // ✅ 정상적인 성공 처리
+            localStorage.setItem('studentName', studentName);
+            localStorage.setItem('instructorName', instructorName);
+            localStorage.setItem('phoneLast4', phoneLast4);
+            alert(`인증 성공: ${studentName}님 (${instructorName} 강사)`);
+        
+        } else { // 🚨 실패 블록 시작
+            alert(`인증 실패: ${result.message}\n게스트 모드로 진행합니다.`);
+            studentName = "게스트"; instructorName = "기본"; phoneLast4 = "0000";
+            localStorage.setItem('studentName', studentName);
+            localStorage.setItem('instructorName', instructorName);
+            localStorage.setItem('phoneLast4', phoneLast4);
+        }
+    } catch (e) {
+        alert(`인증 시스템 오류 발생: ${e.message}. 관리자에게 문의하세요.`);
+        studentName = "게스트"; instructorName = "기본"; phoneLast4 = "0000";
+        localStorage.setItem('studentName', studentName);
+        localStorage.setItem('instructorName', instructorName);
+    }
 }
-
 // 파일명 베이스를 전역 변수에 저장 (강사이름_학생이름_출결4자리)
 function updateFilenameConstants() {
     const filenameBase = `${instructorName}_${studentName}_${phoneLast4}`;
