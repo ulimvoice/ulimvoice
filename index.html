@@ -322,7 +322,7 @@ let studentName = localStorage.getItem('studentName') || '';
 let instructorName = localStorage.getItem('instructorName') || '기본';
 let phoneLast4 = localStorage.getItem('phoneLast4') || '';
 let currentFilenameBase = `${instructorName}_${studentName}_${phoneLast4}`; 
-
+let instructorFolderId = localStorage.getItem('instructorFolderId') || '';
 function pick(a){return a[Math.floor(Math.random()*a.length)];}
 
 // 이미지 다운로드를 처리하는 공통 함수
@@ -390,7 +390,7 @@ async function promptAndAuthenticate() {
             studentName = result.name;
             instructorName = result.instructor;
             phoneLast4 = result.phoneLast4;
-            
+            instructorFolderId = result.instructorFolderId;
             localStorage.setItem('studentName', studentName);
             localStorage.setItem('instructorName', instructorName);
             localStorage.setItem('phoneLast4', phoneLast4);
@@ -458,6 +458,7 @@ async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeT
         // ⭐ GAS가 폴더 및 파일명 생성을 위해 사용할 데이터 ⭐
         fileNameBase: currentFilenameBase, 
         instructor: instructorName       
+		instructorFolderId: instructorFolderId
     };
 
     try {
