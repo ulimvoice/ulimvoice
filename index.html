@@ -11,7 +11,9 @@
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
 <style>
-/* ... (Style sheet content - 생략) ... */
+/* ===========================
+   기본 스타일 (생략)
+   =========================== */
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f5f7fb; margin: 0; color: #333; display: flex; flex-direction: column; min-height: 100vh; }
 .wrapper { max-width: 1200px; width: 95%; margin: 0 auto; flex: 1; padding: 20px 0; }
 header { background: #fff; padding: 15px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; }
@@ -109,7 +111,7 @@ audio { width: 100%; height: 40px; }
 
 <header>
     <div class="header-content">
-        <img src="/ulimvoice/appdata/logo.png" class="logo-img" alt="울림연기학원" onerror="this.style.display='none';">
+        <img src="appdata/logo.png" class="logo-img" alt="울림연기학원" onerror="this.style.display='none';">
         <h1 class="header-title">울림연기학원 연습 프로그램</h1>
     </div>
 </header>
@@ -302,7 +304,7 @@ audio { width: 100%; height: 40px; }
 ---
 <script>
 // =========================================================================================
-// ⭐ 1. GAS URL 정의 (최신 주소로 설정 완료) ⭐
+// ⭐ 1. GAS URL 정의 (제공해주신 배포 주소로 설정 완료) ⭐
 // =========================================================================================
 
 // 학생부 GAS URL (인증 및 강사 정보 조회)
@@ -319,8 +321,6 @@ const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzmcxw7-g
 let studentName = localStorage.getItem('studentName') || '';
 let instructorName = localStorage.getItem('instructorName') || '기본';
 let phoneLast4 = localStorage.getItem('phoneLast4') || '';
-// ⭐ instructorFolderId 변수 추가 (작동하는 복사본에는 없지만, GAS가 요구함) ⭐
-let instructorFolderId = localStorage.getItem('instructorFolderId') || '13rOhOoNZv3s0n0UWmSx2U9_1lSXaH4_z';
 let currentFilenameBase = `${instructorName}_${studentName}_${phoneLast4}`; 
 
 function pick(a){return a[Math.floor(Math.random()*a.length)];}
@@ -370,12 +370,9 @@ async function promptAndAuthenticate() {
         studentName = "게스트";
         instructorName = "기본";
         phoneLast4 = "0000";
-        // instructorFolderId 추가 (GAS가 요구함)
-        instructorFolderId = '13rOhOoNZv3s0n0UWmSx2U9_1lSXaH4_z'; 
         localStorage.setItem('studentName', studentName);
         localStorage.setItem('instructorName', instructorName);
         localStorage.setItem('phoneLast4', phoneLast4);
-        localStorage.setItem('instructorFolderId', instructorFolderId);
         return;
     }
     
@@ -393,33 +390,23 @@ async function promptAndAuthenticate() {
             studentName = result.name;
             instructorName = result.instructor;
             phoneLast4 = result.phoneLast4;
-            // ⭐⭐⭐ [핵심 추가] 폴더 ID 변수 및 localStorage 저장 ⭐⭐⭐
-            instructorFolderId = result.instructorFolderId; 
-
+            
             localStorage.setItem('studentName', studentName);
             localStorage.setItem('instructorName', instructorName);
             localStorage.setItem('phoneLast4', phoneLast4);
-            localStorage.setItem('instructorFolderId', instructorFolderId); // 폴더 ID 저장
-            
             alert(`인증 성공: ${studentName}님 (${instructorName} 강사)`);
         } else {
             alert(`인증 실패: ${result.message}\n게스트 모드로 진행합니다.`);
             studentName = "게스트"; instructorName = "기본"; phoneLast4 = "0000";
-            // 인증 실패 시에도 instructorFolderId 추가
-            instructorFolderId = '13rOhOoNZv3s0n0UWmSx2U9_1lSXaH4_z'; 
             localStorage.setItem('studentName', studentName);
             localStorage.setItem('instructorName', instructorName);
             localStorage.setItem('phoneLast4', phoneLast4);
-            localStorage.setItem('instructorFolderId', instructorFolderId);
         }
     } catch (e) {
         alert(`인증 시스템 오류 발생: ${e.message}. 관리자에게 문의하세요.`);
         studentName = "게스트"; instructorName = "기본"; phoneLast4 = "0000";
-        // 통신 오류 시에도 instructorFolderId 추가
-        instructorFolderId = '13rOhOoNZv3s0n0UWmSx2U9_1lSXaH4_z'; 
         localStorage.setItem('studentName', studentName);
         localStorage.setItem('instructorName', instructorName);
-        localStorage.setItem('instructorFolderId', instructorFolderId);
     }
 }
 
@@ -428,12 +415,12 @@ function updateFilenameConstants() {
     const filenameBase = `${instructorName}_${studentName}_${phoneLast4}`;
     
     // 최종 파일명 베이스 설정 (특수문자 및 공백 제거)
-    currentFilenameBase = filenameBase.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_\uAC00-\D7A3]/g, '');
+    currentFilenameBase = filenameBase.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_\uAC00-\uD7A3]/g, '');
 }
 
 
 // =========================================================================================
-// ⭐ 4. GAS 통신 함수 (Base64 인코딩 및 업로드 로직 포함 - 최종 수정) ⭐
+// ⭐ 4. GAS 통신 함수 (Base64 인코딩 및 업로드 로직 포함) ⭐
 // =========================================================================================
 
 // Blob 데이터를 Base64 문자열로 변환하는 함수
@@ -454,10 +441,9 @@ function blobToBase64(blob) {
 }
 
 // 녹음 파일을 드라이브에 업로드하고 시트에 링크를 기록하는 함수
-// ⭐⭐⭐ instructorFolderId 인수를 추가 (최종 수정) ⭐⭐⭐
-async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeType, action, instructorFolderId) {
+async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeType, action) {
     if (!GOOGLE_APP_SCRIPT_URL || GOOGLE_APP_SCRIPT_URL.includes('YOUR_DEPLOYED_GAS_URL_HERE')) {
-        console.warn("Google Apps Script URL이 설정되지 않아 데이터 전송을 건너뛰겠습니다.");
+        console.warn("Google Apps Script URL이 설정되지 않아 데이터 전송을 건너뜁니다.");
         return;
     }
     
@@ -471,15 +457,13 @@ async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeT
         mimeType: mimeType,
         // ⭐ GAS가 폴더 및 파일명 생성을 위해 사용할 데이터 ⭐
         fileNameBase: currentFilenameBase, 
-        instructor: instructorName,
-        // ⭐⭐ [핵심] 폴더 ID를 POST 페이로드에 포함하여 GAS로 전송 ⭐⭐
-        instructorFolderId: instructorFolderId 
+        instructor: instructorName       
     };
 
     try {
         await fetch(GOOGLE_APP_SCRIPT_URL, {
             method: 'POST',
-            // ⭐ mode: 'no-cors' 제거 (통신 안정화) ⭐
+            mode: 'no-cors', 
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
@@ -492,7 +476,7 @@ async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeT
 // 파일 업로드 없이 메타데이터만 전송하는 함수 (연습 완료 버튼 용)
 async function sendToGoogleSheet(vocalId, sentenceText, action) {
     if (!GOOGLE_APP_SCRIPT_URL || GOOGLE_APP_SCRIPT_URL.includes('YOUR_DEPLOYED_GAS_URL_HERE')) {
-        console.warn("Google Apps Script URL이 설정되지 않아 데이터 전송을 건너뛰겠습니다.");
+        console.warn("Google Apps Script URL이 설정되지 않아 데이터 전송을 건너뜁니다.");
         return;
     }
     
@@ -501,15 +485,13 @@ async function sendToGoogleSheet(vocalId, sentenceText, action) {
         vocalId: vocalId,
         sentence: sentenceText,
         action: action, 
-        instructor: instructorName, // 시트 탭 이름 전달
-        instructorFolderId: instructorFolderId // 폴더 ID 전달
         // 오디오 데이터는 포함하지 않음
     };
 
     try {
         await fetch(GOOGLE_APP_SCRIPT_URL, {
             method: 'POST',
-            // ⭐ mode: 'no-cors' 제거 (통신 안정화) ⭐
+            mode: 'no-cors', 
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
@@ -518,6 +500,8 @@ async function sendToGoogleSheet(vocalId, sentenceText, action) {
         console.error('Google Sheet submission failed:', error);
     }
 }
+
+
 // =========================================================================================
 // ⭐ 5. 탭 1 (상황극) 로직 ⭐
 // =========================================================================================
@@ -1259,8 +1243,6 @@ async function shareVocalResult() {
         base64Data, 
         mimeType,
         "녹음 파일 업로드 및 링크 기록"
-		// ⭐⭐ [최종 수정] 폴더 ID를 인수로 전달합니다. ⭐⭐
-		instructorFolderId
     ); 
 
     alert("녹음 파일 업로드 및 시트 기록을 시도했습니다. 드라이브 폴더와 시트(F열)를 확인하세요.");
