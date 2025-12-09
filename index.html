@@ -478,11 +478,10 @@ async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeT
         instructorFolderId: instructorFolderId 
     };
 
-    try {
+   try {
         await fetch(GOOGLE_APP_SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors', 
-            headers: { 'Content-Type': 'application/json' },
+                       headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
         console.log('Drive upload and Sheet logging attempted.');
