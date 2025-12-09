@@ -321,8 +321,12 @@ const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzmcxw7-g
 let studentName = localStorage.getItem('studentName') || '';
 let instructorName = localStorage.getItem('instructorName') || '기본';
 let phoneLast4 = localStorage.getItem('phoneLast4') || '';
+
+// 'let' 키워드를 사용하여 변수를 선언해야 합니다.
+let instructorFolderId = localStorage.getItem('instructorFolderId') || ''; // 
+
 let currentFilenameBase = `${instructorName}_${studentName}_${phoneLast4}`; 
-let instructorFolderId = localStorage.getItem('instructorFolderId') || '';
+
 function pick(a){return a[Math.floor(Math.random()*a.length)];}
 
 // 이미지 다운로드를 처리하는 공통 함수
@@ -457,7 +461,7 @@ async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeT
         mimeType: mimeType,
         // ⭐ GAS가 폴더 및 파일명 생성을 위해 사용할 데이터 ⭐
         fileNameBase: currentFilenameBase, 
-        instructor: instructorName       
+        instructor: instructorName,       
 		instructorFolderId: instructorFolderId
     };
 
