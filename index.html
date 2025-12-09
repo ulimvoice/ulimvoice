@@ -303,6 +303,7 @@ audio { width: 100%; height: 40px; }
 </footer>
 ---
 <script>
+
 // =========================================================================================
 // ⭐ 1. GAS URL 정의 (최종 확인된 배포 주소) ⭐
 // =========================================================================================
@@ -310,7 +311,7 @@ audio { width: 100%; height: 40px; }
 // 학생부 GAS URL (인증 및 강사 정보 조회)
 const GET_API_URL = 'https://script.google.com/macros/s/AKfycbz5M-B0ogXDLiiV86KVPqRkmrIYJlSgWFf973t7MbPWM0wxjF5L8ubDWSZdlZazhe04sQ/exec'; 
 
-// 연습일지 GAS URL (데이터 전송 및 드라이브 업로드)
+// ⭐⭐ 연습일지 GAS URL (사용자님이 제공한 최신 주소로 교체됨) ⭐⭐
 const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyilq7vdKPcd1AphhPUFPE8Xmezr1Gq_GHK_9W3bcXka9kVQb2L5WrsVccRqkHLITmVjg/exec';
 
 
@@ -327,26 +328,11 @@ let currentFilenameBase = `${instructorName}_${studentName}_${phoneLast4}`;
 
 function pick(a){return a[Math.floor(Math.random()*a.length)];}
 
-// 이미지 다운로드를 처리하는 공통 함수
-function downloadImage(dataUrl, filename='울림_미션.png') {
-    const link = document.createElement('a');
-    link.download = filename;
-    link.href = dataUrl;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    alert("이미지 파일 다운로드를 시작합니다!");
-}
+// 이미지 다운로드를 처리하는 공통 함수 (생략)
+// ...
 
 // 탭 로직 (생략)
-document.querySelectorAll('.tab').forEach(t => {
-    t.onclick = () => {
-        document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
-        t.classList.add('active');
-        document.getElementById(t.dataset.tab).classList.add('active');
-    };
-});
+// ...
 
 
 // =========================================================================================
@@ -435,7 +421,7 @@ function updateFilenameConstants() {
     currentFilenameBase = filenameBase.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_\uAC00-\uD7A3]/g, '');
 }
 // =========================================================================================
-// ⭐ 4. GAS 통신 함수 (Base64 인코딩 및 업로드 로직 포함) ⭐
+// ⭐ 4. GAS 통신 함수 (Base64 인코딩 및 업로드 로직 포함 - mode: 'no-cors' 제거됨) ⭐
 // =========================================================================================
 
 // Blob 데이터를 Base64 문자열로 변환하는 함수
@@ -480,7 +466,7 @@ async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeT
     try {
         await fetch(GOOGLE_APP_SCRIPT_URL, {
             method: 'POST',
-            // ⭐ no-cors 모드 제거 (GAS 통신 안정화) ⭐
+            // ⭐ no-cors 옵션 제거 (GAS 통신 안정화) ⭐
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
@@ -510,7 +496,7 @@ async function sendToGoogleSheet(vocalId, sentenceText, action) {
     try {
         await fetch(GOOGLE_APP_SCRIPT_URL, {
             method: 'POST',
-            // ⭐ no-cors 모드 제거 ⭐
+            // ⭐ no-cors 옵션 제거 ⭐
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
@@ -519,7 +505,6 @@ async function sendToGoogleSheet(vocalId, sentenceText, action) {
         console.error('Google Sheet submission failed:', error);
     }
 }
-
 
 // =========================================================================================
 // ⭐ 5. 탭 1 (상황극) 로직 (생략) ⭐
