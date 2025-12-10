@@ -415,7 +415,8 @@ function showMainContent(isAuthenticated) {
     document.getElementById('loginOverlay').style.display = 'none';
     const wrapper = document.querySelector('.wrapper');
     wrapper.style.display = 'flex'; // 메인 컨텐츠 표시
-
+wrapper.style.flexDirection = 'column'; // 메인 콘텐츠가 수직으로 쌓이도록 보장
+    wrapper.style.alignItems = 'center'; // 중앙 정렬 (margin: 0 auto와 함께 작동)
     const tabs = document.querySelectorAll('.tab');
     
     // 탭 1 (상황극)을 기본 활성화
