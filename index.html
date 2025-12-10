@@ -14,8 +14,8 @@
 <meta name="theme-color" content="#2ecc71">
 <style>
 /* ===========================
-   기본 스타일 (생략)
-   =========================== */
+   기본 스타일 (생략)
+   =========================== */
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f5f7fb; margin: 0; color: #333; display: flex; flex-direction: column; min-height: 100vh; }
 .wrapper { max-width: 1200px; width: 95%; margin: 0 auto; flex: 1; padding: 20px 0; }
 header { background: #fff; padding: 15px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; }
@@ -62,10 +62,10 @@ footer b { color: #fff; font-weight: 700; }
 .mini-char-card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; font-size: 13px; border:1px solid #eee; }
 .mini-char-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; background:#ddd; }
 .mini-char-info { padding: 10px; }
-.train-origin-text { 
-    font-size: 20px; font-weight: 700; color: #333; text-align: center; 
-    margin-bottom: 25px; word-break: keep-all; line-height: 1.5; 
-    min-height: 30px; padding: 15px; background: #e8f5e9; border-radius: 12px; border: 1px solid #c8e6c9;
+.train-origin-text { 
+    font-size: 20px; font-weight: 700; color: #333; text-align: center; 
+    margin-bottom: 25px; word-break: keep-all; line-height: 1.5; 
+    min-height: 30px; padding: 15px; background: #e8f5e9; border-radius: 12px; border: 1px solid #c8e6c9;
 }
 .train-card { background: #fff; border: 2px solid #eee; border-radius: 20px; padding: 30px 15px; text-align: center; margin-bottom: 20px; }
 .train-main-text { font-size: 32px; font-weight: 900; color: #2ecc71; word-break: keep-all; line-height: 1.3; margin: 20px 0; }
@@ -77,9 +77,9 @@ footer b { color: #fff; font-weight: 700; }
 .player-label { font-size: 12px; font-weight: 800; color: #2ecc71; margin-bottom: 5px; display: block; }
 audio { width: 100%; height: 40px; }
 .mic-btn {
-    width: 80px; height: 80px; border-radius: 50%; background: #ff4757; color: white; border: none;
-    font-size: 34px; cursor: pointer; box-shadow: 0 4px 15px rgba(255, 71, 87, 0.5); display: flex; align-items: center; justify-content: center; margin: 0 auto;
-    transition: transform 0.1s;
+    width: 80px; height: 80px; border-radius: 50%; background: #ff4757; color: white; border: none;
+    font-size: 34px; cursor: pointer; box-shadow: 0 4px 15px rgba(255, 71, 87, 0.5); display: flex; align-items: center; justify-content: center; margin: 0 auto;
+    transition: transform 0.1s;
 }
 .mic-btn:active { transform: scale(0.95); }
 .mic-btn.recording { animation: pulse 1.5s infinite; background: #333; }
@@ -98,14 +98,14 @@ audio { width: 100%; height: 40px; }
 .past-role { font-size: 20px; font-weight: 900; color: #2ecc71; margin-bottom: 20px; }
 .past-lines { font-size: 18px; line-height: 1.8; color: #333; white-space: pre-wrap; font-family: 'KoPub Batang', serif; }
 @media (max-width: 600px) {
-    .section { padding: 20px; }
-    .info-grid { grid-template-columns: 1fr; }
-    .line-text { font-size: 22px; }
-    .train-main-text { font-size: 28px; }
-    .header-title { font-size: 18px; }
-    .logo-img { height: 35px; }
-    .btn-row { flex-wrap: wrap; }
-    .btn-row button { min-width: 45%; }
+    .section { padding: 20px; }
+    .info-grid { grid-template-columns: 1fr; }
+    .line-text { font-size: 22px; }
+    .train-main-text { font-size: 28px; }
+    .header-title { font-size: 18px; }
+    .logo-img { height: 35px; }
+    .btn-row { flex-wrap: wrap; }
+    .btn-row button { min-width: 45%; }
 }
 </style>
 </head>
@@ -150,7 +150,8 @@ audio { width: 100%; height: 40px; }
         <a href="#" target="_blank" style="margin: 0 10px;"><img src="https://img.icons8.com/color/40/000000/blogger.png" alt="Blog" style="vertical-align: middle;"></a>
     </div>
 </div>
-<main class="wrapper" style="display: none;">
+<main class="wrapper">
+
   <div class="tabs">
     <div class="tab active" data-tab="tab1">🎭 상황극</div>
     <div class="tab" data-tab="tab2">🎨 캐릭터</div>
@@ -165,7 +166,7 @@ audio { width: 100%; height: 40px; }
             <span id="colorText">색상</span>
             <button class="lock-btn" id="lock-color" onclick="toggleLock('color')">🔓</button>
         </div>
-        <div class="info-grid">
+       <div class="info-grid" style="display: grid; grid-template-columns: 1fr 1fr;">
             <div class="info-item"><span class="info-label">장소</span><span class="info-value" id="placeDisplay">-</span><button class="lock-btn" id="lock-place" onclick="toggleLock('place')">🔓</button></div>
             <div class="info-item"><span class="info-label">감정</span><span class="info-value" id="emotionDisplay">-</span><button class="lock-btn" id="lock-emotion" onclick="toggleLock('emotion')">🔓</button></div>
             <div class="info-item"><span class="info-label">관계</span><span class="info-value" id="relationDisplay">-</span><button class="lock-btn" id="lock-relation" onclick="toggleLock('relation')">🔓</button></div>
@@ -414,11 +415,23 @@ function hideLoading() {
 function showMainContent(isAuthenticated) {
     document.getElementById('loginOverlay').style.display = 'none';
     const wrapper = document.querySelector('.wrapper');
-    wrapper.style.display = 'flex'; // 메인 컨텐츠 표시
-wrapper.style.flexDirection = 'column'; // 메인 콘텐츠가 수직으로 쌓이도록 보장
-    wrapper.style.alignItems = 'center'; // 중앙 정렬 (margin: 0 auto와 함께 작동)
-    const tabs = document.querySelectorAll('.tab');
     
+    // wrapper 스타일 (중앙 정렬) - 유지
+    wrapper.style.display = 'flex'; 
+    wrapper.style.flexDirection = 'column';
+    wrapper.style.width = '95%';
+    wrapper.style.maxWidth = '1200px'; 
+    wrapper.style.margin = '0 auto'; 
+    wrapper.style.padding = '20px 0'; 
+	
+    const tabs = document.querySelectorAll('.tab');
+    const infoGrid = document.querySelector('.info-grid');
+    
+    // 🚨 핵심 수정: infoGrid에 너비와 함께 간격(gap)을 강제 적용합니다.
+    if (infoGrid) {
+        infoGrid.style.width = '100%'; // 너비 100% 확보
+        infoGrid.style.gap = '12px';  // 👈 간격(gap) 강제 주입
+    }
     // 탭 1 (상황극)을 기본 활성화
     tabs[0].classList.add('active');
     document.getElementById('tab1').classList.add('active');
@@ -447,7 +460,7 @@ wrapper.style.flexDirection = 'column'; // 메인 콘텐츠가 수직으로 쌓�
             tabs[i].onclick = defaultTabClickHandler;
             tabs[i].style.opacity = '1';
             tabs[i].style.pointerEvents = 'auto';
-            if(tabContent) tabContent.style.display = 'none';
+           
         }
     }
 }
