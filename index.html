@@ -117,7 +117,44 @@ audio { width: 100%; height: 40px; }
         <h1 class="header-title">울림연기학원 연습 프로그램</h1>
     </div>
 </header>
+</header>
+<div id="loginOverlay" style="
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f5f7fb;
+    z-index: 10000; display: none; flex-direction: column; align-items: center;
+    justify-content: center; padding: 20px; box-sizing: border-box;
+">
+    <div style="max-width: 350px; width: 100%; padding: 40px 25px; background: white; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+        <img src="appdata/logo.png" style="width: 100%; max-width: 150px; display: block; margin: 0 auto 30px;" alt="울림연기학원 로고">
+        <h2 style="text-align: center; color: #2ecc71; margin-bottom: 30px; font-size: 24px;">학생 인증 로그인</h2>
 
+        <div style="margin-bottom: 20px;">
+            <label for="studentNameInput" style="display: block; font-size: 14px; color: #555; margin-bottom: 5px; font-weight: bold;">👤 학생 이름:</label>
+            <input type="text" id="studentNameInput" placeholder="이름을 입력하세요" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px;">
+        </div>
+        <div style="margin-bottom: 30px;">
+            <label for="phoneLast4Input" style="display: block; font-size: 14px; color: #555; margin-bottom: 5px; font-weight: bold;">🔑 암호 (전화번호 뒤 네 자리):</label>
+            <input type="password" id="phoneLast4Input" placeholder="전화번호 뒤 4자리" maxlength="4" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px;">
+        </div>
+
+        <button onclick="authenticateStudentFromInputs()" style="width: 100%; padding: 14px; background: #2ecc71; color: white; border: none; border-radius: 8px; font-size: 17px; font-weight: bold; cursor: pointer; transition: background 0.2s;">
+            로그인
+        </button>
+        <button onclick="guestLogin()" style="width: 100%; padding: 14px; background: #aaa; color: white; border: none; border-radius: 8px; font-size: 17px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: background 0.2s;">
+            게스트 로그인 (상황극 탭만 사용)
+        </button>
+    </div>
+
+    <div style="margin-top: 40px; text-align: center;">
+        <p style="font-size: 14px; color: #888; margin-bottom: 15px;">울림 연기학원의 다양한 소식을 만나보세요!</p>
+        <a href="#" target="_blank" style="margin: 0 10px;"><img src="https://img.icons8.com/color/40/000000/youtube-play.png" alt="YouTube" style="vertical-align: middle;"></a>
+        <a href="#" target="_blank" style="margin: 0 10px;"><img src="https://img.icons8.com/fluent/40/000000/instagram-new.png" alt="Instagram" style="vertical-align: middle;"></a>
+        <a href="#" target="_blank" style="margin: 0 10px;"><img src="https://img.icons8.com/color/40/000000/blogger.png" alt="Blog" style="vertical-align: middle;"></a>
+    </div>
+</div>
+<main class="wrapper" style="display: none;">
+    ```
+
+이 HTML 코드를 추가한 후, GitHub에 다시 배포하면 **로그인 화면이 정상적으로 표시**되고 **"게스트 로그인" 버튼도 작동**할 것입니다.
 <main class="wrapper" style="display: none;">
   <div class="tabs">
     <div class="tab active" data-tab="tab1">🎭 상황극</div>
