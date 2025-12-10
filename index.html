@@ -882,15 +882,20 @@ async function completeTraining() {
         return alert("녹음 파일이 없습니다. STEP 7에서 녹음 후 다시 눌러주세요.");
     }
 
+    // 로딩 UI 표시
+    showLoading("녹음 파일 업로드 중...");
+
     const today = new Date().toISOString().slice(0, 10);
     const savedIds = getSavedVocalIds();
     const records = getVocalRecords();
     const truncatedText = currentTrainObj.text.substring(0, 30) + "...";
 
     if (records.has(today)) {
+        hideLoading();
         return alert("오늘은 이미 연습을 완료했습니다!");
     }
 
+    // 로컬 기록 저장
     savedIds.add(currentTrainObj.id);
     localStorage.setItem('savedVocalIds', JSON.stringify(Array.from(savedIds)));
 
@@ -901,20 +906,20 @@ async function completeTraining() {
     });
     localStorage.setItem('vocalRecords', JSON.stringify(Array.from(records.entries())));
 
-    // 1) 시트에 메타데이터 전송
+    // 시트 메타데이터 저장
     await sendToGoogleSheet(currentTrainObj.id, truncatedText, "연습 완료 체크");
 
-    // 2) 녹음 파일 Base64 변환
+    // Blob → Base64
     const mimeType = lastRecordedBlob.type;
     const base64Data = await blobToBase64(lastRecordedBlob).catch(err => {
+        hideLoading();
         console.error("Base64 Encoding Error:", err);
         alert("녹음 파일 인코딩 실패. 관리자에게 문의하세요.");
         return null;
     });
-
     if (!base64Data) return;
 
-    // 3) 드라이브 업로드 + 링크 기록
+    // 업로드 + 시트 링크 기록
     await uploadAudioToDriveAndLog(
         currentTrainObj.id,
         truncatedText,
@@ -923,8 +928,10 @@ async function completeTraining() {
         "녹음 파일 업로드 및 링크 기록"
     );
 
+    hideLoading();
     alert("연습 완료! (달력 기록 + 시트 기록 + 녹음파일 업로드 모두 완료)");
 
+    // UI 업데이트
     const calendarArea = document.getElementById('calendarDisplayArea');
     if (calendarArea.style.display === 'none') {
         toggleCalendar();
@@ -1414,5 +1421,32 @@ window.onload = async function() {
 
     renderCalendar();
 };
+function showLoading(message = "처리 중...") {
+    let el = document.getElementById("loadingOverlay");
+    if (!el) {
+        el = document.createElement("div");
+        el.id = "loadingOverlay";
+        el.style.position = "fixed";
+        el.style.top = "0";
+        el.style.left = "0";
+        el.style.width = "100%";
+        el.style.height = "100%";
+        el.style.background = "rgba(0,0,0,0.6)";
+        el.style.display = "flex";
+        el.style.alignItems = "center";
+        el.style.justifyContent = "center";
+        el.style.zIndex = "99999";
+        el.style.color = "white";
+        el.style.fontSize = "20px";
+        document.body.appendChild(el);
+    }
+    el.textContent = message;
+    el.style.display = "flex";
+}
+
+function hideLoading() {
+    const el = document.getElementById("loadingOverlay");
+    if (el) el.style.display = "none";
+}
 
 </script>
