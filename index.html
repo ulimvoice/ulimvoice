@@ -308,7 +308,11 @@ let instructorName = localStorage.getItem('instructorName') || '기본';
 let phoneLast4 = localStorage.getItem('phoneLast4') || '';
 
 // 'let' 키워드를 사용하여 변수를 선언해야 합니다.
-let instructorFolderId = localStorage.getItem('instructorFolderId') || ''; // 
+let instructorFolderId = localStorage.getItem('instructorFolderId');
+if (!instructorFolderId || instructorFolderId === 'ERROR_ID_NOT_FOUND') {
+    instructorFolderId = '';
+}
+console.log("Loaded instructorFolderId:", instructorFolderId);
 // =========================================================================================
 // ⭐ 1. GAS URL 정의 (제공해주신 배포 주소로 설정 완료) ⭐
 // =========================================================================================
