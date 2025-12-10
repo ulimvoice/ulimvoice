@@ -10,6 +10,7 @@
 <script src="appdata/past_questions/data.js"></script>
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 <link rel="manifest" href="manifest.json">
+
 <meta name="theme-color" content="#2ecc71">
 <style>
 /* ===========================
@@ -1449,9 +1450,10 @@ function hideLoading() {
     const el = document.getElementById("loadingOverlay");
     if (el) el.style.display = "none";
 }
+<script>
 if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
-        navigator.serviceWorker.register("/service-worker.js")
+        navigator.serviceWorker.register("./service-worker.js")
         .then(() => console.log("PWA ServiceWorker Registered"))
         .catch(err => console.error("SW fail:", err));
     });
