@@ -1370,7 +1370,8 @@ async function togglePastRecord() {
 }
 // 페이지 로드 시 달력과 현재 문장 초기화
 window.onload = function() {
-    checkStudentName();
+    await checkStudentName();
+
 
     document.querySelectorAll('.tab').forEach(t => {
         t.onclick = () => {
