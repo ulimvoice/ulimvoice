@@ -1460,13 +1460,7 @@ async function togglePastRecord() {
 }
 // 페이지 로드 시 달력과 현재 문장 초기화
 
-window.onload = async function() {
-    await checkStudentName();  // 인증 먼저 완료 (여기서 showMainContent가 호출됩니다)
 
-    // showMainContent에서 탭 활성화/비활성화 및 탭 클릭 로직을 이미 처리했으므로, 
-    // 여기서 불필요한 탭 초기화 코드를 제거합니다.
-    renderCalendar();
-};
 function showLoading(message = "처리 중...") {
     let el = document.getElementById("loadingOverlay");
     if (!el) {
@@ -1497,10 +1491,15 @@ function hideLoading() {
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", function () {
-    // 🚨 깃허브 Pages 환경에서는 보통 서브 경로를 명시해야 합니다.
+    // 이 경로는 현재 깃허브 저장소 구조와 일치합니다.
     navigator.serviceWorker.register("/ulimvoice/service-worker.js") 
       .then(() => console.log("Service Worker Registered"))
       .catch(err => console.error("SW registration failed:", err));
   });
 }
+window.onload = async function() {
+    await checkStudentName();  // 인증 먼저 완료 (여기서 showMainContent가 호출됩니다)
+
+    renderCalendar();
+};
 </script>
