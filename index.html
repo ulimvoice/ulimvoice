@@ -303,6 +303,12 @@ audio { width: 100%; height: 40px; }
 </footer>
 ---
 <script>
+let studentName = localStorage.getItem('studentName') || '';
+let instructorName = localStorage.getItem('instructorName') || '기본';
+let phoneLast4 = localStorage.getItem('phoneLast4') || '';
+
+// 'let' 키워드를 사용하여 변수를 선언해야 합니다.
+let instructorFolderId = localStorage.getItem('instructorFolderId') || ''; // 
 // =========================================================================================
 // ⭐ 1. GAS URL 정의 (제공해주신 배포 주소로 설정 완료) ⭐
 // =========================================================================================
@@ -318,12 +324,7 @@ const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxgIXZv73
 // ⭐ 2. 학생/강사 정보 및 공통 유틸리티 ⭐
 // =========================================================================================
 
-let studentName = localStorage.getItem('studentName') || '';
-let instructorName = localStorage.getItem('instructorName') || '기본';
-let phoneLast4 = localStorage.getItem('phoneLast4') || '';
 
-// 'let' 키워드를 사용하여 변수를 선언해야 합니다.
-let instructorFolderId = localStorage.getItem('instructorFolderId') || ''; // 
 
 let currentFilenameBase = `${instructorName}_${studentName}_${phoneLast4}`; 
 
