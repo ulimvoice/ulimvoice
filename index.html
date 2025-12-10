@@ -107,34 +107,6 @@ audio { width: 100%; height: 40px; }
     .btn-row { flex-wrap: wrap; }
     .btn-row button { min-width: 45%; }
 }
-/* 🔥 문장 밑으로 내려온 프로 성우 박스 */
-.record-pro-box {
-    background: #0f0f0f;
-    border: 1px solid #2ecc71;
-    border-radius: 12px;
-    margin: 0 10px 20px 10px;
-    padding: 15px;
-}
-
-/* 예시 라벨 */
-.pro-label {
-    font-size: 13px;
-    font-weight: 700;
-    color: #2ecc71;
-    margin-bottom: 6px;
-}
-
-/* 파형 영역 */
-.record-wave {
-    width: 100%;
-    height: 80px;
-    background: #111;
-    border: 1px solid #444;
-    border-radius: 10px;
-    display: none; /* 녹음 시작 시 표시 */
-    margin-bottom: 20px;
-}
-
 </style>
 </head>
 <body>
@@ -231,53 +203,38 @@ audio { width: 100%; height: 40px; }
         <p style="color:#aaa;">'새 문장 뽑기'를 눌러주세요.</p>
       </div>
 
-      <!-- 🔥 새 발성훈련 녹음 UI (문장카드 아래 → 예시 → 녹음버튼 → 파형) -->
-<div class="record-box" id="recordBox" style="display:none;">
-
-    <!-- 문장 카드 아래에 프로 녹음 위치시키기 -->
-    <div class="record-pro-box">
-        <div class="pro-label">🎧 프로 성우 예시</div>
-        <audio id="proAudio" controls></audio>
-    </div>
-
-    <!-- 녹음 버튼 -->
-    <div style="text-align:center; margin: 25px 0;">
-        <button id="micBtn" class="mic-btn" onclick="handleAction()">🎤</button>
-        <p id="recStatus" style="font-size:14px; color:#555; margin-top:10px; font-weight:bold;">
-            버튼을 눌러 시작
-        </p>
-    </div>
-
-    <!-- 파형 영역 추가 -->
-    <canvas id="waveCanvas" class="record-wave"></canvas>
-
-    <!-- 녹음 결과 (AI 체크 or 최종 녹음) -->
-    <div class="result-box" id="resultBox">
-
-        <!-- 스텝 6: AI 체크 -->
-        <div class="result-section" id="aiSection" style="display:none;">
-            <span class="section-title">🤖 AI 발음 체크</span>
-            <div class="stt-result-box">
-                <div id="sttResult" class="stt-text">...</div>
-                <span id="accBadge" class="accuracy-badge acc-wait">분석 대기중</span>
-            </div>
+      <div class="record-box" id="recordBox">
+        <div class="pro-player-box">
+            <span class="player-label">🎧 프로 성우 예시 듣기</span>
+            <audio id="proAudio" controls src=""></audio>
         </div>
 
-        <!-- 스텝 7: 최종 녹음 -->
-        <div class="result-section" id="recSection" style="display:none;">
-            <span class="section-title">📂 내 녹음 확인</span>
-            <audio id="myAudio" controls src="" style="width:100%;"></audio>
-            <div class="time-info">
-                내 시간: <span id="myTime" class="time-val">0.0s</span> 
-                <span style="font-weight:normal; color:#aaa; margin-left:10px;">
-                    (프로: <span id="proTime">0.0s</span>)
-                </span>
-            </div>
+        <div style="text-align:center; margin: 30px 0;">
+            <button id="micBtn" class="mic-btn" onclick="handleAction()">🎤</button>
+            <p id="recStatus" style="font-size:14px; color:#555; margin-top:10px; font-weight:bold;">버튼을 눌러 시작</p>
         </div>
 
-    </div>
-</div>
+        <div class="result-box" id="resultBox">
+            <div class="result-section" id="aiSection" style="display:none;">
+                <span class="section-title">🤖 AI 발음 체크</span>
+                <div class="stt-result-box">
+                    <div id="sttResult" class="stt-text">...</div>
+                    <span id="accBadge" class="accuracy-badge acc-wait">분석 대기중</span>
+                </div>
+                <p class="guide-text">* 정확도 30% 이상이면 통과입니다.</p>
+            </div>
 
+            <div class="result-section" id="recSection" style="display:none;">
+                <span class="section-title">📂 내 녹음 확인</span>
+                <audio id="myAudio" controls src="" style="width:100%;"></audio>
+                <div class="time-info">
+                    내 시간: <span id="myTime" class="time-val">0.0s</span> 
+                    <span style="font-weight:normal; color:#aaa; margin-left:10px;">(프로: <span id="proTime">0.0s</span>)</span>
+                </div>
+               
+            </div>
+        </div>
+      </div>
       
       <div class="train-nav" style="margin-top:20px;">
         <button id="btn_prev" onclick="trainPrev()" disabled>⬅ 이전</button>
@@ -1081,26 +1038,22 @@ function renderTrain(){
     btnComplete.style.display = (step === 7) ? 'flex' : 'none';
 
     if(step === 6) {
-    recBox.style.display = 'block';
-    document.getElementById("waveCanvas").style.display = "none";
-    micBtn.textContent = '🗣️';
-    recStatus.textContent = "버튼을 눌러 AI 체크 시작";
-    aiSection.style.display = 'block';
-    recSection.style.display = 'none';
-    document.getElementById("resultBox").style.display = 'none';
-
-} else if (step === 7) {
-    recBox.style.display = 'block';
-    document.getElementById("waveCanvas").style.display = "block"; // 🔥 파형 활성화
-
-    micBtn.textContent = '🎤';
-    recStatus.textContent = "버튼을 눌러 녹음 시작";
-
-    aiSection.style.display = 'none';
-    recSection.style.display = 'block';
-    document.getElementById("resultBox").style.display = 'none';
-}
-
+        recBox.style.display = 'block';
+        micBtn.textContent = '🗣️';
+        recStatus.textContent = "버튼을 눌러 AI 체크 시작";
+        aiSection.style.display = 'block';
+        recSection.style.display = 'none';
+        document.getElementById("resultBox").style.display = 'none';
+    } else if (step === 7) {
+        recBox.style.display = 'block';
+        micBtn.textContent = '🎤';
+        recStatus.textContent = "버튼을 눌러 녹음 시작";
+        aiSection.style.display = 'none';
+        recSection.style.display = 'block';
+        document.getElementById("resultBox").style.display = 'none';
+    } else {
+        recBox.style.display = 'none';
+    }
 }
 
 // 달력 펼치기/숨기기 토글 함수
@@ -1303,39 +1256,6 @@ async function toggleRecord() {
         if(mediaRecorder) mediaRecorder.stop();
         isRecording = false;
         resetBtn();
-		document.getElementById("waveCanvas").style.display = "block";  
-startWaveAnimation(); 
-stopWaveAnimation();
-let waveInterval;
-
-function startWaveAnimation() {
-    const canvas = document.getElementById("waveCanvas");
-    const ctx = canvas.getContext("2d");
-
-    waveInterval = setInterval(() => {
-        const w = canvas.width = canvas.offsetWidth;
-        const h = canvas.height = canvas.offsetHeight;
-
-        ctx.clearRect(0,0,w,h);
-
-        ctx.beginPath();
-        ctx.strokeStyle = "#2ecc71";
-        ctx.lineWidth = 3;
-
-        const t = Date.now() / 200;
-
-        for (let x = 0; x < w; x++) {
-            const y = h/2 + Math.sin(x*0.02 + t)*15;
-            ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-    }, 50);
-}
-
-function stopWaveAnimation() {
-    clearInterval(waveInterval);
-}
-
     }
 }
 if (isSpeechSupported) { recognition.onend = function() { isRecording = false; resetBtn(); }; }
