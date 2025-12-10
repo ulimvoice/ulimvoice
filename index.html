@@ -303,6 +303,11 @@ audio { width: 100%; height: 40px; }
 </footer>
 ---
 <script>
+
+// 강사 ID가 ERROR로 저장되어 있으면 아예 지워버림
+if (localStorage.getItem('instructorFolderId') === 'ERROR_ID_NOT_FOUND') {
+    localStorage.removeItem('instructorFolderId');
+}
 let studentName = localStorage.getItem('studentName') || '';
 let instructorName = localStorage.getItem('instructorName') || '기본';
 let phoneLast4 = localStorage.getItem('phoneLast4') || '';
@@ -318,7 +323,7 @@ console.log("Loaded instructorFolderId:", instructorFolderId);
 // =========================================================================================
 
 // 학생부 GAS URL (인증 및 강사 정보 조회)
-const GET_API_URL = 'https://script.google.com/macros/s/AKfycbz5M-B0ogXDLiiV86KVPqRkmrIYJlSgWFf973t7MbPWM0wxjF5L8ubDWSZdlZazhe04sQ/exec'; 
+const GET_API_URL = 'https://script.google.com/macros/s/AKfycbx7wQFuw6MqqOijmvuwpeiCWOk3xU3hr41xoKbRltQHLb1kLbr_1RD5Zzy3iuWcrhUD0A/exec'; 
 
 // 연습일지 GAS URL (데이터 전송 및 드라이브 업로드)
 const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxgIXZv73FmnG-r-JoWnBGcfjrzJZV3I6Zp5xmJbSheUrJ9pWc165UOxAn4HUD5hMpc9g/exec';
