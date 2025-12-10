@@ -344,13 +344,7 @@ audio { width: 100%; height: 40px; }
 </footer>
 ---
 <script>
-// 파일명 베이스를 전역 변수에 저장 (강사이름_학생이름_출결4자리)
-function updateFilenameConstants() {
-    const filenameBase = `${instructorName}_${studentName}_${phoneLast4}`;
-    
-    // 최종 파일명 베이스 설정 (특수문자 및 공백 제거)
-    currentFilenameBase = filenameBase.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_\uAC00-\uD7A3]/g, '');
-}
+
 
 // 강사 ID가 ERROR로 저장되어 있으면 아예 지워버림
 if (localStorage.getItem('instructorFolderId') === 'ERROR_ID_NOT_FOUND') {
@@ -369,6 +363,13 @@ if (!instructorFolderId || instructorFolderId === 'ERROR_ID_NOT_FOUND') {
     instructorFolderId = '';
 }
 console.log("Loaded instructorFolderId:", instructorFolderId);
+// 파일명 베이스를 전역 변수에 저장 (강사이름_학생이름_출결4자리)
+function updateFilenameConstants() {
+    const filenameBase = `${instructorName}_${studentName}_${phoneLast4}`;
+    
+    // 최종 파일명 베이스 설정 (특수문자 및 공백 제거)
+    currentFilenameBase = filenameBase.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_\uAC00-\uD7A3]/g, '');
+}
 // =========================================================================================
 // ⭐ 1. GAS URL 정의 (제공해주신 배포 주소로 설정 완료) ⭐
 // =========================================================================================
@@ -1561,10 +1562,10 @@ function hideLoading() {
 }
 
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load", function () {
-    navigator.serviceWorker.register("/ulimvoice/service-worker.js")
-      .then(() => console.log("Service Worker Registered"))
-      .catch(err => console.error("SW registration failed:", err));
-  });
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("/service-worker.js") //
+      .then(() => console.log("Service Worker Registered"))
+      .catch(err => console.error("SW registration failed:", err));
+  });
 }
 </script>
