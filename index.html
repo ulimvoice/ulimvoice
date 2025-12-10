@@ -411,7 +411,8 @@ async function promptAndAuthenticate() {
             localStorage.setItem('instructorName', instructorName);
             localStorage.setItem('phoneLast4', phoneLast4);
             alert(`인증 성공: ${studentName}님 (${instructorName} 강사)`);
-        
+        window.location.reload();
+
         } else { // 🚨 실패 블록 시작
             alert(`인증 실패: ${result.message}\n게스트 모드로 진행합니다.`);
             studentName = "게스트"; instructorName = "기본"; phoneLast4 = "0000";
