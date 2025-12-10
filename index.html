@@ -1369,9 +1369,8 @@ async function togglePastRecord() {
     }
 }
 // 페이지 로드 시 달력과 현재 문장 초기화
-window.onload = function() {
-    await checkStudentName();
-
+window.onload = async function() {
+    await checkStudentName();  // 인증 먼저 완료
 
     document.querySelectorAll('.tab').forEach(t => {
         t.onclick = () => {
@@ -1381,7 +1380,8 @@ window.onload = function() {
             document.getElementById(t.dataset.tab).classList.add('active');
         };
     });
-    
+
     renderCalendar();
 };
+
 </script>
