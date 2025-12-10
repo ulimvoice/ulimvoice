@@ -400,11 +400,12 @@ async function promptAndAuthenticate() {
             instructorFolderId = result.instructorFolderId;
 
                 // ID 유효성 검사 및 저장 로직 (이전에 추가된 디버깅 코드 유지)
-            if (instructorFolderId && instructorFolderId.length > 10) {
-                 localStorage.setItem('instructorFolderId', instructorFolderId);
-            } else {
-                 localStorage.setItem('instructorFolderId', 'ERROR_ID_NOT_FOUND');
-            }
+            if (instructorFolderId && instructorFolderId.trim() !== "") {
+    localStorage.setItem('instructorFolderId', instructorFolderId);
+} else {
+    localStorage.setItem('instructorFolderId', 'ERROR_ID_NOT_FOUND');
+}
+
             
                 // ✅ 정상적인 성공 처리
             localStorage.setItem('studentName', studentName);
