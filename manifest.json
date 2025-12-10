@@ -1,7 +1,8 @@
 {
   "name": "울림 성우·스피치·연기학원 연습 프로그램",
   "short_name": "울림 연습",
-  "start_url": "/index.html",
+"start_url": "./index.html",
+
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#2ecc71",
