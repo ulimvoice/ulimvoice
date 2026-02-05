@@ -340,6 +340,10 @@ audio { width: 100%; height: 40px; }
     </div>
   </div>
 </main>
+<footer>
+    <b>상담전화</b> : 010-7372-5875 <br>
+    <b>주소</b> : 수원시 영통구 청명남로 28번길 2 아이텐텐빌딩 502호 <br>
+    Copyright © 울림연기학원. All rights reserved.
 
 <div style="margin-top: 20px;">
         <button onclick="logout()" style="background: none; border: 1px solid #666; color: #aaa; padding: 5px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">
@@ -1615,8 +1619,8 @@ async function authenticateStudentFromInputs() {
     const phoneInput = document.getElementById('phoneLast4Input');
     const name = nameInput.value.trim();
     const phone = phoneInput.value.trim();
-    if (!name || !phone || phone.length !== 4) {
-        alert("학생 이름과 전화번호 뒤 4자리를 정확히 입력해주세요.");
+    if (!name || !phone || phone.length< 4) {
+        alert("학생 이름과 전화번호 뒷자리를 정확히 입력해주세요.");
         return;
     }
     await authenticate(name, phone);
