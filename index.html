@@ -2190,11 +2190,15 @@ function renderRoomTimeTable(dateObj) {
                     </td>
                 `;
             } else {
-               html += `
-  <td class="room-slot available"
-      onclick="reserveRoomSlot('${dateKey}', '${room}', ${hour}, ${hour + 1})">
-      가능
-  </td>
+              html += `
+<td class="room-slot available"
+    onclick="reserveRoomSlot(
+        '${date}',
+        '${room}',
+        ${Number(hour)}
+    )">
+    가능
+</td>
 `;
             }
         });
@@ -2215,6 +2219,9 @@ function renderRoomTimeTable(dateObj) {
 }
 
 async function reserveRoomSlot(date, room, hour) {
+
+    hour = Number(hour);
+
     if (!studentName || studentName === "게스트") {
         alert("학생 로그인 후 예약할 수 있습니다.");
         return;
@@ -2225,62 +2232,45 @@ async function reserveRoomSlot(date, room, hour) {
         return;
     }
 
-    const ok = confirm(`${date}\n${room}\n${formatHour(hour)}~${formatHour(hour + 1)}\n예약할까요?`);
+    const ok = confirm(
+        `${date}\n${room}\n${formatHour(hour)}~${formatHour(hour + 1)}\n예약할까요?`
+    );
+
     if (!ok) return;
 
     try {
+
         const data = await roomJsonp({
             action: "reserveRoom",
-            date,
-            room,
+            date: date,
+            room: room,
             startHour: hour,
             endHour: hour + 1,
-            studentName,
-            phoneLast4,
-            instructorName
+            studentName: studentName,
+            phoneLast4: phoneLast4,
+            instructorName: instructorName
         });
 
         if (data && data.status === "success") {
+
             alert("예약되었습니다.");
+
             selectedRoomDate = date;
+
             await loadRoomReservations();
+
             renderRoomTimeTable(parseRoomDate(date));
+
         } else {
+
             alert((data && data.message) || "예약에 실패했습니다.");
         }
+
     } catch (e) {
+
         console.error(e);
-        alert("예약 저장 중 오류가 발생했습니다. GAS JSONP 배포 상태를 확인해주세요.");
-    }
-}
 
-async function cancelRoomReservation(id) {
-    if (!isRoomApiReady()) {
-        alert("연습실 예약 GAS 주소가 아직 설정되지 않았습니다.");
-        return;
-    }
-
-    const ok = confirm("이 예약을 취소할까요?");
-    if (!ok) return;
-
-    try {
-        const data = await roomJsonp({
-            action: "cancelRoom",
-            id,
-            studentName,
-            phoneLast4
-        });
-
-        if (data && data.status === "success") {
-            alert("예약이 취소되었습니다.");
-            await loadRoomReservations();
-            if (selectedRoomDate) renderRoomTimeTable(parseRoomDate(selectedRoomDate));
-        } else {
-            alert((data && data.message) || "취소에 실패했습니다.");
-        }
-    } catch (e) {
-        console.error(e);
-        alert("예약 취소 중 오류가 발생했습니다. GAS JSONP 배포 상태를 확인해주세요.");
+        alert("예약 저장 중 오류가 발생했습니다.");
     }
 }
 
