@@ -5,7 +5,7 @@
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script src="appdata/etude/data.js"></script>
+<script type="text/javascript" nonce="e478b17852f244aa82a97d35d3f" src="//local.adguard.org?ts=1779159953759&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000003d08720b9ad171fd73e7d8db%26ts%3D494214%26p%3Dfs%26cid%3D1%26sig%3D0b5a00aa3453c9c34dd2ab7416a95179d7a6089c21ea9525114e9a068f35a222%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
 <script src="appdata/vocalization/data.js"></script>
 <script src="appdata/past_questions/data.js"></script>
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -119,6 +119,199 @@ audio { width: 100%; height: 40px; }
 }
 
 /* ... 기존 스타일 ... */
+
+/* ===========================
+   🏢 연습실 예약 추가 스타일
+   =========================== */
+.room-reservation-guide {
+    background:#f0fdf4;
+    border:1px solid #dcfce7;
+    border-radius:14px;
+    padding:14px;
+    margin:12px 0 18px;
+    color:#166534;
+    font-size:14px;
+    line-height:1.6;
+}
+.room-month-nav {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    margin-bottom:15px;
+}
+.room-month-nav button,
+.room-refresh-btn {
+    padding:10px 14px;
+    border:none;
+    border-radius:10px;
+    background:#2ecc71;
+    color:#fff;
+    font-weight:800;
+    cursor:pointer;
+}
+.room-refresh-btn {
+    background:#3498db;
+}
+.room-calendar {
+    display:grid;
+    grid-template-columns:repeat(7, 1fr);
+    gap:8px;
+}
+.room-day-name {
+    text-align:center;
+    font-weight:900;
+    color:#666;
+    background:#eef2f7;
+    border-radius:10px;
+    padding:8px 4px;
+}
+.room-day {
+    background:#fff;
+    border:1px solid #ddd;
+    border-radius:12px;
+    min-height:76px;
+    padding:8px;
+    cursor:pointer;
+    font-weight:800;
+    transition:0.15s;
+}
+.room-day:hover {
+    border-color:#2ecc71;
+    background:#f0fdf4;
+}
+.room-day.empty {
+    background:transparent;
+    border:none;
+    cursor:default;
+}
+.room-day.selected {
+    background:#2ecc71;
+    color:white;
+}
+.room-day.today {
+    border:2px solid #3498db;
+}
+.room-count {
+    display:block;
+    font-size:12px;
+    margin-top:8px;
+    color:#3498db;
+    font-weight:700;
+}
+.room-day.selected .room-count {
+    color:white;
+}
+.room-table-wrap {
+    overflow-x:auto;
+    margin-top:15px;
+}
+.room-table {
+    width:100%;
+    min-width:900px;
+    border-collapse:collapse;
+    font-size:13px;
+}
+.room-table th,
+.room-table td {
+    border:1px solid #ddd;
+    padding:8px;
+    text-align:center;
+    min-width:88px;
+}
+.room-table th {
+    background:#2ecc71;
+    color:white;
+    position:sticky;
+    top:0;
+    z-index:1;
+}
+.room-table th:first-child {
+    left:0;
+    z-index:2;
+}
+.room-time-head {
+    background:#166534 !important;
+    position:sticky;
+    left:0;
+    z-index:3;
+}
+.room-slot {
+    cursor:pointer;
+    background:#fff;
+    user-select:none;
+}
+.room-slot.available:hover {
+    background:#e8f8f0;
+    font-weight:900;
+}
+.room-slot.reserved {
+    background:#dff9fb;
+    font-weight:800;
+    color:#0984e3;
+    cursor:default;
+}
+.room-slot.mine {
+    background:#2ecc71;
+    color:white;
+    font-weight:900;
+    cursor:pointer;
+}
+.room-slot.blocked {
+    background:#eee;
+    color:#999;
+    cursor:not-allowed;
+    font-weight:700;
+}
+.room-status-row {
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:12px;
+    font-size:13px;
+    color:#555;
+}
+.room-status-chip {
+    padding:6px 10px;
+    border-radius:999px;
+    background:#f4f6f7;
+    border:1px solid #e5e7eb;
+}
+@media (max-width: 700px) {
+    .room-month-nav {
+        align-items:stretch;
+    }
+    .room-month-nav button {
+        padding:10px 8px;
+        font-size:13px;
+    }
+    .room-calendar {
+        grid-template-columns:repeat(7, minmax(38px, 1fr));
+        gap:4px;
+    }
+    .room-day-name {
+        font-size:12px;
+        padding:6px 2px;
+    }
+    .room-day {
+        min-height:58px;
+        font-size:12px;
+        padding:5px;
+    }
+    .room-count {
+        font-size:10px;
+    }
+    .room-table {
+        font-size:11px;
+        min-width:760px;
+    }
+    .room-table th,
+    .room-table td {
+        padding:6px 4px;
+        min-width:72px;
+    }
+}
+
 </style>
 </style>
 </head>
@@ -145,9 +338,9 @@ audio { width: 100%; height: 40px; }
                 <input type="text" id="studentNameInput" placeholder="이름을 입력하세요" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px;">
             </div>
             <div style="margin-bottom: 30px;">
-    <label for="phoneLast4Input" style="display: block; font-size: 14px; color: #555; margin-bottom: 5px; font-weight: bold;">🔑 암호 (전화번호 뒷자리):</label>
-    <input type="password" id="phoneLast4Input" placeholder="전화번호 뒷자리" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px;">
-</div>
+                <label for="phoneLast4Input" style="display: block; font-size: 14px; color: #555; margin-bottom: 5px; font-weight: bold;">🔑 암호 (전화번호 뒤 네 자리):</label>
+                <input type="password" id="phoneLast4Input" placeholder="전화번호 뒤 4자리" maxlength="4" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px;">
+            </div>
             <button onclick="authenticateStudentFromInputs()" style="width: 100%; padding: 14px; background: #2ecc71; color: white; border: none; border-radius: 8px; font-size: 17px; font-weight: bold; cursor: pointer; transition: background 0.2s;">로그인</button>
             <button onclick="guestLogin()" style="width: 100%; padding: 14px; background: #aaa; color: white; border: none; border-radius: 8px; font-size: 17px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: background 0.2s;">게스트 로그인 (상황극 탭만 사용)</button>
         </div>
@@ -167,6 +360,7 @@ audio { width: 100%; height: 40px; }
     <div class="tab" data-tab="tab2">🎨 캐릭터</div>
     <div class="tab" data-tab="tab3">🎤 발성훈련</div>
     <div class="tab" data-tab="tab4">📄 기출문제</div>
+    <div class="tab" data-tab="tabRoom">🏢 연습실 예약</div>
   </div>
 
   <div class="tab-content active" id="tab1">
@@ -339,32 +533,47 @@ audio { width: 100%; height: 40px; }
 
     </div>
   </div>
+
+  <div class="tab-content" id="tabRoom">
+    <div class="section">
+      <h2 style="margin-top:0;">🏢 연습실 예약</h2>
+      <div class="room-reservation-guide">
+        월간 달력에서 날짜를 선택한 뒤, 아래 시간표에서 빈 칸을 누르면 1시간 단위로 예약됩니다.<br>
+        기존 강의실 사용일지에 수업이 등록된 시간은 자동으로 <b>수업중</b> 처리됩니다.
+      </div>
+
+      <div class="room-month-nav">
+        <button type="button" onclick="changeRoomMonth(-1)">⬅ 이전달</button>
+        <h3 id="roomMonthTitle" style="margin:0; text-align:center;">예약 달력</h3>
+        <button type="button" onclick="changeRoomMonth(1)">다음달 ➡</button>
+      </div>
+
+      <button type="button" class="room-refresh-btn" onclick="loadRoomReservations()" style="width:100%; margin-bottom:12px;">
+        🔄 예약 현황 새로고침
+      </button>
+
+      <div id="roomCalendar" class="room-calendar"></div>
+
+      <div class="room-status-row">
+        <span class="room-status-chip">가능: 예약 가능</span>
+        <span class="room-status-chip">학생명: 이미 예약됨</span>
+        <span class="room-status-chip">초록색: 내 예약</span>
+        <span class="room-status-chip">수업중: 예약 불가</span>
+      </div>
+
+      <h3 id="selectedRoomDateTitle" style="margin-top:25px;">날짜를 선택해주세요</h3>
+      <div id="roomTimeTable"></div>
+    </div>
+  </div>
+
 </main>
+
 <footer>
     <b>상담전화</b> : 010-7372-5875 <br>
     <b>주소</b> : 수원시 영통구 청명남로 28번길 2 아이텐텐빌딩 502호 <br>
     Copyright © 울림연기학원. All rights reserved.
-
-<div style="margin-top: 20px;">
-        <button onclick="logout()" style="background: none; border: 1px solid #666; color: #aaa; padding: 5px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">
-            로그아웃 (학생 정보 초기화)
-        </button>
-    </div>
 </footer>
-
-<script>
-// 로그아웃 함수 추가
-function logout() {
-    if(confirm("로그아웃 하시겠습니까? 저장된 학생 인증 정보가 삭제됩니다.")) {
-        localStorage.removeItem('studentName');
-        localStorage.removeItem('instructorName');
-        localStorage.removeItem('phoneLast4');
-        localStorage.removeItem('instructorFolderId');
-        localStorage.removeItem('savedVocalIds'); // 필요 시 연습 기록도 초기화하고 싶다면 유지
-        window.location.reload(); // 새로고침하여 로그인 화면으로 이동
-    }
-}
-</script>---
+---
 <script>
 
 // 🟢 헤더 로고 클릭 시 로그인 오버레이를 띄우는 함수 (추가)
@@ -457,7 +666,7 @@ async function promptAndAuthenticate() {
     let name = prompt("학생 이름을 입력해주세요.");
     let phone = prompt("출결번호 (휴대폰 번호 뒤 네 자리)를 입력해주세요.");
 
-    if (!name || !phone || phone.length < 4) {
+    if (!name || !phone || phone.length !== 4) {
         alert("인증 정보가 부족합니다. 게스트 모드로 시작합니다.");
         studentName = "게스트";
         instructorName = "기본";
@@ -1619,8 +1828,8 @@ async function authenticateStudentFromInputs() {
     const phoneInput = document.getElementById('phoneLast4Input');
     const name = nameInput.value.trim();
     const phone = phoneInput.value.trim();
-    if (!name || !phone || phone.length< 4) {
-        alert("학생 이름과 전화번호 뒷자리를 정확히 입력해주세요.");
+    if (!name || !phone || phone.length !== 4) {
+        alert("학생 이름과 전화번호 뒤 4자리를 정확히 입력해주세요.");
         return;
     }
     await authenticate(name, phone);
@@ -1676,5 +1885,366 @@ window.onload = async function() {
         renderCalendar();
     }
 };
+
+
+// =========================================================================================
+// ⭐ 9. 연습실 예약 기능
+// =========================================================================================
+// 아래 ROOM_API_URL에는 새로 만든 "연습실예약시트" Apps Script 웹앱 /exec 주소를 넣으세요.
+// 예: const ROOM_API_URL = 'https://script.google.com/macros/s/배포ID/exec';
+const ROOM_API_URL = 'https://script.google.com/macros/s/AKfycbxJ1K95MPTI_Mvma6YQh8gMvIi5OAT1voDHNr-Ahvak131okW1VVVt5NV2HRYo74Xih/exec';
+
+const ROOM_LIST = [
+    "4강의실",
+    "5강의실",
+    "신체훈련실",
+    "2강의실",
+    "3강의실",
+    "개인부스1",
+    "개인부스2",
+    "개인부스3"
+];
+
+const ROOM_HOURS = Array.from({ length: 12 }, (_, i) => 10 + i); // 10:00~22:00
+let roomCurrentDate = new Date();
+let selectedRoomDate = null;
+let roomReservations = [];
+let roomBlockedSlots = [];
+let isRoomReservationLoaded = false;
+
+function isRoomApiReady() {
+    return ROOM_API_URL &&
+           ROOM_API_URL.startsWith('https://script.google.com/macros/s/') &&
+           ROOM_API_URL.includes('/exec');
+}
+
+function formatRoomDate(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+}
+
+function parseRoomDate(dateKey) {
+    const [y, m, d] = dateKey.split("-").map(Number);
+    return new Date(y, m - 1, d);
+}
+
+function formatHour(hour) {
+    return `${String(hour).padStart(2, "0")}:00`;
+}
+
+function getKoreanDay(date) {
+    return ["일", "월", "화", "수", "목", "금", "토"][date.getDay()];
+}
+
+function changeRoomMonth(diff) {
+    roomCurrentDate.setMonth(roomCurrentDate.getMonth() + diff);
+    selectedRoomDate = null;
+    loadRoomReservations();
+}
+
+async function loadRoomReservations() {
+    const calendarEl = document.getElementById("roomCalendar");
+    const tableEl = document.getElementById("roomTimeTable");
+    const titleEl = document.getElementById("selectedRoomDateTitle");
+
+    if (!calendarEl) return;
+
+    if (!isRoomApiReady()) {
+        calendarEl.innerHTML = `
+            <div style="grid-column:1/-1; background:#fff3cd; border:1px solid #ffeeba; border-radius:12px; padding:16px; color:#856404; line-height:1.6;">
+                <b>연습실 예약 GAS 주소가 아직 설정되지 않았습니다.</b><br>
+                index.html 안의 <code>ROOM_API_URL</code> 값을 새로 배포한 Apps Script 웹앱 주소로 교체해주세요.
+            </div>
+        `;
+        if (tableEl) tableEl.innerHTML = "";
+        if (titleEl) titleEl.textContent = "GAS 주소 설정 필요";
+        return;
+    }
+
+    const year = roomCurrentDate.getFullYear();
+    const month = roomCurrentDate.getMonth() + 1;
+
+    calendarEl.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:20px;">예약 현황을 불러오는 중...</div>`;
+
+    try {
+        const url = `${ROOM_API_URL}?action=getRoomReservations&year=${year}&month=${month}`;
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.status !== "success") {
+            throw new Error(data.message || "예약 정보를 불러오지 못했습니다.");
+        }
+
+        roomReservations = data.reservations || [];
+        roomBlockedSlots = data.blockedSlots || [];
+        isRoomReservationLoaded = true;
+    } catch (e) {
+        console.error(e);
+        calendarEl.innerHTML = `
+            <div style="grid-column:1/-1; background:#fde9e9; border:1px solid #ffb3b3; border-radius:12px; padding:16px; color:#b00020; line-height:1.6;">
+                예약 정보를 불러오지 못했습니다.<br>
+                GAS 배포 권한과 ROOM_API_URL을 확인해주세요.
+            </div>
+        `;
+        return;
+    }
+
+    renderRoomCalendar();
+
+    if (selectedRoomDate) {
+        renderRoomTimeTable(parseRoomDate(selectedRoomDate));
+    } else {
+        if (tableEl) tableEl.innerHTML = "";
+        if (titleEl) titleEl.textContent = "날짜를 선택해주세요";
+    }
+}
+
+function renderRoomCalendar() {
+    const year = roomCurrentDate.getFullYear();
+    const month = roomCurrentDate.getMonth();
+
+    const monthTitle = document.getElementById("roomMonthTitle");
+    const container = document.getElementById("roomCalendar");
+    if (!container) return;
+
+    if (monthTitle) monthTitle.textContent = `${year}년 ${month + 1}월`;
+
+    const first = new Date(year, month, 1);
+    const last = new Date(year, month + 1, 0);
+    const todayKey = formatRoomDate(new Date());
+
+    container.innerHTML = "";
+
+    ["일", "월", "화", "수", "목", "금", "토"].forEach(day => {
+        const div = document.createElement("div");
+        div.className = "room-day-name";
+        div.textContent = day;
+        container.appendChild(div);
+    });
+
+    for (let i = 0; i < first.getDay(); i++) {
+        const empty = document.createElement("div");
+        empty.className = "room-day empty";
+        container.appendChild(empty);
+    }
+
+    for (let d = 1; d <= last.getDate(); d++) {
+        const date = new Date(year, month, d);
+        const dateKey = formatRoomDate(date);
+
+        const count = roomReservations.filter(r =>
+            r.date === dateKey && r.status !== "취소"
+        ).length;
+
+        const div = document.createElement("div");
+        div.className = "room-day";
+        if (selectedRoomDate === dateKey) div.classList.add("selected");
+        if (dateKey === todayKey) div.classList.add("today");
+
+        div.innerHTML = `
+            <div>${d}일</div>
+            <span class="room-count">예약 ${count}건</span>
+        `;
+
+        div.onclick = () => {
+            selectedRoomDate = dateKey;
+            renderRoomCalendar();
+            renderRoomTimeTable(date);
+        };
+
+        container.appendChild(div);
+    }
+}
+
+function renderRoomTimeTable(dateObj) {
+    const dateKey = formatRoomDate(dateObj);
+    const dayName = getKoreanDay(dateObj);
+    const titleEl = document.getElementById("selectedRoomDateTitle");
+    const tableEl = document.getElementById("roomTimeTable");
+
+    if (!tableEl) return;
+
+    if (titleEl) {
+        titleEl.textContent = `${dateKey} (${dayName}) 연습실 예약표`;
+    }
+
+    let html = `
+        <div class="room-table-wrap">
+        <table class="room-table">
+            <thead>
+                <tr>
+                    <th class="room-time-head">시간</th>
+                    ${ROOM_LIST.map(room => `<th>${room}</th>`).join("")}
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    ROOM_HOURS.forEach(hour => {
+        html += `<tr><th class="room-time-head">${formatHour(hour)}~${formatHour(hour + 1)}</th>`;
+
+        ROOM_LIST.forEach(room => {
+            const blocked = roomBlockedSlots.find(b =>
+                b.date === dateKey &&
+                b.room === room &&
+                Number(b.startHour) === hour
+            );
+
+            if (blocked) {
+                html += `
+                    <td class="room-slot blocked" title="${blocked.reason || "수업중"}">
+                        ${blocked.reason || "수업중"}
+                    </td>
+                `;
+                return;
+            }
+
+            const reservation = roomReservations.find(r =>
+                r.date === dateKey &&
+                r.room === room &&
+                Number(r.startHour) === hour &&
+                r.status !== "취소"
+            );
+
+            if (reservation) {
+                const isMine =
+                    reservation.studentName === studentName &&
+                    String(reservation.phoneLast4) === String(phoneLast4);
+
+                html += `
+                    <td class="room-slot reserved ${isMine ? "mine" : ""}"
+                        ${isMine ? `onclick="cancelRoomReservation('${reservation.id}')"` : ""}
+                        title="${isMine ? "내 예약 - 클릭하면 취소" : "이미 예약됨"}">
+                        ${reservation.studentName || "예약됨"}
+                    </td>
+                `;
+            } else {
+                html += `
+                    <td class="room-slot available"
+                        onclick="reserveRoomSlot('${dateKey}', '${room}', ${hour})">
+                        가능
+                    </td>
+                `;
+            }
+        });
+
+        html += `</tr>`;
+    });
+
+    html += `
+            </tbody>
+        </table>
+        </div>
+        <p style="font-size:12px; color:#888; margin-top:10px;">
+            ※ 빈칸을 누르면 1시간 단위로 예약됩니다. 본인 예약칸은 다시 누르면 취소할 수 있습니다.
+        </p>
+    `;
+
+    tableEl.innerHTML = html;
+}
+
+async function reserveRoomSlot(date, room, hour) {
+    if (!studentName || studentName === "게스트") {
+        alert("학생 로그인 후 예약할 수 있습니다.");
+        return;
+    }
+
+    if (!isRoomApiReady()) {
+        alert("연습실 예약 GAS 주소가 아직 설정되지 않았습니다.");
+        return;
+    }
+
+    const ok = confirm(`${date}\n${room}\n${formatHour(hour)}~${formatHour(hour + 1)}\n예약할까요?`);
+    if (!ok) return;
+
+    const payload = {
+        action: "reserveRoom",
+        date,
+        room,
+        startHour: hour,
+        endHour: hour + 1,
+        studentName,
+        phoneLast4,
+        instructorName
+    };
+
+    try {
+        const res = await fetch(ROOM_API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (data.status === "success") {
+            alert("예약되었습니다.");
+            await loadRoomReservations();
+            selectedRoomDate = date;
+            renderRoomTimeTable(parseRoomDate(date));
+        } else {
+            alert(data.message || "예약에 실패했습니다.");
+        }
+    } catch (e) {
+        console.error(e);
+        alert("예약 저장 중 오류가 발생했습니다. GAS 배포 권한을 확인해주세요.");
+    }
+}
+
+async function cancelRoomReservation(id) {
+    if (!isRoomApiReady()) {
+        alert("연습실 예약 GAS 주소가 아직 설정되지 않았습니다.");
+        return;
+    }
+
+    const ok = confirm("이 예약을 취소할까요?");
+    if (!ok) return;
+
+    const payload = {
+        action: "cancelRoom",
+        id,
+        studentName,
+        phoneLast4
+    };
+
+    try {
+        const res = await fetch(ROOM_API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (data.status === "success") {
+            alert("예약이 취소되었습니다.");
+            await loadRoomReservations();
+            if (selectedRoomDate) renderRoomTimeTable(parseRoomDate(selectedRoomDate));
+        } else {
+            alert(data.message || "취소에 실패했습니다.");
+        }
+    } catch (e) {
+        console.error(e);
+        alert("예약 취소 중 오류가 발생했습니다. GAS 배포 권한을 확인해주세요.");
+    }
+}
+
+function initializeRoomReservationFeature() {
+    const roomTab = document.querySelector('[data-tab="tabRoom"]');
+    if (!roomTab) return;
+
+    roomTab.addEventListener("click", () => {
+        if (!isRoomReservationLoaded) {
+            loadRoomReservations();
+        } else {
+            renderRoomCalendar();
+        }
+    });
+}
+
+initializeRoomReservationFeature();
+
 
 </script>
