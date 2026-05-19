@@ -2190,12 +2190,12 @@ function renderRoomTimeTable(dateObj) {
                     </td>
                 `;
             } else {
-                html += `
-                    <td class="room-slot available"
-                        onclick="reserveRoomSlot('${dateKey}', '${room}', ${hour})">
-                        가능
-                    </td>
-                `;
+               html += `
+  <td class="room-slot available"
+      onclick="reserveRoomSlot('${dateKey}', '${room}', ${hour}, ${hour + 1})">
+      가능
+  </td>
+`;
             }
         });
 
