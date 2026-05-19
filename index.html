@@ -5,7 +5,7 @@
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script type="text/javascript" nonce="e478b17852f244aa82a97d35d3f" src="//local.adguard.org?ts=1779159953759&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000003d08720b9ad171fd73e7d8db%26ts%3D494214%26p%3Dfs%26cid%3D1%26sig%3D0b5a00aa3453c9c34dd2ab7416a95179d7a6089c21ea9525114e9a068f35a222%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
+<script type="text/javascript" nonce="e478b17852f244aa82a97d35d3f" src="//local.adguard.org?ts=1779159953759&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_0000000027b0720bb13229d7719004c1%26ts%3D494214%26p%3Dfs%26cid%3D1%26sig%3D3ddf0e541fd78d4d919977fadd648259805d7d17bb3a21c9671cd310b291271f%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
 <script src="appdata/vocalization/data.js"></script>
 <script src="appdata/past_questions/data.js"></script>
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -1938,6 +1938,22 @@ function getKoreanDay(date) {
     return ["일", "월", "화", "수", "목", "금", "토"][date.getDay()];
 }
 
+function normalizeRoomTextForMatch(value) {
+    return String(value || "").replace(/\s+/g, "").trim();
+}
+
+function normalizeStatusForMatch(value) {
+    return String(value || "").trim();
+}
+
+function normalizeHourForMatch(value) {
+    if (typeof value === "number") return value;
+
+    const text = String(value || "").trim();
+    const match = text.match(/(\d{1,2})/);
+    return match ? Number(match[1]) : null;
+}
+
 function changeRoomMonth(diff) {
     roomCurrentDate.setMonth(roomCurrentDate.getMonth() + diff);
     selectedRoomDate = null;
@@ -2035,7 +2051,7 @@ function renderRoomCalendar() {
         const dateKey = formatRoomDate(date);
 
         const count = roomReservations.filter(r =>
-            r.date === dateKey && r.status !== "취소"
+            String(r.date || "") === dateKey && normalizeStatusForMatch(r.status) !== "취소"
         ).length;
 
         const div = document.createElement("div");
@@ -2087,9 +2103,9 @@ function renderRoomTimeTable(dateObj) {
 
         ROOM_LIST.forEach(room => {
             const blocked = roomBlockedSlots.find(b =>
-                b.date === dateKey &&
-                b.room === room &&
-                Number(b.startHour) === hour
+                String(b.date || "") === dateKey &&
+                normalizeRoomTextForMatch(b.room) === normalizeRoomTextForMatch(room) &&
+                normalizeHourForMatch(b.startHour) === hour
             );
 
             if (blocked) {
@@ -2102,16 +2118,16 @@ function renderRoomTimeTable(dateObj) {
             }
 
             const reservation = roomReservations.find(r =>
-                r.date === dateKey &&
-                r.room === room &&
-                Number(r.startHour) === hour &&
-                r.status !== "취소"
+                String(r.date || "") === dateKey &&
+                normalizeRoomTextForMatch(r.room) === normalizeRoomTextForMatch(room) &&
+                normalizeHourForMatch(r.startHour) === hour &&
+                normalizeStatusForMatch(r.status) !== "취소"
             );
 
             if (reservation) {
                 const isMine =
-                    reservation.studentName === studentName &&
-                    String(reservation.phoneLast4) === String(phoneLast4);
+                    String(reservation.studentName || "").trim() === String(studentName || "").trim() &&
+                    String(reservation.phoneLast4 || "").trim() === String(phoneLast4 || "").trim();
 
                 html += `
                     <td class="room-slot reserved ${isMine ? "mine" : ""}"
