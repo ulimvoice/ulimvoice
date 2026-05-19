@@ -5,7 +5,7 @@
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script type="text/javascript" nonce="e478b17852f244aa82a97d35d3f" src="//local.adguard.org?ts=1779159953759&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000bc64720ba229e5c84a589ecf%26ts%3D494214%26p%3Dfs%26cid%3D1%26sig%3D5bbdb115b5b8b618ebaeec09e610ec2f1e4d081767ef5454ccbc359a3111acb9%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
+<script type="text/javascript" nonce="e478b17852f244aa82a97d35d3f" src="//local.adguard.org?ts=1779159953759&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000000e847206af3c4bbb55f6925a%26ts%3D494215%26p%3Dfs%26cid%3D1%26sig%3D03887b2426f5b244cd4a03f8c84b9e45f78f9f2253ba3a329d48d55d9f895d48%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
 <script src="appdata/vocalization/data.js"></script>
 <script src="appdata/past_questions/data.js"></script>
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -313,7 +313,6 @@ audio { width: 100%; height: 40px; }
 }
 
 </style>
-</style>
 </head>
 <body>
 
@@ -573,7 +572,6 @@ audio { width: 100%; height: 40px; }
     <b>주소</b> : 수원시 영통구 청명남로 28번길 2 아이텐텐빌딩 502호 <br>
     Copyright © 울림연기학원. All rights reserved.
 </footer>
----
 <script>
 
 // 🟢 헤더 로고 클릭 시 로그인 오버레이를 띄우는 함수 (추가)
@@ -1888,10 +1886,9 @@ window.onload = async function() {
 
 
 // =========================================================================================
-// ⭐ 9. 연습실 예약 기능
+// ⭐ 9. 연습실 예약 기능 - JSONP 방식(CORS 우회)
 // =========================================================================================
-// 아래 ROOM_API_URL에는 새로 만든 "연습실예약시트" Apps Script 웹앱 /exec 주소를 넣으세요.
-// 예: const ROOM_API_URL = 'https://script.google.com/macros/s/배포ID/exec';
+// GitHub Pages에서는 Apps Script fetch가 CORS로 막힐 수 있으므로 JSONP로 호출합니다.
 const ROOM_API_URL = 'https://script.google.com/macros/s/AKfycbxgLt5ngGxRQJ3WtEtIkmAyUlFQMnAc2y6SjEXnL1tQDUW8ZdRcLh628_inbHmqktNIvg/exec';
 
 const ROOM_LIST = [
@@ -1916,6 +1913,54 @@ function isRoomApiReady() {
     return ROOM_API_URL &&
            ROOM_API_URL.startsWith('https://script.google.com/macros/s/') &&
            ROOM_API_URL.includes('/exec');
+}
+
+function roomJsonp(params) {
+    return new Promise((resolve, reject) => {
+        if (!isRoomApiReady()) {
+            reject(new Error("연습실 예약 GAS 주소가 설정되지 않았습니다."));
+            return;
+        }
+
+        const callbackName =
+            'roomCallback_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
+
+        const query = new URLSearchParams();
+        Object.keys(params || {}).forEach(key => {
+            if (params[key] !== undefined && params[key] !== null) {
+                query.append(key, params[key]);
+            }
+        });
+        query.append('callback', callbackName);
+        query.append('_', Date.now()); // 캐시 방지
+
+        const script = document.createElement('script');
+        let timer = null;
+
+        function cleanup() {
+            if (timer) clearTimeout(timer);
+            try { delete window[callbackName]; } catch (e) { window[callbackName] = undefined; }
+            if (script && script.parentNode) script.parentNode.removeChild(script);
+        }
+
+        window[callbackName] = function(data) {
+            cleanup();
+            resolve(data);
+        };
+
+        script.onerror = function() {
+            cleanup();
+            reject(new Error("GAS 연결 실패 또는 JSONP 응답 오류"));
+        };
+
+        timer = setTimeout(() => {
+            cleanup();
+            reject(new Error("GAS 응답 시간 초과"));
+        }, 15000);
+
+        script.src = ROOM_API_URL + '?' + query.toString();
+        document.body.appendChild(script);
+    });
 }
 
 function formatRoomDate(date) {
@@ -1985,12 +2030,14 @@ async function loadRoomReservations() {
     calendarEl.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:20px;">예약 현황을 불러오는 중...</div>`;
 
     try {
-        const url = `${ROOM_API_URL}?action=getRoomReservations&year=${year}&month=${month}`;
-        const res = await fetch(url);
-        const data = await res.json();
+        const data = await roomJsonp({
+            action: "getRoomReservations",
+            year,
+            month
+        });
 
-        if (data.status !== "success") {
-            throw new Error(data.message || "예약 정보를 불러오지 못했습니다.");
+        if (!data || data.status !== "success") {
+            throw new Error((data && data.message) || "예약 정보를 불러오지 못했습니다.");
         }
 
         roomReservations = data.reservations || [];
@@ -2001,7 +2048,8 @@ async function loadRoomReservations() {
         calendarEl.innerHTML = `
             <div style="grid-column:1/-1; background:#fde9e9; border:1px solid #ffb3b3; border-radius:12px; padding:16px; color:#b00020; line-height:1.6;">
                 예약 정보를 불러오지 못했습니다.<br>
-                GAS 배포 권한과 ROOM_API_URL을 확인해주세요.
+                GAS 배포 URL, 새 버전 배포, JSONP 지원 코드를 확인해주세요.<br>
+                <small>${e.message || e}</small>
             </div>
         `;
         return;
@@ -2180,37 +2228,29 @@ async function reserveRoomSlot(date, room, hour) {
     const ok = confirm(`${date}\n${room}\n${formatHour(hour)}~${formatHour(hour + 1)}\n예약할까요?`);
     if (!ok) return;
 
-    const payload = {
-        action: "reserveRoom",
-        date,
-        room,
-        startHour: hour,
-        endHour: hour + 1,
-        studentName,
-        phoneLast4,
-        instructorName
-    };
-
     try {
-        const res = await fetch(ROOM_API_URL, {
-            method: "POST",
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
-            body: JSON.stringify(payload)
+        const data = await roomJsonp({
+            action: "reserveRoom",
+            date,
+            room,
+            startHour: hour,
+            endHour: hour + 1,
+            studentName,
+            phoneLast4,
+            instructorName
         });
 
-        const data = await res.json();
-
-        if (data.status === "success") {
+        if (data && data.status === "success") {
             alert("예약되었습니다.");
-            await loadRoomReservations();
             selectedRoomDate = date;
+            await loadRoomReservations();
             renderRoomTimeTable(parseRoomDate(date));
         } else {
-            alert(data.message || "예약에 실패했습니다.");
+            alert((data && data.message) || "예약에 실패했습니다.");
         }
     } catch (e) {
         console.error(e);
-        alert("예약 저장 중 오류가 발생했습니다. GAS 배포 권한을 확인해주세요.");
+        alert("예약 저장 중 오류가 발생했습니다. GAS JSONP 배포 상태를 확인해주세요.");
     }
 }
 
@@ -2223,32 +2263,24 @@ async function cancelRoomReservation(id) {
     const ok = confirm("이 예약을 취소할까요?");
     if (!ok) return;
 
-    const payload = {
-        action: "cancelRoom",
-        id,
-        studentName,
-        phoneLast4
-    };
-
     try {
-        const res = await fetch(ROOM_API_URL, {
-            method: "POST",
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
-            body: JSON.stringify(payload)
+        const data = await roomJsonp({
+            action: "cancelRoom",
+            id,
+            studentName,
+            phoneLast4
         });
 
-        const data = await res.json();
-
-        if (data.status === "success") {
+        if (data && data.status === "success") {
             alert("예약이 취소되었습니다.");
             await loadRoomReservations();
             if (selectedRoomDate) renderRoomTimeTable(parseRoomDate(selectedRoomDate));
         } else {
-            alert(data.message || "취소에 실패했습니다.");
+            alert((data && data.message) || "취소에 실패했습니다.");
         }
     } catch (e) {
         console.error(e);
-        alert("예약 취소 중 오류가 발생했습니다. GAS 배포 권한을 확인해주세요.");
+        alert("예약 취소 중 오류가 발생했습니다. GAS JSONP 배포 상태를 확인해주세요.");
     }
 }
 
