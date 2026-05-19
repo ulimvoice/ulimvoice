@@ -5,7 +5,7 @@
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script type="text/javascript" nonce="e478b17852f244aa82a97d35d3f" src="//local.adguard.org?ts=1779159953759&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000000e847206af3c4bbb55f6925a%26ts%3D494215%26p%3Dfs%26cid%3D1%26sig%3D03887b2426f5b244cd4a03f8c84b9e45f78f9f2253ba3a329d48d55d9f895d48%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
+<script type="text/javascript" nonce="e478b17852f244aa82a97d35d3f" src="//local.adguard.org?ts=1779177958569&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000003f48720b9755c01d1ff28e0c%26ts%3D494216%26p%3Dfs%26cid%3D1%26sig%3D8af96d461cb79d1c7a6a2ba45fa3ba0c5566c17c96366ee55e826d2e626c2a7d%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
 <script src="appdata/vocalization/data.js"></script>
 <script src="appdata/past_questions/data.js"></script>
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -2123,8 +2123,9 @@ function renderRoomCalendar() {
 }
 
 function renderRoomTimeTable(dateObj) {
-    const dateKey = formatRoomDate(dateObj);
-    const dayName = getKoreanDay(dateObj);
+    const dateKey = typeof dateObj === "string" ? dateObj : formatRoomDate(dateObj);
+    const date = typeof dateObj === "string" ? parseRoomDate(dateObj) : dateObj;
+    const dayName = getKoreanDay(date);
     const titleEl = document.getElementById("selectedRoomDateTitle");
     const tableEl = document.getElementById("roomTimeTable");
 
@@ -2146,10 +2147,13 @@ function renderRoomTimeTable(dateObj) {
             <tbody>
     `;
 
-    ROOM_HOURS.forEach(hour => {
+    ROOM_HOURS.forEach(rawHour => {
+        const hour = Number(rawHour);
         html += `<tr><th class="room-time-head">${formatHour(hour)}~${formatHour(hour + 1)}</th>`;
 
         ROOM_LIST.forEach(room => {
+            const safeRoom = String(room || "").replace(/"/g, "&quot;");
+
             const blocked = roomBlockedSlots.find(b =>
                 String(b.date || "") === dateKey &&
                 normalizeRoomTextForMatch(b.room) === normalizeRoomTextForMatch(room) &&
@@ -2180,26 +2184,25 @@ function renderRoomTimeTable(dateObj) {
                 const statusText = normalizeStatusForMatch(reservation.status);
                 const displayText = statusText === "관리자차단" ? "사용불가" :
                                     statusText === "사용완료" ? "사용완료" :
+                                    statusText === "수업중" ? "수업중" :
                                     "이미 예약됨";
 
                 html += `
                     <td class="room-slot reserved ${isMine ? "mine" : ""}"
-                        ${isMine ? `onclick="cancelRoomReservation('${reservation.id}')"` : ""}
+                        ${isMine ? `data-cancel-id="${reservation.id}"` : ""}
                         title="${isMine ? "내 예약 - 클릭하면 취소" : displayText}">
                         ${displayText}
                     </td>
                 `;
             } else {
-              html += `
-<td class="room-slot available"
-    onclick="reserveRoomSlot(
-        '${date}',
-        '${room}',
-        ${Number(hour)}
-    )">
-    가능
-</td>
-`;
+                html += `
+                    <td class="room-slot available"
+                        data-date="${dateKey}"
+                        data-room="${safeRoom}"
+                        data-hour="${hour}">
+                        가능
+                    </td>
+                `;
             }
         });
 
@@ -2216,10 +2219,24 @@ function renderRoomTimeTable(dateObj) {
     `;
 
     tableEl.innerHTML = html;
+
+    tableEl.querySelectorAll('.room-slot.available').forEach(cell => {
+        cell.addEventListener('click', () => {
+            const clickedDate = cell.dataset.date;
+            const clickedRoom = cell.dataset.room;
+            const clickedHour = Number(cell.dataset.hour);
+            reserveRoomSlot(clickedDate, clickedRoom, clickedHour);
+        });
+    });
+
+    tableEl.querySelectorAll('.room-slot.mine[data-cancel-id]').forEach(cell => {
+        cell.addEventListener('click', () => {
+            cancelRoomReservation(cell.dataset.cancelId);
+        });
+    });
 }
 
 async function reserveRoomSlot(date, room, hour) {
-
     hour = Number(hour);
 
     if (!studentName || studentName === "게스트") {
@@ -2232,14 +2249,15 @@ async function reserveRoomSlot(date, room, hour) {
         return;
     }
 
-    const ok = confirm(
-        `${date}\n${room}\n${formatHour(hour)}~${formatHour(hour + 1)}\n예약할까요?`
-    );
+    if (Number.isNaN(hour)) {
+        alert("예약 시간 정보가 올바르지 않습니다.");
+        return;
+    }
 
+    const ok = confirm(`${date}\n${room}\n${formatHour(hour)}~${formatHour(hour + 1)}\n예약할까요?`);
     if (!ok) return;
 
     try {
-
         const data = await roomJsonp({
             action: "reserveRoom",
             date: date,
@@ -2252,25 +2270,46 @@ async function reserveRoomSlot(date, room, hour) {
         });
 
         if (data && data.status === "success") {
-
             alert("예약되었습니다.");
-
             selectedRoomDate = date;
-
             await loadRoomReservations();
-
             renderRoomTimeTable(parseRoomDate(date));
-
         } else {
-
             alert((data && data.message) || "예약에 실패했습니다.");
         }
-
     } catch (e) {
-
         console.error(e);
+        alert("예약 저장 중 오류가 발생했습니다. GAS JSONP 배포 상태를 확인해주세요.");
+    }
+}
 
-        alert("예약 저장 중 오류가 발생했습니다.");
+async function cancelRoomReservation(id) {
+    if (!isRoomApiReady()) {
+        alert("연습실 예약 GAS 주소가 아직 설정되지 않았습니다.");
+        return;
+    }
+
+    const ok = confirm("이 예약을 취소할까요?");
+    if (!ok) return;
+
+    try {
+        const data = await roomJsonp({
+            action: "cancelRoom",
+            id,
+            studentName,
+            phoneLast4
+        });
+
+        if (data && data.status === "success") {
+            alert("예약이 취소되었습니다.");
+            await loadRoomReservations();
+            if (selectedRoomDate) renderRoomTimeTable(parseRoomDate(selectedRoomDate));
+        } else {
+            alert((data && data.message) || "취소에 실패했습니다.");
+        }
+    } catch (e) {
+        console.error(e);
+        alert("예약 취소 중 오류가 발생했습니다. GAS JSONP 배포 상태를 확인해주세요.");
     }
 }
 
