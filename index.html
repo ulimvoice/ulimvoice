@@ -5,7 +5,7 @@
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script type="text/javascript" nonce="e478b17852f244aa82a97d35d3f" src="//local.adguard.org?ts=1779177958569&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000ec30720bab523c8e41f96559%26ts%3D494217%26p%3Dfs%26cid%3D1%26sig%3D303aeb4e2afc6b2488ad559f8c8328058eec06634dbd0feee62c306074a6fb51%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
+<script type="text/javascript" nonce="e478b17852f244aa82a97d35d3f" src="//local.adguard.org?ts=1779366587249&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000d2c87206911dce82c690acd7%26ts%3D494268%26p%3Dfs%26cid%3D1%26sig%3D40f84459a7c2ccba63cf9aba7ed6149c878bbeb437ff9346d716b38f3b55b3cf%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
 <script src="appdata/vocalization/data.js"></script>
 <script src="appdata/past_questions/data.js"></script>
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -1886,9 +1886,10 @@ window.onload = async function() {
 
 
 // =========================================================================================
-// ⭐ 9. 연습실 예약 기능 - JSONP 방식(CORS 우회)
+// ⭐ 9. 연습실 예약 기능 - JSONP 방식(CORS/권한 오류 최소화)
 // =========================================================================================
-// GitHub Pages에서는 Apps Script fetch가 CORS로 막힐 수 있으므로 JSONP로 호출합니다.
+// GitHub Pages에서는 Apps Script POST/fetch가 CORS/권한 문제처럼 보일 수 있으므로 JSONP GET 방식만 사용합니다.
+// 새 GAS 배포 주소로 바뀌면 아래 URL만 교체하세요.
 const ROOM_API_URL = 'https://script.google.com/macros/s/AKfycbxgLt5ngGxRQJ3WtEtIkmAyUlFQMnAc2y6SjEXnL1tQDUW8ZdRcLh628_inbHmqktNIvg/exec';
 
 const ROOM_LIST = [
@@ -1913,6 +1914,45 @@ function isRoomApiReady() {
     return ROOM_API_URL &&
            ROOM_API_URL.startsWith('https://script.google.com/macros/s/') &&
            ROOM_API_URL.includes('/exec');
+}
+
+function showRoomOverlay(message, id) {
+    hideRoomOverlay(id);
+
+    const overlay = document.createElement("div");
+    overlay.id = id;
+    overlay.style.position = "fixed";
+    overlay.style.left = "0";
+    overlay.style.top = "0";
+    overlay.style.width = "100%";
+    overlay.style.height = "100%";
+    overlay.style.background = "rgba(0,0,0,0.45)";
+    overlay.style.zIndex = "999999";
+    overlay.style.display = "flex";
+    overlay.style.alignItems = "center";
+    overlay.style.justifyContent = "center";
+
+    overlay.innerHTML = `
+        <div style="
+            background:#fff;
+            padding:28px 34px;
+            border-radius:16px;
+            font-size:18px;
+            font-weight:800;
+            color:#222;
+            text-align:center;
+            box-shadow:0 10px 30px rgba(0,0,0,0.2);
+        ">
+            ${message}
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+}
+
+function hideRoomOverlay(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
 }
 
 function roomJsonp(params) {
@@ -1950,7 +1990,7 @@ function roomJsonp(params) {
 
         script.onerror = function() {
             cleanup();
-            reject(new Error("GAS 연결 실패 또는 JSONP 응답 오류"));
+            reject(new Error("GAS 연결 실패. 웹앱 배포 권한을 '모든 사용자'로 설정했는지 확인해주세요."));
         };
 
         timer = setTimeout(() => {
@@ -2000,8 +2040,6 @@ function normalizeHourForMatch(value) {
     }
 
     const text = String(value || "").trim();
-
-    // "20:00", "20시", "20" 모두 20으로 처리
     const match = text.match(/(\d{1,2})/);
     return match ? Number(match[1]) : null;
 }
@@ -2047,15 +2085,15 @@ async function loadRoomReservations() {
             throw new Error((data && data.message) || "예약 정보를 불러오지 못했습니다.");
         }
 
-        roomReservations = data.reservations || [];
-        roomBlockedSlots = data.blockedSlots || [];
+        roomReservations = Array.isArray(data.reservations) ? data.reservations : [];
+        roomBlockedSlots = Array.isArray(data.blockedSlots) ? data.blockedSlots : [];
         isRoomReservationLoaded = true;
     } catch (e) {
         console.error(e);
         calendarEl.innerHTML = `
             <div style="grid-column:1/-1; background:#fde9e9; border:1px solid #ffb3b3; border-radius:12px; padding:16px; color:#b00020; line-height:1.6;">
                 예약 정보를 불러오지 못했습니다.<br>
-                GAS 배포 URL, 새 버전 배포, JSONP 지원 코드를 확인해주세요.<br>
+                GAS 배포 URL, 새 버전 배포, 웹앱 접근 권한, JSONP 지원 코드를 확인해주세요.<br>
                 <small>${e.message || e}</small>
             </div>
         `;
@@ -2106,7 +2144,8 @@ function renderRoomCalendar() {
         const dateKey = formatRoomDate(date);
 
         const count = roomReservations.filter(r =>
-            String(r.date || "") === dateKey && normalizeStatusForMatch(r.status) !== "취소"
+            String(r.date || "") === dateKey &&
+            normalizeStatusForMatch(r.status) !== "취소"
         ).length;
 
         const div = document.createElement("div");
@@ -2244,6 +2283,7 @@ function renderRoomTimeTable(dateObj) {
 }
 
 async function reserveRoomSlot(date, room, hour) {
+    hour = Number(hour);
 
     if (!studentName || studentName === "게스트") {
         alert("학생 로그인 후 예약할 수 있습니다.");
@@ -2255,49 +2295,22 @@ async function reserveRoomSlot(date, room, hour) {
         return;
     }
 
+    if (Number.isNaN(hour)) {
+        alert("예약 시간 정보가 올바르지 않습니다.");
+        return;
+    }
+
     const ok = confirm(
         `${date}\n${room}\n${formatHour(hour)}~${formatHour(hour + 1)}\n예약할까요?`
     );
 
     if (!ok) return;
 
-    // 중복 클릭 방지
     if (window.__roomReserving) return;
     window.__roomReserving = true;
-
-    // 로딩 팝업 생성
-    const loadingPopup = document.createElement("div");
-
-    loadingPopup.id = "roomReserveLoading";
-
-    loadingPopup.style.position = "fixed";
-    loadingPopup.style.left = "0";
-    loadingPopup.style.top = "0";
-    loadingPopup.style.width = "100%";
-    loadingPopup.style.height = "100%";
-    loadingPopup.style.background = "rgba(0,0,0,0.45)";
-    loadingPopup.style.zIndex = "999999";
-    loadingPopup.style.display = "flex";
-    loadingPopup.style.alignItems = "center";
-    loadingPopup.style.justifyContent = "center";
-
-    loadingPopup.innerHTML = `
-        <div style="
-            background:#fff;
-            padding:28px 34px;
-            border-radius:16px;
-            font-size:18px;
-            font-weight:700;
-            box-shadow:0 10px 30px rgba(0,0,0,0.2);
-        ">
-            예약 처리중...
-        </div>
-    `;
-
-    document.body.appendChild(loadingPopup);
+    showRoomOverlay("예약 처리중...", "roomReserveLoading");
 
     try {
-
         const data = await roomJsonp({
             action: "reserveRoom",
             date,
@@ -2309,48 +2322,28 @@ async function reserveRoomSlot(date, room, hour) {
             instructorName
         });
 
-        document.getElementById("roomReserveLoading")?.remove();
-
         if (data && data.status === "success") {
-
-            alert("예약되었습니다.");
-
             selectedRoomDate = date;
-
             await loadRoomReservations();
-
-            renderRoomTimeTable(
-                parseRoomDate(date)
-            );
-
+            renderRoomTimeTable(parseRoomDate(date));
+            alert("예약되었습니다.");
         } else {
-
-            alert(
-                (data && data.message)
-                || "예약에 실패했습니다."
-            );
-
+            alert((data && data.message) || "예약에 실패했습니다.");
         }
 
     } catch (e) {
-
         console.error(e);
-
-        document.getElementById("roomReserveLoading")?.remove();
-
         alert(
-            "예약 저장 중 오류가 발생했습니다.\nGAS 배포 상태를 확인해주세요."
+            "예약 저장 중 오류가 발생했습니다.\n" +
+            (e.message || "GAS 배포 상태를 확인해주세요.")
         );
-
     } finally {
-
+        hideRoomOverlay("roomReserveLoading");
         window.__roomReserving = false;
-
     }
 }
 
 async function cancelRoomReservation(id) {
-
     if (!isRoomApiReady()) {
         alert("연습실 예약 GAS 주소가 아직 설정되지 않았습니다.");
         return;
@@ -2359,43 +2352,11 @@ async function cancelRoomReservation(id) {
     const ok = confirm("이 예약을 취소할까요?");
     if (!ok) return;
 
-    // 중복 클릭 방지
     if (window.__roomCanceling) return;
     window.__roomCanceling = true;
-
-    // 취소중 팝업
-    const loadingPopup = document.createElement("div");
-
-    loadingPopup.id = "roomCancelLoading";
-
-    loadingPopup.style.position = "fixed";
-    loadingPopup.style.left = "0";
-    loadingPopup.style.top = "0";
-    loadingPopup.style.width = "100%";
-    loadingPopup.style.height = "100%";
-    loadingPopup.style.background = "rgba(0,0,0,0.45)";
-    loadingPopup.style.zIndex = "999999";
-    loadingPopup.style.display = "flex";
-    loadingPopup.style.alignItems = "center";
-    loadingPopup.style.justifyContent = "center";
-
-    loadingPopup.innerHTML = `
-        <div style="
-            background:#fff;
-            padding:28px 34px;
-            border-radius:16px;
-            font-size:18px;
-            font-weight:700;
-            box-shadow:0 10px 30px rgba(0,0,0,0.2);
-        ">
-            예약 취소중...
-        </div>
-    `;
-
-    document.body.appendChild(loadingPopup);
+    showRoomOverlay("예약 취소중...", "roomCancelLoading");
 
     try {
-
         const data = await roomJsonp({
             action: "cancelRoom",
             id,
@@ -2403,43 +2364,27 @@ async function cancelRoomReservation(id) {
             phoneLast4
         });
 
-        document.getElementById("roomCancelLoading")?.remove();
-
         if (data && data.status === "success") {
-
-            alert("예약이 취소되었습니다.");
-
             await loadRoomReservations();
 
             if (selectedRoomDate) {
-                renderRoomTimeTable(
-                    parseRoomDate(selectedRoomDate)
-                );
+                renderRoomTimeTable(parseRoomDate(selectedRoomDate));
             }
 
+            alert("예약이 취소되었습니다.");
         } else {
-
-            alert(
-                (data && data.message)
-                || "취소에 실패했습니다."
-            );
-
+            alert((data && data.message) || "취소에 실패했습니다.");
         }
 
     } catch (e) {
-
         console.error(e);
-
-        document.getElementById("roomCancelLoading")?.remove();
-
         alert(
-            "예약 취소 중 오류가 발생했습니다.\nGAS 배포 상태를 확인해주세요."
+            "예약 취소 중 오류가 발생했습니다.\n" +
+            (e.message || "GAS 배포 상태를 확인해주세요.")
         );
-
     } finally {
-
+        hideRoomOverlay("roomCancelLoading");
         window.__roomCanceling = false;
-
     }
 }
 
@@ -2452,6 +2397,9 @@ function initializeRoomReservationFeature() {
             loadRoomReservations();
         } else {
             renderRoomCalendar();
+            if (selectedRoomDate) {
+                renderRoomTimeTable(parseRoomDate(selectedRoomDate));
+            }
         }
     });
 }
