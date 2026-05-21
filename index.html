@@ -2244,7 +2244,6 @@ function renderRoomTimeTable(dateObj) {
 }
 
 async function reserveRoomSlot(date, room, hour) {
-    hour = Number(hour);
 
     if (!studentName || studentName === "게스트") {
         alert("학생 로그인 후 예약할 수 있습니다.");
@@ -2256,37 +2255,97 @@ async function reserveRoomSlot(date, room, hour) {
         return;
     }
 
-    if (Number.isNaN(hour)) {
-        alert("예약 시간 정보가 올바르지 않습니다.");
-        return;
-    }
+    const ok = confirm(
+        `${date}\n${room}\n${formatHour(hour)}~${formatHour(hour + 1)}\n예약할까요?`
+    );
 
-    const ok = confirm(`${date}\n${room}\n${formatHour(hour)}~${formatHour(hour + 1)}\n예약할까요?`);
     if (!ok) return;
 
+    // 중복 클릭 방지
+    if (window.__roomReserving) return;
+    window.__roomReserving = true;
+
+    // 로딩 팝업 생성
+    const loadingPopup = document.createElement("div");
+
+    loadingPopup.id = "roomReserveLoading";
+
+    loadingPopup.style.position = "fixed";
+    loadingPopup.style.left = "0";
+    loadingPopup.style.top = "0";
+    loadingPopup.style.width = "100%";
+    loadingPopup.style.height = "100%";
+    loadingPopup.style.background = "rgba(0,0,0,0.45)";
+    loadingPopup.style.zIndex = "999999";
+    loadingPopup.style.display = "flex";
+    loadingPopup.style.alignItems = "center";
+    loadingPopup.style.justifyContent = "center";
+
+    loadingPopup.innerHTML = `
+        <div style="
+            background:#fff;
+            padding:28px 34px;
+            border-radius:16px;
+            font-size:18px;
+            font-weight:700;
+            box-shadow:0 10px 30px rgba(0,0,0,0.2);
+        ">
+            예약 처리중...
+        </div>
+    `;
+
+    document.body.appendChild(loadingPopup);
+
     try {
+
         const data = await roomJsonp({
             action: "reserveRoom",
-            date: date,
-            room: room,
+            date,
+            room,
             startHour: hour,
             endHour: hour + 1,
-            studentName: studentName,
-            phoneLast4: phoneLast4,
-            instructorName: instructorName
+            studentName,
+            phoneLast4,
+            instructorName
         });
 
+        document.getElementById("roomReserveLoading")?.remove();
+
         if (data && data.status === "success") {
+
             alert("예약되었습니다.");
+
             selectedRoomDate = date;
+
             await loadRoomReservations();
-            renderRoomTimeTable(parseRoomDate(date));
+
+            renderRoomTimeTable(
+                parseRoomDate(date)
+            );
+
         } else {
-            alert((data && data.message) || "예약에 실패했습니다.");
+
+            alert(
+                (data && data.message)
+                || "예약에 실패했습니다."
+            );
+
         }
+
     } catch (e) {
+
         console.error(e);
-        alert("예약 저장 중 오류가 발생했습니다. GAS JSONP 배포 상태를 확인해주세요.");
+
+        document.getElementById("roomReserveLoading")?.remove();
+
+        alert(
+            "예약 저장 중 오류가 발생했습니다.\nGAS 배포 상태를 확인해주세요."
+        );
+
+    } finally {
+
+        window.__roomReserving = false;
+
     }
 }
 
