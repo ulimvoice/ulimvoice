@@ -2350,6 +2350,7 @@ async function reserveRoomSlot(date, room, hour) {
 }
 
 async function cancelRoomReservation(id) {
+
     if (!isRoomApiReady()) {
         alert("연습실 예약 GAS 주소가 아직 설정되지 않았습니다.");
         return;
@@ -2358,7 +2359,43 @@ async function cancelRoomReservation(id) {
     const ok = confirm("이 예약을 취소할까요?");
     if (!ok) return;
 
+    // 중복 클릭 방지
+    if (window.__roomCanceling) return;
+    window.__roomCanceling = true;
+
+    // 취소중 팝업
+    const loadingPopup = document.createElement("div");
+
+    loadingPopup.id = "roomCancelLoading";
+
+    loadingPopup.style.position = "fixed";
+    loadingPopup.style.left = "0";
+    loadingPopup.style.top = "0";
+    loadingPopup.style.width = "100%";
+    loadingPopup.style.height = "100%";
+    loadingPopup.style.background = "rgba(0,0,0,0.45)";
+    loadingPopup.style.zIndex = "999999";
+    loadingPopup.style.display = "flex";
+    loadingPopup.style.alignItems = "center";
+    loadingPopup.style.justifyContent = "center";
+
+    loadingPopup.innerHTML = `
+        <div style="
+            background:#fff;
+            padding:28px 34px;
+            border-radius:16px;
+            font-size:18px;
+            font-weight:700;
+            box-shadow:0 10px 30px rgba(0,0,0,0.2);
+        ">
+            예약 취소중...
+        </div>
+    `;
+
+    document.body.appendChild(loadingPopup);
+
     try {
+
         const data = await roomJsonp({
             action: "cancelRoom",
             id,
@@ -2366,16 +2403,43 @@ async function cancelRoomReservation(id) {
             phoneLast4
         });
 
+        document.getElementById("roomCancelLoading")?.remove();
+
         if (data && data.status === "success") {
+
             alert("예약이 취소되었습니다.");
+
             await loadRoomReservations();
-            if (selectedRoomDate) renderRoomTimeTable(parseRoomDate(selectedRoomDate));
+
+            if (selectedRoomDate) {
+                renderRoomTimeTable(
+                    parseRoomDate(selectedRoomDate)
+                );
+            }
+
         } else {
-            alert((data && data.message) || "취소에 실패했습니다.");
+
+            alert(
+                (data && data.message)
+                || "취소에 실패했습니다."
+            );
+
         }
+
     } catch (e) {
+
         console.error(e);
-        alert("예약 취소 중 오류가 발생했습니다. GAS JSONP 배포 상태를 확인해주세요.");
+
+        document.getElementById("roomCancelLoading")?.remove();
+
+        alert(
+            "예약 취소 중 오류가 발생했습니다.\nGAS 배포 상태를 확인해주세요."
+        );
+
+    } finally {
+
+        window.__roomCanceling = false;
+
     }
 }
 
