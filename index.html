@@ -2045,24 +2045,28 @@ function escapeHtml(value) {
 function renderNoticeCard(notice) {
     let html = `
         <div class="notice-card">
-            <div class="notice-card-title">${escapeNoticeHtml(notice.title)}</div>
+            <div class="notice-card-title">${escapeHtml(notice.title)}</div>
     `;
 
     if (notice.content) {
-        html += `<div class="notice-text">${escapeNoticeHtml(notice.content)}</div>`;
+        html += `<div class="notice-text">${escapeHtml(notice.content)}</div>`;
     }
 
     if (notice.imageUrl) {
-        html += `<img src="${escapeNoticeHtml(notice.imageUrl)}" alt="${escapeNoticeHtml(notice.title)}">`;
+        html += `
+            <img 
+                src="${escapeHtml(notice.imageUrl)}" 
+                alt="${escapeHtml(notice.title)}"
+            >
+        `;
     }
 
     if (notice.youtubeUrl) {
         html += `
             <div class="notice-youtube-wrap">
-                <iframe
-                    src="${escapeNoticeHtml(notice.youtubeUrl)}"
-                    title="${escapeNoticeHtml(notice.title)}"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                <iframe 
+                    src="${escapeHtml(notice.youtubeUrl)}"
+                    title="${escapeHtml(notice.title)}"
                     allowfullscreen>
                 </iframe>
             </div>
@@ -2071,32 +2075,34 @@ function renderNoticeCard(notice) {
 
     if (notice.videoUrl) {
         html += `
-            <video controls playsinline preload="metadata">
-                <source src="${escapeNoticeHtml(notice.videoUrl)}">
+            <video controls playsinline>
+                <source src="${escapeHtml(notice.videoUrl)}">
                 현재 브라우저에서 영상을 재생할 수 없습니다.
             </video>
         `;
     }
-if (notice.linkUrl) {
-    html += `
-        <a href="${escapeHtml(notice.linkUrl)}"
-           target="_blank"
-           rel="noopener noreferrer"
-           style="
-               display:block;
-               text-align:center;
-               margin-top:14px;
-               padding:13px 16px;
-               background:#2ecc71;
-               color:#fff;
-               border-radius:12px;
-               text-decoration:none;
-               font-weight:900;
-           ">
-            🔗 ${escapeHtml(notice.linkText || "자세히 보기")}
-        </a>
-    `;
-}
+
+    if (notice.linkUrl) {
+        html += `
+            <a href="${escapeHtml(notice.linkUrl)}"
+               target="_blank"
+               rel="noopener noreferrer"
+               style="
+                   display:block;
+                   text-align:center;
+                   margin-top:14px;
+                   padding:13px 16px;
+                   background:#2ecc71;
+                   color:#fff;
+                   border-radius:12px;
+                   text-decoration:none;
+                   font-weight:900;
+               ">
+                🔗 ${escapeHtml(notice.linkText || "자세히 보기")}
+            </a>
+        `;
+    }
+
     html += `</div>`;
     return html;
 }
