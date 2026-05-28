@@ -5,7 +5,7 @@
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1779963058596&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000341c720981d2eb80ae257605%26ts%3D494436%26p%3Dfs%26cid%3D1%26sig%3Df5293af9617796b6cbe2fd65b9ec2c39ee7ba1530a74ba26cb02f9a5edf11129%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
+<script src="appdata/etude/data.js"></script>
 <script src="appdata/vocalization/data.js"></script>
 <script src="appdata/past_questions/data.js"></script>
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -648,6 +648,10 @@ audio { width: 100%; height: 40px; }
     margin:4px;
 }
 .admin-class-chip:hover { background:#f0fdf4; border-color:#2ecc71; color:#166534; }
+.admin-class-list-panel { display:none; margin-top:10px; padding:10px; background:#f8fafc; border:1px solid #e5e7eb; border-radius:14px; max-height:210px; overflow:auto; }
+.admin-class-list-panel.open { display:block; }
+.admin-permission-note { font-size:12px; color:#777; margin-top:6px; line-height:1.5; }
+.admin-role-badge { display:inline-block; padding:4px 9px; border-radius:999px; background:#eef2ff; color:#3730a3; font-size:12px; font-weight:800; }
 .admin-recipient-row {
     display:flex;
     flex-wrap:wrap;
@@ -1008,7 +1012,7 @@ audio { width: 100%; height: 40px; }
           <button type="button" class="admin-subtab active" data-admin-panel="adminPanelStudents" onclick="showAdminPanel('adminPanelStudents')">학생검색</button>
           <button type="button" class="admin-subtab" data-admin-panel="adminPanelAttendance" onclick="showAdminPanel('adminPanelAttendance')">출석부 확인/문자</button>
           <button type="button" class="admin-subtab" data-admin-panel="adminPanelDailyEval" onclick="showAdminPanel('adminPanelDailyEval')">수업 일일평가</button>
-          <button type="button" class="admin-subtab" data-admin-panel="adminPanelPayment" onclick="showAdminPanel('adminPanelPayment')">결제관리</button>
+          <button type="button" class="admin-subtab admin-full-only" data-admin-panel="adminPanelPayment" onclick="showAdminPanel('adminPanelPayment')">결제관리</button>
         </div>
 
         <div id="adminPanelStudents" class="admin-panel active">
@@ -1037,6 +1041,8 @@ audio { width: 100%; height: 40px; }
                 <label for="adminAttendanceClass">반명 / 수업명 선택 또는 검색</label>
                 <input type="text" id="adminAttendanceClass" list="adminClassDatalist" placeholder="예: [최봄결T] 토요일 청소년 초중급">
                 <datalist id="adminClassDatalist"></datalist>
+                <button type="button" class="admin-btn gray" style="margin-top:8px; padding:9px 12px; font-size:13px;" onclick="toggleAdminClassList('adminClassChipWrap')">반 목록 펼치기/닫기</button>
+                <div id="adminClassChipWrap" class="admin-class-list-panel"></div>
               </div>
               <div class="admin-field">
                 <label for="adminAttendanceFilter">학생명 / 강사명 필터</label>
@@ -1058,20 +1064,19 @@ audio { width: 100%; height: 40px; }
               </div>
             </div>
 
-            <div id="adminClassChipWrap" style="margin:8px 0 12px;"></div>
-
             <div class="admin-recipient-row">
               <b style="width:100%; color:#111827;">문자 수신 대상</b>
               <label><input type="checkbox" id="attRecipientStudent" checked> 학생</label>
               <label><input type="checkbox" id="attRecipientParent" checked> 학부모</label>
               <label><input type="checkbox" id="attRecipientInstructor"> 담당강사</label>
               <label><input type="checkbox" id="attRecipientAdmin"> 관리자</label>
+              <div class="admin-permission-note admin-teacher-note" style="display:none; width:100%;">강사 권한은 문자 발송이 제한됩니다. 출석 확인과 일일평가 저장만 가능합니다.</div>
             </div>
 
             <div class="admin-btn-row">
               <button type="button" class="admin-btn blue" onclick="adminLoadAttendanceSnapshot()">출석부 반영</button>
               <button type="button" class="admin-btn orange" onclick="adminPreviewAttendanceMessages()">문자 미리보기</button>
-              <button type="button" class="admin-btn red" onclick="adminSendAttendanceMessages()">선택 문자 발송</button>
+              <button type="button" class="admin-btn red admin-full-only" onclick="adminSendAttendanceMessages()">선택 문자 발송</button>
             </div>
             <div id="adminAttendanceSummary" style="font-size:13px; color:#666; margin:10px 0;"></div>
             <div id="adminAttendanceTableWrap" class="admin-table-wrap"></div>
@@ -1094,12 +1099,24 @@ audio { width: 100%; height: 40px; }
                 <label for="adminDailyEvalClass">반명 / 수업명</label>
                 <input type="text" id="adminDailyEvalClass" list="adminDailyClassDatalist" placeholder="예: 토요일 청소년 초중급" oninput="adminRenderDailyEvalTable()">
                 <datalist id="adminDailyClassDatalist"></datalist>
+                <button type="button" class="admin-btn gray" style="margin-top:8px; padding:9px 12px; font-size:13px;" onclick="toggleAdminClassList('adminDailyClassChipWrap')">반 목록 펼치기/닫기</button>
+                <div id="adminDailyClassChipWrap" class="admin-class-list-panel"></div>
               </div>
               <div class="admin-field">
                 <label for="adminDailyEvalFilter">학생명 / 강사명 필터</label>
                 <input type="text" id="adminDailyEvalFilter" placeholder="예: 유혜원, 최봄결" oninput="adminRenderDailyEvalTable()">
               </div>
             </div>
+            <div class="admin-field admin-template-box" style="margin-top:12px;">
+              <label for="adminDailyEvalTemplate">일일평가 기본 문구</label>
+              <textarea id="adminDailyEvalTemplate" class="admin-eval-textarea" style="min-height:120px;" placeholder="일일평가 기본문구"></textarea>
+              <div class="admin-btn-row" style="margin-top:8px;">
+                <button type="button" class="admin-btn admin-full-only" onclick="adminSaveDailyEvalTemplate()">기본 문구 저장</button>
+                <button type="button" class="admin-btn blue" onclick="adminApplyTemplateToVisibleRows()">현재 학생들에게 문구 적용</button>
+              </div>
+              <div class="admin-permission-note">사용 가능 치환어: [반이름], [학생명], [담당강사], [수업일]</div>
+            </div>
+
             <div class="admin-recipient-row">
               <b style="width:100%; color:#111827;">평가 문자 수신 대상</b>
               <label><input type="checkbox" id="dailyRecipientStudent"> 학생</label>
@@ -1111,7 +1128,7 @@ audio { width: 100%; height: 40px; }
               <button type="button" class="admin-btn blue" onclick="adminRenderDailyEvalTable()">학생 불러오기</button>
               <button type="button" class="admin-btn" onclick="adminSaveDailyEvaluations(false)">평가 저장</button>
               <button type="button" class="admin-btn orange" onclick="adminPreviewDailyEvalMessages()">문자 미리보기</button>
-              <button type="button" class="admin-btn red" onclick="adminSaveDailyEvaluations(true)">저장 후 문자발송</button>
+              <button type="button" class="admin-btn red admin-full-only" onclick="adminSaveDailyEvaluations(true)">저장 후 문자발송</button>
             </div>
             <div id="adminDailyEvalTableWrap" class="admin-table-wrap"></div>
             <div id="adminDailyEvalPreview" class="admin-message-preview" style="display:none;"></div>
@@ -2573,6 +2590,9 @@ function closeNoticeModal() {
 
 
 function showMainContent(isAuthenticated) {
+    adminModeActive = false;
+    setAdminTabVisibility();
+
     document.getElementById('loginOverlay').style.display = 'none';
     const wrapper = document.querySelector('.wrapper');
     wrapper.style.display = 'flex';
@@ -2589,7 +2609,7 @@ function showMainContent(isAuthenticated) {
     const defaultTabClickHandler = (event) => {
         const clickedTab = event.currentTarget;
         const targetTab = clickedTab.dataset.tab;
-        if (targetTab === 'tabAdmin' && !adminToken) {
+        if (targetTab === 'tabAdmin') {
             openAdminPage();
             return;
         }
@@ -2605,7 +2625,7 @@ function showMainContent(isAuthenticated) {
         tab.onclick = null;
 
         if (isAdminTab) {
-            tab.style.display = adminToken ? '' : 'none';
+            tab.style.display = 'none';
             tab.onclick = defaultTabClickHandler;
             if (tabContent) tabContent.style.display = '';
             return;
@@ -2701,6 +2721,7 @@ async function checkStudentName() {
 }
 
 window.onload = async function() {
+    adminModeActive = false;
     setAdminTabVisibility();
     await checkStudentName();
     setAdminTabVisibility();
@@ -2715,11 +2736,13 @@ window.onload = async function() {
 // 🔐 관리자 페이지 기능 v2 - 출석부 반영 / 선택 문자 / 일일평가
 // =========================================================================================
 let adminToken = localStorage.getItem('adminToken') || '';
+let adminModeActive = false;
 let adminInfo = null;
 let adminStudents = [];
 let adminClassList = [];
 let adminAttendanceRecords = [];
 let adminDailyEvalRows = [];
+let adminDailyEvalTemplateText = '안녕하세요. 울림연기학원입니다.\n[반이름] [학생명] 학생 수업 일일평가입니다.\n\n수업내용 :\n수업평가 :';
 
 function getTodayInputValue() {
     const now = new Date();
@@ -2741,10 +2764,11 @@ function activateTabById(tabId) {
 function setAdminTabVisibility() {
     const tab = document.querySelector('.tab[data-tab="tabAdmin"]');
     if (!tab) return;
-    tab.style.display = adminToken ? '' : 'none';
+    tab.style.display = (adminModeActive && adminToken) ? '' : 'none';
 }
 
 function openAdminPage() {
+    adminModeActive = true;
     const overlay = document.getElementById('loginOverlay');
     const wrapper = document.querySelector('.wrapper');
     if (overlay) overlay.style.display = 'none';
@@ -2758,7 +2782,7 @@ function openAdminPage() {
     }
 
     const adminTab = document.querySelector('.tab[data-tab="tabAdmin"]');
-    if (adminTab) adminTab.style.display = '';
+    if (adminTab) adminTab.style.display = adminToken ? '' : 'none';
     activateTabById('tabAdmin');
 
     const loginBox = document.getElementById('adminLoginBox');
@@ -2772,6 +2796,40 @@ function openAdminPage() {
         if (loginBox) loginBox.style.display = 'block';
         if (dashboard) dashboard.style.display = 'none';
     }
+}
+
+function adminRoleText() {
+    return String((adminInfo && adminInfo.role) || '').trim();
+}
+
+function adminIsFullAdmin() {
+    const role = adminRoleText().replace(/\s/g, '');
+    if (!role) return false;
+    if (/강사/.test(role) && !/전체|관리자|원장|admin/i.test(role)) return false;
+    return /전체|관리|관리자|원장|admin/i.test(role);
+}
+
+function applyAdminPermissions() {
+    const isFull = adminIsFullAdmin();
+    document.querySelectorAll('.admin-full-only').forEach(el => {
+        el.style.display = isFull ? '' : 'none';
+    });
+    document.querySelectorAll('.admin-teacher-note').forEach(el => {
+        el.style.display = isFull ? 'none' : '';
+    });
+    const templateEl = document.getElementById('adminDailyEvalTemplate');
+    if (templateEl) templateEl.disabled = !isFull;
+    const paymentPanel = document.getElementById('adminPanelPayment');
+    if (!isFull && paymentPanel) paymentPanel.classList.remove('active');
+    const welcome = document.getElementById('adminWelcomeText');
+    if (welcome && adminInfo) {
+        welcome.innerHTML = `${escapeHtml(adminInfo.name || adminInfo.id || '관리자')} <span class="admin-role-badge">${escapeHtml(adminInfo.role || '권한없음')}</span>`;
+    }
+}
+
+function toggleAdminClassList(id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('open');
 }
 
 async function adminApi(action, params = {}) {
@@ -2802,7 +2860,7 @@ async function adminLogin() {
         setAdminTabVisibility();
         document.getElementById('adminLoginBox').style.display = 'none';
         document.getElementById('adminDashboard').style.display = 'block';
-        document.getElementById('adminWelcomeText').textContent = `${adminInfo.name || id} 관리자`;
+        applyAdminPermissions();
         await adminLoadInitialData();
     } catch (e) {
         hideLoading();
@@ -2812,6 +2870,7 @@ async function adminLogin() {
 
 function adminLogout() {
     adminToken = '';
+    adminModeActive = false;
     adminInfo = null;
     adminStudents = [];
     adminClassList = [];
@@ -2830,6 +2889,8 @@ function adminLogout() {
 async function adminLoadInitialData() {
     await adminLoadStudents();
     await adminLoadClassList();
+    await adminLoadDailyEvalTemplate();
+    applyAdminPermissions();
 }
 
 async function adminLoadStudents() {
@@ -2841,7 +2902,7 @@ async function adminLoadStudents() {
         adminStudents = data.students || [];
         document.getElementById('adminStudentCount').textContent = `학생 ${adminStudents.length}명`;
         if (data.admin) adminInfo = data.admin;
-        if (adminInfo) document.getElementById('adminWelcomeText').textContent = `${adminInfo.name || '관리자'} 관리자`;
+        if (adminInfo) applyAdminPermissions();
         adminRenderStudentDatalist();
         adminRenderStudentTable();
         adminInitDates();
@@ -2875,17 +2936,25 @@ function adminRenderClassSelectors() {
     if (dl) {
         dl.innerHTML = adminClassList.map(c => `<option value="${escapeHtml(c.className)}">${escapeHtml(c.teacher || c.source || '')}</option>`).join('');
     }
-    const chipWrap = document.getElementById('adminClassChipWrap');
-    if (chipWrap) {
-        chipWrap.innerHTML = adminClassList.slice(0, 80).map(c => `
-            <button type="button" class="admin-class-chip" onclick="adminSelectClass('${escapeJsString(c.className)}')">
+    const chipHtmlAttendance = adminClassList.map(c => `
+            <button type="button" class="admin-class-chip" onclick="adminSelectClass('${escapeJsString(c.className)}', 'adminAttendanceClass')">
                 ${escapeHtml(c.className)}
             </button>
         `).join('');
-    }
+    const chipWrap = document.getElementById('adminClassChipWrap');
+    if (chipWrap) chipWrap.innerHTML = chipHtmlAttendance || '<span style="font-size:13px; color:#888;">불러온 반 목록이 없습니다.</span>';
+
     const evalDl = document.getElementById('adminDailyClassDatalist');
     if (evalDl) {
         evalDl.innerHTML = adminClassList.map(c => `<option value="${escapeHtml(c.className)}">${escapeHtml(c.teacher || c.source || '')}</option>`).join('');
+    }
+    const dailyWrap = document.getElementById('adminDailyClassChipWrap');
+    if (dailyWrap) {
+        dailyWrap.innerHTML = adminClassList.map(c => `
+            <button type="button" class="admin-class-chip" onclick="adminSelectClass('${escapeJsString(c.className)}', 'adminDailyEvalClass')">
+                ${escapeHtml(c.className)}
+            </button>
+        `).join('') || '<span style="font-size:13px; color:#888;">불러온 반 목록이 없습니다.</span>';
     }
 }
 
@@ -2893,10 +2962,13 @@ function escapeJsString(value) {
     return String(value || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '');
 }
 
-function adminSelectClass(className) {
-    const el = document.getElementById('adminAttendanceClass');
-    if (el) el.value = className;
-    adminLoadAttendanceSnapshot();
+function adminSelectClass(className, targetId = 'adminAttendanceClass') {
+    const el = document.getElementById(targetId);
+    if (el) {
+        el.value = className;
+        el.focus();
+    }
+    if (targetId === 'adminDailyEvalClass') adminRenderDailyEvalTable();
 }
 
 function adminRenderStudentDatalist() {
@@ -2970,10 +3042,10 @@ function adminRenderAttendanceTable() {
         wrap.innerHTML = `<div class="notice-empty">출석부 데이터를 불러오세요. 날짜와 반명을 선택한 뒤 [출석부 반영]을 누르면 됩니다.</div>`;
         return;
     }
-    let html = `<table class="admin-table"><thead><tr><th><input type="checkbox" id="adminAttendSelectAll" onchange="adminToggleAttendanceAll(this.checked)" checked></th><th>상태</th><th>학생명</th><th>반명/수업명</th><th>담당강사</th><th>학생전화</th><th>학부모전화</th><th>출처</th><th>메모</th></tr></thead><tbody>`;
+    let html = `<table class="admin-table"><thead><tr><th><input type="checkbox" id="adminAttendSelectAll" onchange="adminToggleAttendanceAll(this.checked)" checked></th><th>출결상태</th><th>특이사항</th><th>학생명</th><th>반명/수업명</th><th>담당강사</th><th>학생전화</th><th>학부모전화</th><th>출처</th><th>메모</th></tr></thead><tbody>`;
     adminAttendanceRecords.forEach((r, idx) => {
         const statusClass = r.status === '출석' ? 'attendance-ok' : (r.status === '결석' ? 'attendance-no' : '');
-        html += `<tr data-att-index="${idx}"><td><input type="checkbox" class="admin-att-check" checked></td><td><span class="admin-status-badge ${statusClass}">${escapeHtml(r.status || '미체크')}</span></td><td><b>${escapeHtml(r.studentName)}</b></td><td>${escapeHtml(r.className || '')}</td><td>${escapeHtml(r.instructor || '')}</td><td>${escapeHtml(r.studentPhone || '')}</td><td>${escapeHtml(r.parentPhone || '')}</td><td>${escapeHtml(r.source || '')}</td><td><input class="admin-small-input" data-field="memo" value="${escapeHtml(r.memo || '')}" placeholder="메모"></td></tr>`;
+        html += `<tr data-att-index="${idx}"><td><input type="checkbox" class="admin-att-check" checked></td><td><span class="admin-status-badge ${statusClass}">${escapeHtml(r.status || '미체크')}</span></td><td>${r.specialStatus ? `<span class="admin-status-badge">${escapeHtml(r.specialStatus)}</span>` : '-'}</td><td><b>${escapeHtml(r.studentName)}</b></td><td>${escapeHtml(r.className || '')}</td><td>${escapeHtml(r.instructor || '')}</td><td>${escapeHtml(r.studentPhone || '')}</td><td>${escapeHtml(r.parentPhone || '')}</td><td>${escapeHtml(r.source || '')}</td><td><input class="admin-small-input" data-field="memo" value="${escapeHtml(r.memo || '')}" placeholder="메모"></td></tr>`;
     });
     html += `</tbody></table>`;
     wrap.innerHTML = html;
@@ -2998,13 +3070,17 @@ function adminGetSelectedAttendanceRecords() {
 function buildAttendanceMessageText(record) {
     const classText = record.className ? ` ${record.className}` : '';
     const base = `${record.studentName} 학생${classText} ${record.date}`;
-    if (record.status === '출석') return `${base} 수업 출석이 확인되었습니다.\n- 울림연기학원`;
-    if (record.status === '결석') return `${base} 수업 결석으로 확인되었습니다.\n- 울림연기학원`;
-    if (record.status === '지각') return `${base} 수업 지각으로 기록되었습니다.\n- 울림연기학원`;
-    if (record.status === '보강') return `${base} 보강 수업으로 기록되었습니다.\n- 울림연기학원`;
-    if (record.status === '휴원') return `${base} 휴원으로 기록되었습니다.\n- 울림연기학원`;
-    if (record.status === '신규') return `${record.studentName} 학생의 첫 수업 안내입니다.${classText}\n자세한 사항은 학원 안내를 확인해주세요.\n- 울림연기학원`;
-    if (record.status === '반이동') return `${record.studentName} 학생의 반 이동 안내입니다.${classText}\n변경된 수업 정보를 확인해주세요.\n- 울림연기학원`;
+    const effectiveStatus = record.specialStatus || record.status;
+    if (record.specialStatus === '신규') return `${record.studentName} 학생의 신규 수업 안내입니다.${classText}\n수업일: ${record.date}\n- 울림연기학원`;
+    if (record.specialStatus === '반이동') return `${record.studentName} 학생의 반 이동 안내입니다.${classText}\n수업일: ${record.date}\n- 울림연기학원`;
+    if (record.specialStatus === '보강') return `${record.studentName} 학생의 보강 수업 안내입니다.${classText}\n수업일: ${record.date}\n- 울림연기학원`;
+    if (effectiveStatus === '출석') return `${base} 수업 출석이 확인되었습니다.\n- 울림연기학원`;
+    if (effectiveStatus === '결석') return `${base} 수업 결석으로 확인되었습니다.\n- 울림연기학원`;
+    if (effectiveStatus === '지각') return `${base} 수업 지각으로 기록되었습니다.\n- 울림연기학원`;
+    if (effectiveStatus === '보강') return `${base} 보강 수업으로 기록되었습니다.\n- 울림연기학원`;
+    if (effectiveStatus === '휴원') return `${base} 휴원으로 기록되었습니다.\n- 울림연기학원`;
+    if (effectiveStatus === '신규') return `${record.studentName} 학생의 첫 수업 안내입니다.${classText}\n자세한 사항은 학원 안내를 확인해주세요.\n- 울림연기학원`;
+    if (effectiveStatus === '반이동') return `${record.studentName} 학생의 반 이동 안내입니다.${classText}\n변경된 수업 정보를 확인해주세요.\n- 울림연기학원`;
     return `${base} 출결 상태가 [${record.status || '미체크'}]로 확인되었습니다.\n- 울림연기학원`;
 }
 
@@ -3020,6 +3096,7 @@ function adminPreviewAttendanceMessages() {
 }
 
 async function adminSendAttendanceMessages() {
+    if (!adminIsFullAdmin()) return alert('문자 발송은 관리자 권한에서만 가능합니다.');
     const records = adminGetSelectedAttendanceRecords();
     const recipientTypes = adminGetRecipientTypes('attendance');
     if (!records.length) return alert('선택된 출석 데이터가 없습니다.');
@@ -3041,9 +3118,64 @@ function adminFilteredStudentsForDaily() {
     const keyword = (document.getElementById('adminDailyEvalFilter')?.value || '').trim().toLowerCase();
     return adminStudents.filter(s => {
         const blob = [s.name, s.studentNo, s.studentPhone, s.parentPhone, s.instructor, s.className, s.memo].join(' ').toLowerCase();
-        if (className && !blob.includes(className)) return false;
+        if (className && !normalizeForClientMatch(blob).includes(normalizeForClientMatch(className))) return false;
         if (keyword && !blob.includes(keyword)) return false;
         return true;
+    });
+}
+
+function normalizeForClientMatch(value) {
+    return String(value || '').replace(/\s+/g, '').toLowerCase();
+}
+
+async function adminLoadDailyEvalTemplate() {
+    if (!adminToken) return;
+    try {
+        const data = await adminApi('adminGetDailyEvalTemplate', { adminToken });
+        adminDailyEvalTemplateText = data.template || adminDailyEvalTemplateText;
+        const el = document.getElementById('adminDailyEvalTemplate');
+        if (el) el.value = adminDailyEvalTemplateText;
+    } catch (e) {
+        console.warn('일일평가 기본문구 로딩 오류:', e);
+        const el = document.getElementById('adminDailyEvalTemplate');
+        if (el && !el.value) el.value = adminDailyEvalTemplateText;
+    }
+}
+
+async function adminSaveDailyEvalTemplate() {
+    if (!adminIsFullAdmin()) return alert('기본 문구 수정은 관리자 권한에서만 가능합니다.');
+    const template = document.getElementById('adminDailyEvalTemplate')?.value || '';
+    if (!template.trim()) return alert('저장할 기본 문구를 입력해주세요.');
+    try {
+        showLoading('일일평가 기본문구 저장 중...');
+        const data = await adminApi('adminSaveDailyEvalTemplate', { adminToken, template });
+        hideLoading();
+        adminDailyEvalTemplateText = template;
+        alert(data.message || '기본 문구를 저장했습니다.');
+    } catch (e) {
+        hideLoading();
+        alert(e.message);
+    }
+}
+
+function buildDailyEvalTemplateForStudent(student) {
+    const date = document.getElementById('adminDailyEvalDate')?.value || getTodayInputValue();
+    const selectedClass = document.getElementById('adminDailyEvalClass')?.value || student.className || '';
+    const template = document.getElementById('adminDailyEvalTemplate')?.value || adminDailyEvalTemplateText;
+    return template
+        .replaceAll('[반이름]', selectedClass)
+        .replaceAll('[학생명]', student.name || student.studentName || '')
+        .replaceAll('[담당강사]', student.instructor || '')
+        .replaceAll('[수업일]', date);
+}
+
+function adminApplyTemplateToVisibleRows() {
+    const rows = Array.from(document.querySelectorAll('#adminDailyEvalTableWrap tr[data-daily-index]'));
+    rows.forEach(row => {
+        const idx = Number(row.dataset.dailyIndex);
+        const base = adminDailyEvalRows[idx] || {};
+        const textarea = row.querySelector('.admin-eval-textarea');
+        if (textarea) textarea.value = buildDailyEvalTemplateForStudent(base);
     });
 }
 
@@ -3055,6 +3187,7 @@ function adminRenderDailyEvalTable() {
         date: document.getElementById('adminDailyEvalDate')?.value || getTodayInputValue(),
         className: document.getElementById('adminDailyEvalClass')?.value || s.className || '',
         studentName: s.name,
+        name: s.name,
         studentNo: s.studentNo,
         studentPhone: s.studentPhone,
         parentPhone: s.parentPhone,
@@ -3065,9 +3198,11 @@ function adminRenderDailyEvalTable() {
         wrap.innerHTML = `<div class="notice-empty">표시할 학생이 없습니다. 반명 또는 검색어를 확인하세요.</div>`;
         return;
     }
-    let html = `<table class="admin-table"><thead><tr><th><input type="checkbox" onchange="adminToggleDailyAll(this.checked)" checked></th><th>학생명</th><th>담당강사</th><th>학생전화</th><th>학부모전화</th><th>일일평가</th></tr></thead><tbody>`;
+    let html = `<table class="admin-table"><thead><tr><th><input type="checkbox" onchange="adminToggleDailyAll(this.checked)" checked></th><th>학생명</th><th>담당강사</th><th>반명</th><th>학생전화</th><th>학부모전화</th><th>일일평가</th></tr></thead><tbody>`;
     list.forEach((s, idx) => {
-        html += `<tr data-daily-index="${idx}"><td><input type="checkbox" class="admin-daily-check" checked></td><td><b>${escapeHtml(s.name)}</b></td><td>${escapeHtml(s.instructor)}</td><td>${escapeHtml(s.studentPhone)}</td><td>${escapeHtml(s.parentPhone)}</td><td><textarea class="admin-eval-textarea" placeholder="오늘 수업 태도, 발음, 표현, 과제 등을 입력하세요."></textarea></td></tr>`;
+        const rowObj = adminDailyEvalRows[idx];
+        const defaultText = buildDailyEvalTemplateForStudent(rowObj);
+        html += `<tr data-daily-index="${idx}"><td><input type="checkbox" class="admin-daily-check" checked></td><td><b>${escapeHtml(s.name)}</b></td><td>${escapeHtml(s.instructor)}</td><td>${escapeHtml(rowObj.className)}</td><td>${escapeHtml(s.studentPhone)}</td><td>${escapeHtml(s.parentPhone)}</td><td><textarea class="admin-eval-textarea" placeholder="오늘 수업 태도, 발음, 표현, 과제 등을 입력하세요.">${escapeHtml(defaultText)}</textarea></td></tr>`;
     });
     html += `</tbody></table>`;
     wrap.innerHTML = html;
@@ -3099,11 +3234,15 @@ function adminPreviewDailyEvalMessages() {
     const preview = document.getElementById('adminDailyEvalPreview');
     if (!rows.length) return alert('저장/발송할 일일평가 내용이 없습니다.');
     if (!recipientTypes.length) return alert('문자 수신 대상을 선택해주세요.');
-    preview.textContent = rows.map(r => `[${r.studentName}]\n수신대상: ${recipientTypes.join(', ')}\n${r.studentName} 학생 ${r.date} 수업 일일평가입니다.\n${r.evaluation}\n- 울림연기학원`).join('\n\n--------------------\n\n');
+    preview.textContent = rows.map(r => `[${r.studentName}]
+수신대상: ${recipientTypes.join(', ')}
+${r.evaluation}
+- 울림연기학원`).join('\n\n--------------------\n\n');
     preview.style.display = 'block';
 }
 
 async function adminSaveDailyEvaluations(sendSms = false) {
+    if (sendSms && !adminIsFullAdmin()) return alert('문자 발송은 관리자 권한에서만 가능합니다.');
     const rows = adminGetSelectedDailyRows();
     const recipientTypes = adminGetRecipientTypes('daily');
     if (!rows.length) return alert('저장할 일일평가 내용이 없습니다.');
@@ -3122,6 +3261,7 @@ async function adminSaveDailyEvaluations(sendSms = false) {
 
 async function adminSavePayment() {
     if (!adminToken) return alert('관리자 로그인이 필요합니다.');
+    if (!adminIsFullAdmin()) return alert('결제관리는 관리자 권한에서만 가능합니다.');
     const studentNameValue = document.getElementById('paymentStudentInput').value.trim();
     const student = adminStudents.find(s => s.name === studentNameValue) || {};
     const month = document.getElementById('paymentMonthInput').value.trim();
