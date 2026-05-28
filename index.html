@@ -637,90 +637,28 @@ audio { width: 100%; height: 40px; }
 /* ===========================
    🔐 관리자 v2 추가 스타일
    =========================== */
-.admin-class-combo {
-    position: relative;
-}
-.admin-class-display {
-    width:100%;
-    min-height:46px;
-    padding:12px 42px 12px 14px;
+.admin-class-chip {
     border:1px solid #d1d5db;
-    border-radius:10px;
     background:#fff;
-    color:#111827;
-    font-size:14px;
-    font-weight:800;
-    text-align:left;
-    cursor:pointer;
-    position:relative;
-    word-break:keep-all;
-}
-.admin-class-display::after {
-    content:"▾";
-    position:absolute;
-    right:14px;
-    top:50%;
-    transform:translateY(-50%);
-    color:#374151;
-    font-size:14px;
-}
-.admin-class-display.empty {
-    color:#9ca3af;
-    font-weight:700;
-}
-.admin-class-list-panel {
-    display:none;
-    margin-top:8px;
-    padding:10px;
-    background:#fff;
-    border:1px solid #d1d5db;
-    border-radius:12px;
-    box-shadow:0 10px 24px rgba(0,0,0,0.08);
-}
-.admin-class-list-panel.open { display:block; }
-.admin-class-search {
-    width:100%;
-    box-sizing:border-box;
-    padding:11px 12px;
-    border:1px solid #d1d5db;
-    border-radius:10px;
-    font-size:14px;
-    margin-bottom:8px;
-}
-.admin-class-options {
-    max-height:260px;
-    overflow:auto;
-    border:1px solid #eef2f7;
-    border-radius:10px;
-    background:#fbfdff;
-}
-.admin-class-option {
-    display:block;
-    width:100%;
-    padding:10px 12px;
-    border:0;
-    border-bottom:1px solid #eef2f7;
-    background:#fff;
-    color:#111827;
-    text-align:left;
+    border-radius:999px;
+    padding:7px 11px;
     font-size:13px;
-    font-weight:800;
+    font-weight:700;
     cursor:pointer;
-    word-break:keep-all;
+    margin:4px;
 }
-.admin-class-option:last-child { border-bottom:0; }
-.admin-class-option:hover, .admin-class-option:focus {
-    background:#f0fdf4;
-    color:#166534;
-    outline:none;
-}
-.admin-class-option.direct {
-    background:#eff6ff;
-    color:#1d4ed8;
-}
-@media (max-width: 700px) {
-    .admin-class-options { max-height:230px; }
-    .admin-class-option { padding:12px 10px; font-size:13px; }
+.admin-class-chip:hover { background:#f0fdf4; border-color:#2ecc71; color:#166534; }
+.admin-class-list-panel { display:block; margin-top:10px; padding:10px; background:#f8fafc; border:1px solid #e5e7eb; border-radius:14px; max-height:210px; overflow:auto; }
+.admin-class-list-panel.open { display:block; }
+.admin-class-select {
+    width:100%;
+    padding:12px;
+    border:1px solid #d1d5db;
+    border-radius:10px;
+    background:#fff;
+    font-size:14px;
+    font-weight:700;
+    margin-top:8px;
 }
 .admin-only-tab { display:none !important; }
 body.admin-mode .admin-only-tab { display:block !important; }
@@ -758,8 +696,8 @@ body.admin-mode .admin-only-tab { display:block !important; }
 .admin-status-badge.attendance-no { background:#fee2e2; color:#991b1b; }
 .admin-eval-textarea {
     width:100%;
-    min-width:320px;
-    min-height:220px;
+    min-width:520px;
+    min-height:320px;
     border:1px solid #d1d5db;
     border-radius:10px;
     padding:10px;
@@ -1142,7 +1080,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
               </div>
             </div>
 
-            <div class="admin-recipient-row">
+            <div class="admin-recipient-row admin-full-only">
               <b style="width:100%; color:#111827;">문자 수신 대상</b>
               <label><input type="checkbox" id="attRecipientStudent" checked> 학생</label>
               <label><input type="checkbox" id="attRecipientParent" checked> 학부모</label>
@@ -1153,7 +1091,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
 
             <div class="admin-btn-row">
               <button type="button" class="admin-btn blue" onclick="adminLoadAttendanceSnapshot()">출석부 반영</button>
-              <button type="button" class="admin-btn orange" onclick="adminPreviewAttendanceMessages()">문자 미리보기</button>
+              <button type="button" class="admin-btn orange admin-full-only" onclick="adminPreviewAttendanceMessages()">문자 미리보기</button>
               <button type="button" class="admin-btn red admin-full-only" onclick="adminSendAttendanceMessages()">선택 문자 발송</button>
             </div>
             <div id="adminAttendanceSummary" style="font-size:13px; color:#666; margin:10px 0;"></div>
@@ -1189,7 +1127,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
                 <input type="text" id="adminDailyEvalFilter" placeholder="학생명 또는 강사명 입력" oninput="adminRenderDailyEvalTable()">
               </div>
             </div>
-            <div class="admin-field admin-template-box" style="margin-top:12px;">
+            <div class="admin-field admin-template-box admin-full-only" style="margin-top:12px;">
               <label for="adminDailyEvalTemplate">일일평가 기본 문구</label>
               <textarea id="adminDailyEvalTemplate" class="admin-eval-textarea" style="min-height:170px;" placeholder="일일평가 기본문구"></textarea>
               <div class="admin-btn-row" style="margin-top:8px;">
@@ -1199,7 +1137,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
               <div class="admin-permission-note">사용 가능 치환어: [반이름], [학생명], [담당강사], [수업일]</div>
             </div>
 
-            <div class="admin-recipient-row">
+            <div class="admin-recipient-row admin-full-only">
               <b style="width:100%; color:#111827;">평가 문자 수신 대상</b>
               <label><input type="checkbox" id="dailyRecipientStudent"> 학생</label>
               <label><input type="checkbox" id="dailyRecipientParent" checked> 학부모</label>
@@ -1209,7 +1147,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
             <div class="admin-btn-row">
               <button type="button" class="admin-btn blue" onclick="adminLoadDailyEvalStudents()">현재 반 학생 불러오기</button>
               <button type="button" class="admin-btn" onclick="adminSaveDailyEvaluations(false)">평가 저장</button>
-              <button type="button" class="admin-btn orange" onclick="adminPreviewDailyEvalMessages()">문자 미리보기</button>
+              <button type="button" class="admin-btn orange admin-full-only" onclick="adminPreviewDailyEvalMessages()">문자 미리보기</button>
               <button type="button" class="admin-btn red admin-full-only" onclick="adminSaveDailyEvaluations(true)">저장 후 문자발송</button>
             </div>
             <div id="adminDailyEvalTableWrap" class="admin-table-wrap"></div>
@@ -2897,20 +2835,36 @@ function adminIsFullAdmin() {
 
 function applyAdminPermissions() {
     const isFull = adminIsFullAdmin();
+
+    document.body.classList.toggle('teacher-mode', !!adminInfo && !isFull);
+    document.body.classList.toggle('full-admin-mode', !!adminInfo && isFull);
+
     document.querySelectorAll('.admin-full-only').forEach(el => {
         el.style.display = isFull ? '' : 'none';
     });
     document.querySelectorAll('.admin-teacher-note').forEach(el => {
         el.style.display = isFull ? 'none' : '';
     });
+
     const templateEl = document.getElementById('adminDailyEvalTemplate');
     if (templateEl) templateEl.disabled = !isFull;
+
     const paymentPanel = document.getElementById('adminPanelPayment');
-    if (!isFull && paymentPanel) paymentPanel.classList.remove('active');
+    const paymentTab = document.querySelector('.admin-subtab[data-admin-panel="adminPanelPayment"]');
+    if (!isFull) {
+        if (paymentPanel) paymentPanel.classList.remove('active');
+        if (paymentTab) paymentTab.classList.remove('active');
+        const activePanel = document.querySelector('.admin-panel.active');
+        if (!activePanel) showAdminPanel('adminPanelStudents');
+    }
+
     const welcome = document.getElementById('adminWelcomeText');
     if (welcome && adminInfo) {
         welcome.innerHTML = `${escapeHtml(adminInfo.name || adminInfo.id || '관리자')} <span class="admin-role-badge">${escapeHtml(adminInfo.role || '권한없음')}</span>`;
     }
+
+    if (adminAttendanceRecords.length) adminRenderAttendanceTable();
+    if (adminDailyEvalRows.length) adminRenderDailyEvalRows();
 }
 
 function toggleAdminClassList(id) {
@@ -3187,6 +3141,10 @@ function adminRenderStudentTable() {
 }
 
 function showAdminPanel(panelId) {
+    if (panelId === 'adminPanelPayment' && !adminIsFullAdmin()) {
+        alert('결제관리는 관리자 권한에서만 접근할 수 있습니다.');
+        panelId = 'adminPanelStudents';
+    }
     document.querySelectorAll('.admin-subtab').forEach(btn => btn.classList.toggle('active', btn.dataset.adminPanel === panelId));
     document.querySelectorAll('.admin-panel').forEach(panel => panel.classList.toggle('active', panel.id === panelId));
     if (panelId === 'adminPanelAttendance' && !adminAttendanceRecords.length) adminLoadAttendanceSnapshot(false);
@@ -3229,10 +3187,12 @@ function adminRenderAttendanceTable() {
         wrap.innerHTML = `<div class="notice-empty">출석부 데이터를 불러오세요. 날짜와 반명을 선택한 뒤 [출석부 반영]을 누르면 됩니다.</div>`;
         return;
     }
-    let html = `<table class="admin-table"><thead><tr><th><input type="checkbox" id="adminAttendSelectAll" onchange="adminToggleAttendanceAll(this.checked)" checked></th><th>출결상태</th><th>특이사항</th><th>학생명</th><th>반명/수업명</th><th>담당강사</th><th>학생전화</th><th>학부모전화</th><th>메모</th></tr></thead><tbody>`;
+    const isFull = adminIsFullAdmin();
+    let html = `<table class="admin-table"><thead><tr><th><input type="checkbox" id="adminAttendSelectAll" onchange="adminToggleAttendanceAll(this.checked)" checked></th><th>출결상태</th><th>특이사항</th><th>학생명</th><th>반명/수업명</th><th>담당강사</th>${isFull ? '<th>학생전화</th><th>학부모전화</th>' : ''}<th>메모</th></tr></thead><tbody>`;
     adminAttendanceRecords.forEach((r, idx) => {
         const statusClass = r.status === '출석' ? 'attendance-ok' : (r.status === '결석' ? 'attendance-no' : '');
-        html += `<tr data-att-index="${idx}"><td><input type="checkbox" class="admin-att-check" checked></td><td><span class="admin-status-badge ${statusClass}">${escapeHtml(r.status || '미체크')}</span></td><td>${r.specialStatus ? `<span class="admin-status-badge">${escapeHtml(r.specialStatus)}</span>` : '-'}</td><td><b>${escapeHtml(r.studentName)}</b></td><td>${escapeHtml(r.className || '')}</td><td>${escapeHtml(r.instructor || '')}</td><td>${escapeHtml(r.studentPhone || '')}</td><td>${escapeHtml(r.parentPhone || '')}</td><td><input class="admin-small-input" data-field="memo" value="${escapeHtml(r.memo || '')}" placeholder="메모"></td></tr>`;
+        const phoneCells = isFull ? `<td>${escapeHtml(r.studentPhone || '')}</td><td>${escapeHtml(r.parentPhone || '')}</td>` : '';
+        html += `<tr data-att-index="${idx}"><td><input type="checkbox" class="admin-att-check" checked></td><td><span class="admin-status-badge ${statusClass}">${escapeHtml(r.status || '미체크')}</span></td><td>${r.specialStatus ? `<span class="admin-status-badge">${escapeHtml(r.specialStatus)}</span>` : '-'}</td><td><b>${escapeHtml(r.studentName)}</b></td><td>${escapeHtml(r.className || '')}</td><td>${escapeHtml(r.instructor || '')}</td>${phoneCells}<td><input class="admin-small-input" data-field="memo" value="${escapeHtml(r.memo || '')}" placeholder="메모"></td></tr>`;
     });
     html += `</tbody></table>`;
     wrap.innerHTML = html;
@@ -3272,6 +3232,7 @@ function buildAttendanceMessageText(record) {
 }
 
 function adminPreviewAttendanceMessages() {
+    if (!adminIsFullAdmin()) return alert('문자 미리보기와 발송은 관리자 권한에서만 가능합니다.');
     const records = adminGetSelectedAttendanceRecords();
     const recipientTypes = adminGetRecipientTypes('attendance');
     const preview = document.getElementById('adminAttendanceMessagePreview');
@@ -3434,13 +3395,15 @@ function adminRenderDailyEvalRows(message = '') {
         wrap.innerHTML = `<div class="notice-empty">표시할 학생이 없습니다. 반명 또는 검색어를 확인하세요.</div>`;
         return;
     }
+    const isFull = adminIsFullAdmin();
     let html = '';
     if (message) html += `<div style="font-size:13px; color:#666; margin:8px 0;">${escapeHtml(message)}</div>`;
-    html += `<table class="admin-table"><thead><tr><th><input type="checkbox" onchange="adminToggleDailyAll(this.checked)" checked></th><th>학생명</th><th>담당강사</th><th>반명</th><th>학생전화</th><th>학부모전화</th><th>출결/특이사항</th><th>일일평가</th></tr></thead><tbody>`;
+    html += `<table class="admin-table"><thead><tr><th><input type="checkbox" onchange="adminToggleDailyAll(this.checked)" checked></th><th>학생명</th><th>담당강사</th><th>반명</th>${isFull ? '<th>학생전화</th><th>학부모전화</th>' : ''}<th>출결/특이사항</th><th>일일평가</th></tr></thead><tbody>`;
     list.forEach((s, idx) => {
         const defaultText = buildDailyEvalTemplateForStudent(s);
         const statusText = [s.attendanceStatus, s.specialStatus].filter(Boolean).join(' / ');
-        html += `<tr data-daily-index="${idx}"><td><input type="checkbox" class="admin-daily-check" checked></td><td><b>${escapeHtml(s.studentName || s.name)}</b></td><td>${escapeHtml(s.instructor)}</td><td>${escapeHtml(s.className)}</td><td>${escapeHtml(s.studentPhone)}</td><td>${escapeHtml(s.parentPhone)}</td><td>${escapeHtml(statusText || '-')}</td><td><textarea class="admin-eval-textarea" placeholder="오늘 수업 태도, 발음, 표현, 과제 등을 입력하세요.">${escapeHtml(defaultText)}</textarea></td></tr>`;
+        const phoneCells = isFull ? `<td>${escapeHtml(s.studentPhone)}</td><td>${escapeHtml(s.parentPhone)}</td>` : '';
+        html += `<tr data-daily-index="${idx}"><td><input type="checkbox" class="admin-daily-check" checked></td><td><b>${escapeHtml(s.studentName || s.name)}</b></td><td>${escapeHtml(s.instructor)}</td><td>${escapeHtml(s.className)}</td>${phoneCells}<td>${escapeHtml(statusText || '-')}</td><td><textarea class="admin-eval-textarea" placeholder="오늘 수업 태도, 발음, 표현, 과제 등을 입력하세요.">${escapeHtml(defaultText)}</textarea></td></tr>`;
     });
     html += `</tbody></table>`;
     wrap.innerHTML = html;
@@ -3467,6 +3430,7 @@ function adminGetSelectedDailyRows() {
 }
 
 function adminPreviewDailyEvalMessages() {
+    if (!adminIsFullAdmin()) return alert('일일평가 문자 미리보기와 발송은 관리자 권한에서만 가능합니다.');
     const rows = adminGetSelectedDailyRows();
     const recipientTypes = adminGetRecipientTypes('daily');
     const preview = document.getElementById('adminDailyEvalPreview');
