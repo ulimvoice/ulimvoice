@@ -2034,7 +2034,14 @@ function isNoticeTargetMatched(notice) {
 
     return false;
 }
-
+function escapeHtml(value) {
+    return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
 function renderNoticeCard(notice) {
     let html = `
         <div class="notice-card">
