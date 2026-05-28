@@ -648,7 +648,7 @@ audio { width: 100%; height: 40px; }
     margin:4px;
 }
 .admin-class-chip:hover { background:#f0fdf4; border-color:#2ecc71; color:#166534; }
-.admin-class-list-panel { display:none; margin-top:10px; padding:10px; background:#f8fafc; border:1px solid #e5e7eb; border-radius:14px; max-height:210px; overflow:auto; }
+.admin-class-list-panel { display:block; margin-top:10px; padding:10px; background:#f8fafc; border:1px solid #e5e7eb; border-radius:14px; max-height:210px; overflow:auto; }
 .admin-class-list-panel.open { display:block; }
 .admin-class-select {
     width:100%;
@@ -1047,17 +1047,12 @@ body.admin-mode .admin-only-tab { display:block !important; }
             <div class="admin-grid">
               <div class="admin-field">
                 <label for="adminAttendanceDate">수업일</label>
-                <input type="date" id="adminAttendanceDate">
+                <input type="date" id="adminAttendanceDate" onchange="adminLoadClassList(this.value)">
               </div>
               <div class="admin-field">
-                <label for="adminAttendanceClass">반명 / 수업명 선택 또는 검색</label>
-                <input type="text" id="adminAttendanceClass" list="adminClassDatalist" placeholder="반명 또는 수업명을 입력하거나 아래 목록에서 선택">
-                <datalist id="adminClassDatalist"></datalist>
-                <select id="adminAttendanceClassSelect" class="admin-class-select" onchange="adminSelectClassFromDropdown(this, 'adminAttendanceClass')">
-                  <option value="">반 목록에서 빠른 선택</option>
-                </select>
-                <button type="button" class="admin-btn gray" style="margin-top:8px; padding:9px 12px; font-size:13px;" onclick="toggleAdminClassList('adminClassChipWrap')">전체 반 목록 펼치기/닫기</button>
-                <div id="adminClassChipWrap" class="admin-class-list-panel"></div>
+                <label for="adminAttendanceClass">반명 / 수업명 검색 및 선택</label>
+                <input type="text" id="adminAttendanceClass" placeholder="반명 일부를 입력하거나 아래 목록에서 선택" oninput="adminRenderClassPicker('adminAttendanceClass', 'adminClassPickerPanel')">
+                <div id="adminClassPickerPanel" class="admin-class-list-panel open"></div>
               </div>
               <div class="admin-field">
                 <label for="adminAttendanceFilter">학생명 / 강사명 필터</label>
@@ -1108,17 +1103,12 @@ body.admin-mode .admin-only-tab { display:block !important; }
             <div class="admin-grid">
               <div class="admin-field">
                 <label for="adminDailyEvalDate">수업일</label>
-                <input type="date" id="adminDailyEvalDate">
+                <input type="date" id="adminDailyEvalDate" onchange="adminLoadClassList(this.value); adminRenderDailyEvalTable();">
               </div>
               <div class="admin-field">
-                <label for="adminDailyEvalClass">반명 / 수업명</label>
-                <input type="text" id="adminDailyEvalClass" list="adminDailyClassDatalist" placeholder="반명 또는 수업명을 입력하거나 아래 목록에서 선택" oninput="adminRenderDailyEvalTable()">
-                <datalist id="adminDailyClassDatalist"></datalist>
-                <select id="adminDailyClassSelect" class="admin-class-select" onchange="adminSelectClassFromDropdown(this, 'adminDailyEvalClass')">
-                  <option value="">반 목록에서 빠른 선택</option>
-                </select>
-                <button type="button" class="admin-btn gray" style="margin-top:8px; padding:9px 12px; font-size:13px;" onclick="toggleAdminClassList('adminDailyClassChipWrap')">전체 반 목록 펼치기/닫기</button>
-                <div id="adminDailyClassChipWrap" class="admin-class-list-panel"></div>
+                <label for="adminDailyEvalClass">반명 / 수업명 검색 및 선택</label>
+                <input type="text" id="adminDailyEvalClass" placeholder="반명 일부를 입력하거나 아래 목록에서 선택" oninput="adminRenderClassPicker('adminDailyEvalClass', 'adminDailyClassPickerPanel'); adminRenderDailyEvalTable();">
+                <div id="adminDailyClassPickerPanel" class="admin-class-list-panel open"></div>
               </div>
               <div class="admin-field">
                 <label for="adminDailyEvalFilter">학생명 / 강사명 필터</label>
@@ -2943,10 +2933,14 @@ function adminInitDates() {
     });
 }
 
-async function adminLoadClassList() {
+async function adminLoadClassList(dateOverride = '') {
     if (!adminToken) return;
     try {
-        const data = await adminApi('adminGetClassList', { adminToken });
+        const date = dateOverride
+            || document.getElementById('adminAttendanceDate')?.value
+            || document.getElementById('adminDailyEvalDate')?.value
+            || getTodayInputValue();
+        const data = await adminApi('adminGetClassList', { adminToken, date });
         adminClassList = data.classes || [];
         adminRenderClassSelectors();
     } catch (e) {
@@ -2956,42 +2950,41 @@ async function adminLoadClassList() {
 
 
 function adminRenderClassSelectors() {
-    const optionsHtml = adminClassList.map(c => `<option value="${escapeHtml(c.className)}">${escapeHtml(c.className)}</option>`).join('');
-
-    const dl = document.getElementById('adminClassDatalist');
-    if (dl) dl.innerHTML = optionsHtml;
-
-    const attendanceSelect = document.getElementById('adminAttendanceClassSelect');
-    if (attendanceSelect) {
-        attendanceSelect.innerHTML = `<option value="">반 목록에서 빠른 선택</option>` + optionsHtml;
-    }
-
-    const chipHtmlAttendance = adminClassList.map(c => `
-            <button type="button" class="admin-class-chip" onclick="adminSelectClass('${escapeJsString(c.className)}', 'adminAttendanceClass', 'adminClassChipWrap')">
-                ${escapeHtml(c.className)}
-            </button>
-        `).join('');
-    const chipWrap = document.getElementById('adminClassChipWrap');
-    if (chipWrap) chipWrap.innerHTML = chipHtmlAttendance || '<span style="font-size:13px; color:#888;">불러온 반 목록이 없습니다.</span>';
-
-    const evalDl = document.getElementById('adminDailyClassDatalist');
-    if (evalDl) evalDl.innerHTML = optionsHtml;
-
-    const dailySelect = document.getElementById('adminDailyClassSelect');
-    if (dailySelect) {
-        dailySelect.innerHTML = `<option value="">반 목록에서 빠른 선택</option>` + optionsHtml;
-    }
-
-    const dailyWrap = document.getElementById('adminDailyClassChipWrap');
-    if (dailyWrap) {
-        dailyWrap.innerHTML = adminClassList.map(c => `
-            <button type="button" class="admin-class-chip" onclick="adminSelectClass('${escapeJsString(c.className)}', 'adminDailyEvalClass', 'adminDailyClassChipWrap')">
-                ${escapeHtml(c.className)}
-            </button>
-        `).join('') || '<span style="font-size:13px; color:#888;">불러온 반 목록이 없습니다.</span>';
-    }
+    adminRenderClassPicker('adminAttendanceClass', 'adminClassPickerPanel');
+    adminRenderClassPicker('adminDailyEvalClass', 'adminDailyClassPickerPanel');
 }
 
+function adminRenderClassPicker(inputId, panelId) {
+    const input = document.getElementById(inputId);
+    const panel = document.getElementById(panelId);
+    if (!panel) return;
+
+    const query = normalizeClassSearchText(input ? input.value : '');
+    const filtered = adminClassList
+        .filter(c => {
+            if (!query) return true;
+            return normalizeClassSearchText(c.className).includes(query);
+        })
+        .slice(0, 80);
+
+    if (!filtered.length) {
+        panel.innerHTML = '<span style="font-size:13px; color:#888;">검색 결과가 없습니다.</span>';
+        return;
+    }
+
+    panel.innerHTML = filtered.map(c => `
+        <button type="button" class="admin-class-chip" onclick="adminSelectClass('${escapeJsString(c.className)}', '${escapeJsString(inputId)}', '${escapeJsString(panelId)}')">
+            ${escapeHtml(c.className)}
+        </button>
+    `).join('');
+}
+
+function normalizeClassSearchText(value) {
+    return String(value || '')
+        .toLowerCase()
+        .replace(/\s+/g, '')
+        .replace(/[\[\]\(\)~～\-]/g, '');
+}
 
 function escapeJsString(value) {
     return String(value || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '');
@@ -3005,19 +2998,13 @@ function adminSelectClass(className, targetId = 'adminAttendanceClass', panelId 
         el.blur();
     }
 
-    if (panelId) {
-        const panel = document.getElementById(panelId);
-        if (panel) panel.classList.remove('open');
-    }
-
+    // 모바일에서 선택 후 입력칸으로 포커스가 튀거나 키보드가 다시 올라오지 않도록 포커스를 해제합니다.
     if (document.activeElement && typeof document.activeElement.blur === 'function') {
         document.activeElement.blur();
     }
 
-    const selectId = targetId === 'adminDailyEvalClass' ? 'adminDailyClassSelect' : 'adminAttendanceClassSelect';
-    const select = document.getElementById(selectId);
-    if (select) select.value = className;
-
+    // 선택한 반명을 기준으로 목록을 다시 필터링합니다. 패널은 닫지 않습니다.
+    if (panelId) adminRenderClassPicker(targetId, panelId);
     if (targetId === 'adminDailyEvalClass') adminRenderDailyEvalTable();
 }
 
