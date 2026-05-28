@@ -1136,14 +1136,14 @@ body.admin-mode .admin-only-tab { display:block !important; }
                 <div class="admin-class-combo">
                   <button type="button" id="adminAttendanceClassDisplay" class="admin-class-display empty" onclick="adminToggleClassCombo('adminAttendanceClass', 'adminClassPickerPanel')">반 목록에서 선택하거나 검색하세요</button>
                   <div id="adminClassPickerPanel" class="admin-class-list-panel">
-                    <input type="text" id="adminAttendanceClassSearch" class="admin-class-search" placeholder="반명, 강사명, 요일로 검색">
+                    <input type="text" id="adminAttendanceClassSearch" class="admin-class-search" placeholder="반명 또는 요일로 검색">
                     <div id="adminClassPickerPanelOptions" class="admin-class-options"></div>
                   </div>
                 </div>
               </div>
               <div class="admin-field">
-                <label for="adminAttendanceFilter">학생명 / 강사명 필터</label>
-                <input type="text" id="adminAttendanceFilter" placeholder="학생명 또는 강사명 입력">
+                <label for="adminAttendanceFilter">학생명 필터</label>
+                <input type="text" id="adminAttendanceFilter" placeholder="학생명 입력">
               </div>
               <div class="admin-field">
                 <label for="adminAttendanceStatusFilter">출결 상태 필터</label>
@@ -1198,14 +1198,14 @@ body.admin-mode .admin-only-tab { display:block !important; }
                 <div class="admin-class-combo">
                   <button type="button" id="adminDailyEvalClassDisplay" class="admin-class-display empty" onclick="adminToggleClassCombo('adminDailyEvalClass', 'adminDailyClassPickerPanel')">반 목록에서 선택하거나 검색하세요</button>
                   <div id="adminDailyClassPickerPanel" class="admin-class-list-panel">
-                    <input type="text" id="adminDailyEvalClassSearch" class="admin-class-search" placeholder="반명, 강사명, 요일로 검색">
+                    <input type="text" id="adminDailyEvalClassSearch" class="admin-class-search" placeholder="반명 또는 요일로 검색">
                     <div id="adminDailyClassPickerPanelOptions" class="admin-class-options"></div>
                   </div>
                 </div>
               </div>
               <div class="admin-field">
-                <label for="adminDailyEvalFilter">학생명 / 강사명 필터</label>
-                <input type="text" id="adminDailyEvalFilter" placeholder="학생명 또는 강사명 입력" oninput="adminRenderDailyEvalTable()">
+                <label for="adminDailyEvalFilter">학생명 필터</label>
+                <input type="text" id="adminDailyEvalFilter" placeholder="학생명 입력" oninput="adminRenderDailyEvalTable()">
               </div>
             </div>
             <div class="admin-field admin-template-box admin-full-only" style="margin-top:12px;">
@@ -3213,12 +3213,17 @@ function adminRenderClassPicker(inputId, panelId) {
     const query = normalizeClassSearchText(queryRaw);
     const selectedValue = document.getElementById(inputId)?.value || '';
 
-    const filtered = adminFilterClassListForRole(adminClassList)
+    let filtered = adminFilterClassListForRole(adminClassList)
         .filter(c => {
             if (!query) return true;
             return normalizeClassSearchText(c.className).includes(query);
         })
         .slice(0, 80);
+
+    const allClassItem = { className: '전체반', teacher: '', source: 'virtual' };
+    if (!query || normalizeClassSearchText('전체반').includes(query) || query.includes('전체')) {
+        filtered = [allClassItem].concat(filtered.filter(c => c.className !== '전체반'));
+    }
 
     let html = '';
 
@@ -3469,12 +3474,13 @@ async function adminSendAttendanceMessages() {
 }
 
 function adminFilteredStudentsForDaily() {
-    const className = (document.getElementById('adminDailyEvalClass')?.value || '').trim().toLowerCase();
+    const className = (document.getElementById('adminDailyEvalClass')?.value || '').trim();
     const keyword = (document.getElementById('adminDailyEvalFilter')?.value || '').trim().toLowerCase();
     return adminStudents.filter(s => {
-        const blob = [s.name, s.studentNo, s.studentPhone, s.parentPhone, s.instructor, s.className, s.memo].join(' ').toLowerCase();
-        if (className && !normalizeForClientMatch(blob).includes(normalizeForClientMatch(className))) return false;
-        if (keyword && !blob.includes(keyword)) return false;
+        const nameText = String(s.name || '').toLowerCase();
+        const classBlob = [s.className, s.memo].join(' ').toLowerCase();
+        if (className && className !== '전체반' && !normalizeForClientMatch(classBlob).includes(normalizeForClientMatch(className))) return false;
+        if (keyword && !nameText.includes(keyword)) return false;
         return true;
     });
 }
@@ -3554,7 +3560,7 @@ async function adminLoadDailyEvalStudents() {
     const date = document.getElementById('adminDailyEvalDate')?.value || getTodayInputValue();
     const className = document.getElementById('adminDailyEvalClass')?.value.trim() || '';
     const keyword = document.getElementById('adminDailyEvalFilter')?.value.trim() || '';
-    if (!className && !keyword) return alert('반명 또는 학생/강사 필터를 입력하거나 반 목록에서 선택해주세요.');
+    if (!className && !keyword) return alert('반명 또는 학생명을 입력하거나 반 목록에서 선택해주세요.');
 
     try {
         showLoading('출석부 기준 현재 반 학생 불러오는 중...');
