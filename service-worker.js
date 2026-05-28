@@ -1,33 +1,90 @@
-// const BASE = "/ulimvoice/";
-const BASE = "/"; // 깃허브 Pages의 경우, Service Worker는 보통 사이트 루트('/')에서 제어합니다.
+const CACHE_NAME = "ulimvoice-cache-v24";
 
-const CACHE_NAME = "ulimvoice-cache-v1";
+// GitHub Pages 프로젝트 경로에서는 상대경로가 가장 안전합니다.
+// service-worker.js가 /ulimvoice/service-worker.js에 있다면 ./ 는 /ulimvoice/ 기준입니다.
 const STATIC_ASSETS = [
-    // BASE는 '/'로 변경되었으므로, 파일명을 직접 지정합니다.
-    BASE,
-    BASE + "index.html",
-    BASE + "manifest.json",
-    // 깃허브에 없는 파일은 제거해야 404 오류를 피할 수 있습니다.
-    // BASE + "style.css", // 깃허브에 없거나 경로가 다름
-    // BASE + "app.js",   // 깃허브에 없거나 경로가 다름 
-    
-    // appdata 폴더의 파일을 캐시하려면 경로를 명시해야 합니다.
-    BASE + "appdata/etude/data.js", 
-    BASE + "appdata/vocalization/data.js", 
-    BASE + "appdata/past_questions/data.js", 
-
-    BASE + "icons/icon-192.png", // icons 폴더가 루트에 있다면 BASE + "icons/..."
-    BASE + "icons/icon-512.png"
+    "./",
+    "./index.html",
+    "./manifest.json",
+    "./appdata/etude/data.js",
+    "./appdata/vocalization/data.js",
+    "./appdata/past_questions/data.js",
+    "./appdata/logo.png",
+    "./icons/icon-192.png",
+    "./icons/icon-512.png"
 ];
 
 self.addEventListener("install", event => {
     event.waitUntil(
-        caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
+        caches.open(CACHE_NAME)
+            .then(cache => {
+                return Promise.allSettled(
+                    STATIC_ASSETS.map(async url => {
+                        try {
+                            const request = new Request(url, { cache: "reload" });
+                            const response = await fetch(request);
+
+                            if (!response.ok) {
+                                console.warn("[SW] 캐시 제외:", url, response.status);
+                                return;
+                            }
+
+                            await cache.put(request, response);
+                        } catch (err) {
+                            console.warn("[SW] 캐시 실패:", url, err);
+                        }
+                    })
+                );
+            })
+            .then(() => self.skipWaiting())
+    );
+});
+
+self.addEventListener("activate", event => {
+    event.waitUntil(
+        caches.keys()
+            .then(keys => {
+                return Promise.all(
+                    keys
+                        .filter(key => key !== CACHE_NAME)
+                        .map(key => caches.delete(key))
+                );
+            })
+            .then(() => self.clients.claim())
     );
 });
 
 self.addEventListener("fetch", event => {
+    const request = event.request;
+    const url = new URL(request.url);
+
+    // POST 요청은 절대 서비스워커가 건드리지 않게 함
+    // 일일평가 저장, GAS 전송 같은 기능 보호
+    if (request.method !== "GET") {
+        return;
+    }
+
+    // GAS, 외부 CDN, 외부 이미지 등은 캐시하지 않고 브라우저 기본 처리
+    if (url.origin !== self.location.origin) {
+        return;
+    }
+
     event.respondWith(
-        caches.match(event.request).then(resp => resp || fetch(event.request))
+        caches.match(request).then(cached => {
+            if (cached) {
+                return cached;
+            }
+
+            return fetch(request)
+                .then(response => {
+                    return response;
+                })
+                .catch(() => {
+                    // 페이지 새로고침 오프라인 fallback
+                    if (request.mode === "navigate") {
+                        return caches.match("./index.html");
+                    }
+                });
+        })
     );
 });
