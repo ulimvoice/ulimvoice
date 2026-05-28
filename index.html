@@ -650,6 +650,16 @@ audio { width: 100%; height: 40px; }
 .admin-class-chip:hover { background:#f0fdf4; border-color:#2ecc71; color:#166534; }
 .admin-class-list-panel { display:none; margin-top:10px; padding:10px; background:#f8fafc; border:1px solid #e5e7eb; border-radius:14px; max-height:210px; overflow:auto; }
 .admin-class-list-panel.open { display:block; }
+.admin-class-select {
+    width:100%;
+    padding:12px;
+    border:1px solid #d1d5db;
+    border-radius:10px;
+    background:#fff;
+    font-size:14px;
+    font-weight:700;
+    margin-top:8px;
+}
 .admin-only-tab { display:none !important; }
 body.admin-mode .admin-only-tab { display:block !important; }
 .admin-permission-note { font-size:12px; color:#777; margin-top:6px; line-height:1.5; }
@@ -686,8 +696,8 @@ body.admin-mode .admin-only-tab { display:block !important; }
 .admin-status-badge.attendance-no { background:#fee2e2; color:#991b1b; }
 .admin-eval-textarea {
     width:100%;
-    min-width:260px;
-    min-height:150px;
+    min-width:320px;
+    min-height:220px;
     border:1px solid #d1d5db;
     border-radius:10px;
     padding:10px;
@@ -1043,7 +1053,10 @@ body.admin-mode .admin-only-tab { display:block !important; }
                 <label for="adminAttendanceClass">반명 / 수업명 선택 또는 검색</label>
                 <input type="text" id="adminAttendanceClass" list="adminClassDatalist" placeholder="반명 또는 수업명을 입력하거나 아래 목록에서 선택">
                 <datalist id="adminClassDatalist"></datalist>
-                <button type="button" class="admin-btn gray" style="margin-top:8px; padding:9px 12px; font-size:13px;" onclick="toggleAdminClassList('adminClassChipWrap')">반 목록 펼치기/닫기</button>
+                <select id="adminAttendanceClassSelect" class="admin-class-select" onchange="adminSelectClassFromDropdown(this, 'adminAttendanceClass')">
+                  <option value="">반 목록에서 빠른 선택</option>
+                </select>
+                <button type="button" class="admin-btn gray" style="margin-top:8px; padding:9px 12px; font-size:13px;" onclick="toggleAdminClassList('adminClassChipWrap')">전체 반 목록 펼치기/닫기</button>
                 <div id="adminClassChipWrap" class="admin-class-list-panel"></div>
               </div>
               <div class="admin-field">
@@ -1101,7 +1114,10 @@ body.admin-mode .admin-only-tab { display:block !important; }
                 <label for="adminDailyEvalClass">반명 / 수업명</label>
                 <input type="text" id="adminDailyEvalClass" list="adminDailyClassDatalist" placeholder="반명 또는 수업명을 입력하거나 아래 목록에서 선택" oninput="adminRenderDailyEvalTable()">
                 <datalist id="adminDailyClassDatalist"></datalist>
-                <button type="button" class="admin-btn gray" style="margin-top:8px; padding:9px 12px; font-size:13px;" onclick="toggleAdminClassList('adminDailyClassChipWrap')">반 목록 펼치기/닫기</button>
+                <select id="adminDailyClassSelect" class="admin-class-select" onchange="adminSelectClassFromDropdown(this, 'adminDailyEvalClass')">
+                  <option value="">반 목록에서 빠른 선택</option>
+                </select>
+                <button type="button" class="admin-btn gray" style="margin-top:8px; padding:9px 12px; font-size:13px;" onclick="toggleAdminClassList('adminDailyClassChipWrap')">전체 반 목록 펼치기/닫기</button>
                 <div id="adminDailyClassChipWrap" class="admin-class-list-panel"></div>
               </div>
               <div class="admin-field">
@@ -2938,13 +2954,20 @@ async function adminLoadClassList() {
     }
 }
 
+
 function adminRenderClassSelectors() {
+    const optionsHtml = adminClassList.map(c => `<option value="${escapeHtml(c.className)}">${escapeHtml(c.className)}</option>`).join('');
+
     const dl = document.getElementById('adminClassDatalist');
-    if (dl) {
-        dl.innerHTML = adminClassList.map(c => `<option value="${escapeHtml(c.className)}">${escapeHtml(c.teacher || c.source || '')}</option>`).join('');
+    if (dl) dl.innerHTML = optionsHtml;
+
+    const attendanceSelect = document.getElementById('adminAttendanceClassSelect');
+    if (attendanceSelect) {
+        attendanceSelect.innerHTML = `<option value="">반 목록에서 빠른 선택</option>` + optionsHtml;
     }
+
     const chipHtmlAttendance = adminClassList.map(c => `
-            <button type="button" class="admin-class-chip" onclick="adminSelectClass('${escapeJsString(c.className)}', 'adminAttendanceClass')">
+            <button type="button" class="admin-class-chip" onclick="adminSelectClass('${escapeJsString(c.className)}', 'adminAttendanceClass', 'adminClassChipWrap')">
                 ${escapeHtml(c.className)}
             </button>
         `).join('');
@@ -2952,31 +2975,58 @@ function adminRenderClassSelectors() {
     if (chipWrap) chipWrap.innerHTML = chipHtmlAttendance || '<span style="font-size:13px; color:#888;">불러온 반 목록이 없습니다.</span>';
 
     const evalDl = document.getElementById('adminDailyClassDatalist');
-    if (evalDl) {
-        evalDl.innerHTML = adminClassList.map(c => `<option value="${escapeHtml(c.className)}">${escapeHtml(c.teacher || c.source || '')}</option>`).join('');
+    if (evalDl) evalDl.innerHTML = optionsHtml;
+
+    const dailySelect = document.getElementById('adminDailyClassSelect');
+    if (dailySelect) {
+        dailySelect.innerHTML = `<option value="">반 목록에서 빠른 선택</option>` + optionsHtml;
     }
+
     const dailyWrap = document.getElementById('adminDailyClassChipWrap');
     if (dailyWrap) {
         dailyWrap.innerHTML = adminClassList.map(c => `
-            <button type="button" class="admin-class-chip" onclick="adminSelectClass('${escapeJsString(c.className)}', 'adminDailyEvalClass')">
+            <button type="button" class="admin-class-chip" onclick="adminSelectClass('${escapeJsString(c.className)}', 'adminDailyEvalClass', 'adminDailyClassChipWrap')">
                 ${escapeHtml(c.className)}
             </button>
         `).join('') || '<span style="font-size:13px; color:#888;">불러온 반 목록이 없습니다.</span>';
     }
 }
 
+
 function escapeJsString(value) {
     return String(value || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '');
 }
 
-function adminSelectClass(className, targetId = 'adminAttendanceClass') {
+
+function adminSelectClass(className, targetId = 'adminAttendanceClass', panelId = '') {
     const el = document.getElementById(targetId);
     if (el) {
         el.value = className;
-        el.focus();
+        el.blur();
     }
+
+    if (panelId) {
+        const panel = document.getElementById(panelId);
+        if (panel) panel.classList.remove('open');
+    }
+
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+        document.activeElement.blur();
+    }
+
+    const selectId = targetId === 'adminDailyEvalClass' ? 'adminDailyClassSelect' : 'adminAttendanceClassSelect';
+    const select = document.getElementById(selectId);
+    if (select) select.value = className;
+
     if (targetId === 'adminDailyEvalClass') adminRenderDailyEvalTable();
 }
+
+function adminSelectClassFromDropdown(selectEl, targetId) {
+    const value = selectEl ? selectEl.value : '';
+    if (!value) return;
+    adminSelectClass(value, targetId);
+}
+
 
 function adminRenderStudentDatalist() {
     const dl = document.getElementById('adminStudentDatalist');
@@ -3049,10 +3099,10 @@ function adminRenderAttendanceTable() {
         wrap.innerHTML = `<div class="notice-empty">출석부 데이터를 불러오세요. 날짜와 반명을 선택한 뒤 [출석부 반영]을 누르면 됩니다.</div>`;
         return;
     }
-    let html = `<table class="admin-table"><thead><tr><th><input type="checkbox" id="adminAttendSelectAll" onchange="adminToggleAttendanceAll(this.checked)" checked></th><th>출결상태</th><th>특이사항</th><th>학생명</th><th>반명/수업명</th><th>담당강사</th><th>학생전화</th><th>학부모전화</th><th>출처</th><th>메모</th></tr></thead><tbody>`;
+    let html = `<table class="admin-table"><thead><tr><th><input type="checkbox" id="adminAttendSelectAll" onchange="adminToggleAttendanceAll(this.checked)" checked></th><th>출결상태</th><th>특이사항</th><th>학생명</th><th>반명/수업명</th><th>담당강사</th><th>학생전화</th><th>학부모전화</th><th>메모</th></tr></thead><tbody>`;
     adminAttendanceRecords.forEach((r, idx) => {
         const statusClass = r.status === '출석' ? 'attendance-ok' : (r.status === '결석' ? 'attendance-no' : '');
-        html += `<tr data-att-index="${idx}"><td><input type="checkbox" class="admin-att-check" checked></td><td><span class="admin-status-badge ${statusClass}">${escapeHtml(r.status || '미체크')}</span></td><td>${r.specialStatus ? `<span class="admin-status-badge">${escapeHtml(r.specialStatus)}</span>` : '-'}</td><td><b>${escapeHtml(r.studentName)}</b></td><td>${escapeHtml(r.className || '')}</td><td>${escapeHtml(r.instructor || '')}</td><td>${escapeHtml(r.studentPhone || '')}</td><td>${escapeHtml(r.parentPhone || '')}</td><td>${escapeHtml(r.source || '')}</td><td><input class="admin-small-input" data-field="memo" value="${escapeHtml(r.memo || '')}" placeholder="메모"></td></tr>`;
+        html += `<tr data-att-index="${idx}"><td><input type="checkbox" class="admin-att-check" checked></td><td><span class="admin-status-badge ${statusClass}">${escapeHtml(r.status || '미체크')}</span></td><td>${r.specialStatus ? `<span class="admin-status-badge">${escapeHtml(r.specialStatus)}</span>` : '-'}</td><td><b>${escapeHtml(r.studentName)}</b></td><td>${escapeHtml(r.className || '')}</td><td>${escapeHtml(r.instructor || '')}</td><td>${escapeHtml(r.studentPhone || '')}</td><td>${escapeHtml(r.parentPhone || '')}</td><td><input class="admin-small-input" data-field="memo" value="${escapeHtml(r.memo || '')}" placeholder="메모"></td></tr>`;
     });
     html += `</tbody></table>`;
     wrap.innerHTML = html;
