@@ -2964,16 +2964,15 @@ function adminIsTeacherMode() {
     return !!adminInfo && !adminIsFullAdmin();
 }
 
-function normalizeName(str) {
-    if (!str) return "";
-    return String(str)
-        .replace(/\s+/g, "")
-        .replace(/-/g, "")
-        .replace(/–/g, "")
-        .replace(/—/g, "")
-        .replace(/T$/i, "")
+function adminNormalizeKoreanName(value) {
+    return String(value || '')
+        .replace(/\s+/g, '')
+        .replace(/-/g, '')
+        .replace(/–/g, '')
+        .replace(/—/g, '')
+        .replace(/T$/i, '')
         .trim()
-        .normalize("NFC");
+        .normalize('NFC');
 }
 
 function adminTeacherKey() {
@@ -2987,7 +2986,7 @@ function adminClassBelongsToCurrentTeacher(classItem) {
     if (!teacherKey) return false;
     const classText = adminNormalizeKoreanName((classItem && classItem.className) || '');
     const teacherText = adminNormalizeKoreanName((classItem && classItem.teacher) || '');
-    return classText.includes(teacherKey) || (teacherText && teacherText.includes(teacherKey)) || (teacherText && teacherKey.includes(teacherText));
+    return classText.includes(teacherKey) || teacherText.includes(teacherKey) || teacherKey.includes(teacherText);
 }
 
 function adminFilterClassListForRole(classes) {
@@ -3310,7 +3309,7 @@ function adminStudentBelongsToCurrentTeacher(student) {
     if (!teacherKey) return false;
     const instructor = adminNormalizeKoreanName((student && student.instructor) || '');
     const classText = adminNormalizeKoreanName((student && student.className) || '');
-    return (instructor && instructor.includes(teacherKey)) || (instructor && teacherKey.includes(instructor)) || classText.includes(teacherKey);
+    return instructor.includes(teacherKey) || teacherKey.includes(instructor) || classText.includes(teacherKey);
 }
 
 function adminFilteredStudents(inputId) {
