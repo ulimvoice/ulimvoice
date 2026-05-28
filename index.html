@@ -2964,14 +2964,16 @@ function adminIsTeacherMode() {
     return !!adminInfo && !adminIsFullAdmin();
 }
 
-function adminNormalizeKoreanName(value) {
-    return String(value || '')
-        .replace(/[\s  -‏
--  -⁯　﻿]/g, '')
-        .replace(/[\-\–\—]/g, '')
-        .replace(/T$/i, '')
+function normalizeName(str) {
+    if (!str) return "";
+    return String(str)
+        .replace(/\s+/g, "")
+        .replace(/-/g, "")
+        .replace(/–/g, "")
+        .replace(/—/g, "")
+        .replace(/T$/i, "")
         .trim()
-        .normalize('NFC');
+        .normalize("NFC");
 }
 
 function adminTeacherKey() {
