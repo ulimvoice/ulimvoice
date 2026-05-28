@@ -1097,13 +1097,13 @@ body.admin-mode .admin-only-tab { display:block !important; }
         </div>
 
         <div class="admin-btn-row">
-          <button type="button" class="admin-btn blue" onclick="adminLoadStudents()">학생목록 새로고침</button>
+          <button type="button" class="admin-btn blue" id="adminRefreshStudentsBtn" onclick="adminLoadStudents()">학생목록 새로고침</button>
           <button type="button" class="admin-btn gray" onclick="adminLogout()">로그아웃</button>
         </div>
 
         <div class="admin-subtabs">
-          <button type="button" class="admin-subtab active" data-admin-panel="adminPanelStudents" onclick="showAdminPanel('adminPanelStudents')">학생검색</button>
-          <button type="button" class="admin-subtab" data-admin-panel="adminPanelAttendance" onclick="showAdminPanel('adminPanelAttendance')">출석부 확인/문자</button>
+          <button type="button" class="admin-subtab active" id="adminStudentsSubtab" data-admin-panel="adminPanelStudents" onclick="showAdminPanel('adminPanelStudents')">학생검색</button>
+          <button type="button" class="admin-subtab" id="adminAttendanceSubtab" data-admin-panel="adminPanelAttendance" onclick="showAdminPanel('adminPanelAttendance')">출석부 확인/문자</button>
           <button type="button" class="admin-subtab" data-admin-panel="adminPanelDailyEval" onclick="showAdminPanel('adminPanelDailyEval')">수업 일일평가</button>
           <button type="button" class="admin-subtab admin-full-only" data-admin-panel="adminPanelPayment" onclick="showAdminPanel('adminPanelPayment')">결제관리</button>
         </div>
@@ -1121,7 +1121,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
 
         <div id="adminPanelAttendance" class="admin-panel">
           <div class="admin-card">
-            <h3 style="margin-top:0;">출석부 확인 / 출결 문자 발송</h3>
+            <h3 id="adminAttendancePanelTitle" style="margin-top:0;">출석부 확인 / 출결 문자 발송</h3>
             <p style="font-size:14px; color:#666; line-height:1.6; margin-top:-4px;">
               강사들이 기존 출석부 시트에 O/X/지각 등을 입력하면, 이 화면에서 해당 데이터를 불러와 확인한 뒤 선택 발송합니다.
             </p>
@@ -2960,10 +2960,44 @@ function adminIsFullAdmin() {
     return /전체|관리|관리자|원장|admin/i.test(role);
 }
 
+function adminIsTeacherMode() {
+    return !!adminInfo && !adminIsFullAdmin();
+}
+
+function adminNormalizeKoreanName(value) {
+    return String(value || '')
+        .replace(/[\s  -‏
+-  -⁯　﻿]/g, '')
+        .replace(/[\-\–\—]/g, '')
+        .replace(/T$/i, '')
+        .trim()
+        .normalize('NFC');
+}
+
+function adminTeacherKey() {
+    if (!adminInfo) return '';
+    return adminNormalizeKoreanName(adminInfo.name || adminInfo.id || '');
+}
+
+function adminClassBelongsToCurrentTeacher(classItem) {
+    if (!adminIsTeacherMode()) return true;
+    const teacherKey = adminTeacherKey();
+    if (!teacherKey) return false;
+    const classText = adminNormalizeKoreanName((classItem && classItem.className) || '');
+    const teacherText = adminNormalizeKoreanName((classItem && classItem.teacher) || '');
+    return classText.includes(teacherKey) || (teacherText && teacherText.includes(teacherKey)) || (teacherText && teacherKey.includes(teacherText));
+}
+
+function adminFilterClassListForRole(classes) {
+    const list = Array.isArray(classes) ? classes : [];
+    return list.filter(adminClassBelongsToCurrentTeacher);
+}
+
 function applyAdminPermissions() {
     const isFull = adminIsFullAdmin();
+    const isTeacher = !!adminInfo && !isFull;
 
-    document.body.classList.toggle('teacher-mode', !!adminInfo && !isFull);
+    document.body.classList.toggle('teacher-mode', isTeacher);
     document.body.classList.toggle('full-admin-mode', !!adminInfo && isFull);
 
     document.querySelectorAll('.admin-full-only').forEach(el => {
@@ -2976,13 +3010,30 @@ function applyAdminPermissions() {
     const templateEl = document.getElementById('adminDailyEvalTemplate');
     if (templateEl) templateEl.disabled = !isFull;
 
+    const studentsTab = document.querySelector('.admin-subtab[data-admin-panel="adminPanelStudents"]');
+    const studentsPanel = document.getElementById('adminPanelStudents');
+    const refreshStudentsBtn = document.getElementById('adminRefreshStudentsBtn');
+    const studentCount = document.getElementById('adminStudentCount');
+    if (studentsTab) studentsTab.style.display = isFull ? '' : 'none';
+    if (refreshStudentsBtn) refreshStudentsBtn.style.display = isFull ? '' : 'none';
+    if (studentCount) studentCount.style.display = isFull ? '' : 'none';
+    if (!isFull && studentsPanel) studentsPanel.classList.remove('active');
+
+    const attendanceTab = document.querySelector('.admin-subtab[data-admin-panel="adminPanelAttendance"]');
+    if (attendanceTab) attendanceTab.textContent = isFull ? '출석부 확인/문자' : '출석부 확인';
+    const attendanceTitle = document.getElementById('adminAttendancePanelTitle');
+    if (attendanceTitle) attendanceTitle.textContent = isFull ? '출석부 확인 / 출결 문자 발송' : '출석부 확인';
+
     const paymentPanel = document.getElementById('adminPanelPayment');
     const paymentTab = document.querySelector('.admin-subtab[data-admin-panel="adminPanelPayment"]');
     if (!isFull) {
         if (paymentPanel) paymentPanel.classList.remove('active');
         if (paymentTab) paymentTab.classList.remove('active');
-        const activePanel = document.querySelector('.admin-panel.active');
-        if (!activePanel) showAdminPanel('adminPanelStudents');
+    }
+
+    const activePanel = document.querySelector('.admin-panel.active');
+    if (!activePanel || (!isFull && (activePanel.id === 'adminPanelStudents' || activePanel.id === 'adminPanelPayment'))) {
+        showAdminPanel('adminPanelAttendance');
     }
 
     const welcome = document.getElementById('adminWelcomeText');
@@ -2990,6 +3041,8 @@ function applyAdminPermissions() {
         welcome.innerHTML = `${escapeHtml(adminInfo.name || adminInfo.id || '관리자')} <span class="admin-role-badge">${escapeHtml(adminInfo.role || '권한없음')}</span>`;
     }
 
+    adminClassList = adminFilterClassListForRole(adminClassList);
+    if (adminClassList.length) adminRenderClassSelectors();
     if (adminAttendanceRecords.length) adminRenderAttendanceTable();
     if (adminDailyEvalRows.length) adminRenderDailyEvalRows();
 }
@@ -3100,7 +3153,7 @@ async function adminLoadClassList(dateOverride = '') {
             || document.getElementById('adminDailyEvalDate')?.value
             || getTodayInputValue();
         const data = await adminApi('adminGetClassList', { adminToken, date });
-        adminClassList = data.classes || [];
+        adminClassList = adminFilterClassListForRole(data.classes || []);
         adminRenderClassSelectors();
     } catch (e) {
         console.warn('수업 목록 로딩 오류:', e);
@@ -3159,7 +3212,7 @@ function adminRenderClassPicker(inputId, panelId) {
     const query = normalizeClassSearchText(queryRaw);
     const selectedValue = document.getElementById(inputId)?.value || '';
 
-    const filtered = adminClassList
+    const filtered = adminFilterClassListForRole(adminClassList)
         .filter(c => {
             if (!query) return true;
             return normalizeClassSearchText(c.className).includes(query);
@@ -3249,10 +3302,20 @@ function adminRenderStudentDatalist() {
     dl.innerHTML = adminStudents.map(s => `<option value="${escapeHtml(s.name)}">${escapeHtml(s.instructor || '')} ${escapeHtml(s.studentPhone || '')}</option>`).join('');
 }
 
+function adminStudentBelongsToCurrentTeacher(student) {
+    if (!adminIsTeacherMode()) return true;
+    const teacherKey = adminTeacherKey();
+    if (!teacherKey) return false;
+    const instructor = adminNormalizeKoreanName((student && student.instructor) || '');
+    const classText = adminNormalizeKoreanName((student && student.className) || '');
+    return (instructor && instructor.includes(teacherKey)) || (instructor && teacherKey.includes(instructor)) || classText.includes(teacherKey);
+}
+
 function adminFilteredStudents(inputId) {
     const keyword = (document.getElementById(inputId)?.value || '').trim().toLowerCase();
-    if (!keyword) return adminStudents;
-    return adminStudents.filter(s => [s.name, s.studentNo, s.studentPhone, s.parentPhone, s.instructor, s.className, s.memo].join(' ').toLowerCase().includes(keyword));
+    const base = adminStudents.filter(adminStudentBelongsToCurrentTeacher);
+    if (!keyword) return base;
+    return base.filter(s => [s.name, s.studentNo, s.studentPhone, s.parentPhone, s.instructor, s.className, s.memo].join(' ').toLowerCase().includes(keyword));
 }
 
 function adminRenderStudentTable() {
@@ -3272,11 +3335,23 @@ function adminRenderStudentTable() {
 }
 
 function showAdminPanel(panelId) {
-    if (panelId === 'adminPanelPayment' && !adminIsFullAdmin()) {
+    const isFull = adminIsFullAdmin();
+
+    if (panelId === 'adminPanelPayment' && !isFull) {
         alert('결제관리는 관리자 권한에서만 접근할 수 있습니다.');
-        panelId = 'adminPanelStudents';
+        panelId = 'adminPanelAttendance';
     }
-    document.querySelectorAll('.admin-subtab').forEach(btn => btn.classList.toggle('active', btn.dataset.adminPanel === panelId));
+
+    if (panelId === 'adminPanelStudents' && !isFull) {
+        panelId = 'adminPanelAttendance';
+    }
+
+    document.querySelectorAll('.admin-subtab').forEach(btn => {
+        const isHiddenTeacherTab = !isFull && (btn.dataset.adminPanel === 'adminPanelStudents' || btn.dataset.adminPanel === 'adminPanelPayment');
+        if (isHiddenTeacherTab) btn.style.display = 'none';
+        btn.classList.toggle('active', btn.dataset.adminPanel === panelId);
+    });
+
     document.querySelectorAll('.admin-panel').forEach(panel => panel.classList.toggle('active', panel.id === panelId));
     if (panelId === 'adminPanelAttendance' && !adminAttendanceRecords.length) adminLoadAttendanceSnapshot(false);
     if (panelId === 'adminPanelDailyEval') adminRenderDailyEvalTable();
