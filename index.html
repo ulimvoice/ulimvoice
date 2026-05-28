@@ -2070,7 +2070,26 @@ function renderNoticeCard(notice) {
             </video>
         `;
     }
-
+if (notice.linkUrl) {
+    html += `
+        <a href="${escapeHtml(notice.linkUrl)}"
+           target="_blank"
+           rel="noopener noreferrer"
+           style="
+               display:block;
+               text-align:center;
+               margin-top:14px;
+               padding:13px 16px;
+               background:#2ecc71;
+               color:#fff;
+               border-radius:12px;
+               text-decoration:none;
+               font-weight:900;
+           ">
+            🔗 ${escapeHtml(notice.linkText || "자세히 보기")}
+        </a>
+    `;
+}
     html += `</div>`;
     return html;
 }
