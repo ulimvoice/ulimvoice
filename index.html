@@ -3783,7 +3783,7 @@ async function adminSaveDailyEvaluations(sendSms = false) {
             const targetKey = adminDailyEvalExactKey(saved);
             adminDailyEvalRows = adminDailyEvalRows.map(row => {
                 if (adminDailyEvalExactKey(row) === targetKey || adminDailyEvalNameKey(row) === adminDailyEvalNameKey(saved)) {
-                    return Object.assign({}, row, { evaluation: saved.evaluation, savedAt: '방금 저장', savedBy: adminSession?.admin?.name || '' });
+                    return Object.assign({}, row, { evaluation: saved.evaluation, savedAt: '방금 저장', savedBy: (adminInfo && (adminInfo.name || adminInfo.id)) || '' });
                 }
                 return row;
             });
