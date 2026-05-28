@@ -2875,7 +2875,9 @@ let adminDailyEvalTemplateLoaded = false;
 let adminClassListLoadedKey = '';
 const ADMIN_CLASS_LIST_CACHE_MS = 10 * 60 * 1000;
 const ADMIN_DAILY_TEMPLATE_CACHE_MS = 5 * 60 * 1000;
-const ROOM_RESERVATION_CACHE_MS = 30 * 1000;
+// 연습실 예약은 처음 화면이 느리게 뜨는 것을 막기 위해 브라우저 캐시를 길게 두고, 백그라운드에서 갱신합니다.
+const ROOM_RESERVATION_CACHE_MS = 3 * 60 * 1000;
+const ROOM_RESERVATION_STALE_CACHE_MS = 60 * 60 * 1000;
 const roomReservationMemoryCache = {};
 let adminDailyEvalTemplateText = '안녕하세요. 울림연기학원입니다.\n[반이름] [학생명] 학생 수업 일일평가입니다.\n\n수업내용 :\n수업평가 :';
 
@@ -3959,6 +3961,9 @@ let roomCurrentDate = new Date();
 let selectedRoomDate = null;
 let roomReservations = [];
 let roomBlockedSlots = [];
+let roomReservationMap = Object.create(null);
+let roomBlockedMap = Object.create(null);
+let roomReservationCountByDate = Object.create(null);
 let isRoomReservationLoaded = false;
 
 function isRoomApiReady() {
@@ -4006,7 +4011,7 @@ function hideRoomOverlay(id) {
     if (el) el.remove();
 }
 
-function roomJsonp(params) {
+function roomJsonp(params, options = {}) {
     return new Promise((resolve, reject) => {
         if (!isRoomApiReady()) {
             reject(new Error("연습실 예약 GAS 주소가 설정되지 않았습니다."));
@@ -4023,7 +4028,9 @@ function roomJsonp(params) {
             }
         });
         query.append('callback', callbackName);
-        query.append('_', Date.now()); // 캐시 방지
+        if (options.cacheBust !== false) {
+            query.append('_', Date.now()); // 강제 새로고침일 때만 캐시 방지
+        }
 
         const script = document.createElement('script');
         let timer = null;
@@ -4095,6 +4102,92 @@ function normalizeHourForMatch(value) {
     return match ? Number(match[1]) : null;
 }
 
+function getRoomCacheKey(year, month) {
+    return `${year}-${String(month).padStart(2, '0')}`;
+}
+
+function getRoomLocalStorageKey(cacheKey) {
+    return `ulimRoomReservationCache_${cacheKey}`;
+}
+
+function getRoomSlotKey(date, room, hour) {
+    return [
+        String(date || ''),
+        normalizeRoomTextForMatch(room),
+        String(Number(hour))
+    ].join('|');
+}
+
+function buildRoomReservationIndexes() {
+    roomReservationMap = Object.create(null);
+    roomBlockedMap = Object.create(null);
+    roomReservationCountByDate = Object.create(null);
+
+    (roomReservations || []).forEach(r => {
+        if (normalizeStatusForMatch(r.status) === '취소') return;
+        const date = String(r.date || '');
+        const hour = normalizeHourForMatch(r.startHour);
+        if (!date || hour === null) return;
+        roomReservationMap[getRoomSlotKey(date, r.room, hour)] = r;
+        roomReservationCountByDate[date] = (roomReservationCountByDate[date] || 0) + 1;
+    });
+
+    (roomBlockedSlots || []).forEach(b => {
+        const date = String(b.date || '');
+        const hour = normalizeHourForMatch(b.startHour);
+        if (!date || hour === null) return;
+        roomBlockedMap[getRoomSlotKey(date, b.room, hour)] = b;
+    });
+}
+
+function applyRoomReservationData(data) {
+    roomReservations = Array.isArray(data && data.reservations) ? data.reservations : [];
+    roomBlockedSlots = Array.isArray(data && data.blockedSlots) ? data.blockedSlots : [];
+    buildRoomReservationIndexes();
+    isRoomReservationLoaded = true;
+}
+
+function saveRoomReservationCache(cacheKey, data) {
+    const payload = {
+        savedAt: Date.now(),
+        reservations: Array.isArray(data && data.reservations) ? data.reservations : [],
+        blockedSlots: Array.isArray(data && data.blockedSlots) ? data.blockedSlots : []
+    };
+    roomReservationMemoryCache[cacheKey] = payload;
+    try {
+        localStorage.setItem(getRoomLocalStorageKey(cacheKey), JSON.stringify(payload));
+    } catch (e) {
+        // localStorage 용량 초과 시 메모리 캐시만 사용합니다.
+    }
+}
+
+function readRoomReservationCache(cacheKey) {
+    const memory = roomReservationMemoryCache[cacheKey];
+    if (memory && Array.isArray(memory.reservations)) return memory;
+
+    try {
+        const raw = localStorage.getItem(getRoomLocalStorageKey(cacheKey));
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !Array.isArray(parsed.reservations)) return null;
+        return parsed;
+    } catch (e) {
+        return null;
+    }
+}
+
+function renderCurrentRoomReservationView() {
+    renderRoomCalendar();
+    const tableEl = document.getElementById("roomTimeTable");
+    const titleEl = document.getElementById("selectedRoomDateTitle");
+    if (selectedRoomDate) {
+        renderRoomTimeTable(parseRoomDate(selectedRoomDate));
+    } else {
+        if (tableEl) tableEl.innerHTML = "";
+        if (titleEl) titleEl.textContent = "날짜를 선택해주세요";
+    }
+}
+
 function changeRoomMonth(diff) {
     roomCurrentDate.setMonth(roomCurrentDate.getMonth() + diff);
     selectedRoomDate = null;
@@ -4122,48 +4215,47 @@ async function loadRoomReservations(force = false) {
 
     const year = roomCurrentDate.getFullYear();
     const month = roomCurrentDate.getMonth() + 1;
-    const roomCacheKey = `${year}-${String(month).padStart(2, '0')}`;
+    const roomCacheKey = getRoomCacheKey(year, month);
+    const cached = !force ? readRoomReservationCache(roomCacheKey) : null;
+    const now = Date.now();
+    let renderedCached = false;
 
-    if (!force) {
-        const cached = roomReservationMemoryCache[roomCacheKey];
-        if (cached && Date.now() - cached.savedAt < ROOM_RESERVATION_CACHE_MS) {
-            roomReservations = Array.isArray(cached.reservations) ? cached.reservations : [];
-            roomBlockedSlots = Array.isArray(cached.blockedSlots) ? cached.blockedSlots : [];
-            isRoomReservationLoaded = true;
-            renderRoomCalendar();
-            if (selectedRoomDate) {
-                renderRoomTimeTable(parseRoomDate(selectedRoomDate));
-            } else {
-                if (tableEl) tableEl.innerHTML = "";
-                if (titleEl) titleEl.textContent = "날짜를 선택해주세요";
-            }
+    // 1) 캐시가 있으면 먼저 즉시 렌더링합니다. 이게 체감 로딩 속도를 가장 크게 줄입니다.
+    if (cached && now - Number(cached.savedAt || 0) < ROOM_RESERVATION_STALE_CACHE_MS) {
+        applyRoomReservationData(cached);
+        renderCurrentRoomReservationView();
+        renderedCached = true;
+
+        // 충분히 최신이면 GAS 호출 자체를 생략합니다.
+        if (now - Number(cached.savedAt || 0) < ROOM_RESERVATION_CACHE_MS) {
             return;
         }
     }
 
-    calendarEl.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:20px;">예약 현황을 불러오는 중...</div>`;
+    if (!renderedCached) {
+        calendarEl.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:20px;">예약 현황을 불러오는 중...</div>`;
+    }
 
     try {
         const data = await roomJsonp({
             action: "getRoomReservations",
             year,
             month
-        });
+        }, { cacheBust: force });
 
         if (!data || data.status !== "success") {
             throw new Error((data && data.message) || "예약 정보를 불러오지 못했습니다.");
         }
 
-        roomReservations = Array.isArray(data.reservations) ? data.reservations : [];
-        roomBlockedSlots = Array.isArray(data.blockedSlots) ? data.blockedSlots : [];
-        roomReservationMemoryCache[roomCacheKey] = {
-            savedAt: Date.now(),
-            reservations: roomReservations,
-            blockedSlots: roomBlockedSlots
-        };
-        isRoomReservationLoaded = true;
+        applyRoomReservationData(data);
+        saveRoomReservationCache(roomCacheKey, data);
+        renderCurrentRoomReservationView();
     } catch (e) {
         console.error(e);
+
+        // 캐시 화면이 이미 떠 있으면 오류 화면으로 덮어쓰지 않습니다.
+        if (renderedCached) return;
+
         calendarEl.innerHTML = `
             <div style="grid-column:1/-1; background:#fde9e9; border:1px solid #ffb3b3; border-radius:12px; padding:16px; color:#b00020; line-height:1.6;">
                 예약 정보를 불러오지 못했습니다.<br>
@@ -4171,16 +4263,6 @@ async function loadRoomReservations(force = false) {
                 <small>${e.message || e}</small>
             </div>
         `;
-        return;
-    }
-
-    renderRoomCalendar();
-
-    if (selectedRoomDate) {
-        renderRoomTimeTable(parseRoomDate(selectedRoomDate));
-    } else {
-        if (tableEl) tableEl.innerHTML = "";
-        if (titleEl) titleEl.textContent = "날짜를 선택해주세요";
     }
 }
 
@@ -4217,10 +4299,7 @@ function renderRoomCalendar() {
         const date = new Date(year, month, d);
         const dateKey = formatRoomDate(date);
 
-        const count = roomReservations.filter(r =>
-            String(r.date || "") === dateKey &&
-            normalizeStatusForMatch(r.status) !== "취소"
-        ).length;
+        const count = roomReservationCountByDate[dateKey] || 0;
 
         const div = document.createElement("div");
         div.className = "room-day";
@@ -4274,11 +4353,8 @@ function renderRoomTimeTable(dateObj) {
         ROOM_LIST.forEach(room => {
             const safeRoom = String(room || "").replace(/"/g, "&quot;");
 
-            const blocked = roomBlockedSlots.find(b =>
-                String(b.date || "") === dateKey &&
-                normalizeRoomTextForMatch(b.room) === normalizeRoomTextForMatch(room) &&
-                normalizeHourForMatch(b.startHour) === Number(hour)
-            );
+            const slotKey = getRoomSlotKey(dateKey, room, hour);
+            const blocked = roomBlockedMap[slotKey];
 
             if (blocked) {
                 html += `
@@ -4289,12 +4365,7 @@ function renderRoomTimeTable(dateObj) {
                 return;
             }
 
-            const reservation = roomReservations.find(r =>
-                String(r.date || "") === dateKey &&
-                normalizeRoomTextForMatch(r.room) === normalizeRoomTextForMatch(room) &&
-                normalizeHourForMatch(r.startHour) === Number(hour) &&
-                normalizeStatusForMatch(r.status) !== "취소"
-            );
+            const reservation = roomReservationMap[slotKey];
 
             if (reservation) {
                 const isMine =
