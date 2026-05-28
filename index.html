@@ -1060,7 +1060,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
         <button type="button" onclick="changeRoomMonth(1)">다음달 ➡</button>
       </div>
 
-      <button type="button" class="room-refresh-btn" onclick="loadRoomReservations()" style="width:100%; margin-bottom:12px;">
+      <button type="button" class="room-refresh-btn" onclick="loadRoomReservations(true)" style="width:100%; margin-bottom:12px;">
         🔄 예약 현황 새로고침
       </button>
 
@@ -1108,7 +1108,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
         </div>
 
         <div class="admin-btn-row">
-          <button type="button" class="admin-btn blue" id="adminRefreshStudentsBtn" onclick="adminLoadStudents()">학생목록 새로고침</button>
+          <button type="button" class="admin-btn blue" id="adminRefreshStudentsBtn" onclick="adminLoadStudents(true, true)">학생목록 새로고침</button>
           <button type="button" class="admin-btn gray" onclick="adminLogout()">로그아웃</button>
         </div>
 
@@ -2862,11 +2862,21 @@ window.onload = async function() {
 // =========================================================================================
 let adminToken = localStorage.getItem('adminToken') || '';
 let adminModeActive = false;
-let adminInfo = null;
+let adminInfo = (() => {
+    try { return JSON.parse(localStorage.getItem('adminInfo') || 'null'); }
+    catch (e) { return null; }
+})();
 let adminStudents = [];
 let adminClassList = [];
 let adminAttendanceRecords = [];
 let adminDailyEvalRows = [];
+let adminStudentsLoaded = false;
+let adminDailyEvalTemplateLoaded = false;
+let adminClassListLoadedKey = '';
+const ADMIN_CLASS_LIST_CACHE_MS = 10 * 60 * 1000;
+const ADMIN_DAILY_TEMPLATE_CACHE_MS = 5 * 60 * 1000;
+const ROOM_RESERVATION_CACHE_MS = 30 * 1000;
+const roomReservationMemoryCache = {};
 let adminDailyEvalTemplateText = '안녕하세요. 울림연기학원입니다.\n[반이름] [학생명] 학생 수업 일일평가입니다.\n\n수업내용 :\n수업평가 :';
 
 function getTodayInputValue() {
@@ -3104,6 +3114,7 @@ async function adminLogin() {
         adminToken = data.adminToken;
         adminInfo = data.admin || {};
         localStorage.setItem('adminToken', adminToken);
+        localStorage.setItem('adminInfo', JSON.stringify(adminInfo));
         localStorage.setItem('ulimLastMode', 'admin');
         adminModeActive = true;
         adminEnableAllTabsForAdminMode();
@@ -3128,7 +3139,11 @@ function adminLogout() {
     adminAttendanceRecords = [];
     adminDailyEvalRows = [];
     localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminInfo');
     localStorage.removeItem('ulimLastMode');
+    adminStudentsLoaded = false;
+    adminDailyEvalTemplateLoaded = false;
+    adminClassListLoadedKey = '';
     setAdminTabVisibility();
     document.getElementById('adminLoginBox').style.display = 'block';
     document.getElementById('adminDashboard').style.display = 'none';
@@ -3142,38 +3157,63 @@ async function adminLoadInitialData() {
     document.body.classList.add('admin-booting');
     const dashboard = document.getElementById('adminDashboard');
     const loginBox = document.getElementById('adminLoginBox');
-    if (!adminInfo && dashboard) dashboard.style.display = 'none';
+    if (dashboard) dashboard.style.display = 'none';
 
     try {
-        await adminLoadStudents();
-        await adminLoadClassList();
-        await adminLoadDailyEvalTemplate();
+        showLoading('관리자 권한 확인 중...');
+        const data = await adminApi('adminGetSession', { adminToken });
+        hideLoading();
+
+        adminInfo = data.admin || adminInfo || {};
+        localStorage.setItem('adminInfo', JSON.stringify(adminInfo));
+        document.body.classList.add('admin-mode');
+        setAdminTabVisibility();
+        adminInitDates();
         applyAdminPermissions();
 
-        if (adminInfo) {
-            if (loginBox) loginBox.style.display = 'none';
-            if (dashboard) dashboard.style.display = 'block';
+        if (loginBox) loginBox.style.display = 'none';
+        if (dashboard) dashboard.style.display = 'block';
+
+        // 속도 개선: 로그인 직후에는 무거운 학생목록/출석부 조회를 자동 실행하지 않습니다.
+        // 필요한 탭을 열 때만 해당 데이터를 불러옵니다.
+        if (adminIsTeacherMode()) {
+            showAdminPanel('adminPanelAttendance');
         }
+    } catch (e) {
+        hideLoading();
+        alert(e.message);
+        adminLogout();
     } finally {
         document.body.classList.remove('admin-booting');
     }
 }
 
-async function adminLoadStudents() {
+async function adminLoadStudents(showOverlay = true, force = false) {
     if (!adminToken) return;
+    if (!adminIsFullAdmin()) return;
+    if (adminStudentsLoaded && !force) {
+        adminRenderStudentDatalist();
+        adminRenderStudentTable();
+        return;
+    }
     try {
-        showLoading('학생 목록 불러오는 중...');
-        const data = await adminApi('adminGetStudents', { adminToken });
-        hideLoading();
+        if (showOverlay) showLoading('학생 목록 불러오는 중...');
+        const data = await adminApi('adminGetStudents', { adminToken, force: force ? '1' : '' });
+        if (showOverlay) hideLoading();
         adminStudents = data.students || [];
-        document.getElementById('adminStudentCount').textContent = `학생 ${adminStudents.length}명`;
-        if (data.admin) adminInfo = data.admin;
+        adminStudentsLoaded = true;
+        const countEl = document.getElementById('adminStudentCount');
+        if (countEl) countEl.textContent = `학생 ${adminStudents.length}명`;
+        if (data.admin) {
+            adminInfo = data.admin;
+            localStorage.setItem('adminInfo', JSON.stringify(adminInfo));
+        }
         if (adminInfo) { document.body.classList.add('admin-mode'); setAdminTabVisibility(); applyAdminPermissions(); }
         adminRenderStudentDatalist();
         adminRenderStudentTable();
         adminInitDates();
     } catch (e) {
-        hideLoading();
+        if (showOverlay) hideLoading();
         alert(e.message);
         if (String(e.message).includes('토큰') || String(e.message).includes('로그인')) adminLogout();
     }
@@ -3186,15 +3226,54 @@ function adminInitDates() {
     });
 }
 
-async function adminLoadClassList(dateOverride = '') {
+function getAdminClassListCacheKey(date) {
+    const role = adminRoleText() || 'unknown';
+    const name = (adminInfo && (adminInfo.name || adminInfo.id)) || 'unknown';
+    return `ulim_admin_classes_${adminToken}_${date}_${role}_${name}`;
+}
+
+function readAdminClassListCache(key) {
+    try {
+        const raw = sessionStorage.getItem(key);
+        if (!raw) return null;
+        const cached = JSON.parse(raw);
+        if (!cached || !Array.isArray(cached.classes)) return null;
+        if (Date.now() - Number(cached.savedAt || 0) > ADMIN_CLASS_LIST_CACHE_MS) return null;
+        return cached.classes;
+    } catch (e) {
+        return null;
+    }
+}
+
+function writeAdminClassListCache(key, classes) {
+    try {
+        sessionStorage.setItem(key, JSON.stringify({ savedAt: Date.now(), classes: classes || [] }));
+    } catch (e) {}
+}
+
+async function adminLoadClassList(dateOverride = '', force = false) {
     if (!adminToken) return;
     try {
         const date = dateOverride
             || document.getElementById('adminAttendanceDate')?.value
             || document.getElementById('adminDailyEvalDate')?.value
             || getTodayInputValue();
-        const data = await adminApi('adminGetClassList', { adminToken, date });
+        const cacheKey = getAdminClassListCacheKey(date);
+
+        if (!force) {
+            const cached = readAdminClassListCache(cacheKey);
+            if (cached) {
+                adminClassList = adminFilterClassListForRole(cached || []);
+                adminClassListLoadedKey = cacheKey;
+                adminRenderClassSelectors();
+                return;
+            }
+        }
+
+        const data = await adminApi('adminGetClassList', { adminToken, date, force: force ? '1' : '' });
         adminClassList = adminFilterClassListForRole(data.classes || []);
+        adminClassListLoadedKey = cacheKey;
+        writeAdminClassListCache(cacheKey, adminClassList);
         adminRenderClassSelectors();
     } catch (e) {
         console.warn('수업 목록 로딩 오류:', e);
@@ -3399,8 +3478,21 @@ function showAdminPanel(panelId) {
     });
 
     document.querySelectorAll('.admin-panel').forEach(panel => panel.classList.toggle('active', panel.id === panelId));
-    if (panelId === 'adminPanelAttendance' && !adminAttendanceRecords.length) adminLoadAttendanceSnapshot(false);
-    if (panelId === 'adminPanelDailyEval') adminRenderDailyEvalTable();
+
+    // 속도 개선: 탭을 열 때 필요한 데이터만 지연 로딩합니다.
+    if (panelId === 'adminPanelStudents' && isFull && !adminStudentsLoaded) {
+        adminLoadStudents(false, false);
+    }
+
+    if (panelId === 'adminPanelAttendance') {
+        adminLoadClassList('', false);
+    }
+
+    if (panelId === 'adminPanelDailyEval') {
+        adminLoadClassList(document.getElementById('adminDailyEvalDate')?.value || '', false);
+        if (!adminDailyEvalTemplateLoaded) adminLoadDailyEvalTemplate();
+        adminRenderDailyEvalTable();
+    }
 }
 
 function adminGetRecipientTypes(prefix = 'attendance') {
@@ -3529,11 +3621,29 @@ function normalizeForClientMatch(value) {
     return String(value || '').replace(/\s+/g, '').toLowerCase();
 }
 
-async function adminLoadDailyEvalTemplate() {
+async function adminLoadDailyEvalTemplate(force = false) {
     if (!adminToken) return;
     try {
+        const cacheKey = 'ulim_daily_template_' + adminToken;
+        if (!force) {
+            try {
+                const raw = sessionStorage.getItem(cacheKey);
+                if (raw) {
+                    const cached = JSON.parse(raw);
+                    if (cached && cached.template && Date.now() - Number(cached.savedAt || 0) < ADMIN_DAILY_TEMPLATE_CACHE_MS) {
+                        adminDailyEvalTemplateText = cached.template;
+                        adminDailyEvalTemplateLoaded = true;
+                        const el = document.getElementById('adminDailyEvalTemplate');
+                        if (el) el.value = adminDailyEvalTemplateText;
+                        return;
+                    }
+                }
+            } catch (cacheErr) {}
+        }
         const data = await adminApi('adminGetDailyEvalTemplate', { adminToken });
         adminDailyEvalTemplateText = data.template || adminDailyEvalTemplateText;
+        adminDailyEvalTemplateLoaded = true;
+        try { sessionStorage.setItem(cacheKey, JSON.stringify({ savedAt: Date.now(), template: adminDailyEvalTemplateText })); } catch (e) {}
         const el = document.getElementById('adminDailyEvalTemplate');
         if (el) el.value = adminDailyEvalTemplateText;
     } catch (e) {
@@ -3552,6 +3662,8 @@ async function adminSaveDailyEvalTemplate() {
         const data = await adminApi('adminSaveDailyEvalTemplate', { adminToken, template });
         hideLoading();
         adminDailyEvalTemplateText = template;
+        adminDailyEvalTemplateLoaded = true;
+        try { sessionStorage.setItem('ulim_daily_template_' + adminToken, JSON.stringify({ savedAt: Date.now(), template })); } catch (cacheErr) {}
         alert(data.message || '기본 문구를 저장했습니다.');
     } catch (e) {
         hideLoading();
@@ -3989,7 +4101,7 @@ function changeRoomMonth(diff) {
     loadRoomReservations();
 }
 
-async function loadRoomReservations() {
+async function loadRoomReservations(force = false) {
     const calendarEl = document.getElementById("roomCalendar");
     const tableEl = document.getElementById("roomTimeTable");
     const titleEl = document.getElementById("selectedRoomDateTitle");
@@ -4010,6 +4122,24 @@ async function loadRoomReservations() {
 
     const year = roomCurrentDate.getFullYear();
     const month = roomCurrentDate.getMonth() + 1;
+    const roomCacheKey = `${year}-${String(month).padStart(2, '0')}`;
+
+    if (!force) {
+        const cached = roomReservationMemoryCache[roomCacheKey];
+        if (cached && Date.now() - cached.savedAt < ROOM_RESERVATION_CACHE_MS) {
+            roomReservations = Array.isArray(cached.reservations) ? cached.reservations : [];
+            roomBlockedSlots = Array.isArray(cached.blockedSlots) ? cached.blockedSlots : [];
+            isRoomReservationLoaded = true;
+            renderRoomCalendar();
+            if (selectedRoomDate) {
+                renderRoomTimeTable(parseRoomDate(selectedRoomDate));
+            } else {
+                if (tableEl) tableEl.innerHTML = "";
+                if (titleEl) titleEl.textContent = "날짜를 선택해주세요";
+            }
+            return;
+        }
+    }
 
     calendarEl.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:20px;">예약 현황을 불러오는 중...</div>`;
 
@@ -4026,6 +4156,11 @@ async function loadRoomReservations() {
 
         roomReservations = Array.isArray(data.reservations) ? data.reservations : [];
         roomBlockedSlots = Array.isArray(data.blockedSlots) ? data.blockedSlots : [];
+        roomReservationMemoryCache[roomCacheKey] = {
+            savedAt: Date.now(),
+            reservations: roomReservations,
+            blockedSlots: roomBlockedSlots
+        };
         isRoomReservationLoaded = true;
     } catch (e) {
         console.error(e);
@@ -4263,7 +4398,7 @@ async function reserveRoomSlot(date, room, hour) {
 
         if (data && data.status === "success") {
             selectedRoomDate = date;
-            await loadRoomReservations();
+            await loadRoomReservations(true);
             renderRoomTimeTable(parseRoomDate(date));
             alert("예약되었습니다.");
         } else {
@@ -4304,7 +4439,7 @@ async function cancelRoomReservation(id) {
         });
 
         if (data && data.status === "success") {
-            await loadRoomReservations();
+            await loadRoomReservations(true);
 
             if (selectedRoomDate) {
                 renderRoomTimeTable(parseRoomDate(selectedRoomDate));
