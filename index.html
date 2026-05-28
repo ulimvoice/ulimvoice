@@ -650,6 +650,8 @@ audio { width: 100%; height: 40px; }
 .admin-class-chip:hover { background:#f0fdf4; border-color:#2ecc71; color:#166534; }
 .admin-class-list-panel { display:none; margin-top:10px; padding:10px; background:#f8fafc; border:1px solid #e5e7eb; border-radius:14px; max-height:210px; overflow:auto; }
 .admin-class-list-panel.open { display:block; }
+.admin-only-tab { display:none !important; }
+body.admin-mode .admin-only-tab { display:block !important; }
 .admin-permission-note { font-size:12px; color:#777; margin-top:6px; line-height:1.5; }
 .admin-role-badge { display:inline-block; padding:4px 9px; border-radius:999px; background:#eef2ff; color:#3730a3; font-size:12px; font-weight:800; }
 .admin-recipient-row {
@@ -685,7 +687,7 @@ audio { width: 100%; height: 40px; }
 .admin-eval-textarea {
     width:100%;
     min-width:260px;
-    min-height:72px;
+    min-height:150px;
     border:1px solid #d1d5db;
     border-radius:10px;
     padding:10px;
@@ -1039,14 +1041,14 @@ audio { width: 100%; height: 40px; }
               </div>
               <div class="admin-field">
                 <label for="adminAttendanceClass">반명 / 수업명 선택 또는 검색</label>
-                <input type="text" id="adminAttendanceClass" list="adminClassDatalist" placeholder="예: [최봄결T] 토요일 청소년 초중급">
+                <input type="text" id="adminAttendanceClass" list="adminClassDatalist" placeholder="반명 또는 수업명을 입력하거나 아래 목록에서 선택">
                 <datalist id="adminClassDatalist"></datalist>
                 <button type="button" class="admin-btn gray" style="margin-top:8px; padding:9px 12px; font-size:13px;" onclick="toggleAdminClassList('adminClassChipWrap')">반 목록 펼치기/닫기</button>
                 <div id="adminClassChipWrap" class="admin-class-list-panel"></div>
               </div>
               <div class="admin-field">
                 <label for="adminAttendanceFilter">학생명 / 강사명 필터</label>
-                <input type="text" id="adminAttendanceFilter" placeholder="예: 유혜원, 최봄결">
+                <input type="text" id="adminAttendanceFilter" placeholder="학생명 또는 강사명 입력">
               </div>
               <div class="admin-field">
                 <label for="adminAttendanceStatusFilter">출결 상태 필터</label>
@@ -1097,19 +1099,19 @@ audio { width: 100%; height: 40px; }
               </div>
               <div class="admin-field">
                 <label for="adminDailyEvalClass">반명 / 수업명</label>
-                <input type="text" id="adminDailyEvalClass" list="adminDailyClassDatalist" placeholder="예: 토요일 청소년 초중급" oninput="adminRenderDailyEvalTable()">
+                <input type="text" id="adminDailyEvalClass" list="adminDailyClassDatalist" placeholder="반명 또는 수업명을 입력하거나 아래 목록에서 선택" oninput="adminRenderDailyEvalTable()">
                 <datalist id="adminDailyClassDatalist"></datalist>
                 <button type="button" class="admin-btn gray" style="margin-top:8px; padding:9px 12px; font-size:13px;" onclick="toggleAdminClassList('adminDailyClassChipWrap')">반 목록 펼치기/닫기</button>
                 <div id="adminDailyClassChipWrap" class="admin-class-list-panel"></div>
               </div>
               <div class="admin-field">
                 <label for="adminDailyEvalFilter">학생명 / 강사명 필터</label>
-                <input type="text" id="adminDailyEvalFilter" placeholder="예: 유혜원, 최봄결" oninput="adminRenderDailyEvalTable()">
+                <input type="text" id="adminDailyEvalFilter" placeholder="학생명 또는 강사명 입력" oninput="adminRenderDailyEvalTable()">
               </div>
             </div>
             <div class="admin-field admin-template-box" style="margin-top:12px;">
               <label for="adminDailyEvalTemplate">일일평가 기본 문구</label>
-              <textarea id="adminDailyEvalTemplate" class="admin-eval-textarea" style="min-height:120px;" placeholder="일일평가 기본문구"></textarea>
+              <textarea id="adminDailyEvalTemplate" class="admin-eval-textarea" style="min-height:170px;" placeholder="일일평가 기본문구"></textarea>
               <div class="admin-btn-row" style="margin-top:8px;">
                 <button type="button" class="admin-btn admin-full-only" onclick="adminSaveDailyEvalTemplate()">기본 문구 저장</button>
                 <button type="button" class="admin-btn blue" onclick="adminApplyTemplateToVisibleRows()">현재 학생들에게 문구 적용</button>
@@ -1125,7 +1127,7 @@ audio { width: 100%; height: 40px; }
               <label><input type="checkbox" id="dailyRecipientAdmin"> 관리자</label>
             </div>
             <div class="admin-btn-row">
-              <button type="button" class="admin-btn blue" onclick="adminRenderDailyEvalTable()">학생 불러오기</button>
+              <button type="button" class="admin-btn blue" onclick="adminLoadDailyEvalStudents()">현재 반 학생 불러오기</button>
               <button type="button" class="admin-btn" onclick="adminSaveDailyEvaluations(false)">평가 저장</button>
               <button type="button" class="admin-btn orange" onclick="adminPreviewDailyEvalMessages()">문자 미리보기</button>
               <button type="button" class="admin-btn red admin-full-only" onclick="adminSaveDailyEvaluations(true)">저장 후 문자발송</button>
@@ -2591,6 +2593,7 @@ function closeNoticeModal() {
 
 function showMainContent(isAuthenticated) {
     adminModeActive = false;
+    document.body.classList.remove('admin-mode');
     setAdminTabVisibility();
 
     document.getElementById('loginOverlay').style.display = 'none';
@@ -2722,6 +2725,7 @@ async function checkStudentName() {
 
 window.onload = async function() {
     adminModeActive = false;
+    document.body.classList.remove('admin-mode');
     setAdminTabVisibility();
     await checkStudentName();
     setAdminTabVisibility();
@@ -2764,7 +2768,9 @@ function activateTabById(tabId) {
 function setAdminTabVisibility() {
     const tab = document.querySelector('.tab[data-tab="tabAdmin"]');
     if (!tab) return;
-    tab.style.display = (adminModeActive && adminToken) ? '' : 'none';
+    const show = !!(adminModeActive && adminToken && adminInfo);
+    document.body.classList.toggle('admin-mode', show);
+    tab.style.display = show ? '' : 'none';
 }
 
 function openAdminPage() {
@@ -2782,7 +2788,7 @@ function openAdminPage() {
     }
 
     const adminTab = document.querySelector('.tab[data-tab="tabAdmin"]');
-    if (adminTab) adminTab.style.display = adminToken ? '' : 'none';
+    if (adminTab) adminTab.style.display = 'none';
     activateTabById('tabAdmin');
 
     const loginBox = document.getElementById('adminLoginBox');
@@ -2871,6 +2877,7 @@ async function adminLogin() {
 function adminLogout() {
     adminToken = '';
     adminModeActive = false;
+    document.body.classList.remove('admin-mode');
     adminInfo = null;
     adminStudents = [];
     adminClassList = [];
@@ -2902,7 +2909,7 @@ async function adminLoadStudents() {
         adminStudents = data.students || [];
         document.getElementById('adminStudentCount').textContent = `학생 ${adminStudents.length}명`;
         if (data.admin) adminInfo = data.admin;
-        if (adminInfo) applyAdminPermissions();
+        if (adminInfo) { document.body.classList.add('admin-mode'); setAdminTabVisibility(); applyAdminPermissions(); }
         adminRenderStudentDatalist();
         adminRenderStudentTable();
         adminInitDates();
@@ -3163,7 +3170,7 @@ function buildDailyEvalTemplateForStudent(student) {
     const selectedClass = document.getElementById('adminDailyEvalClass')?.value || student.className || '';
     const template = document.getElementById('adminDailyEvalTemplate')?.value || adminDailyEvalTemplateText;
     return template
-        .replaceAll('[반이름]', selectedClass)
+        .replaceAll('[반이름]', selectedClass || student.className || '')
         .replaceAll('[학생명]', student.name || student.studentName || '')
         .replaceAll('[담당강사]', student.instructor || '')
         .replaceAll('[수업일]', date);
@@ -3179,9 +3186,7 @@ function adminApplyTemplateToVisibleRows() {
     });
 }
 
-function adminRenderDailyEvalTable() {
-    const wrap = document.getElementById('adminDailyEvalTableWrap');
-    if (!wrap) return;
+function adminBuildDailyRowsFromStudents() {
     const list = adminFilteredStudentsForDaily();
     adminDailyEvalRows = list.map(s => ({
         date: document.getElementById('adminDailyEvalDate')?.value || getTodayInputValue(),
@@ -3194,15 +3199,68 @@ function adminRenderDailyEvalTable() {
         instructor: s.instructor,
         evaluation: ''
     }));
+}
+
+async function adminLoadDailyEvalStudents() {
+    if (!adminToken) return alert('관리자 로그인이 필요합니다.');
+    const date = document.getElementById('adminDailyEvalDate')?.value || getTodayInputValue();
+    const className = document.getElementById('adminDailyEvalClass')?.value.trim() || '';
+    const keyword = document.getElementById('adminDailyEvalFilter')?.value.trim() || '';
+    if (!className && !keyword) return alert('반명 또는 학생/강사 필터를 입력하거나 반 목록에서 선택해주세요.');
+
+    try {
+        showLoading('출석부 기준 현재 반 학생 불러오는 중...');
+        const data = await adminApi('adminGetAttendanceSnapshot', { adminToken, date, className, keyword, statusFilter: '' });
+        hideLoading();
+        const records = data.records || [];
+
+        if (!records.length) {
+            adminBuildDailyRowsFromStudents();
+            adminRenderDailyEvalRows('출석부에서 해당 반 학생을 찾지 못해 학생부 기준으로 표시했습니다.');
+            return;
+        }
+
+        adminDailyEvalRows = records.map(r => ({
+            date: r.date || date,
+            className: r.className || className,
+            studentName: r.studentName,
+            name: r.studentName,
+            studentNo: r.studentNo || '',
+            studentPhone: r.studentPhone || '',
+            parentPhone: r.parentPhone || '',
+            instructor: r.instructor || '',
+            attendanceStatus: r.status || '',
+            specialStatus: r.specialStatus || '',
+            memo: r.memo || '',
+            evaluation: ''
+        }));
+        adminRenderDailyEvalRows(data.message || '출석부 기준으로 학생을 불러왔습니다.');
+    } catch (e) {
+        hideLoading();
+        alert(e.message);
+    }
+}
+
+function adminRenderDailyEvalTable() {
+    adminBuildDailyRowsFromStudents();
+    adminRenderDailyEvalRows();
+}
+
+function adminRenderDailyEvalRows(message = '') {
+    const wrap = document.getElementById('adminDailyEvalTableWrap');
+    if (!wrap) return;
+    const list = adminDailyEvalRows;
     if (!list.length) {
         wrap.innerHTML = `<div class="notice-empty">표시할 학생이 없습니다. 반명 또는 검색어를 확인하세요.</div>`;
         return;
     }
-    let html = `<table class="admin-table"><thead><tr><th><input type="checkbox" onchange="adminToggleDailyAll(this.checked)" checked></th><th>학생명</th><th>담당강사</th><th>반명</th><th>학생전화</th><th>학부모전화</th><th>일일평가</th></tr></thead><tbody>`;
+    let html = '';
+    if (message) html += `<div style="font-size:13px; color:#666; margin:8px 0;">${escapeHtml(message)}</div>`;
+    html += `<table class="admin-table"><thead><tr><th><input type="checkbox" onchange="adminToggleDailyAll(this.checked)" checked></th><th>학생명</th><th>담당강사</th><th>반명</th><th>학생전화</th><th>학부모전화</th><th>출결/특이사항</th><th>일일평가</th></tr></thead><tbody>`;
     list.forEach((s, idx) => {
-        const rowObj = adminDailyEvalRows[idx];
-        const defaultText = buildDailyEvalTemplateForStudent(rowObj);
-        html += `<tr data-daily-index="${idx}"><td><input type="checkbox" class="admin-daily-check" checked></td><td><b>${escapeHtml(s.name)}</b></td><td>${escapeHtml(s.instructor)}</td><td>${escapeHtml(rowObj.className)}</td><td>${escapeHtml(s.studentPhone)}</td><td>${escapeHtml(s.parentPhone)}</td><td><textarea class="admin-eval-textarea" placeholder="오늘 수업 태도, 발음, 표현, 과제 등을 입력하세요.">${escapeHtml(defaultText)}</textarea></td></tr>`;
+        const defaultText = buildDailyEvalTemplateForStudent(s);
+        const statusText = [s.attendanceStatus, s.specialStatus].filter(Boolean).join(' / ');
+        html += `<tr data-daily-index="${idx}"><td><input type="checkbox" class="admin-daily-check" checked></td><td><b>${escapeHtml(s.studentName || s.name)}</b></td><td>${escapeHtml(s.instructor)}</td><td>${escapeHtml(s.className)}</td><td>${escapeHtml(s.studentPhone)}</td><td>${escapeHtml(s.parentPhone)}</td><td>${escapeHtml(statusText || '-')}</td><td><textarea class="admin-eval-textarea" placeholder="오늘 수업 태도, 발음, 표현, 과제 등을 입력하세요.">${escapeHtml(defaultText)}</textarea></td></tr>`;
     });
     html += `</tbody></table>`;
     wrap.innerHTML = html;
