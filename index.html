@@ -1082,7 +1082,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
     <div class="section">
       <h2 style="margin-top:0;">🔐 관리자 페이지</h2>
       <p style="color:#666; line-height:1.6; margin-top:0;">
-        출석 체크, 일일평가를 작성하는 페이지입니다.
+        출석 체크, 출결 메시지 발송, 결제 등록을 관리하는 페이지입니다.
       </p>
 
       <div id="adminLoginBox" class="admin-login-card">
@@ -3582,6 +3582,58 @@ function adminBuildDailyRowsFromStudents() {
     }));
 }
 
+
+function adminDailyEvalExactKey(row) {
+    return [
+        normalizeForClientMatch(row.className || ''),
+        normalizeForClientMatch(row.studentName || row.name || '')
+    ].join('|');
+}
+
+function adminDailyEvalNameKey(row) {
+    return normalizeForClientMatch(row.studentName || row.name || '');
+}
+
+async function adminMergeSavedDailyEvaluations(date, className, keyword = '') {
+    if (!adminToken || !adminDailyEvalRows.length) return;
+
+    try {
+        const data = await adminApi('adminGetDailyEvaluations', {
+            adminToken,
+            date,
+            className,
+            keyword
+        });
+
+        const savedRows = data.rows || [];
+        if (!savedRows.length) return;
+
+        const exactMap = {};
+        const nameMap = {};
+
+        savedRows.forEach(row => {
+            exactMap[adminDailyEvalExactKey(row)] = row;
+            nameMap[adminDailyEvalNameKey(row)] = row;
+        });
+
+        adminDailyEvalRows = adminDailyEvalRows.map(row => {
+            const saved = exactMap[adminDailyEvalExactKey(row)] || nameMap[adminDailyEvalNameKey(row)];
+            if (!saved || !saved.evaluation) return row;
+
+            return Object.assign({}, row, {
+                evaluation: saved.evaluation,
+                savedAt: saved.savedAt || '',
+                savedBy: saved.adminName || saved.adminId || '',
+                smsResult: saved.smsResult || '',
+                className: row.className || saved.className || '',
+                instructor: row.instructor || saved.instructor || ''
+            });
+        });
+    } catch (e) {
+        console.warn('저장된 일일평가 불러오기 오류:', e);
+    }
+}
+
 async function adminLoadDailyEvalStudents() {
     if (!adminToken) return alert('관리자 로그인이 필요합니다.');
     const date = document.getElementById('adminDailyEvalDate')?.value || getTodayInputValue();
@@ -3597,6 +3649,7 @@ async function adminLoadDailyEvalStudents() {
 
         if (!records.length) {
             adminBuildDailyRowsFromStudents();
+            await adminMergeSavedDailyEvaluations(date, className, keyword);
             adminRenderDailyEvalRows('출석부에서 해당 반 학생을 찾지 못해 학생부 기준으로 표시했습니다.');
             return;
         }
@@ -3615,6 +3668,7 @@ async function adminLoadDailyEvalStudents() {
             memo: r.memo || '',
             evaluation: ''
         }));
+        await adminMergeSavedDailyEvaluations(date, className, keyword);
         adminRenderDailyEvalRows(data.message || '출석부 기준으로 학생을 불러왔습니다.');
     } catch (e) {
         hideLoading();
@@ -3641,9 +3695,11 @@ function adminRenderDailyEvalRows(message = '') {
     html += `<table class="admin-table"><thead><tr><th><input type="checkbox" onchange="adminToggleDailyAll(this.checked)" checked></th><th>학생명</th><th>담당강사</th><th>반명</th>${isFull ? '<th>학생전화</th><th>학부모전화</th>' : ''}<th>출결/특이사항</th><th>일일평가</th></tr></thead><tbody>`;
     list.forEach((s, idx) => {
         const defaultText = buildDailyEvalTemplateForStudent(s);
+        const evalText = String(s.evaluation || '').trim() ? s.evaluation : defaultText;
         const statusText = [s.attendanceStatus, s.specialStatus].filter(Boolean).join(' / ');
+        const savedInfo = s.savedAt ? `<div style="font-size:11px; color:#16a34a; margin-bottom:4px; font-weight:700;">저장됨: ${escapeHtml(s.savedAt)}${s.savedBy ? ' / ' + escapeHtml(s.savedBy) : ''}</div>` : '';
         const phoneCells = isFull ? `<td>${escapeHtml(s.studentPhone)}</td><td>${escapeHtml(s.parentPhone)}</td>` : '';
-        html += `<tr data-daily-index="${idx}"><td><input type="checkbox" class="admin-daily-check" checked></td><td><b>${escapeHtml(s.studentName || s.name)}</b></td><td>${escapeHtml(s.instructor)}</td><td>${escapeHtml(s.className)}</td>${phoneCells}<td>${escapeHtml(statusText || '-')}</td><td><textarea class="admin-eval-textarea" placeholder="오늘 수업 태도, 발음, 표현, 과제 등을 입력하세요.">${escapeHtml(defaultText)}</textarea></td></tr>`;
+        html += `<tr data-daily-index="${idx}"><td><input type="checkbox" class="admin-daily-check" checked></td><td><b>${escapeHtml(s.studentName || s.name)}</b></td><td>${escapeHtml(s.instructor)}</td><td>${escapeHtml(s.className)}</td>${phoneCells}<td>${escapeHtml(statusText || '-')}</td><td>${savedInfo}<textarea class="admin-eval-textarea" placeholder="오늘 수업 태도, 발음, 표현, 과제 등을 입력하세요.">${escapeHtml(evalText)}</textarea></td></tr>`;
     });
     html += `</tbody></table>`;
     wrap.innerHTML = html;
@@ -3694,6 +3750,19 @@ async function adminSaveDailyEvaluations(sendSms = false) {
         showLoading(sendSms ? '일일평가 저장 및 문자 발송 중...' : '일일평가 저장 중...');
         const data = await adminApi('adminSaveDailyEvaluations', { adminToken, rows: JSON.stringify(rows), sendSms: sendSms ? 'Y' : 'N', recipientTypes: recipientTypes.join(',') });
         hideLoading();
+        const date = document.getElementById('adminDailyEvalDate')?.value || getTodayInputValue();
+        const className = document.getElementById('adminDailyEvalClass')?.value.trim() || '';
+        const keyword = document.getElementById('adminDailyEvalFilter')?.value.trim() || '';
+        rows.forEach(saved => {
+            const targetKey = adminDailyEvalExactKey(saved);
+            adminDailyEvalRows = adminDailyEvalRows.map(row => {
+                if (adminDailyEvalExactKey(row) === targetKey || adminDailyEvalNameKey(row) === adminDailyEvalNameKey(saved)) {
+                    return Object.assign({}, row, { evaluation: saved.evaluation, savedAt: '방금 저장', savedBy: adminSession?.admin?.name || '' });
+                }
+                return row;
+            });
+        });
+        adminRenderDailyEvalRows('저장된 일일평가 내용을 화면에 반영했습니다.');
         alert(data.message || '처리 완료');
     } catch (e) {
         hideLoading();
