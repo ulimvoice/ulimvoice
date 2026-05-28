@@ -741,6 +741,17 @@ audio { width: 100%; height: 40px; }
     font-weight:700;
     margin-top:8px;
 }
+
+/* 관리자 권한 판별 전 깜빡임 방지: 기본은 관리자 전용 UI를 숨김 */
+.admin-full-only { display: none !important; }
+body.full-admin-mode .admin-recipient-row.admin-full-only { display: flex !important; }
+body.full-admin-mode button.admin-full-only,
+body.full-admin-mode .admin-subtab.admin-full-only { display: inline-block !important; }
+body.full-admin-mode .admin-field.admin-full-only { display: block !important; }
+body.full-admin-mode .admin-full-only:not(.admin-recipient-row):not(button):not(.admin-subtab):not(.admin-field) { display: revert !important; }
+body.teacher-mode .admin-full-only { display: none !important; }
+body.admin-booting #adminDashboard { visibility: hidden; }
+
 .admin-only-tab { display:none !important; }
 body.admin-mode .admin-only-tab { display:block !important; }
 .admin-permission-note { font-size:12px; color:#777; margin-top:6px; line-height:1.5; }
@@ -2940,8 +2951,10 @@ function openAdminPage() {
     const dashboard = document.getElementById('adminDashboard');
 
     if (adminToken) {
+        // 새로고침 직후에는 권한 확인 전까지 대시보드를 숨겨서
+        // 강사 계정에 관리자 전용 항목이 잠깐 보이는 현상을 막는다.
         if (loginBox) loginBox.style.display = 'none';
-        if (dashboard) dashboard.style.display = 'block';
+        if (dashboard) dashboard.style.display = adminInfo ? 'block' : 'none';
         adminLoadInitialData();
     } else {
         if (loginBox) loginBox.style.display = 'block';
@@ -3082,9 +3095,9 @@ async function adminLogin() {
         adminModeActive = true;
         adminEnableAllTabsForAdminMode();
         setAdminTabVisibility();
+        applyAdminPermissions();
         document.getElementById('adminLoginBox').style.display = 'none';
         document.getElementById('adminDashboard').style.display = 'block';
-        applyAdminPermissions();
         await adminLoadInitialData();
     } catch (e) {
         hideLoading();
@@ -3113,10 +3126,24 @@ function adminLogout() {
 }
 
 async function adminLoadInitialData() {
-    await adminLoadStudents();
-    await adminLoadClassList();
-    await adminLoadDailyEvalTemplate();
-    applyAdminPermissions();
+    document.body.classList.add('admin-booting');
+    const dashboard = document.getElementById('adminDashboard');
+    const loginBox = document.getElementById('adminLoginBox');
+    if (!adminInfo && dashboard) dashboard.style.display = 'none';
+
+    try {
+        await adminLoadStudents();
+        await adminLoadClassList();
+        await adminLoadDailyEvalTemplate();
+        applyAdminPermissions();
+
+        if (adminInfo) {
+            if (loginBox) loginBox.style.display = 'none';
+            if (dashboard) dashboard.style.display = 'block';
+        }
+    } finally {
+        document.body.classList.remove('admin-booting');
+    }
 }
 
 async function adminLoadStudents() {
