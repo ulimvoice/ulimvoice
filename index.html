@@ -3584,7 +3584,7 @@ function adminBuildDailyRowsFromStudents() {
     const list = adminFilteredStudentsForDaily();
     adminDailyEvalRows = list.map(s => ({
         date: document.getElementById('adminDailyEvalDate')?.value || getTodayInputValue(),
-        className: document.getElementById('adminDailyEvalClass')?.value || s.className || '',
+        className: ((document.getElementById('adminDailyEvalClass')?.value || '') === '전체반') ? (s.className || '전체반') : (document.getElementById('adminDailyEvalClass')?.value || s.className || ''),
         studentName: s.name,
         name: s.name,
         studentNo: s.studentNo,
@@ -3732,7 +3732,11 @@ function adminGetSelectedDailyRows() {
         if (!checked) return null;
         const base = Object.assign({}, adminDailyEvalRows[idx] || {});
         base.date = date;
-        base.className = className || base.className || '';
+        if (className && className !== '전체반') {
+            base.className = className;
+        } else {
+            base.className = base.className || className || '';
+        }
         base.evaluation = row.querySelector('.admin-eval-textarea')?.value.trim() || '';
         return base.evaluation ? base : null;
     }).filter(Boolean);
