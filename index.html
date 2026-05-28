@@ -5,7 +5,7 @@
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1779963058596&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000006b9072098da537e932e330e3%26ts%3D494434%26p%3Dfs%26cid%3D1%26sig%3D094c79d2ae5756d65582644838a21cda699d2132d2b47649a4e2ab013cae40c2%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
+<script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1779963058596&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000a3147209933e1a1fba4c87c3%26ts%3D494435%26p%3Dfs%26cid%3D1%26sig%3D9e3703f5537f9d6dbb62dbe048ed82938cd1175c537e3968e073c8aa9290096a%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
 <script src="appdata/vocalization/data.js"></script>
 <script src="appdata/past_questions/data.js"></script>
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -479,6 +479,161 @@ audio { width: 100%; height: 40px; }
     }
 }
 
+/* ===========================
+   🔐 관리자 페이지
+   =========================== */
+.admin-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+.admin-login-card,
+.admin-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    padding: 18px;
+}
+.admin-login-card {
+    max-width: 420px;
+    margin: 0 auto;
+}
+.admin-field {
+    margin-bottom: 12px;
+}
+.admin-field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 800;
+    color: #555;
+    margin-bottom: 6px;
+}
+.admin-field input,
+.admin-field select,
+.admin-field textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 11px 12px;
+    font-size: 15px;
+}
+.admin-btn-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 12px 0;
+}
+.admin-btn {
+    border: none;
+    border-radius: 10px;
+    padding: 11px 14px;
+    font-weight: 900;
+    cursor: pointer;
+    background: #2ecc71;
+    color: #fff;
+}
+.admin-btn.gray { background: #6b7280; }
+.admin-btn.blue { background: #3498db; }
+.admin-btn.orange { background: #e67e22; }
+.admin-btn.red { background: #e74c3c; }
+.admin-subtabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 12px 0 18px;
+}
+.admin-subtab {
+    border: 1px solid #ddd;
+    border-radius: 999px;
+    padding: 9px 14px;
+    background: #fff;
+    color: #555;
+    font-weight: 900;
+    cursor: pointer;
+}
+.admin-subtab.active {
+    background: #2ecc71;
+    color: #fff;
+    border-color: #2ecc71;
+}
+.admin-panel { display: none; }
+.admin-panel.active { display: block; }
+.admin-table-wrap {
+    overflow-x: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    margin-top: 12px;
+}
+.admin-table {
+    width: 100%;
+    min-width: 760px;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+.admin-table th,
+.admin-table td {
+    border-bottom: 1px solid #eee;
+    padding: 9px 8px;
+    text-align: left;
+    vertical-align: middle;
+}
+.admin-table th {
+    background: #f3f4f6;
+    color: #374151;
+    font-weight: 900;
+    position: sticky;
+    top: 0;
+}
+.admin-table tr:hover td {
+    background: #f9fafb;
+}
+.admin-status-select {
+    min-width: 90px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 7px;
+}
+.admin-small-input {
+    min-width: 160px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 7px;
+}
+.admin-message-preview {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    padding: 12px;
+    margin-top: 12px;
+    white-space: pre-wrap;
+    font-size: 13px;
+    line-height: 1.5;
+}
+.admin-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 10px 0;
+}
+.admin-chip {
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: #f0fdf4;
+    color: #166534;
+    border: 1px solid #dcfce7;
+    font-weight: 800;
+    font-size: 13px;
+}
+@media (max-width: 700px) {
+    .admin-btn-row .admin-btn {
+        flex: 1 1 100%;
+    }
+    .admin-table {
+        min-width: 720px;
+    }
+}
+
 </style>
 </head>
 <body>
@@ -509,6 +664,7 @@ audio { width: 100%; height: 40px; }
             </div>
             <button onclick="authenticateStudentFromInputs()" style="width: 100%; padding: 14px; background: #2ecc71; color: white; border: none; border-radius: 8px; font-size: 17px; font-weight: bold; cursor: pointer; transition: background 0.2s;">로그인</button>
             <button onclick="guestLogin()" style="width: 100%; padding: 14px; background: #aaa; color: white; border: none; border-radius: 8px; font-size: 17px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: background 0.2s;">게스트 로그인 (상황극 탭만 사용)</button>
+            <button onclick="openAdminPage()" style="width: 100%; padding: 14px; background: #111827; color: white; border: none; border-radius: 8px; font-size: 17px; font-weight: bold; cursor: pointer; margin-top: 10px;">관리자 페이지</button>
         </div>
        <div style="margin-top: 40px; text-align: center;">
     <p style="font-size: 14px; color: #888; margin-bottom: 15px;">울림 연기학원의 다양한 소식을 만나보세요!</p>
@@ -552,6 +708,7 @@ audio { width: 100%; height: 40px; }
     <div class="tab" data-tab="tab3">🎤 발성훈련</div>
     <div class="tab" data-tab="tab4">📄 기출문제</div>
     <div class="tab" data-tab="tabRoom">🏢 연습실 예약</div>
+    <div class="tab" data-tab="tabAdmin">🔐 관리자</div>
   </div>
 
   <div class="tab-content active" id="tab1">
@@ -754,6 +911,138 @@ audio { width: 100%; height: 40px; }
 
       <h3 id="selectedRoomDateTitle" style="margin-top:25px;">날짜를 선택해주세요</h3>
       <div id="roomTimeTable"></div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tabAdmin">
+    <div class="section">
+      <h2 style="margin-top:0;">🔐 관리자 페이지</h2>
+      <p style="color:#666; line-height:1.6; margin-top:0;">
+        출석 체크, 출결 메시지 발송, 결제 등록을 관리하는 페이지입니다.
+      </p>
+
+      <div id="adminLoginBox" class="admin-login-card">
+        <h3 style="margin-top:0; color:#166534;">관리자 로그인</h3>
+        <div class="admin-field">
+          <label for="adminIdInput">관리자 ID</label>
+          <input type="text" id="adminIdInput" placeholder="관리자 ID">
+        </div>
+        <div class="admin-field">
+          <label for="adminPwInput">비밀번호</label>
+          <input type="password" id="adminPwInput" placeholder="비밀번호">
+        </div>
+        <button type="button" class="admin-btn" style="width:100%;" onclick="adminLogin()">관리자 로그인</button>
+        <p style="font-size:12px; color:#888; line-height:1.5; margin-bottom:0;">
+          최초 사용 전 GAS에서 <b>setupAdminSheets</b>를 실행하고, 관리자 시트의 기본 비밀번호를 반드시 변경하세요.
+        </p>
+      </div>
+
+      <div id="adminDashboard" style="display:none;">
+        <div class="admin-summary">
+          <span class="admin-chip" id="adminWelcomeText">관리자</span>
+          <span class="admin-chip" id="adminStudentCount">학생 0명</span>
+        </div>
+
+        <div class="admin-btn-row">
+          <button type="button" class="admin-btn blue" onclick="adminLoadStudents()">학생목록 새로고침</button>
+          <button type="button" class="admin-btn gray" onclick="adminLogout()">로그아웃</button>
+        </div>
+
+        <div class="admin-subtabs">
+          <button type="button" class="admin-subtab active" data-admin-panel="adminPanelStudents" onclick="showAdminPanel('adminPanelStudents')">학생검색</button>
+          <button type="button" class="admin-subtab" data-admin-panel="adminPanelAttendance" onclick="showAdminPanel('adminPanelAttendance')">출석관리</button>
+          <button type="button" class="admin-subtab" data-admin-panel="adminPanelPayment" onclick="showAdminPanel('adminPanelPayment')">결제관리</button>
+        </div>
+
+        <div id="adminPanelStudents" class="admin-panel active">
+          <div class="admin-card">
+            <h3 style="margin-top:0;">학생 검색</h3>
+            <div class="admin-field">
+              <label for="adminStudentSearch">학생명 / 전화번호 / 담당강사 검색</label>
+              <input type="text" id="adminStudentSearch" placeholder="예: 홍길동, 010, 이용우" oninput="adminRenderStudentTable()">
+            </div>
+            <div id="adminStudentTableWrap" class="admin-table-wrap"></div>
+          </div>
+        </div>
+
+        <div id="adminPanelAttendance" class="admin-panel">
+          <div class="admin-card">
+            <h3 style="margin-top:0;">출석 체크</h3>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">
+              <div class="admin-field">
+                <label for="adminAttendanceDate">수업일</label>
+                <input type="date" id="adminAttendanceDate">
+              </div>
+              <div class="admin-field">
+                <label for="adminAttendanceClass">반명 / 수업명</label>
+                <input type="text" id="adminAttendanceClass" placeholder="예: 토요일 청소년 초급B">
+              </div>
+              <div class="admin-field">
+                <label for="adminAttendanceFilter">학생 필터</label>
+                <input type="text" id="adminAttendanceFilter" placeholder="학생명/강사명 검색" oninput="adminRenderAttendanceTable()">
+              </div>
+            </div>
+            <div class="admin-btn-row">
+              <button type="button" class="admin-btn blue" onclick="adminMarkAllAttendance('출석')">전체 출석</button>
+              <button type="button" class="admin-btn gray" onclick="adminMarkAllAttendance('')">전체 초기화</button>
+              <button type="button" class="admin-btn" onclick="adminSaveAttendance(false)">출석 저장</button>
+              <button type="button" class="admin-btn orange" onclick="adminPreviewAttendanceMessages()">문자 미리보기</button>
+              <button type="button" class="admin-btn red" onclick="adminSendAttendanceMessages()">출결 문자 발송</button>
+            </div>
+            <div id="adminAttendanceTableWrap" class="admin-table-wrap"></div>
+            <div id="adminAttendanceMessagePreview" class="admin-message-preview" style="display:none;"></div>
+          </div>
+        </div>
+
+        <div id="adminPanelPayment" class="admin-panel">
+          <div class="admin-card">
+            <h3 style="margin-top:0;">결제 등록</h3>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">
+              <div class="admin-field">
+                <label for="paymentStudentInput">학생명</label>
+                <input type="text" id="paymentStudentInput" list="adminStudentDatalist" placeholder="학생명 입력">
+                <datalist id="adminStudentDatalist"></datalist>
+              </div>
+              <div class="admin-field">
+                <label for="paymentMonthInput">수강월</label>
+                <input type="text" id="paymentMonthInput" placeholder="예: 6월">
+              </div>
+              <div class="admin-field">
+                <label for="paymentAmountInput">결제금액</label>
+                <input type="number" id="paymentAmountInput" placeholder="예: 200000">
+              </div>
+              <div class="admin-field">
+                <label for="paymentMethodInput">결제수단</label>
+                <select id="paymentMethodInput">
+                  <option value="카드">카드</option>
+                  <option value="계좌이체">계좌이체</option>
+                  <option value="현금">현금</option>
+                  <option value="기타">기타</option>
+                </select>
+              </div>
+              <div class="admin-field">
+                <label for="paymentDateInput">결제일</label>
+                <input type="date" id="paymentDateInput">
+              </div>
+            </div>
+            <div class="admin-field">
+              <label for="paymentMemoInput">메모</label>
+              <textarea id="paymentMemoInput" rows="3" placeholder="할인, 반 변경, 특이사항 등"></textarea>
+            </div>
+            <label class="notice-check-label" style="margin:8px 0 12px;">
+              <input type="checkbox" id="paymentSendSmsCheck" checked>
+              결제 확인 문자 발송
+            </label>
+            <div class="admin-btn-row">
+              <button type="button" class="admin-btn" onclick="adminSavePayment()">결제 등록</button>
+            </div>
+            <p style="font-size:13px; color:#888; line-height:1.6;">
+              현재 수정본은 결제 내역을 <b>웹결제기록</b> 시트에 저장하고 결제 확인 문자를 발송합니다.
+              수입최종 시트 자동 체크는 수입최종 스프레드시트 ID와 열 구조가 확정되면 바로 연결하면 됩니다.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -2187,7 +2476,9 @@ function showMainContent(isAuthenticated) {
     for (let i = 1; i < tabs.length; i++) {
         const tabContent = document.getElementById(tabs[i].dataset.tab);
         tabs[i].onclick = null;
-        if (!isAuthenticated) {
+        const isAdminTab = tabs[i].dataset.tab === 'tabAdmin';
+
+        if (!isAuthenticated && !isAdminTab) {
             tabs[i].onclick = () => alert("학생 인증 후 이용 가능한 기능입니다.");
             tabs[i].style.opacity = '0.5';
             tabs[i].style.pointerEvents = 'none';
@@ -2277,6 +2568,469 @@ window.onload = async function() {
         renderCalendar();
     }
 };
+
+
+
+// =========================================================================================
+// 🔐 관리자 페이지 기능
+// =========================================================================================
+let adminToken = localStorage.getItem('adminToken') || '';
+let adminInfo = null;
+let adminStudents = [];
+
+function getTodayInputValue() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+}
+
+function activateTabById(tabId) {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
+
+    const tab = document.querySelector(`.tab[data-tab="${tabId}"]`);
+    const content = document.getElementById(tabId);
+
+    if (tab) tab.classList.add('active');
+    if (content) content.classList.add('active');
+}
+
+function openAdminPage() {
+    showMainContent(false);
+    activateTabById('tabAdmin');
+
+    const loginBox = document.getElementById('adminLoginBox');
+    const dashboard = document.getElementById('adminDashboard');
+
+    if (adminToken) {
+        if (loginBox) loginBox.style.display = 'none';
+        if (dashboard) dashboard.style.display = 'block';
+        adminLoadStudents();
+    } else {
+        if (loginBox) loginBox.style.display = 'block';
+        if (dashboard) dashboard.style.display = 'none';
+    }
+}
+
+async function adminApi(action, params = {}) {
+    const query = new URLSearchParams();
+    query.set('action', action);
+    query.set('_', Date.now());
+
+    Object.keys(params).forEach(key => {
+        if (params[key] !== undefined && params[key] !== null) {
+            query.set(key, params[key]);
+        }
+    });
+
+    const response = await fetch(`${GET_API_URL}?${query.toString()}`);
+    if (!response.ok) {
+        throw new Error(`관리자 API 오류: ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (!data || data.status !== 'success') {
+        throw new Error((data && data.message) || '관리자 API 응답 오류');
+    }
+
+    return data;
+}
+
+async function adminLogin() {
+    const id = document.getElementById('adminIdInput').value.trim();
+    const pw = document.getElementById('adminPwInput').value.trim();
+
+    if (!id || !pw) {
+        alert('관리자 ID와 비밀번호를 입력해주세요.');
+        return;
+    }
+
+    try {
+        showLoading('관리자 로그인 중...');
+        const data = await adminApi('adminLogin', { adminId: id, adminPw: pw });
+        hideLoading();
+
+        adminToken = data.adminToken;
+        adminInfo = data.admin || {};
+        localStorage.setItem('adminToken', adminToken);
+
+        document.getElementById('adminLoginBox').style.display = 'none';
+        document.getElementById('adminDashboard').style.display = 'block';
+        document.getElementById('adminWelcomeText').textContent = `${adminInfo.name || id} 관리자`;
+
+        await adminLoadStudents();
+
+    } catch (e) {
+        hideLoading();
+        alert(e.message);
+    }
+}
+
+function adminLogout() {
+    adminToken = '';
+    adminInfo = null;
+    adminStudents = [];
+    localStorage.removeItem('adminToken');
+
+    document.getElementById('adminLoginBox').style.display = 'block';
+    document.getElementById('adminDashboard').style.display = 'none';
+    document.getElementById('adminStudentTableWrap').innerHTML = '';
+    document.getElementById('adminAttendanceTableWrap').innerHTML = '';
+}
+
+async function adminLoadStudents() {
+    if (!adminToken) return;
+
+    try {
+        showLoading('학생 목록 불러오는 중...');
+        const data = await adminApi('adminGetStudents', { adminToken });
+        hideLoading();
+
+        adminStudents = data.students || [];
+        document.getElementById('adminStudentCount').textContent = `학생 ${adminStudents.length}명`;
+        if (adminInfo) {
+            document.getElementById('adminWelcomeText').textContent = `${adminInfo.name || '관리자'} 관리자`;
+        }
+
+        adminRenderStudentDatalist();
+        adminRenderStudentTable();
+        adminRenderAttendanceTable();
+
+        const dateEl = document.getElementById('adminAttendanceDate');
+        const payDateEl = document.getElementById('paymentDateInput');
+        if (dateEl && !dateEl.value) dateEl.value = getTodayInputValue();
+        if (payDateEl && !payDateEl.value) payDateEl.value = getTodayInputValue();
+
+    } catch (e) {
+        hideLoading();
+        alert(e.message);
+        if (String(e.message).indexOf('토큰') !== -1 || String(e.message).indexOf('로그인') !== -1) {
+            adminLogout();
+        }
+    }
+}
+
+function adminRenderStudentDatalist() {
+    const dl = document.getElementById('adminStudentDatalist');
+    if (!dl) return;
+
+    dl.innerHTML = adminStudents.map(s => {
+        return `<option value="${escapeHtml(s.name)}">${escapeHtml(s.instructor || '')} ${escapeHtml(s.studentPhone || '')}</option>`;
+    }).join('');
+}
+
+function adminFilteredStudents(inputId) {
+    const keyword = (document.getElementById(inputId)?.value || '').trim().toLowerCase();
+
+    if (!keyword) return adminStudents;
+
+    return adminStudents.filter(s => {
+        const blob = [
+            s.name,
+            s.studentNo,
+            s.studentPhone,
+            s.parentPhone,
+            s.instructor,
+            s.className,
+            s.memo
+        ].join(' ').toLowerCase();
+
+        return blob.indexOf(keyword) !== -1;
+    });
+}
+
+function adminRenderStudentTable() {
+    const wrap = document.getElementById('adminStudentTableWrap');
+    if (!wrap) return;
+
+    const list = adminFilteredStudents('adminStudentSearch');
+
+    if (!list.length) {
+        wrap.innerHTML = `<div class="notice-empty">표시할 학생이 없습니다.</div>`;
+        return;
+    }
+
+    let html = `
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>출결번호</th>
+              <th>학생명</th>
+              <th>학생전화</th>
+              <th>학부모전화</th>
+              <th>담당강사</th>
+              <th>반/메모</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    list.forEach(s => {
+        html += `
+            <tr>
+              <td>${escapeHtml(s.studentNo)}</td>
+              <td><b>${escapeHtml(s.name)}</b></td>
+              <td>${escapeHtml(s.studentPhone)}</td>
+              <td>${escapeHtml(s.parentPhone)}</td>
+              <td>${escapeHtml(s.instructor)}</td>
+              <td>${escapeHtml(s.className || s.memo || '')}</td>
+            </tr>
+        `;
+    });
+
+    html += `</tbody></table>`;
+    wrap.innerHTML = html;
+}
+
+function showAdminPanel(panelId) {
+    document.querySelectorAll('.admin-subtab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.adminPanel === panelId);
+    });
+    document.querySelectorAll('.admin-panel').forEach(panel => {
+        panel.classList.toggle('active', panel.id === panelId);
+    });
+
+    if (panelId === 'adminPanelAttendance') {
+        adminRenderAttendanceTable();
+    }
+}
+
+function adminRenderAttendanceTable() {
+    const wrap = document.getElementById('adminAttendanceTableWrap');
+    if (!wrap) return;
+
+    const list = adminFilteredStudents('adminAttendanceFilter');
+
+    if (!list.length) {
+        wrap.innerHTML = `<div class="notice-empty">표시할 학생이 없습니다. 먼저 학생목록을 불러오세요.</div>`;
+        return;
+    }
+
+    const options = ['', '출석', '결석', '지각', '보강', '휴원', '신규', '반이동'];
+
+    let html = `
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>상태</th>
+              <th>학생명</th>
+              <th>학생전화</th>
+              <th>학부모전화</th>
+              <th>담당강사</th>
+              <th>메모</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    list.forEach((s, index) => {
+        const realIndex = adminStudents.indexOf(s);
+        html += `
+            <tr data-admin-student-index="${realIndex}">
+              <td>
+                <select class="admin-status-select" data-field="status">
+                  ${options.map(o => `<option value="${escapeHtml(o)}">${o ? escapeHtml(o) : '선택'}</option>`).join('')}
+                </select>
+              </td>
+              <td><b>${escapeHtml(s.name)}</b></td>
+              <td>${escapeHtml(s.studentPhone)}</td>
+              <td>${escapeHtml(s.parentPhone)}</td>
+              <td>${escapeHtml(s.instructor)}</td>
+              <td><input class="admin-small-input" data-field="memo" placeholder="메모"></td>
+            </tr>
+        `;
+    });
+
+    html += `</tbody></table>`;
+    wrap.innerHTML = html;
+}
+
+function adminMarkAllAttendance(status) {
+    document.querySelectorAll('#adminAttendanceTableWrap select[data-field="status"]').forEach(sel => {
+        sel.value = status;
+    });
+}
+
+function adminCollectAttendanceRecords() {
+    const date = document.getElementById('adminAttendanceDate').value || getTodayInputValue();
+    const className = document.getElementById('adminAttendanceClass').value.trim();
+
+    const rows = Array.from(document.querySelectorAll('#adminAttendanceTableWrap tr[data-admin-student-index]'));
+    const records = [];
+
+    rows.forEach(row => {
+        const idx = Number(row.dataset.adminStudentIndex);
+        const student = adminStudents[idx];
+        if (!student) return;
+
+        const status = row.querySelector('select[data-field="status"]')?.value || '';
+        const memo = row.querySelector('input[data-field="memo"]')?.value || '';
+
+        if (!status && !memo) return;
+
+        records.push({
+            date,
+            className,
+            status,
+            memo,
+            studentName: student.name,
+            studentNo: student.studentNo,
+            studentPhone: student.studentPhone,
+            parentPhone: student.parentPhone,
+            instructor: student.instructor
+        });
+    });
+
+    return { date, className, records };
+}
+
+async function adminSaveAttendance(silent = false) {
+    if (!adminToken) {
+        alert('관리자 로그인이 필요합니다.');
+        return false;
+    }
+
+    const collected = adminCollectAttendanceRecords();
+
+    if (!collected.records.length) {
+        alert('저장할 출석 상태가 없습니다.');
+        return false;
+    }
+
+    try {
+        showLoading('출석 저장 중...');
+        await adminApi('adminSaveAttendance', {
+            adminToken,
+            date: collected.date,
+            className: collected.className,
+            records: JSON.stringify(collected.records)
+        });
+        hideLoading();
+
+        if (!silent) alert('출석 기록을 저장했습니다.');
+        return true;
+
+    } catch (e) {
+        hideLoading();
+        alert(e.message);
+        return false;
+    }
+}
+
+function buildAttendanceMessageText(record) {
+    const classText = record.className ? ` ${record.className}` : '';
+    const base = `${record.studentName} 학생${classText} ${record.date}`;
+
+    if (record.status === '출석') return `${base} 수업 출석이 확인되었습니다.\n- 울림연기학원`;
+    if (record.status === '결석') return `${base} 수업 결석으로 확인되었습니다.\n- 울림연기학원`;
+    if (record.status === '지각') return `${base} 수업 지각으로 기록되었습니다.\n- 울림연기학원`;
+    if (record.status === '보강') return `${base} 보강 수업으로 기록되었습니다.\n- 울림연기학원`;
+    if (record.status === '휴원') return `${base} 휴원으로 기록되었습니다.\n- 울림연기학원`;
+    if (record.status === '신규') return `${record.studentName} 학생의 첫 수업 안내입니다.${classText}\n자세한 사항은 학원 안내를 확인해주세요.\n- 울림연기학원`;
+    if (record.status === '반이동') return `${record.studentName} 학생의 반 이동 안내입니다.${classText}\n변경된 수업 정보를 확인해주세요.\n- 울림연기학원`;
+
+    return `${base} 출결 상태가 [${record.status}]로 기록되었습니다.\n- 울림연기학원`;
+}
+
+function adminPreviewAttendanceMessages() {
+    const collected = adminCollectAttendanceRecords();
+    const preview = document.getElementById('adminAttendanceMessagePreview');
+
+    if (!collected.records.length) {
+        alert('문자 미리보기를 만들 출석 상태가 없습니다.');
+        return;
+    }
+
+    const lines = [];
+    collected.records.forEach(record => {
+        if (!record.status) return;
+
+        const recipients = [];
+        if (record.studentPhone) recipients.push(`학생 ${record.studentPhone}`);
+        if (record.parentPhone) recipients.push(`학부모 ${record.parentPhone}`);
+
+        lines.push(`[${record.studentName} / ${record.status}]
+수신: ${recipients.join(', ') || '번호 없음'}
+${buildAttendanceMessageText(record)}`);
+    });
+
+    preview.textContent = lines.join('\n\n--------------------\n\n');
+    preview.style.display = 'block';
+}
+
+async function adminSendAttendanceMessages() {
+    if (!confirm('선택한 출결 상태 기준으로 학생/학부모에게 문자를 발송할까요?')) {
+        return;
+    }
+
+    const saved = await adminSaveAttendance(true);
+    if (!saved) return;
+
+    const collected = adminCollectAttendanceRecords();
+
+    try {
+        showLoading('출결 문자 발송 중...');
+        const data = await adminApi('adminSendAttendanceMessages', {
+            adminToken,
+            date: collected.date,
+            className: collected.className,
+            records: JSON.stringify(collected.records)
+        });
+        hideLoading();
+
+        alert(data.message || `처리 완료: ${data.count || 0}건`);
+
+    } catch (e) {
+        hideLoading();
+        alert(e.message);
+    }
+}
+
+async function adminSavePayment() {
+    if (!adminToken) {
+        alert('관리자 로그인이 필요합니다.');
+        return;
+    }
+
+    const studentNameValue = document.getElementById('paymentStudentInput').value.trim();
+    const student = adminStudents.find(s => s.name === studentNameValue) || {};
+    const month = document.getElementById('paymentMonthInput').value.trim();
+    const amount = document.getElementById('paymentAmountInput').value.trim();
+    const method = document.getElementById('paymentMethodInput').value;
+    const date = document.getElementById('paymentDateInput').value || getTodayInputValue();
+    const memo = document.getElementById('paymentMemoInput').value.trim();
+    const sendSms = document.getElementById('paymentSendSmsCheck').checked ? 'Y' : 'N';
+
+    if (!studentNameValue || !month || !amount) {
+        alert('학생명, 수강월, 결제금액을 입력해주세요.');
+        return;
+    }
+
+    try {
+        showLoading('결제 등록 중...');
+        const data = await adminApi('adminSavePayment', {
+            adminToken,
+            studentName: studentNameValue,
+            studentPhone: student.studentPhone || '',
+            parentPhone: student.parentPhone || '',
+            month,
+            amount,
+            method,
+            date,
+            memo,
+            sendSms
+        });
+        hideLoading();
+
+        alert(data.message || '결제 등록이 완료되었습니다.');
+
+    } catch (e) {
+        hideLoading();
+        alert(e.message);
+    }
+}
 
 
 // =========================================================================================
