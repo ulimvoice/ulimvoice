@@ -4188,6 +4188,106 @@ function renderCurrentRoomReservationView() {
     }
 }
 
+
+function getRoomCacheKeyForDateKey(dateKey) {
+    const d = parseRoomDate(String(dateKey || formatRoomDate(roomCurrentDate)));
+    return getRoomCacheKey(d.getFullYear(), d.getMonth() + 1);
+}
+
+function persistCurrentRoomReservationState(dateKey) {
+    const cacheKey = getRoomCacheKeyForDateKey(dateKey || selectedRoomDate || formatRoomDate(roomCurrentDate));
+    saveRoomReservationCache(cacheKey, {
+        reservations: roomReservations,
+        blockedSlots: roomBlockedSlots
+    });
+}
+
+function extractReservationIdFromRoomResponse(data) {
+    if (!data) return "";
+    const sources = [
+        data.reservation,
+        data.record,
+        data.item,
+        data.data,
+        data
+    ];
+    for (const source of sources) {
+        if (!source || typeof source !== "object") continue;
+        const id = source.id || source.reservationId || source.rowId || source.uid || source._id;
+        if (id !== undefined && id !== null && String(id).trim()) return String(id).trim();
+    }
+    return "";
+}
+
+function upsertLocalRoomReservation(reservation) {
+    const key = getRoomSlotKey(reservation.date, reservation.room, reservation.startHour);
+    let replaced = false;
+
+    roomReservations = (roomReservations || []).map(r => {
+        const rKey = getRoomSlotKey(r.date, r.room, r.startHour);
+        if (rKey === key) {
+            replaced = true;
+            return Object.assign({}, r, reservation);
+        }
+        return r;
+    });
+
+    if (!replaced) {
+        roomReservations.push(reservation);
+    }
+
+    buildRoomReservationIndexes();
+    persistCurrentRoomReservationState(reservation.date);
+}
+
+function removeLocalRoomReservationById(id) {
+    const idText = String(id || "").trim();
+    if (!idText) return;
+
+    roomReservations = (roomReservations || []).filter(r => String(r.id || "").trim() !== idText);
+    buildRoomReservationIndexes();
+    persistCurrentRoomReservationState(selectedRoomDate || formatRoomDate(roomCurrentDate));
+}
+
+function applyRoomReservationSuccessLocally(date, room, hour, data) {
+    const serverReservation = (data && (data.reservation || data.record || data.item || data.data)) || {};
+    const id = extractReservationIdFromRoomResponse(data);
+
+    const reservation = Object.assign({}, serverReservation, {
+        id: id || String(serverReservation.id || ""),
+        date,
+        room,
+        startHour: Number(hour),
+        endHour: Number(hour) + 1,
+        studentName,
+        phoneLast4,
+        instructorName,
+        status: serverReservation.status || "예약",
+        pending: !id
+    });
+
+    upsertLocalRoomReservation(reservation);
+}
+
+function refreshRoomReservationsInBackground(force = true) {
+    const year = roomCurrentDate.getFullYear();
+    const month = roomCurrentDate.getMonth() + 1;
+    const cacheKey = getRoomCacheKey(year, month);
+
+    roomJsonp({
+        action: "getRoomReservations",
+        year,
+        month
+    }, { cacheBust: force }).then(data => {
+        if (!data || data.status !== "success") return;
+        applyRoomReservationData(data);
+        saveRoomReservationCache(cacheKey, data);
+        renderCurrentRoomReservationView();
+    }).catch(err => {
+        console.warn("연습실 예약 백그라운드 갱신 실패:", err);
+    });
+}
+
 function changeRoomMonth(diff) {
     roomCurrentDate.setMonth(roomCurrentDate.getMonth() + diff);
     selectedRoomDate = null;
@@ -4378,11 +4478,13 @@ function renderRoomTimeTable(dateObj) {
                                     statusText === "수업중" ? "수업중" :
                                     "이미 예약됨";
 
+                const canCancel = isMine && reservation.id && !reservation.pending;
+
                 html += `
                     <td class="room-slot reserved ${isMine ? "mine" : ""}"
-                        ${isMine ? `data-cancel-id="${reservation.id}"` : ""}
-                        title="${isMine ? "내 예약 - 클릭하면 취소" : displayText}">
-                        ${displayText}
+                        ${canCancel ? `data-cancel-id="${reservation.id}"` : ""}
+                        title="${canCancel ? "내 예약 - 클릭하면 취소" : (isMine ? "내 예약 - 최신 정보 반영 중" : displayText)}">
+                        ${isMine && reservation.pending ? "예약 반영중" : displayText}
                     </td>
                 `;
             } else {
@@ -4469,9 +4571,15 @@ async function reserveRoomSlot(date, room, hour) {
 
         if (data && data.status === "success") {
             selectedRoomDate = date;
-            await loadRoomReservations(true);
+
+            // 기존에는 여기서 한 달 전체 예약 현황을 다시 불러와서 느렸습니다.
+            // 이제는 성공한 예약 1건만 화면/캐시에 즉시 반영하고, 최신 전체 데이터는 뒤에서 조용히 갱신합니다.
+            applyRoomReservationSuccessLocally(date, room, hour, data);
+            renderRoomCalendar();
             renderRoomTimeTable(parseRoomDate(date));
+            hideRoomOverlay("roomReserveLoading");
             alert("예약되었습니다.");
+            refreshRoomReservationsInBackground(true);
         } else {
             alert((data && data.message) || "예약에 실패했습니다.");
         }
@@ -4510,13 +4618,18 @@ async function cancelRoomReservation(id) {
         });
 
         if (data && data.status === "success") {
-            await loadRoomReservations(true);
+            // 기존에는 취소 후 한 달 전체 예약 현황을 다시 불러와서 느렸습니다.
+            // 이제는 취소된 1건만 화면/캐시에서 즉시 제거하고, 최신 전체 데이터는 뒤에서 조용히 갱신합니다.
+            removeLocalRoomReservationById(id);
+            renderRoomCalendar();
 
             if (selectedRoomDate) {
                 renderRoomTimeTable(parseRoomDate(selectedRoomDate));
             }
 
+            hideRoomOverlay("roomCancelLoading");
             alert("예약이 취소되었습니다.");
+            refreshRoomReservationsInBackground(true);
         } else {
             alert((data && data.message) || "취소에 실패했습니다.");
         }
