@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
-<!-- 관리자페이지 9차: 강사 권한 반명 통합검색 동일 적용 -->
+<!-- 관리자페이지 10차: 권한분리 유지 + 반목록 검색/선택 단일 리스트 UI 복구 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="appdata/etude/data.js"></script>
@@ -763,6 +763,52 @@ body.admin-mode .admin-only-tab { display:block !important; }
     box-sizing:border-box;
 }
 
+
+/* ===========================
+   반목록 검색/선택 단일 리스트 UI - 10차 수정
+   =========================== */
+.admin-class-selectbox {
+    width: 100%;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: #f8fafc;
+    padding: 10px;
+    box-sizing: border-box;
+}
+.admin-class-selectbox .admin-class-search {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 11px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    font-size: 14px;
+    background: #fff;
+}
+.admin-class-select-list {
+    width: 100%;
+    min-height: 210px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    background: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 6px;
+    box-sizing: border-box;
+    overflow: auto;
+}
+.admin-class-select-list option {
+    padding: 8px 10px;
+    line-height: 1.5;
+    white-space: normal;
+}
+@media (max-width: 700px) {
+    .admin-class-select-list {
+        min-height: 180px;
+        font-size: 13px;
+    }
+}
+
 </style>
 </head>
 <body>
@@ -1109,12 +1155,11 @@ body.admin-mode .admin-only-tab { display:block !important; }
               <div class="admin-field">
                 <label for="adminAttendanceClass">반명 / 수업명 선택 또는 검색</label>
                 <input type="hidden" id="adminAttendanceClass">
-                <div class="admin-class-combo">
-                  <button type="button" id="adminAttendanceClassDisplay" class="admin-class-display empty" onclick="adminToggleClassCombo('adminAttendanceClass', 'adminClassPickerPanel')">반 목록에서 선택하거나 검색하세요</button>
-                  <div id="adminClassPickerPanel" class="admin-class-list-panel">
-                    <input type="text" id="adminAttendanceClassSearch" class="admin-class-search" placeholder="반명, 강사명, 요일로 검색">
-                    <div id="adminClassPickerPanelOptions" class="admin-class-options"></div>
-                  </div>
+                <div class="admin-class-selectbox">
+                  <input type="text" id="adminAttendanceClassSearch" class="admin-class-search" placeholder="반명, 강사명, 요일로 검색하거나 직접 입력" oninput="adminOnClassSearchInput('adminAttendanceClass', 'adminAttendanceClassSelect')">
+                  <select id="adminAttendanceClassSelect" class="admin-class-select-list" size="8" onchange="adminSelectClassFromList('adminAttendanceClass', 'adminAttendanceClassSelect')">
+                    <option value="">수업일을 선택하면 반 목록이 표시됩니다</option>
+                  </select>
                 </div>
               </div>
               <div class="admin-field">
@@ -1171,12 +1216,11 @@ body.admin-mode .admin-only-tab { display:block !important; }
               <div class="admin-field">
                 <label for="adminDailyEvalClass">반명 / 수업명 선택 또는 검색</label>
                 <input type="hidden" id="adminDailyEvalClass">
-                <div class="admin-class-combo">
-                  <button type="button" id="adminDailyEvalClassDisplay" class="admin-class-display empty" onclick="adminToggleClassCombo('adminDailyEvalClass', 'adminDailyClassPickerPanel')">반 목록에서 선택하거나 검색하세요</button>
-                  <div id="adminDailyClassPickerPanel" class="admin-class-list-panel">
-                    <input type="text" id="adminDailyEvalClassSearch" class="admin-class-search" placeholder="반명, 강사명, 요일로 검색">
-                    <div id="adminDailyClassPickerPanelOptions" class="admin-class-options"></div>
-                  </div>
+                <div class="admin-class-selectbox">
+                  <input type="text" id="adminDailyEvalClassSearch" class="admin-class-search" placeholder="반명, 강사명, 요일로 검색하거나 직접 입력" oninput="adminOnClassSearchInput('adminDailyEvalClass', 'adminDailyEvalClassSelect')">
+                  <select id="adminDailyEvalClassSelect" class="admin-class-select-list" size="8" onchange="adminSelectClassFromList('adminDailyEvalClass', 'adminDailyEvalClassSelect')">
+                    <option value="">수업일을 선택하면 반 목록이 표시됩니다</option>
+                  </select>
                 </div>
               </div>
               <div class="admin-field">
@@ -4071,5 +4115,103 @@ function initializeRoomReservationFeature() {
 
 initializeRoomReservationFeature();
 
+
+
+
+// =========================================================
+// 반목록 검색/선택 단일 리스트 UI - 10차 수정
+// 기존 버튼/칩 방식 대신 검색 가능한 select 리스트로 통일합니다.
+// 관리자/강사 권한 모두 동일하게 작동합니다.
+// =========================================================
+function adminRenderClassSelectors() {
+    adminRenderClassListBox('adminAttendanceClass', 'adminAttendanceClassSearch', 'adminAttendanceClassSelect');
+    adminRenderClassListBox('adminDailyEvalClass', 'adminDailyEvalClassSearch', 'adminDailyEvalClassSelect');
+}
+
+function adminRenderClassListBox(hiddenInputId, searchInputId, selectId) {
+    const hidden = document.getElementById(hiddenInputId);
+    const search = document.getElementById(searchInputId);
+    const select = document.getElementById(selectId);
+    if (!hidden || !search || !select) return;
+
+    const queryRaw = String(search.value || '').trim();
+    const query = normalizeClassSearchText(queryRaw);
+    const current = String(hidden.value || '').trim();
+
+    const list = (adminClassList || [])
+        .filter(c => {
+            if (!query) return true;
+            const text = normalizeClassSearchText(c.className || '');
+            return text.includes(query);
+        })
+        .slice(0, 120);
+
+    select.innerHTML = '';
+
+    if (queryRaw) {
+        const directOption = document.createElement('option');
+        directOption.value = queryRaw;
+        directOption.textContent = `입력한 문구 그대로 사용: ${queryRaw}`;
+        select.appendChild(directOption);
+    }
+
+    if (!list.length && !queryRaw) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = '표시할 반 목록이 없습니다. 수업일을 확인하세요.';
+        select.appendChild(opt);
+        return;
+    }
+
+    if (!list.length && queryRaw) {
+        const opt = document.createElement('option');
+        opt.value = queryRaw;
+        opt.textContent = '검색 결과 없음 - 입력한 문구 사용';
+        select.appendChild(opt);
+        return;
+    }
+
+    list.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.className || '';
+        opt.textContent = c.className || '';
+        if (current && current === opt.value) opt.selected = true;
+        select.appendChild(opt);
+    });
+}
+
+function adminOnClassSearchInput(hiddenInputId, selectId) {
+    const searchId = hiddenInputId === 'adminDailyEvalClass' ? 'adminDailyEvalClassSearch' : 'adminAttendanceClassSearch';
+    const search = document.getElementById(searchId);
+    const hidden = document.getElementById(hiddenInputId);
+    if (hidden && search) hidden.value = String(search.value || '').trim();
+    adminRenderClassListBox(hiddenInputId, searchId, selectId);
+}
+
+function adminSelectClassFromList(hiddenInputId, selectId) {
+    const select = document.getElementById(selectId);
+    const hidden = document.getElementById(hiddenInputId);
+    const searchId = hiddenInputId === 'adminDailyEvalClass' ? 'adminDailyEvalClassSearch' : 'adminAttendanceClassSearch';
+    const search = document.getElementById(searchId);
+    if (!select || !hidden) return;
+
+    const value = String(select.value || '').trim();
+    hidden.value = value;
+    if (search) search.value = value;
+
+    if (hiddenInputId === 'adminDailyEvalClass' && typeof adminRenderDailyEvalTable === 'function') {
+        adminRenderDailyEvalTable();
+    }
+}
+
+function adminSelectClass(value, inputId, panelId) {
+    const hidden = document.getElementById(inputId);
+    const searchId = inputId === 'adminDailyEvalClass' ? 'adminDailyEvalClassSearch' : 'adminAttendanceClassSearch';
+    const selectId = inputId === 'adminDailyEvalClass' ? 'adminDailyEvalClassSelect' : 'adminAttendanceClassSelect';
+    const search = document.getElementById(searchId);
+    if (hidden) hidden.value = value || '';
+    if (search) search.value = value || '';
+    adminRenderClassListBox(inputId, searchId, selectId);
+}
 
 </script>
