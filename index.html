@@ -5,7 +5,7 @@
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script type="text/javascript" nonce="e478b17852f244aa82a97d35d3f" src="//local.adguard.org?ts=1779366587249&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000d2c87206911dce82c690acd7%26ts%3D494268%26p%3Dfs%26cid%3D1%26sig%3D40f84459a7c2ccba63cf9aba7ed6149c878bbeb437ff9346d716b38f3b55b3cf%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
+<script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1779963058596&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000006b9072098da537e932e330e3%26ts%3D494434%26p%3Dfs%26cid%3D1%26sig%3D094c79d2ae5756d65582644838a21cda699d2132d2b47649a4e2ab013cae40c2%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
 <script src="appdata/vocalization/data.js"></script>
 <script src="appdata/past_questions/data.js"></script>
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -312,6 +312,173 @@ audio { width: 100%; height: 40px; }
     }
 }
 
+/* ===========================
+   📢 구글시트 연동 공지사항 팝업
+   =========================== */
+.notice-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 20000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    box-sizing: border-box;
+}
+
+.notice-modal {
+    width: 100%;
+    max-width: 560px;
+    max-height: 88vh;
+    background: #fff;
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 16px 45px rgba(0,0,0,0.28);
+    display: flex;
+    flex-direction: column;
+}
+
+.notice-header {
+    padding: 18px 20px;
+    background: #2ecc71;
+    color: #fff;
+}
+
+.notice-header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 900;
+}
+
+.notice-body {
+    padding: 20px;
+    overflow-y: auto;
+    line-height: 1.6;
+    color: #333;
+    word-break: keep-all;
+}
+
+.notice-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 16px;
+    background: #ffffff;
+}
+
+.notice-card:last-child {
+    margin-bottom: 0;
+}
+
+.notice-card-title {
+    font-size: 18px;
+    font-weight: 900;
+    color: #166534;
+    margin-bottom: 10px;
+}
+
+.notice-text {
+    font-size: 15px;
+    white-space: pre-wrap;
+    margin-bottom: 12px;
+}
+
+.notice-body img {
+    width: 100%;
+    border-radius: 14px;
+    margin: 10px 0 12px;
+    display: block;
+}
+
+.notice-body video {
+    width: 100%;
+    border-radius: 14px;
+    margin: 10px 0 12px;
+    display: block;
+    background: #000;
+}
+
+.notice-youtube-wrap {
+    position: relative;
+    width: 100%;
+    padding-top: 56.25%;
+    margin: 10px 0 12px;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #000;
+}
+
+.notice-youtube-wrap iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+.notice-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 18px;
+    border-top: 1px solid #eee;
+    background: #fafafa;
+}
+
+.notice-check-label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 14px;
+    color: #555;
+    font-weight: 700;
+}
+
+.notice-check-label input {
+    width: 18px;
+    height: 18px;
+}
+
+.notice-close-btn {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 10px;
+    background: #333;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.notice-empty {
+    color: #888;
+    font-size: 14px;
+    text-align: center;
+    padding: 20px 0;
+}
+
+@media (max-width: 600px) {
+    .notice-modal {
+        max-height: 90vh;
+        border-radius: 18px;
+    }
+
+    .notice-header h2 {
+        font-size: 18px;
+    }
+
+    .notice-footer {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .notice-close-btn {
+        width: 100%;
+    }
+}
+
 </style>
 </head>
 <body>
@@ -352,6 +519,31 @@ audio { width: 100%; height: 40px; }
    <a href="https://blog.naver.com/ulimvoice" target="_blank" style="margin: 0 10px;"><img src="https://img.icons8.com/color/40/000000/blogger.png" alt="Blog" style="vertical-align: middle;"></a>
 </div>
     </div>
+
+
+<!-- 📢 학생 로그인 후 공지사항 팝업 -->
+<div id="noticeOverlay" class="notice-overlay">
+    <div class="notice-modal">
+        <div class="notice-header">
+            <h2>📢 공지사항</h2>
+        </div>
+
+        <div id="noticeBody" class="notice-body">
+            <!-- 공지 자동 삽입 -->
+        </div>
+
+        <div class="notice-footer">
+            <label class="notice-check-label">
+                <input type="checkbox" id="noticeTodayHide">
+                오늘 하루 안보기
+            </label>
+
+            <button type="button" class="notice-close-btn" onclick="closeNoticeModal()">
+                닫기
+            </button>
+        </div>
+    </div>
+</div>
 
 <main class="wrapper" style="display:none;">
   <div class="tabs">
@@ -1770,6 +1962,171 @@ function hideLoading() {
     const el = document.getElementById("loadingOverlay");
     if (el) el.style.display = "none";
 }
+
+// =========================================================================================
+// 📢 구글시트 연동 공지사항 팝업
+// - 학생부 GAS의 action=getNotices 응답을 읽어서 표시합니다.
+// - 공지사항 시트에서 사용여부, 기간, 우선순위로 관리합니다.
+// =========================================================================================
+
+let currentNoticeHideKey = "";
+
+function getTodayStringForNotice() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+}
+
+function normalizeNoticeText(value) {
+    return String(value || "")
+        .replace(/\s+/g, "")
+        .trim()
+        .toLowerCase();
+}
+
+function escapeNoticeHtml(value) {
+    return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+async function loadNoticesFromSheet() {
+    const url = `${GET_API_URL}?action=getNotices&_=${Date.now()}`;
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+        throw new Error(`공지사항 불러오기 실패: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!data || data.status !== "success") {
+        throw new Error((data && data.message) || "공지사항 응답 오류");
+    }
+
+    return Array.isArray(data.notices) ? data.notices : [];
+}
+
+function isNoticeTargetMatched(notice) {
+    const target = String(notice.target || "전체").trim();
+
+    if (!target || target === "전체" || target.toLowerCase() === "all") {
+        return true;
+    }
+
+    const normalizedTarget = normalizeNoticeText(target);
+    const normalizedStudent = normalizeNoticeText(studentName);
+    const normalizedInstructor = normalizeNoticeText(instructorName);
+
+    if (normalizedStudent && normalizedTarget.indexOf(normalizedStudent) !== -1) {
+        return true;
+    }
+
+    if (normalizedInstructor && normalizedTarget.indexOf(normalizedInstructor) !== -1) {
+        return true;
+    }
+
+    return false;
+}
+
+function renderNoticeCard(notice) {
+    let html = `
+        <div class="notice-card">
+            <div class="notice-card-title">${escapeNoticeHtml(notice.title)}</div>
+    `;
+
+    if (notice.content) {
+        html += `<div class="notice-text">${escapeNoticeHtml(notice.content)}</div>`;
+    }
+
+    if (notice.imageUrl) {
+        html += `<img src="${escapeNoticeHtml(notice.imageUrl)}" alt="${escapeNoticeHtml(notice.title)}">`;
+    }
+
+    if (notice.youtubeUrl) {
+        html += `
+            <div class="notice-youtube-wrap">
+                <iframe
+                    src="${escapeNoticeHtml(notice.youtubeUrl)}"
+                    title="${escapeNoticeHtml(notice.title)}"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowfullscreen>
+                </iframe>
+            </div>
+        `;
+    }
+
+    if (notice.videoUrl) {
+        html += `
+            <video controls playsinline preload="metadata">
+                <source src="${escapeNoticeHtml(notice.videoUrl)}">
+                현재 브라우저에서 영상을 재생할 수 없습니다.
+            </video>
+        `;
+    }
+
+    html += `</div>`;
+    return html;
+}
+
+async function showNoticeIfNeeded() {
+    try {
+        if (!studentName || studentName === "게스트") {
+            return;
+        }
+
+        const noticesRaw = await loadNoticesFromSheet();
+        const notices = noticesRaw.filter(isNoticeTargetMatched);
+
+        if (!notices.length) {
+            return;
+        }
+
+        const today = getTodayStringForNotice();
+        const noticeIds = notices.map(n => n.id).join("_");
+        currentNoticeHideKey = `noticeHideToday_${today}_${noticeIds}`;
+
+        if (localStorage.getItem(currentNoticeHideKey) === "Y") {
+            return;
+        }
+
+        const bodyEl = document.getElementById("noticeBody");
+        const checkEl = document.getElementById("noticeTodayHide");
+        const overlayEl = document.getElementById("noticeOverlay");
+
+        if (!bodyEl || !checkEl || !overlayEl) {
+            return;
+        }
+
+        bodyEl.innerHTML = notices.map(renderNoticeCard).join("");
+        checkEl.checked = false;
+        overlayEl.style.display = "flex";
+
+    } catch (e) {
+        console.warn("공지사항 로딩 오류:", e);
+    }
+}
+
+function closeNoticeModal() {
+    const checkEl = document.getElementById("noticeTodayHide");
+    const overlayEl = document.getElementById("noticeOverlay");
+
+    if (checkEl && checkEl.checked && currentNoticeHideKey) {
+        localStorage.setItem(currentNoticeHideKey, "Y");
+    }
+
+    if (overlayEl) {
+        overlayEl.style.display = "none";
+    }
+}
+
+
 function showMainContent(isAuthenticated) {
     document.getElementById('loginOverlay').style.display = 'none';
     const wrapper = document.querySelector('.wrapper');
@@ -1809,6 +2166,11 @@ function showMainContent(isAuthenticated) {
             tabs[i].style.pointerEvents = 'auto';
             if (tabContent) tabContent.style.display = '';
         }
+    }
+
+    // ✅ 학생 로그인 성공/유지 상태에서만 공지사항 표시
+    if (isAuthenticated) {
+        setTimeout(showNoticeIfNeeded, 400);
     }
 }
 function guestLogin() {
