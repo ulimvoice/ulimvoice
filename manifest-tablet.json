@@ -1,5 +1,5 @@
 {
-  "name": "울림연기학원 출결체크",
+  "name": "울림연기학원 등하원 체크",
   "short_name": "울림출결",
   "start_url": "./tablet.html",
   "scope": "./tablet.html",
