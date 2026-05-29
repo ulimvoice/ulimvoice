@@ -3600,7 +3600,103 @@ function adminRenderStudentTable() {
     html += `</tbody></table>`;
     wrap.innerHTML = html;
 }
+function adminInitNoticeSelectors() {
+    const classSelect = document.getElementById("noticeClassSelect");
+    const studentSelect = document.getElementById("noticeStudentSelect");
 
+    if (!classSelect || !studentSelect) return;
+    if (!Array.isArray(adminStudents)) return;
+
+    const classSet = new Set();
+
+    adminStudents.forEach(s => {
+        const className = s.className || s.class || s.반명 || "";
+        if (className) classSet.add(className);
+    });
+
+    classSelect.innerHTML = `<option value="">전체반</option>` +
+        Array.from(classSet).sort().map(name =>
+            `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`
+        ).join("");
+
+    renderNoticeStudentOptions();
+
+    classSelect.onchange = renderNoticeStudentOptions;
+}
+
+function renderNoticeStudentOptions() {
+    const classSelect = document.getElementById("noticeClassSelect");
+    const studentSelect = document.getElementById("noticeStudentSelect");
+
+    if (!classSelect || !studentSelect) return;
+
+    const selectedClass = classSelect.value || "";
+
+    const list = (adminStudents || []).filter(s => {
+        const className = s.className || s.class || s.반명 || "";
+        return !selectedClass || className === selectedClass;
+    });
+
+    studentSelect.innerHTML = `<option value="">전체학생</option>` +
+        list.map(s => {
+            const name = s.name || s.studentName || s.학생명 || "";
+            return `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`;
+        }).join("");
+}
+
+function getNoticeTargets() {
+    const selectedClass = document.getElementById("noticeClassSelect")?.value || "";
+    const selectedStudent = document.getElementById("noticeStudentSelect")?.value || "";
+
+    return (adminStudents || []).filter(s => {
+        const className = s.className || s.class || s.반명 || "";
+        const name = s.name || s.studentName || s.학생명 || "";
+
+        if (selectedClass && className !== selectedClass) return false;
+        if (selectedStudent && name !== selectedStudent) return false;
+
+        return true;
+    });
+}
+
+function buildNoticeMessage(rawText, student) {
+    const name = student.name || student.studentName || student.학생명 || "";
+    const className = student.className || student.class || student.반명 || "";
+    const instructor = student.instructorName || student.instructor || student.담당강사 || "";
+
+    return String(rawText || "")
+        .replaceAll("[학생명]", name)
+        .replaceAll("[반이름]", className)
+        .replaceAll("[담당강사]", instructor);
+}
+
+function adminPreviewNoticeMessages() {
+    const message = document.getElementById("noticeMessageText")?.value || "";
+    const preview = document.getElementById("noticeMessagePreview");
+
+    if (!message.trim()) {
+        alert("공지 문구를 입력해주세요.");
+        return;
+    }
+
+    const targets = getNoticeTargets();
+
+    if (!targets.length) {
+        alert("발송 대상 학생이 없습니다.");
+        return;
+    }
+
+    const sample = targets.slice(0, 5).map(s => {
+        const name = s.name || s.studentName || s.학생명 || "";
+        return `■ ${name}\n${buildNoticeMessage(message, s)}`;
+    }).join("\n\n");
+
+    preview.style.display = "block";
+    preview.textContent =
+        `발송 대상: ${targets.length}명\n\n` +
+        sample +
+        (targets.length > 5 ? `\n\n...외 ${targets.length - 5}명` : "");
+}
 function showAdminPanel(panelId) {
     const isFull = adminIsFullAdmin();
 
