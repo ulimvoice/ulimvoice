@@ -1,11 +1,15 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780058918039&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000382c720688145fcb59a634bc%26fn%3Dtablet_%25EC%2588%2598%25EC%25A0%2595%25EB%25B3%25B8_v64_%25EC%2595%258C%25EB%25A6%25BC%25ED%2586%25A1%25EB%25AC%25B8%25EA%25B5%25AC%25EC%2588%25A8%25EA%25B9%2580.html%26cd%3Dattachment%26ts%3D494461%26p%3Dfs%26cid%3D1%26sig%3D72a97609211aa245389e3460caf5623b995cb8d1d60881b39fdf360dbfa8ee47%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="manifest" href="./manifest-tablet.json">
+<script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780078652705&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000a92c7206a8934a172d459031%26fn%3Dtablet_%25EC%2588%2598%25EC%25A0%2595%25EB%25B3%25B8_v87_%25EB%2593%259C%25EB%25A1%25AD%25EB%258B%25A4%25EC%259A%25B4_%25EC%2598%2581%25EC%2583%2581%25ED%2599%2595%25EB%258C%2580_%25EC%2586%258D%25EB%258F%2584%25EA%25B0%259C%25EC%2584%25A0.html%26cd%3Dattachment%26ts%3D494466%26p%3Dfs%26cid%3D1%26sig%3D01cc5b9ddbae4e67c4e42577316cb44c8863c8f7c4b30ce9d2c648d652c1d880%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="manifest" href="./manifest-tablet.json">
 <meta name="theme-color" content="#16a34a">
+<link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://script.googleusercontent.com">
+<link rel="dns-prefetch" href="https://script.google.com">
+<link rel="dns-prefetch" href="https://script.googleusercontent.com">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>울림연기학원 등하원 체크 v64</title>
+  <title>울림연기학원 등하원 체크 v87</title>
   <style>
     :root {
       --green: #16a34a;
@@ -244,25 +248,26 @@
     }
 
     .ad-wrap {
-      width: min(74vw, 660px);
-      max-width: 78%;
+      width: min(92%, 900px);
+      max-width: none;
       text-align: center;
+      transform: translateY(-2vh);
     }
 
     .ad-title {
-      margin: 0 0 24px;
-      font-size: 34px;
+      margin: 0 0 18px;
+      font-size: clamp(30px, 3.1vw, 42px);
       font-weight: 900;
       letter-spacing: -0.04em;
     }
 
     .ad-box {
       width: 100%;
-      border-radius: 18px;
+      border-radius: 20px;
       overflow: hidden;
       background: #020617;
-      box-shadow: 0 20px 50px rgba(0,0,0,.28);
-      min-height: 300px;
+      box-shadow: 0 24px 60px rgba(0,0,0,.34);
+      min-height: clamp(320px, 58vh, 560px);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -278,14 +283,18 @@
 
     .ad-box img,
     .ad-box video {
-      max-height: calc(100vh - 210px);
+      width: 100%;
+      height: 100%;
+      max-height: calc(100vh - 150px);
       object-fit: contain;
       background: #020617;
     }
 
     .ad-box iframe {
+      width: 100%;
+      height: auto;
       aspect-ratio: 16 / 9;
-      max-height: calc(100vh - 210px);
+      max-height: calc(100vh - 150px);
     }
 
     .ad-text {
@@ -401,6 +410,65 @@
       color: #166534;
     }
 
+    .choice-select-wrap {
+      margin-top: 20px;
+      text-align: left;
+    }
+
+    .choice-label {
+      display: block;
+      margin: 0 0 8px;
+      color: #334155;
+      font-size: 15px;
+      font-weight: 900;
+    }
+
+    .choice-select {
+      width: 100%;
+      min-height: 70px;
+      border-radius: 16px;
+      border: 2px solid #dbeafe;
+      background: #f8fafc;
+      color: #0f172a;
+      font-size: 21px;
+      font-weight: 900;
+      line-height: 1.35;
+      padding: 14px 46px 14px 16px;
+      outline: none;
+    }
+
+    .choice-select:focus {
+      border-color: #16a34a;
+      box-shadow: 0 0 0 4px rgba(22, 163, 74, .12);
+    }
+
+    .choice-help {
+      margin: 10px 0 0;
+      color: #64748b;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .modal.select-modal {
+      width: min(740px, 94vw);
+      padding: 34px 36px;
+    }
+
+    .modal.select-modal .modal-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 22px;
+    }
+
+    .modal.select-modal .modal-btn {
+      width: 100%;
+      min-width: 0;
+      min-height: 72px;
+      font-size: 22px;
+      border-radius: 18px;
+    }
+
     @keyframes pop {
       from { transform: scale(.98); opacity: .6; }
       to { transform: scale(1); opacity: 1; }
@@ -470,17 +538,18 @@
     min-height: auto;
     padding: 20px 12px 80px;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: center;
   }
 
   .ad-wrap {
     width: 100%;
     max-width: 100%;
+    transform: none;
   }
 
   .ad-box {
     width: 100%;
-    min-height: 200px;
+    min-height: 240px;
   }
 
   .ad-box img,
@@ -844,21 +913,54 @@
       const title = "학생을 선택해주세요.";
       const message = `출결번호 ${data.attendanceNo || lastAttendanceNo}를 사용하는 학생이 여러 명입니다.`;
 
-      const actions = candidates.map(student => {
-        const label = `${student.name || ""} ${student.className ? " / " + student.className : ""}`;
-        return `<button class="choice-btn" onclick='selectStudent(${JSON.stringify(student).replace(/'/g, "&#39;")})'>
-          <b>${escapeHtml(student.name || "")}</b>
-          <br>${escapeHtml(student.className || student.instructor || "")}
-        </button>`;
+      window.__studentCandidates = candidates;
+
+      const options = candidates.map((student, index) => {
+        const label = [
+          student.name || "이름 확인 필요",
+          student.className || student.instructor || ""
+        ].filter(Boolean).join(" / ");
+
+        return `<option value="${index}">${escapeHtml(label)}</option>`;
       }).join("");
 
-      showCustomModal(title, message, `<div class="choice-list">${actions}</div><div class="modal-actions"><button class="modal-btn gray" onclick="closeModal()">취소</button></div>`, "warning");
+      const inner = `
+        <div class="choice-select-wrap">
+          <label class="choice-label" for="studentChoiceSelect">학생 선택</label>
+          <select class="choice-select" id="studentChoiceSelect">${options}</select>
+          <p class="choice-help">드롭바를 눌러 학생을 선택한 뒤 선택 버튼을 눌러주세요.</p>
+        </div>
+        <div class="modal-actions">
+          <button class="modal-btn" onclick="confirmStudentChoice()">선택</button>
+          <button class="modal-btn gray" onclick="cancelChoiceModal()">취소</button>
+        </div>
+      `;
+
+      showCustomModal(title, message, inner, "warning", "select-modal");
+      focusSelectSoon("studentChoiceSelect");
+    }
+
+    function confirmStudentChoice() {
+      const select = document.getElementById("studentChoiceSelect");
+      const index = select ? Number(select.value) : 0;
+      const student = (window.__studentCandidates || [])[index];
+
+      if (!student) {
+        showModal("학생 선택 오류", "학생 정보를 다시 선택해주세요.", "error");
+        return;
+      }
+
+      selectStudent(student);
     }
 
     function selectStudent(student) {
       selectedStudent = student;
       closeModal();
-      submitCheck(lastMode, { attendanceNo: lastAttendanceNo, selectedRowNumber: student.rowNumber, selectedStudentName: student.name });
+      submitCheck(lastMode, {
+        attendanceNo: lastAttendanceNo,
+        selectedRowNumber: student.rowNumber,
+        selectedStudentName: student.name
+      });
     }
 
     function showClassChoice(data) {
@@ -866,20 +968,65 @@
       const title = "수업을 선택해주세요.";
       const message = `${data.studentName || "학생"} 학생의 오늘 수업이 여러 개입니다.`;
 
-      const actions = classes.map(cls => {
-        const safe = JSON.stringify(cls).replace(/'/g, "&#39;");
-        return `<button class="choice-btn" onclick='selectClass(${safe})'>
-          <b>${escapeHtml(cls.className || "수업명 확인 필요")}</b>
-          <br>강의실: ${escapeHtml(cls.roomName || "데스크에 문의해주세요")}
-        </button>`;
+      window.__classCandidates = classes;
+
+      const options = classes.map((cls, index) => {
+        const label = [
+          cls.className || "수업명 확인 필요",
+          cls.roomName ? `강의실: ${cls.roomName}` : "강의실: 데스크 문의"
+        ].filter(Boolean).join(" / ");
+
+        return `<option value="${index}">${escapeHtml(label)}</option>`;
       }).join("");
 
-      showCustomModal(title, message, `<div class="choice-list">${actions}</div><div class="modal-actions"><button class="modal-btn gray" onclick="closeModal()">취소</button></div>`, "warning");
+      const inner = `
+        <div class="choice-select-wrap">
+          <label class="choice-label" for="classChoiceSelect">수업 선택</label>
+          <select class="choice-select" id="classChoiceSelect">${options}</select>
+          <p class="choice-help">드롭바를 눌러 수업을 선택한 뒤 선택 버튼을 눌러주세요.</p>
+        </div>
+        <div class="modal-actions">
+          <button class="modal-btn" onclick="confirmClassChoice()">선택</button>
+          <button class="modal-btn gray" onclick="cancelChoiceModal()">취소</button>
+        </div>
+      `;
+
+      showCustomModal(title, message, inner, "warning", "select-modal");
+      focusSelectSoon("classChoiceSelect");
+    }
+
+    function confirmClassChoice() {
+      const select = document.getElementById("classChoiceSelect");
+      const index = select ? Number(select.value) : 0;
+      const cls = (window.__classCandidates || [])[index];
+
+      if (!cls) {
+        showModal("수업 선택 오류", "수업 정보를 다시 선택해주세요.", "error");
+        return;
+      }
+
+      selectClass(cls);
     }
 
     function selectClass(cls) {
       closeModal();
       submitCheck(lastMode, { attendanceNo: lastAttendanceNo, selectedClassIndex: cls.index });
+    }
+
+    function cancelChoiceModal() {
+      selectedStudent = null;
+      setBusy(false);
+      closeModal();
+      setStatus("출결번호를 입력해주세요.", "등원 또는 하원 버튼을 누르면 출결이 기록됩니다.", "success");
+    }
+
+    function focusSelectSoon(id) {
+      setTimeout(() => {
+        const el = document.getElementById(id);
+        if (el) {
+          try { el.focus({ preventScroll: true }); } catch (err) { el.focus(); }
+        }
+      }, 80);
     }
 
     function showModal(title, message = "", type = "success") {
@@ -895,10 +1042,11 @@
       }
     }
 
-    function showCustomModal(title, message, innerHtml, type = "success") {
+    function showCustomModal(title, message, innerHtml, type = "success", extraClass = "") {
       const backdrop = document.getElementById("modalBackdrop");
       const box = document.getElementById("modalBox");
       box.className = "modal";
+      if (extraClass) box.classList.add(extraClass);
       if (type === "error") box.classList.add("error");
       if (type === "warning") box.classList.add("warning");
 
@@ -1028,6 +1176,9 @@
     renderPin();
     loadAds();
     warmup();
+    // Apps Script 콜드스타트 방지를 위해 주기적으로 가볍게 예열합니다.
+    // 태블릿 출결 버튼을 눌렀을 때 첫 응답 대기 시간을 줄이는 용도입니다.
+    setInterval(warmup, 4 * 60 * 1000);
 
     // 키보드 숫자 입력도 지원
     document.addEventListener("keydown", event => {
@@ -1056,7 +1207,7 @@ window.addEventListener("beforeinstallprompt", function (e) {
 
   setTimeout(function () {
     showPwaInstallGuide();
-  }, 600);
+  }, 1800);
 });
 
 function showPwaInstallGuide() {
@@ -1073,7 +1224,8 @@ function showPwaInstallGuide() {
     </div>
   `,
   "success"
-);
+  );
+}
 
 async function installPwa() {
   if (!deferredPrompt) {
@@ -1086,7 +1238,7 @@ async function installPwa() {
   deferredPrompt = null;
   closeModal();
 }
-  function hidePwaForever() {
+function hidePwaForever() {
   localStorage.setItem(PWA_HIDE_KEY, "Y");
   closeModal();
 }
