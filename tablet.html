@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+  <link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#16a34a">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>울림연기학원 등하원 체크 v63</title>
@@ -1042,5 +1044,45 @@
       if (event.key === "ArrowLeft") prevAdSlide(true);
     });
   </script>
+  <script>
+let deferredPrompt = null;
+
+window.addEventListener("beforeinstallprompt", function (e) {
+  e.preventDefault();
+  deferredPrompt = e;
+
+  setTimeout(function () {
+    showPwaInstallGuide();
+  }, 600);
+});
+
+function showPwaInstallGuide() {
+  if (!deferredPrompt) return;
+
+  showCustomModal(
+    "앱으로 설치하기",
+    "울림연기학원 앱을 홈 화면에 설치하면 더 편하게 사용할 수 있습니다.",
+    `
+      <div class="modal-actions">
+        <button class="modal-btn" onclick="installPwa()">앱 설치하기</button>
+        <button class="modal-btn gray" onclick="closeModal()">나중에</button>
+      </div>
+    `,
+    "success"
+  );
+}
+
+async function installPwa() {
+  if (!deferredPrompt) {
+    closeModal();
+    return;
+  }
+
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  closeModal();
+}
+</script>
 </body>
 </html>
