@@ -200,12 +200,18 @@
         });
         if (options.studentRowNumber) query.append('studentRowNumber', String(options.studentRowNumber));
         if (options.selectedStudentName) query.append('selectedStudentName', String(options.selectedStudentName));
+        if (options.selectedClassIndex !== undefined && options.selectedClassIndex !== null) query.append('selectedClassIndex', String(options.selectedClassIndex));
 
         const response = await fetch(`${GET_API_URL}?${query.toString()}`);
         const data = await response.json();
 
         if (data.status === 'multiple') {
           showCandidateSelection(data, mode);
+          return;
+        }
+
+        if (data.status === 'multipleClasses') {
+          showClassSelection(data, mode, options);
           return;
         }
 
@@ -235,6 +241,7 @@
       const desc = document.getElementById('candidateDesc');
       const candidates = Array.isArray(data.candidates) ? data.candidates : [];
 
+      document.querySelector('#candidateModal .candidate-title').textContent = '학생을 선택해주세요';
       desc.textContent = `${data.attendanceNo || currentNumber}번 출결번호에 해당하는 학생이 ${candidates.length}명 있습니다.`;
       list.innerHTML = '';
 
@@ -260,6 +267,41 @@
 
     function closeCandidateModal() {
       document.getElementById('candidateModal').classList.remove('show');
+    }
+
+    function showClassSelection(data, mode, previousOptions = {}) {
+      const modal = document.getElementById('candidateModal');
+      const list = document.getElementById('candidateList');
+      const desc = document.getElementById('candidateDesc');
+      const classes = Array.isArray(data.classes) ? data.classes : [];
+
+      document.querySelector('#candidateModal .candidate-title').textContent = '수업을 선택해주세요';
+      desc.textContent = `${data.studentName || ''} 학생의 오늘 수업이 ${classes.length}개 있습니다. 출결 처리할 수업을 선택해주세요.`;
+      list.innerHTML = '';
+
+      classes.forEach(item => {
+        const btn = document.createElement('button');
+        btn.className = 'candidate-btn';
+        const instructor = item.instructor ? `${item.instructor}T`.replace(/TT$/, 'T') : '담당강사 확인 필요';
+        const className = item.className || '수업명 확인 필요';
+        const roomName = item.roomName || '강의실 확인 필요';
+        const statusText = item.status ? ` · 출결상태: ${item.status}` : '';
+        btn.innerHTML = `
+          <div class="candidate-name">${escapeHtml(className)}</div>
+          <div class="candidate-meta">${escapeHtml(instructor)} · ${escapeHtml(roomName)}${escapeHtml(statusText)}</div>
+        `;
+        btn.onclick = () => {
+          closeCandidateModal();
+          submitCheck(mode, Object.assign({}, previousOptions, {
+            studentRowNumber: data.studentRowNumber || previousOptions.studentRowNumber,
+            selectedClassIndex: item.index
+          }));
+        };
+        list.appendChild(btn);
+      });
+
+      setStatus('수업 선택 필요', '오늘 수업이 여러 개 있습니다.\n출결 처리할 수업을 선택해주세요.');
+      modal.classList.add('show');
     }
 
     function setStatus(title, sub) {
