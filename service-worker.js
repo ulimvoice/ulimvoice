@@ -5,7 +5,9 @@ const CACHE_NAME = "ulimvoice-cache-v24";
 const STATIC_ASSETS = [
     "./",
     "./index.html",
-    "./manifest.json",
+  "./manifest-index.json",
+"./manifest-tablet.json",
+"./tablet.html",
     "./appdata/etude/data.js",
     "./appdata/vocalization/data.js",
     "./appdata/past_questions/data.js",
