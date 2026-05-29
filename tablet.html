@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780078652705&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000a92c7206a8934a172d459031%26fn%3Dtablet_%25EC%2588%2598%25EC%25A0%2595%25EB%25B3%25B8_v87_%25EB%2593%259C%25EB%25A1%25AD%25EB%258B%25A4%25EC%259A%25B4_%25EC%2598%2581%25EC%2583%2581%25ED%2599%2595%25EB%258C%2580_%25EC%2586%258D%25EB%258F%2584%25EA%25B0%259C%25EC%2584%25A0.html%26cd%3Dattachment%26ts%3D494466%26p%3Dfs%26cid%3D1%26sig%3D01cc5b9ddbae4e67c4e42577316cb44c8863c8f7c4b30ce9d2c648d652c1d880%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="manifest" href="./manifest-tablet.json">
+<script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780078652705&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000007aa07206acd58f71c046ef76%26fn%3Dtablet_%25EC%2588%2598%25EC%25A0%2595%25EB%25B3%25B8_v88_%25EC%2595%2588%25EC%25A0%2595%25ED%2598%2595%25EC%2586%258D%25EB%258F%2584%25EA%25B0%259C%25EC%2584%25A0_%25EB%258D%25B0%25EC%258A%25A4%25ED%2581%25AC%25EB%25AC%25B8%25EC%259D%2598.html%26cd%3Dattachment%26ts%3D494467%26p%3Dfs%26cid%3D1%26sig%3Dc96a8c0e5c9c3da190599740fc5549b73284df9b3592ea67ea55dd0cd1643a44%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="manifest" href="./manifest-tablet.json">
 <meta name="theme-color" content="#16a34a">
 <link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://script.googleusercontent.com">
@@ -9,7 +9,7 @@
 <link rel="dns-prefetch" href="https://script.googleusercontent.com">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>울림연기학원 등하원 체크 v87</title>
+  <title>울림연기학원 등하원 체크 v88</title>
   <style>
     :root {
       --green: #16a34a;
@@ -743,6 +743,14 @@
     let adIndex = 0;
     let adTimer = null;
 
+    // v88 안정형 속도개선:
+    // 학생/오늘수업 후보를 백그라운드로 미리 받아두고,
+    // 다중 학생/다중 수업 선택은 태블릿 안에서 먼저 처리합니다.
+    // 최종 등원/하원 기록 저장은 기존 GAS 처리 구조를 그대로 사용합니다.
+    let tabletPreload = null;
+    let tabletPreloadAt = 0;
+    let tabletPreloadLoading = false;
+
     function pad2(n) {
       return String(n).padStart(2, "0");
     }
@@ -812,6 +820,11 @@
 
       lastMode = mode;
       lastAttendanceNo = attendanceNo;
+
+      if (tryHandleWithPreload(attendanceNo, mode, extra || {})) {
+        return;
+      }
+
       setBusy(true);
       setStatus("처리 중입니다.", "잠시만 기다려주세요.", "warning");
 
@@ -881,7 +894,7 @@
       const modeText = data.mode || "";
       const name = data.studentName || "학생";
       const className = data.className || "오늘 수업 확인 필요";
-      const roomName = data.roomName || "데스크에 문의해주세요";
+      const roomName = data.roomName || "데스크문의";
 
       const title = `${name}님이 ${modeText}하였습니다.`;
       const lines = [
@@ -956,10 +969,24 @@
     function selectStudent(student) {
       selectedStudent = student;
       closeModal();
+
+      const classes = Array.isArray(student.classes) ? student.classes : [];
+      if (classes.length > 1) {
+        showClassChoice({
+          status: "multipleClasses",
+          attendanceNo: lastAttendanceNo,
+          studentName: student.name,
+          classes: classes
+        });
+        return;
+      }
+
+      const selectedClassIndex = classes.length === 1 ? classes[0].index : undefined;
       submitCheck(lastMode, {
         attendanceNo: lastAttendanceNo,
         selectedRowNumber: student.rowNumber,
-        selectedStudentName: student.name
+        selectedStudentName: student.name,
+        selectedClassIndex: selectedClassIndex
       });
     }
 
@@ -973,7 +1000,7 @@
       const options = classes.map((cls, index) => {
         const label = [
           cls.className || "수업명 확인 필요",
-          cls.roomName ? `강의실: ${cls.roomName}` : "강의실: 데스크 문의"
+          cls.roomName ? `강의실: ${cls.roomName}` : "강의실: 데스크문의"
         ].filter(Boolean).join(" / ");
 
         return `<option value="${index}">${escapeHtml(label)}</option>`;
@@ -1165,6 +1192,84 @@
       return escapeHtml(value).replace(/`/g, "&#096;");
     }
 
+    async function loadTabletPreload(force = false) {
+      const now = Date.now();
+      if (!force && tabletPreload && now - tabletPreloadAt < 2 * 60 * 1000) return tabletPreload;
+      if (tabletPreloadLoading) return tabletPreload;
+
+      tabletPreloadLoading = true;
+      try {
+        const res = await fetch(apiUrl({ action: "tabletPreload" }), { method: "GET", cache: "no-store" });
+        const data = await res.json();
+
+        if (data && data.status === "success" && data.attendanceMap) {
+          tabletPreload = data;
+          tabletPreloadAt = Date.now();
+        }
+      } catch (err) {
+        // 사전 캐시 실패 시 기존 tabletCheck 경로로 처리합니다.
+      } finally {
+        tabletPreloadLoading = false;
+      }
+
+      return tabletPreload;
+    }
+
+    function normalizeAttendanceNoClient(value) {
+      return String(value || "").replace(/[^0-9]/g, "");
+    }
+
+    function getPreloadedCandidates(attendanceNo) {
+      if (!tabletPreload || !tabletPreload.attendanceMap) return null;
+      const key = normalizeAttendanceNoClient(attendanceNo);
+      return tabletPreload.attendanceMap[key] || null;
+    }
+
+    function tryHandleWithPreload(attendanceNo, mode, extra) {
+      if (!tabletPreload || !tabletPreload.attendanceMap) return false;
+      if (extra && (extra.selectedClassIndex !== undefined || extra.classIndex !== undefined || extra.selectedRowNumber || extra.rowNumber)) {
+        return false;
+      }
+
+      const candidates = getPreloadedCandidates(attendanceNo);
+      if (!candidates || !candidates.length) return false;
+
+      lastMode = mode;
+      lastAttendanceNo = attendanceNo;
+
+      if (candidates.length > 1) {
+        showStudentChoice({
+          status: "multiple",
+          attendanceNo: attendanceNo,
+          candidates: candidates
+        });
+        return true;
+      }
+
+      const student = candidates[0];
+      selectedStudent = student;
+
+      const classes = Array.isArray(student.classes) ? student.classes : [];
+      if (classes.length > 1) {
+        showClassChoice({
+          status: "multipleClasses",
+          attendanceNo: attendanceNo,
+          studentName: student.name,
+          classes: classes
+        });
+        return true;
+      }
+
+      const selectedClassIndex = classes.length === 1 ? classes[0].index : undefined;
+      submitCheck(mode, {
+        attendanceNo: attendanceNo,
+        selectedRowNumber: student.rowNumber,
+        selectedStudentName: student.name,
+        selectedClassIndex: selectedClassIndex
+      });
+      return true;
+    }
+
     async function warmup() {
       try {
         await fetch(apiUrl({ action: "tabletWarmup" }), { method: "GET", cache: "no-store" });
@@ -1176,9 +1281,11 @@
     renderPin();
     loadAds();
     warmup();
+    loadTabletPreload(true);
     // Apps Script 콜드스타트 방지를 위해 주기적으로 가볍게 예열합니다.
     // 태블릿 출결 버튼을 눌렀을 때 첫 응답 대기 시간을 줄이는 용도입니다.
     setInterval(warmup, 4 * 60 * 1000);
+    setInterval(() => loadTabletPreload(true), 2 * 60 * 1000);
 
     // 키보드 숫자 입력도 지원
     document.addEventListener("keydown", event => {
