@@ -3561,23 +3561,26 @@ function adminGetSelectedAttendanceRecords() {
 }
 
 function buildAttendanceMessageText(record) {
-    const classText = record.className ? ` ${record.className}` : '';
-    const roomText = (record.classroom || record.roomName || record.room) ? ` [${record.classroom || record.roomName || record.room}]` : '';
-    const base = `${record.studentName} 학생${classText}${roomText} ${record.date}`;
-    const effectiveStatus = record.specialStatus || record.status;
+    const roomName = record.classroom || record.roomName || record.room || '';
+    const safeClassName = (record.className || '').trim() || '미확인';
+    const safeRoomName = String(roomName || '').trim() || '미확인';
+    const safeDate = (record.date || '').trim() || '';
+    const effectiveStatus = record.specialStatus || record.status || '미체크';
+    const infoText = `수업일 : ${safeDate}\n반명 : ${safeClassName}\n강의실 : ${safeRoomName}`;
 
-    if (record.specialStatus === '신규') return `${record.studentName} 학생의 신규 수업 안내입니다.${classText}${roomText}\n수업일: ${record.date}\n- 울림연기학원`;
-    if (record.specialStatus === '반이동') return `${record.studentName} 학생의 반 이동 안내입니다.${classText}${roomText}\n수업일: ${record.date}\n- 울림연기학원`;
-    if (record.specialStatus === '보강') return `${record.studentName} 학생의 보강 수업 안내입니다.${classText}${roomText}\n수업일: ${record.date}\n- 울림연기학원`;
-    if (effectiveStatus === '출석') return `${base} 수업 출석이 확인되었습니다.\n- 울림연기학원`;
-    if (effectiveStatus === '결석') return `${base} 수업 결석으로 확인되었습니다.\n- 울림연기학원`;
-    if (effectiveStatus === '지각') return `${base} 수업 지각으로 기록되었습니다.\n- 울림연기학원`;
-    if (effectiveStatus === '보강') return `${base} 보강 수업으로 기록되었습니다.\n- 울림연기학원`;
-    if (effectiveStatus === '휴원') return `${base} 휴원으로 기록되었습니다.\n- 울림연기학원`;
-    if (effectiveStatus === '신규') return `${record.studentName} 학생의 첫 수업 안내입니다.${classText}${roomText}\n자세한 사항은 학원 안내를 확인해주세요.\n- 울림연기학원`;
-    if (effectiveStatus === '반이동') return `${record.studentName} 학생의 반 이동 안내입니다.${classText}${roomText}\n변경된 수업 정보를 확인해주세요.\n- 울림연기학원`;
-    return `${base} 출결 상태가 [${record.status || '미체크'}]로 확인되었습니다.\n- 울림연기학원`;
+    if (record.specialStatus === '신규') return `${record.studentName} 학생의 신규 수업 안내입니다.\n${infoText}\n\n자세한 사항은 학원 안내를 확인해주세요.\n- 울림연기학원`;
+    if (record.specialStatus === '반이동') return `${record.studentName} 학생의 반 이동 안내입니다.\n${infoText}\n\n변경된 수업 정보를 확인해주세요.\n- 울림연기학원`;
+    if (record.specialStatus === '보강') return `${record.studentName} 학생의 보강 수업 안내입니다.\n${infoText}\n출결상태 : 보강\n\n보강 수업으로 기록되었습니다.\n- 울림연기학원`;
+    if (effectiveStatus === '출석') return `${record.studentName} 학생 출결 안내입니다.\n${infoText}\n출결상태 : 출석\n\n수업 출석이 확인되었습니다.\n- 울림연기학원`;
+    if (effectiveStatus === '결석') return `${record.studentName} 학생 출결 안내입니다.\n${infoText}\n출결상태 : 결석\n\n수업 결석으로 확인되었습니다.\n- 울림연기학원`;
+    if (effectiveStatus === '지각') return `${record.studentName} 학생 출결 안내입니다.\n${infoText}\n출결상태 : 지각\n\n수업 지각으로 기록되었습니다.\n- 울림연기학원`;
+    if (effectiveStatus === '보강') return `${record.studentName} 학생 보강 수업 안내입니다.\n${infoText}\n출결상태 : 보강\n\n보강 수업으로 기록되었습니다.\n- 울림연기학원`;
+    if (effectiveStatus === '휴원') return `${record.studentName} 학생 휴원 안내입니다.\n${infoText}\n출결상태 : 휴원\n\n휴원으로 기록되었습니다.\n- 울림연기학원`;
+    if (effectiveStatus === '신규') return `${record.studentName} 학생의 첫 수업 안내입니다.\n${infoText}\n\n자세한 사항은 학원 안내를 확인해주세요.\n- 울림연기학원`;
+    if (effectiveStatus === '반이동') return `${record.studentName} 학생의 반 이동 안내입니다.\n${infoText}\n\n변경된 수업 정보를 확인해주세요.\n- 울림연기학원`;
+    return `${record.studentName} 학생 출결 안내입니다.\n${infoText}\n출결상태 : ${effectiveStatus}\n\n출결 상태가 [${effectiveStatus}]로 확인되었습니다.\n- 울림연기학원`;
 }
+
 
 function adminPreviewAttendanceMessages() {
     if (!adminIsFullAdmin()) return alert('문자 미리보기와 발송은 관리자 권한에서만 가능합니다.');
