@@ -59,6 +59,17 @@
     .toast-sub { margin-top:18px; font-size:26px; color:#374151; white-space:pre-wrap; line-height:1.4; }
     .toast.error { border-color:#fecaca; }
     .toast.error .toast-title { color:#991b1b; }
+    .candidate-modal { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.48); z-index:120; padding:30px; }
+    .candidate-modal.show { display:flex; }
+    .candidate-card { width:min(760px,92vw); max-height:86vh; overflow:auto; background:#fff; border-radius:32px; box-shadow:0 30px 90px rgba(0,0,0,.35); padding:30px; border:4px solid #bbf7d0; }
+    .candidate-title { font-size:34px; font-weight:950; color:#14532d; text-align:center; line-height:1.25; }
+    .candidate-desc { margin-top:10px; font-size:20px; color:#4b5563; text-align:center; line-height:1.45; }
+    .candidate-list { display:flex; flex-direction:column; gap:12px; margin-top:24px; }
+    .candidate-btn { width:100%; border:2px solid #d1fae5; background:#f0fdf4; border-radius:20px; padding:18px 20px; text-align:left; cursor:pointer; }
+    .candidate-btn:active { transform:scale(.99); background:#dcfce7; }
+    .candidate-name { font-size:28px; font-weight:950; color:#052e16; }
+    .candidate-meta { margin-top:6px; font-size:17px; color:#374151; line-height:1.35; }
+    .candidate-close { margin-top:20px; width:100%; height:56px; border:0; border-radius:18px; background:#f3f4f6; color:#374151; font-size:20px; font-weight:900; cursor:pointer; }
     @media (max-width: 900px) {
       .kiosk { grid-template-columns:1fr; grid-template-rows:60vh 40vh; }
       .left { border-right:0; border-bottom:1px solid var(--line); padding:18px; gap:12px; }
@@ -112,6 +123,15 @@
     </section>
   </main>
 
+  <div class="candidate-modal" id="candidateModal">
+    <div class="candidate-card">
+      <div class="candidate-title">학생을 선택해주세요</div>
+      <div class="candidate-desc" id="candidateDesc">같은 출결번호를 사용하는 학생이 여러 명입니다.</div>
+      <div class="candidate-list" id="candidateList"></div>
+      <button class="candidate-close" onclick="closeCandidateModal()">닫기</button>
+    </div>
+  </div>
+
   <div class="toast" id="toast">
     <div class="toast-title" id="toastTitle"></div>
     <div class="toast-sub" id="toastSub"></div>
@@ -160,7 +180,7 @@
       el.innerHTML = currentNumber ? currentNumber : '<span class="placeholder">출결번호</span>';
     }
 
-    async function submitCheck(mode) {
+    async function submitCheck(mode, options = {}) {
       if (busy) return;
       if (!currentNumber) {
         showToast('출결번호를 입력해주세요.', '', true);
@@ -178,8 +198,17 @@
           kioskKey: KIOSK_KEY,
           _: Date.now().toString()
         });
+        if (options.studentRowNumber) query.append('studentRowNumber', String(options.studentRowNumber));
+        if (options.selectedStudentName) query.append('selectedStudentName', String(options.selectedStudentName));
+
         const response = await fetch(`${GET_API_URL}?${query.toString()}`);
         const data = await response.json();
+
+        if (data.status === 'multiple') {
+          showCandidateSelection(data, mode);
+          return;
+        }
+
         if (data.status !== 'success') throw new Error(data.message || '등하원 처리 실패');
 
         const title = `${data.studentName}님이 ${data.mode}하였습니다.`;
@@ -198,6 +227,39 @@
         busy = false;
         document.getElementById('kioskRoot').classList.remove('loading');
       }
+    }
+
+    function showCandidateSelection(data, mode) {
+      const modal = document.getElementById('candidateModal');
+      const list = document.getElementById('candidateList');
+      const desc = document.getElementById('candidateDesc');
+      const candidates = Array.isArray(data.candidates) ? data.candidates : [];
+
+      desc.textContent = `${data.attendanceNo || currentNumber}번 출결번호에 해당하는 학생이 ${candidates.length}명 있습니다.`;
+      list.innerHTML = '';
+
+      candidates.forEach(candidate => {
+        const btn = document.createElement('button');
+        btn.className = 'candidate-btn';
+        const instructor = candidate.instructor ? `${candidate.instructor}T`.replace(/TT$/, 'T') : '담당강사 확인 필요';
+        const className = candidate.className || '등록 반 확인 필요';
+        btn.innerHTML = `
+          <div class="candidate-name">${escapeHtml(candidate.name || '')}</div>
+          <div class="candidate-meta">${escapeHtml(instructor)} · ${escapeHtml(className)}</div>
+        `;
+        btn.onclick = () => {
+          closeCandidateModal();
+          submitCheck(mode, { studentRowNumber: candidate.rowNumber });
+        };
+        list.appendChild(btn);
+      });
+
+      setStatus('학생 선택 필요', '같은 출결번호가 여러 명에게 등록되어 있습니다.\n화면에서 학생을 선택해주세요.');
+      modal.classList.add('show');
+    }
+
+    function closeCandidateModal() {
+      document.getElementById('candidateModal').classList.remove('show');
     }
 
     function setStatus(title, sub) {
