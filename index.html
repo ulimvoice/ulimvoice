@@ -5,7 +5,7 @@
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780046248858&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000009e74720ba966eae5bdcb5a59%26fn%3Dindex_notice_fullclass_students_fixed.html%26cd%3Dattachment%26ts%3D494460%26p%3Dfs%26cid%3D1%26sig%3Debe6f10a40d0134af333297f5fb7597e7eab2d5a9368c1e88c313524182faee1%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
+<script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780046248858&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_0000000069987206b2dfff72263f615e%26fn%3Dindex_notice_syntax_fixed.html%26cd%3Dattachment%26ts%3D494460%26p%3Dfs%26cid%3D1%26sig%3D67118c8fdc96b4e4177ab4eb486c4780d07cc64118e2f4e70d7687a0ceb5a83d%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
 <script src="appdata/vocalization/data.js"></script>
 <script src="appdata/past_questions/data.js"></script>
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -3728,8 +3728,7 @@ function adminGetNoticeClassValue() {
 function adminNoticeNormalize_(value) {
     return String(value || '')
         .toLowerCase()
-        .replace(/[\s  -‏
--  -⁯　﻿]/g, '')
+        .replace(/[\s\u00A0\u2000-\u200F\u2028-\u202F\u205F-\u206F\u3000\ufeff]/g, '')
         .replace(/[\[\]\(\){}~～:：\-–—_,./\|]/g, '')
         .replace(/t/g, '')
         .normalize('NFC');
