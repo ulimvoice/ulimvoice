@@ -1318,6 +1318,36 @@ body.admin-mode .admin-only-tab { display:block !important; }
     <b>상담전화</b> : 010-7372-5875 <br>
     <b>주소</b> : 수원시 영통구 청명남로 28번길 2 아이텐텐빌딩 502호 <br>
     Copyright © 울림연기학원. All rights reserved.
+	<div id="pwaInstallOverlay" class="notice-overlay">
+    <div class="notice-modal">
+        <div class="notice-header">
+            <h2>📲 앱으로 설치하기</h2>
+        </div>
+
+        <div class="notice-body">
+            <div class="notice-card">
+                <div class="notice-card-title">울림연기학원 앱 설치 안내</div>
+                <div class="notice-text">
+홈 화면에 설치하면 브라우저를 열지 않고 바로 사용할 수 있습니다.
+                </div>
+            </div>
+        </div>
+
+        <div class="notice-footer">
+            <button type="button" class="notice-close-btn" onclick="installPwaApp()" style="background:#2ecc71;">
+                앱 설치하기
+            </button>
+
+            <button type="button" class="notice-close-btn" onclick="closePwaInstallPopup()">
+                나중에
+            </button>
+
+            <button type="button" class="notice-close-btn" onclick="hidePwaInstallForever()" style="background:#777;">
+                다시는 보지 않기
+            </button>
+        </div>
+    </div>
+</div>
 </footer>
 <script>
 /* ===========================
