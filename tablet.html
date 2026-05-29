@@ -1046,7 +1046,7 @@
   </script>
   <script>
 let deferredPrompt = null;
-
+const PWA_HIDE_KEY = "ULIM_TABLET_PWA_HIDE";
 window.addEventListener("beforeinstallprompt", function (e) {
   e.preventDefault();
   deferredPrompt = e;
