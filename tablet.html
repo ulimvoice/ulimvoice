@@ -1,3 +1,424 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>울림연기학원 등하원 체크</title>
+  <style>
+    :root {
+      --green:#22c55e;
+      --green-dark:#15803d;
+      --blue:#2563eb;
+      --red:#ef4444;
+      --bg:#f3f6f4;
+      --ink:#111827;
+      --muted:#6b7280;
+      --card:#ffffff;
+      --line:#e5e7eb;
+    }
+    * { box-sizing:border-box; }
+    html, body { margin:0; width:100%; height:100%; overflow:hidden; font-family:-apple-system,BlinkMacSystemFont,"Noto Sans KR","Segoe UI",sans-serif; background:var(--bg); color:var(--ink); }
+    .kiosk { display:grid; grid-template-columns: 1fr 1fr; height:100vh; width:100vw; }
+    .left { padding:26px; display:flex; flex-direction:column; gap:18px; border-right:1px solid var(--line); background:linear-gradient(180deg,#ffffff,#f6fbf7); }
+    .right { position:relative; background:#111827; color:#fff; overflow:hidden; }
+    .brand { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .brand-title { font-size:30px; font-weight:950; letter-spacing:-0.05em; color:#14532d; }
+    .clock { text-align:right; font-weight:800; color:#374151; line-height:1.35; }
+    .clock .time { font-size:26px; color:#111827; }
+    .panel { background:var(--card); border:1px solid var(--line); border-radius:28px; box-shadow:0 14px 35px rgba(15,23,42,.08); padding:24px; }
+    .guide { font-size:24px; font-weight:900; text-align:center; margin-bottom:18px; color:#14532d; }
+    .input-box { width:100%; height:78px; border:3px solid #bbf7d0; border-radius:22px; background:#f0fdf4; display:flex; align-items:center; justify-content:center; font-size:42px; font-weight:950; letter-spacing:.12em; color:#052e16; }
+    .placeholder { color:#9ca3af; letter-spacing:-.03em; font-size:28px; }
+    .keypad { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:16px; }
+    .key { height:66px; border:0; border-radius:18px; font-size:28px; font-weight:950; background:#fff; box-shadow:0 5px 14px rgba(15,23,42,.08); color:#111827; cursor:pointer; }
+    .key:active { transform:scale(.98); background:#dcfce7; }
+    .actions { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:18px; }
+    .action-btn { height:78px; border:0; border-radius:22px; color:#fff; font-size:28px; font-weight:950; box-shadow:0 12px 22px rgba(15,23,42,.16); cursor:pointer; }
+    .in { background:linear-gradient(135deg,#22c55e,#15803d); }
+    .out { background:linear-gradient(135deg,#3b82f6,#1d4ed8); }
+    .clear { background:#f3f4f6; color:#374151; }
+    .back { background:#fee2e2; color:#991b1b; }
+    .status-card { flex:1; min-height:170px; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; border-radius:28px; padding:24px; background:#ecfdf5; border:2px solid #bbf7d0; }
+    .status-title { white-space:pre-wrap; font-size:30px; font-weight:950; line-height:1.35; color:#14532d; }
+    .status-sub { white-space:pre-wrap; margin-top:12px; font-size:20px; color:#374151; line-height:1.45; }
+    .loading { opacity:.65; pointer-events:none; }
+    .slide { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; padding:44px; opacity:0; transition:opacity .45s ease; }
+    .slide.active { opacity:1; }
+    .slide-inner { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:22px; }
+    .slide-title { font-size:44px; line-height:1.15; font-weight:950; letter-spacing:-0.05em; }
+    .slide-content { font-size:28px; line-height:1.5; color:#e5e7eb; white-space:pre-wrap; word-break:keep-all; }
+    .slide img { max-width:100%; max-height:72vh; object-fit:contain; border-radius:24px; box-shadow:0 20px 60px rgba(0,0,0,.35); }
+    .video-wrap { width:100%; max-width:780px; aspect-ratio:16/9; background:#000; border-radius:24px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.35); }
+    .video-wrap iframe, .video-wrap video { width:100%; height:100%; border:0; display:block; }
+    .right-footer { position:absolute; left:0; right:0; bottom:0; padding:16px 22px; background:linear-gradient(180deg,transparent,rgba(0,0,0,.75)); display:flex; justify-content:space-between; font-size:16px; color:#d1d5db; }
+    .mini-btn { border:0; border-radius:999px; padding:10px 14px; background:#111827; color:#fff; font-weight:800; cursor:pointer; }
+    .toast { position:fixed; left:50%; top:50%; transform:translate(-50%,-50%) scale(.98); width:min(780px,86vw); min-height:250px; background:#fff; border-radius:34px; box-shadow:0 30px 90px rgba(0,0,0,.35); z-index:99; display:none; padding:34px; text-align:center; border:4px solid #bbf7d0; }
+    .toast.show { display:flex; flex-direction:column; align-items:center; justify-content:center; animation:pop .18s ease forwards; }
+    @keyframes pop { to { transform:translate(-50%,-50%) scale(1); } }
+    .toast-title { font-size:44px; font-weight:950; line-height:1.25; color:#14532d; white-space:pre-wrap; }
+    .toast-sub { margin-top:18px; font-size:26px; color:#374151; white-space:pre-wrap; line-height:1.4; }
+    .toast.error { border-color:#fecaca; }
+    .toast.error .toast-title { color:#991b1b; }
+    .candidate-modal { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.48); z-index:120; padding:30px; }
+    .candidate-modal.show { display:flex; }
+    .candidate-card { width:min(760px,92vw); max-height:86vh; overflow:auto; background:#fff; border-radius:32px; box-shadow:0 30px 90px rgba(0,0,0,.35); padding:30px; border:4px solid #bbf7d0; }
+    .candidate-title { font-size:34px; font-weight:950; color:#14532d; text-align:center; line-height:1.25; }
+    .candidate-desc { margin-top:10px; font-size:20px; color:#4b5563; text-align:center; line-height:1.45; }
+    .candidate-list { display:flex; flex-direction:column; gap:12px; margin-top:24px; }
+    .candidate-btn { width:100%; border:2px solid #d1fae5; background:#f0fdf4; border-radius:20px; padding:18px 20px; text-align:left; cursor:pointer; }
+    .candidate-btn:active { transform:scale(.99); background:#dcfce7; }
+    .candidate-name { font-size:28px; font-weight:950; color:#052e16; }
+    .candidate-meta { margin-top:6px; font-size:17px; color:#374151; line-height:1.35; }
+    .candidate-close { margin-top:20px; width:100%; height:56px; border:0; border-radius:18px; background:#f3f4f6; color:#374151; font-size:20px; font-weight:900; cursor:pointer; }
+    @media (max-width: 900px) {
+      .kiosk { grid-template-columns:1fr; grid-template-rows:60vh 40vh; }
+      .left { border-right:0; border-bottom:1px solid var(--line); padding:18px; gap:12px; }
+      .right { min-height:40vh; }
+      .brand-title { font-size:24px; }
+      .clock .time { font-size:22px; }
+      .panel { padding:16px; border-radius:22px; }
+      .guide { font-size:20px; margin-bottom:12px; }
+      .input-box { height:60px; font-size:32px; }
+      .key { height:50px; font-size:22px; }
+      .action-btn { height:60px; font-size:22px; }
+      .status-title { font-size:22px; }
+      .status-sub { font-size:16px; }
+      .slide { padding:22px; }
+      .slide-title { font-size:30px; }
+      .slide-content { font-size:20px; }
+      .toast-title { font-size:30px; }
+      .toast-sub { font-size:20px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="kiosk" id="kioskRoot">
+    <section class="left">
+      <div class="brand">
+        <div class="brand-title">울림연기학원 등하원 체크</div>
+        <div class="clock"><div id="dateText"></div><div class="time" id="timeText"></div></div>
+      </div>
+
+      <div class="panel">
+        <div class="guide">출결번호를 입력하세요</div>
+        <div class="input-box" id="numberDisplay"><span class="placeholder">출결번호</span></div>
+        <div class="keypad" id="keypad"></div>
+        <div class="actions">
+          <button class="action-btn in" onclick="submitCheck('in')">등원</button>
+          <button class="action-btn out" onclick="submitCheck('out')">하원</button>
+        </div>
+      </div>
+
+      <div class="status-card" id="statusCard">
+        <div class="status-title">환영합니다</div>
+        <div class="status-sub">출결번호 입력 후 등원 또는 하원을 눌러주세요.</div>
+      </div>
+    </section>
+
+    <section class="right" id="adArea">
+      <div class="right-footer">
+        <span id="slideInfo">공지 불러오는 중...</span>
+        <button class="mini-btn" onclick="toggleFullscreen()">전체화면</button>
+      </div>
+    </section>
+  </main>
+
+  <div class="candidate-modal" id="candidateModal">
+    <div class="candidate-card">
+      <div class="candidate-title">학생을 선택해주세요</div>
+      <div class="candidate-desc" id="candidateDesc">같은 출결번호를 사용하는 학생이 여러 명입니다.</div>
+      <div class="candidate-list" id="candidateList"></div>
+      <button class="candidate-close" onclick="closeCandidateModal()">닫기</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">
+    <div class="toast-title" id="toastTitle"></div>
+    <div class="toast-sub" id="toastSub"></div>
+  </div>
+
+  <script>
+    const GET_API_URL = 'https://script.google.com/macros/s/AKfycbx7wQFuw6MqqOijmvuwpeiCWOk3xU3hr41xoKbRltQHLb1kLbr_1RD5Zzy3iuWcrhUD0A/exec';
+    const KIOSK_KEY = localStorage.getItem('ulimTabletKioskKey') || '';
+
+    let currentNumber = '';
+    let busy = false;
+    let slides = [];
+    let slideIndex = 0;
+    let slideTimer = null;
+
+    function updateClock() {
+      const now = new Date();
+      const days = ['일','월','화','수','목','금','토'];
+      document.getElementById('dateText').textContent = `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 ${days[now.getDay()]}요일`;
+      document.getElementById('timeText').textContent = now.toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit' });
+    }
+
+    function buildKeypad() {
+      const keys = ['1','2','3','4','5','6','7','8','9','지움','0','전체삭제'];
+      const root = document.getElementById('keypad');
+      root.innerHTML = '';
+      keys.forEach(k => {
+        const btn = document.createElement('button');
+        btn.className = 'key ' + (k === '지움' ? 'back' : k === '전체삭제' ? 'clear' : '');
+        btn.textContent = k;
+        btn.onclick = () => handleKey(k);
+        root.appendChild(btn);
+      });
+    }
+
+    function handleKey(k) {
+      if (busy) return;
+      if (k === '전체삭제') currentNumber = '';
+      else if (k === '지움') currentNumber = currentNumber.slice(0, -1);
+      else if (currentNumber.length < 8) currentNumber += k;
+      renderNumber();
+    }
+
+    function renderNumber() {
+      const el = document.getElementById('numberDisplay');
+      el.innerHTML = currentNumber ? currentNumber : '<span class="placeholder">출결번호</span>';
+    }
+
+    async function submitCheck(mode, options = {}) {
+      if (busy) return;
+      if (!currentNumber) {
+        showToast('출결번호를 입력해주세요.', '', true);
+        return;
+      }
+      busy = true;
+      document.getElementById('kioskRoot').classList.add('loading');
+      setStatus('확인 중입니다...', '잠시만 기다려주세요.');
+
+      try {
+        const query = new URLSearchParams({
+          action: 'tabletCheck',
+          attendanceNo: currentNumber,
+          mode,
+          kioskKey: KIOSK_KEY,
+          _: Date.now().toString()
+        });
+        if (options.studentRowNumber) query.append('studentRowNumber', String(options.studentRowNumber));
+        if (options.selectedStudentName) query.append('selectedStudentName', String(options.selectedStudentName));
+        if (options.selectedClassIndex !== undefined && options.selectedClassIndex !== null) query.append('selectedClassIndex', String(options.selectedClassIndex));
+
+        const response = await fetch(`${GET_API_URL}?${query.toString()}`);
+        const data = await response.json();
+
+        if (data.status === 'multiple') {
+          showCandidateSelection(data, mode);
+          return;
+        }
+
+        if (data.status === 'multipleClasses') {
+          showClassSelection(data, mode, options);
+          return;
+        }
+
+        if (data.status !== 'success') throw new Error(data.message || '등하원 처리 실패');
+
+        const title = `${data.studentName}님이 ${data.mode}하였습니다.`;
+        const sub = data.mode === '등원'
+          ? `오늘 수업: ${data.className || '확인 필요'}\n오늘 강의실: ${data.roomName || '데스크 문의'}`
+          : `수고하셨습니다.\n${data.className || ''}`;
+        setStatus(title, `${sub}\n${data.notifyResult || ''}`);
+        showToast(title, sub, false);
+        currentNumber = '';
+        renderNumber();
+      } catch (err) {
+        const msg = err && err.message ? err.message : String(err);
+        setStatus('처리 실패', msg);
+        showToast('처리 실패', msg, true);
+      } finally {
+        busy = false;
+        document.getElementById('kioskRoot').classList.remove('loading');
+      }
+    }
+
+    function showCandidateSelection(data, mode) {
+      const modal = document.getElementById('candidateModal');
+      const list = document.getElementById('candidateList');
+      const desc = document.getElementById('candidateDesc');
+      const candidates = Array.isArray(data.candidates) ? data.candidates : [];
+
+      document.querySelector('#candidateModal .candidate-title').textContent = '학생을 선택해주세요';
+      desc.textContent = `${data.attendanceNo || currentNumber}번 출결번호에 해당하는 학생이 ${candidates.length}명 있습니다.`;
+      list.innerHTML = '';
+
+      candidates.forEach(candidate => {
+        const btn = document.createElement('button');
+        btn.className = 'candidate-btn';
+        const instructor = candidate.instructor ? `${candidate.instructor}T`.replace(/TT$/, 'T') : '담당강사 확인 필요';
+        const className = candidate.className || '등록 반 확인 필요';
+        btn.innerHTML = `
+          <div class="candidate-name">${escapeHtml(candidate.name || '')}</div>
+          <div class="candidate-meta">${escapeHtml(instructor)} · ${escapeHtml(className)}</div>
+        `;
+        btn.onclick = () => {
+          closeCandidateModal();
+          submitCheck(mode, { studentRowNumber: candidate.rowNumber });
+        };
+        list.appendChild(btn);
+      });
+
+      setStatus('학생 선택 필요', '같은 출결번호가 여러 명에게 등록되어 있습니다.\n화면에서 학생을 선택해주세요.');
+      modal.classList.add('show');
+    }
+
+    function closeCandidateModal() {
+      document.getElementById('candidateModal').classList.remove('show');
+    }
+
+    function showClassSelection(data, mode, previousOptions = {}) {
+      const modal = document.getElementById('candidateModal');
+      const list = document.getElementById('candidateList');
+      const desc = document.getElementById('candidateDesc');
+      const classes = Array.isArray(data.classes) ? data.classes : [];
+
+      document.querySelector('#candidateModal .candidate-title').textContent = '수업을 선택해주세요';
+      desc.textContent = `${data.studentName || ''} 학생의 오늘 수업이 ${classes.length}개 있습니다. 출결 처리할 수업을 선택해주세요.`;
+      list.innerHTML = '';
+
+      classes.forEach(item => {
+        const btn = document.createElement('button');
+        btn.className = 'candidate-btn';
+        const instructor = item.instructor ? `${item.instructor}T`.replace(/TT$/, 'T') : '담당강사 확인 필요';
+        const className = item.className || '수업명 확인 필요';
+        const roomName = item.roomName || '강의실 확인 필요';
+        const statusText = item.status ? ` · 출결상태: ${item.status}` : '';
+        btn.innerHTML = `
+          <div class="candidate-name">${escapeHtml(className)}</div>
+          <div class="candidate-meta">${escapeHtml(instructor)} · ${escapeHtml(roomName)}${escapeHtml(statusText)}</div>
+        `;
+        btn.onclick = () => {
+          closeCandidateModal();
+          submitCheck(mode, Object.assign({}, previousOptions, {
+            studentRowNumber: data.studentRowNumber || previousOptions.studentRowNumber,
+            selectedClassIndex: item.index
+          }));
+        };
+        list.appendChild(btn);
+      });
+
+      setStatus('수업 선택 필요', '오늘 수업이 여러 개 있습니다.\n출결 처리할 수업을 선택해주세요.');
+      modal.classList.add('show');
+    }
+
+    function setStatus(title, sub) {
+      document.getElementById('statusCard').innerHTML = `<div class="status-title">${escapeHtml(title)}</div><div class="status-sub">${escapeHtml(sub || '')}</div>`;
+    }
+
+    function showToast(title, sub, isError) {
+      const toast = document.getElementById('toast');
+      toast.className = 'toast show' + (isError ? ' error' : '');
+      document.getElementById('toastTitle').textContent = title;
+      document.getElementById('toastSub').textContent = sub || '';
+      clearTimeout(showToast._timer);
+      showToast._timer = setTimeout(() => { toast.className = 'toast'; }, isError ? 2600 : 4200);
+    }
+
+    async function warmupTabletCache() {
+      try {
+        const query = new URLSearchParams({ action:'tabletWarmup', kioskKey:KIOSK_KEY, _:Date.now().toString() });
+        fetch(`${GET_API_URL}?${query.toString()}`).catch(() => {});
+      } catch (err) {}
+    }
+
+    async function loadSlides() {
+      try {
+        const query = new URLSearchParams({ action:'tabletGetAds', kioskKey:KIOSK_KEY, _:Date.now().toString() });
+        const response = await fetch(`${GET_API_URL}?${query.toString()}`);
+        const data = await response.json();
+        slides = data.slides && data.slides.length ? data.slides : defaultSlides();
+      } catch (err) {
+        slides = defaultSlides();
+      }
+      renderSlides();
+      startSlideLoop();
+    }
+
+    function defaultSlides() {
+      return [
+        { type:'공지', title:'울림연기학원', content:'출결번호를 입력하고 등원 또는 하원을 눌러주세요.', seconds:8 },
+        { type:'공지', title:'오늘도 좋은 수업 되세요', content:'공지사항과 홍보 이미지는 태블릿홍보 시트에서 관리할 수 있습니다.', seconds:8 }
+      ];
+    }
+
+    function renderSlides() {
+      const area = document.getElementById('adArea');
+      area.querySelectorAll('.slide').forEach(x => x.remove());
+      slides.forEach((s, i) => {
+        const div = document.createElement('div');
+        div.className = 'slide' + (i === 0 ? ' active' : '');
+        div.innerHTML = slideHtml(s);
+        area.insertBefore(div, area.querySelector('.right-footer'));
+      });
+      updateSlideInfo();
+    }
+
+    function slideHtml(s) {
+      const title = escapeHtml(s.title || '울림연기학원');
+      const content = escapeHtml(s.content || '');
+      if (s.videoUrl) {
+        const url = escapeAttr(s.videoUrl);
+        const isYoutube = url.includes('youtube.com/embed/');
+        return `<div class="slide-inner"><div class="slide-title">${title}</div><div class="video-wrap">${isYoutube ? `<iframe src="${url}" allowfullscreen></iframe>` : `<video src="${url}" autoplay muted loop playsinline controls></video>`}</div>${content ? `<div class="slide-content">${content}</div>` : ''}</div>`;
+      }
+      if (s.imageUrl) {
+        return `<div class="slide-inner"><div class="slide-title">${title}</div><img src="${escapeAttr(s.imageUrl)}" alt="${title}">${content ? `<div class="slide-content">${content}</div>` : ''}</div>`;
+      }
+      return `<div class="slide-inner"><div class="slide-title">${title}</div><div class="slide-content">${content}</div></div>`;
+    }
+
+    function startSlideLoop() {
+      clearTimeout(slideTimer);
+      if (!slides.length) return;
+      const current = slides[slideIndex] || slides[0];
+      slideTimer = setTimeout(nextSlide, Math.max(5, Number(current.seconds || 8)) * 1000);
+    }
+
+    function nextSlide() {
+      if (!slides.length) return;
+      const slideEls = Array.from(document.querySelectorAll('.slide'));
+      slideEls.forEach(x => x.classList.remove('active'));
+      slideIndex = (slideIndex + 1) % slides.length;
+      if (slideEls[slideIndex]) slideEls[slideIndex].classList.add('active');
+      updateSlideInfo();
+      startSlideLoop();
+    }
+
+    function updateSlideInfo() {
+      document.getElementById('slideInfo').textContent = slides.length ? `${slideIndex + 1} / ${slides.length}` : '공지 없음';
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+      else document.exitFullscreen?.();
+    }
+
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+    }
+    function escapeAttr(value) { return escapeHtml(value).replace(/`/g, '&#96;'); }
+
+    window.addEventListener('keydown', e => {
+      if (/^[0-9]$/.test(e.key)) handleKey(e.key);
+      if (e.key === 'Backspace') handleKey('지움');
+      if (e.key === 'Enter') submitCheck('in');
+    });
+
+    updateClock();
+    setInterval(updateClock, 1000);
+    buildKeypad();
+    renderNumber();
+    warmupTabletCache();
+    loadSlides();
+    setInterval(loadSlides, 10 * 60 * 1000);
+  </script>
+</body>
+</html>
+
 /****************************************************
  * 태블릿 페이지 v60 패치
  * 목적:
