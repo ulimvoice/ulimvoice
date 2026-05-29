@@ -5,7 +5,7 @@
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780046248858&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000001d447209bf3739bb906fcedf%26fn%3Dindex_notice_currentclass_teachersearch_final.html%26cd%3Dattachment%26ts%3D494460%26p%3Dfs%26cid%3D1%26sig%3De6fd9f806c8c355ff781f58178dfd5385c456a2e49099f43bbfbeceb1667d7b1%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
+<script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780046248858&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000ed207209bcc180195b5718ae%26fn%3Dindex_notice_class_from_attendance_teacher_from_students.html%26cd%3Dattachment%26ts%3D494460%26p%3Dfs%26cid%3D1%26sig%3D5b62499cd1645e1e77a6f1cf1b62823cfcbe4706132c5d314e85bd4fa4679511%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
 <script src="appdata/vocalization/data.js"></script>
 <script src="appdata/past_questions/data.js"></script>
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -3746,6 +3746,10 @@ function adminNoticeCoreClassText_(className) {
         .replace(/\[[^\]]+?T\]/gi, ' ')
         .replace(/\([^)]*\)/g, ' ')
         .replace(/\d{1,2}\s*[:：]\s*\d{2}\s*[~～-]\s*\d{1,2}\s*[:：]\s*\d{2}/g, ' ')
+        .replace(/\d{1,2}\s*시\s*\d{0,2}\s*분?\s*[~～-]\s*\d{1,2}\s*시\s*\d{0,2}\s*분?/g, ' ')
+        .replace(/월요일|화요일|수요일|목요일|금요일|토요일|일요일/g, ' ')
+        .replace(/\b[월화수목금토일]\b/g, ' ')
+        .replace(/청소년|성인|초등|중고등/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
 }
@@ -3757,7 +3761,7 @@ function adminNoticeTokenizeClass_(value) {
         .map(v => v.trim())
         .filter(Boolean)
         .filter(v => !/^\d+$/.test(v))
-        .filter(v => !['반', '수업', '강의', '전체반'].includes(v));
+        .filter(v => !['반', '수업', '강의', '기초', '초급', '중급', '전체반'].includes(v));
 }
 
 function adminNoticeTeacherMatches_(student, selectedClass) {
@@ -3765,10 +3769,70 @@ function adminNoticeTeacherMatches_(student, selectedClass) {
     if (!selectedTeacher) return false;
 
     const teacherNorm = adminNoticeNormalize_(selectedTeacher);
-    const studentTeacherNorm = adminNoticeNormalize_(student.instructor || student.instructorName || '');
+    const studentTeacherNorm = adminNoticeNormalize_(student.instructor || student.instructorName || student['담당강사'] || '');
 
     return !!teacherNorm && !!studentTeacherNorm &&
         (studentTeacherNorm.includes(teacherNorm) || teacherNorm.includes(studentTeacherNorm));
+}
+
+function adminNoticeGetStudentClassText_(student) {
+    // 학생명단의 현재반/반명 성격 필드만 사용합니다.
+    // 담당강사는 여기서 절대 섞지 않습니다.
+    return [
+        student.className,
+        student.class,
+        student['반명'],
+        student.currentClass,
+        student['현재반'],
+        student.enrolledClass,
+        student['수강반'],
+        student.memo
+    ].map(v => String(v || '').trim()).filter(Boolean).join('\n');
+}
+
+function adminNoticeSplitClassCandidates_(value) {
+    return String(value || '')
+        .split(/\n|,|;|\/+/)
+        .map(v => v.trim())
+        .filter(Boolean);
+}
+
+function adminNoticeClassMatchScore_(studentClassText, selectedClass) {
+    const selectedNorm = adminNoticeNormalize_(selectedClass);
+    const selectedCore = adminNoticeCoreClassText_(selectedClass);
+    const selectedCoreNorm = adminNoticeNormalize_(selectedCore);
+    const selectedTokens = adminNoticeTokenizeClass_(selectedClass)
+        .map(adminNoticeNormalize_)
+        .filter(Boolean);
+
+    let best = 0;
+
+    adminNoticeSplitClassCandidates_(studentClassText).forEach(candidate => {
+        const candNorm = adminNoticeNormalize_(candidate);
+        const candCore = adminNoticeCoreClassText_(candidate);
+        const candCoreNorm = adminNoticeNormalize_(candCore);
+
+        if (!candNorm && !candCoreNorm) return;
+
+        // 완전/포함 매칭
+        if (candNorm && selectedNorm && (candNorm === selectedNorm || candNorm.includes(selectedNorm) || selectedNorm.includes(candNorm))) {
+            best = Math.max(best, 100);
+        }
+
+        // 강사/요일/시간을 제거한 핵심 반명 매칭
+        if (candCoreNorm && selectedCoreNorm && (candCoreNorm === selectedCoreNorm || candCoreNorm.includes(selectedCoreNorm) || selectedCoreNorm.includes(candCoreNorm))) {
+            best = Math.max(best, 90);
+        }
+
+        // 핵심 단어 매칭. 예: 공채입문, 애니메이션더빙, 연기기초B 등
+        if (selectedTokens.length > 0) {
+            const hit = selectedTokens.filter(t => candNorm.includes(t) || candCoreNorm.includes(t)).length;
+            const required = Math.min(2, selectedTokens.length);
+            if (hit >= required) best = Math.max(best, 70 + hit);
+        }
+    });
+
+    return best;
 }
 
 function adminNoticeStudentMatchesClass_(student, selectedClass) {
@@ -3777,45 +3841,13 @@ function adminNoticeStudentMatchesClass_(student, selectedClass) {
     const selectedNorm = adminNoticeNormalize_(selectedClass);
     if (!selectedNorm || selectedNorm === adminNoticeNormalize_('전체반')) return true;
 
-    // 공지 발송의 "반 선택"은 출석부가 아니라 학생부 학생명단의 현재반/반명 기준으로만 매칭합니다.
-    // 담당강사명만 같다는 이유로 해당 반 학생으로 포함하지 않습니다.
-    const currentClassRaw = [
-        student.className,
-        student.class,
-        student['반명'],
-        student.currentClass,
-        student['현재반'],
-        student.memo
-    ].join(' ');
+    // 반 선택은 출석부에서 가져온 반명을 기준으로 하되,
+    // 학생 필터는 학생명단의 현재반/반명 필드와만 비교합니다.
+    // 담당강사명만 같다는 이유로 학생을 포함하지 않습니다.
+    const studentClassText = adminNoticeGetStudentClassText_(student);
+    if (!adminNoticeNormalize_(studentClassText)) return false;
 
-    const currentClassNorm = adminNoticeNormalize_(currentClassRaw);
-    if (!currentClassNorm) return false;
-
-    // 1. 학생부 현재반과 선택 반명이 거의 동일한 경우
-    if (currentClassNorm.includes(selectedNorm) || selectedNorm.includes(currentClassNorm)) {
-        return true;
-    }
-
-    // 2. [강사T], 요일, 시간 표기가 섞인 반명 대응
-    // 예: 선택값 "[강호철T] - 금요일 공채입문 19:00 ~ 22:00"
-    // 학생부 현재반 "금요일 공채입문" / "공채입문" 등도 매칭
-    const selectedCoreNorm = adminNoticeNormalize_(adminNoticeCoreClassText_(selectedClass));
-    if (selectedCoreNorm && (currentClassNorm.includes(selectedCoreNorm) || selectedCoreNorm.includes(currentClassNorm))) {
-        return true;
-    }
-
-    const tokens = adminNoticeTokenizeClass_(selectedClass)
-        .map(adminNoticeNormalize_)
-        .filter(Boolean)
-        .filter(t => !['월요일','화요일','수요일','목요일','금요일','토요일','일요일'].map(adminNoticeNormalize_).includes(t));
-
-    if (tokens.length > 0) {
-        const matchedTokenCount = tokens.filter(t => currentClassNorm.includes(t)).length;
-        // 핵심 단어 2개 이상, 또는 토큰이 1개뿐이면 1개 매칭으로 인정
-        if (matchedTokenCount >= Math.min(2, tokens.length)) return true;
-    }
-
-    return false;
+    return adminNoticeClassMatchScore_(studentClassText, selectedClass) >= 70;
 }
 
 function adminNoticeStudentMatchesKeyword_(student, keyword) {
