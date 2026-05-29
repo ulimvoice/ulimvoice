@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>울림연기학원 등하원 체크 v61</title>
+  <title>울림연기학원 등하원 체크 v63</title>
   <style>
     :root {
       --green: #16a34a;
@@ -274,8 +274,16 @@
       border: 0;
     }
 
+    .ad-box img,
+    .ad-box video {
+      max-height: calc(100vh - 210px);
+      object-fit: contain;
+      background: #020617;
+    }
+
     .ad-box iframe {
       aspect-ratio: 16 / 9;
+      max-height: calc(100vh - 210px);
     }
 
     .ad-text {
@@ -291,17 +299,6 @@
       color: #cbd5e1;
       font-size: 13px;
       font-weight: 700;
-    }
-
-    .fullscreen-btn {
-      position: absolute;
-      right: 20px;
-      bottom: 18px;
-      padding: 9px 13px;
-      border-radius: 999px;
-      background: rgba(255,255,255,.10);
-      color: #fff;
-      font-size: 12px;
     }
 
     .modal-backdrop {
@@ -425,7 +422,7 @@
     .ad-nav-row {
       position: absolute;
       right: 20px;
-      bottom: 58px;
+      bottom: 18px;
       display: flex;
       gap: 8px;
       z-index: 20;
@@ -446,17 +443,197 @@
     }
 
     @media (max-width: 900px) {
-      body {
-        grid-template-columns: 1fr;
-        overflow: auto;
+      html, body {
+        height: auto;
+        min-height: 100%;
+        overflow-x: hidden;
+        overflow-y: auto;
       }
 
-      .right {
-        min-height: 48vh;
+      body {
+        display: block;
+        min-height: 100vh;
+        background: #eef2f7;
       }
 
       .left {
-        min-height: 52vh;
+        min-height: auto;
+        padding: 18px 16px 20px;
+        gap: 14px;
+      }
+
+      .top-row {
+        gap: 12px;
+      }
+
+      .title {
+        font-size: 21px;
+        line-height: 1.2;
+      }
+
+      .clock-date {
+        font-size: 12px;
+      }
+
+      .clock-time {
+        font-size: 20px;
+      }
+
+      .card {
+        padding: 18px;
+        border-radius: 18px;
+      }
+
+      .input-title {
+        font-size: 17px;
+        margin-bottom: 12px;
+      }
+
+      .pin-display {
+        height: 54px;
+        font-size: 27px;
+        margin-bottom: 12px;
+      }
+
+      .num-btn {
+        height: 46px;
+        font-size: 20px;
+      }
+
+      .action-btn {
+        height: 56px;
+        font-size: 20px;
+      }
+
+      .status-card {
+        min-height: 180px;
+        padding: 22px 16px;
+      }
+
+      .status-card h2 {
+        font-size: 20px;
+      }
+
+      .status-card p {
+        font-size: 14px;
+      }
+
+      .right {
+        min-height: auto;
+        padding: 22px 14px 68px;
+        align-items: flex-start;
+        overflow: visible;
+      }
+
+      .ad-wrap {
+        width: 100%;
+        max-width: 100%;
+      }
+
+      .ad-title {
+        font-size: 27px;
+        margin-bottom: 16px;
+      }
+
+      .ad-box {
+        width: 100%;
+        min-height: 0;
+        max-height: none;
+        background: #020617;
+        border-radius: 16px;
+      }
+
+      .ad-box iframe {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        max-height: 58vh;
+      }
+
+      .ad-box img,
+      .ad-box video {
+        width: 100%;
+        height: auto;
+        max-height: 70vh;
+        object-fit: contain;
+        background: #020617;
+      }
+
+      .ad-text {
+        padding: 28px 22px;
+        font-size: 15px;
+      }
+
+      .ad-click-hint {
+        top: 12px;
+        right: 14px;
+        font-size: 11px;
+        padding: 6px 9px;
+      }
+
+      .slide-count {
+        left: 14px;
+        bottom: 18px;
+      }
+
+      .ad-nav-row {
+        right: 14px;
+        bottom: 18px;
+      }
+
+      .ad-nav-btn {
+        padding: 9px 12px;
+        font-size: 12px;
+      }
+
+      .modal {
+        padding: 30px 24px;
+      }
+
+      .modal h2 {
+        font-size: 25px;
+      }
+
+      .modal p {
+        font-size: 15px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .left {
+        padding: 14px 12px 18px;
+      }
+
+      .title {
+        font-size: 19px;
+      }
+
+      .clock-time {
+        font-size: 18px;
+      }
+
+      .card {
+        padding: 16px;
+      }
+
+      .keypad {
+        gap: 8px;
+      }
+
+      .num-btn {
+        height: 43px;
+      }
+
+      .right {
+        padding: 20px 12px 64px;
+      }
+
+      .ad-title {
+        font-size: 24px;
+      }
+
+      .ad-box img,
+      .ad-box video {
+        max-height: 68vh;
       }
     }
   </style>
@@ -517,7 +694,6 @@
       <button class="ad-nav-btn" onclick="event.stopPropagation(); prevAdSlide(true);">이전</button>
       <button class="ad-nav-btn" onclick="event.stopPropagation(); nextAdSlide(true);">다음</button>
     </div>
-    <button class="fullscreen-btn" onclick="event.stopPropagation(); toggleFullscreen()">전체화면</button>
   </section>
 
   <div class="modal-backdrop" id="modalBackdrop" onclick="closeModalByBackdrop(event)">
@@ -838,7 +1014,7 @@
           box.innerHTML = `<video src="${escapeAttr(videoUrl)}" autoplay muted loop playsinline></video>`;
         }
       } else if (imageUrl) {
-        box.innerHTML = `<img src="${escapeAttr(imageUrl)}" alt="홍보 이미지">`;
+        box.innerHTML = `<img src="${escapeAttr(imageUrl)}" alt="홍보 이미지" onerror="this.parentElement.innerHTML=\`<div class=\'ad-text\'>이미지를 불러오지 못했습니다.<br>이미지URL과 공유 권한을 확인해주세요.</div>\`;">`;
       } else {
         box.innerHTML = `<div class="ad-text">${escapeHtml(slide.content || "오늘도 좋은 수업 되세요.")}</div>`;
       }
@@ -880,14 +1056,6 @@
     function extractYoutubeId(url) {
       const m = String(url || "").match(/embed\/([^?&/]+)/);
       return m ? m[1] : "";
-    }
-
-    function toggleFullscreen() {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen?.();
-      } else {
-        document.exitFullscreen?.();
-      }
     }
 
     function escapeHtml(value) {
