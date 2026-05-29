@@ -1048,6 +1048,11 @@
 let deferredPrompt = null;
 const PWA_HIDE_KEY = "ULIM_TABLET_PWA_HIDE";
 window.addEventListener("beforeinstallprompt", function (e) {
+
+  if (localStorage.getItem(PWA_HIDE_KEY) === "Y") {
+    return;
+  }
+
   e.preventDefault();
   deferredPrompt = e;
 
@@ -1081,6 +1086,10 @@ async function installPwa() {
   deferredPrompt.prompt();
   await deferredPrompt.userChoice;
   deferredPrompt = null;
+  closeModal();
+}
+  function hidePwaForever() {
+  localStorage.setItem(PWA_HIDE_KEY, "Y");
   closeModal();
 }
 </script>
