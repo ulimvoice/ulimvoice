@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<link rel="manifest" href="./manifest-tablet.json">
+<script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780058918039&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000382c720688145fcb59a634bc%26fn%3Dtablet_%25EC%2588%2598%25EC%25A0%2595%25EB%25B3%25B8_v64_%25EC%2595%258C%25EB%25A6%25BC%25ED%2586%25A1%25EB%25AC%25B8%25EA%25B5%25AC%25EC%2588%25A8%25EA%25B9%2580.html%26cd%3Dattachment%26ts%3D494461%26p%3Dfs%26cid%3D1%26sig%3D72a97609211aa245389e3460caf5623b995cb8d1d60881b39fdf360dbfa8ee47%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="manifest" href="./manifest-tablet.json">
 <meta name="theme-color" content="#16a34a">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>울림연기학원 등하원 체크 v63</title>
+  <title>울림연기학원 등하원 체크 v64</title>
   <style>
     :root {
       --green: #16a34a;
@@ -813,17 +813,15 @@
       const name = data.studentName || "학생";
       const className = data.className || "오늘 수업 확인 필요";
       const roomName = data.roomName || "데스크에 문의해주세요";
-      const notify = data.notifyResult || "";
 
       const title = `${name}님이 ${modeText}하였습니다.`;
       const lines = [
         `오늘 수업: ${className}`,
-        modeText === "등원" ? `오늘 강의실: ${roomName}` : `오늘 강의실: ${roomName}`,
-        notify ? notify : ""
-      ].filter(Boolean);
+        `오늘 강의실: ${roomName}`
+      ];
 
       setStatus(title, lines.join("\n"), "success");
-      showModal(title, lines.slice(0, 2).join("\n"), "success");
+      showModal(title, lines.join("\n"), "success");
     }
 
     function setStatus(title, message, type = "success") {
