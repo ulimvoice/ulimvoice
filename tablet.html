@@ -213,6 +213,13 @@
       showToast._timer = setTimeout(() => { toast.className = 'toast'; }, isError ? 2600 : 4200);
     }
 
+    async function warmupTabletCache() {
+      try {
+        const query = new URLSearchParams({ action:'tabletWarmup', kioskKey:KIOSK_KEY, _:Date.now().toString() });
+        fetch(`${GET_API_URL}?${query.toString()}`).catch(() => {});
+      } catch (err) {}
+    }
+
     async function loadSlides() {
       try {
         const query = new URLSearchParams({ action:'tabletGetAds', kioskKey:KIOSK_KEY, _:Date.now().toString() });
@@ -300,6 +307,7 @@
     setInterval(updateClock, 1000);
     buildKeypad();
     renderNumber();
+    warmupTabletCache();
     loadSlides();
     setInterval(loadSlides, 10 * 60 * 1000);
   </script>
