@@ -5,7 +5,7 @@
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780058918039&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000006fec720985377dba9ae2a8f2%26fn%3Dindex_%25EC%2588%2598%25EC%25A0%2595%25EB%25B3%25B8_v65_%25EA%25B3%25B5%25EC%25A7%2580%25EC%2598%2586%25EA%25B2%25B0%25EC%2584%259D%25EC%2595%258C%25EB%25A6%25BC%25ED%2586%25A1.html%26cd%3Dattachment%26ts%3D494461%26p%3Dfs%26cid%3D1%26sig%3Df08a32aa2d1fd2c3d5d94a9229ef408a30bd04c689c38debeeba5913343d82ed%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780046248858&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000ed207209bcc180195b5718ae%26fn%3Dindex_notice_class_from_attendance_teacher_from_students.html%26cd%3Dattachment%26ts%3D494460%26p%3Dfs%26cid%3D1%26sig%3D5b62499cd1645e1e77a6f1cf1b62823cfcbe4706132c5d314e85bd4fa4679511%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
+<script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780064251945&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_0000000028fc720b889e15242db7b5f6%26fn%3Dindex_%25EC%2588%2598%25EC%25A0%2595%25EB%25B3%25B8_v66_%25EC%2597%25B0%25EC%258A%25B5%25EC%258B%25A4%25EC%2598%2588%25EC%2595%25BD%25EC%2595%258C%25EB%25A6%25BC%25ED%2586%25A1.html%26cd%3Dattachment%26ts%3D494462%26p%3Dfs%26cid%3D1%26sig%3D3116ab7ef04ff73f3b002ec2ed32f902400aa3723c16d9c7af051072ae42e71c%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780046248858&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000ed207209bcc180195b5718ae%26fn%3Dindex_notice_class_from_attendance_teacher_from_students.html%26cd%3Dattachment%26ts%3D494460%26p%3Dfs%26cid%3D1%26sig%3D5b62499cd1645e1e77a6f1cf1b62823cfcbe4706132c5d314e85bd4fa4679511%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
 <script src="appdata/vocalization/data.js"></script>
 <script src="appdata/past_questions/data.js"></script>
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -1113,6 +1113,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
           <button type="button" class="admin-subtab active" id="adminStudentsSubtab" data-admin-panel="adminPanelStudents" onclick="showAdminPanel('adminPanelStudents')">학생검색</button>
           <button type="button" class="admin-subtab" id="adminAttendanceSubtab" data-admin-panel="adminPanelAttendance" onclick="showAdminPanel('adminPanelAttendance')">출석부 확인/발송</button>
           <button type="button" class="admin-subtab" data-admin-panel="adminPanelDailyEval" onclick="showAdminPanel('adminPanelDailyEval')">수업 일일평가</button>
+          <button type="button" class="admin-subtab admin-full-only" data-admin-panel="adminPanelRoom" onclick="showAdminPanel('adminPanelRoom')">연습실 예약 알림</button>
           <button type="button" class="admin-subtab admin-full-only" data-admin-panel="adminPanelPayment" onclick="showAdminPanel('adminPanelPayment')">결제관리</button>
         </div>
 
@@ -1307,6 +1308,59 @@ body.admin-mode .admin-only-tab { display:block !important; }
             </div>
             <div id="adminDailyEvalTableWrap" class="admin-table-wrap"></div>
             <div id="adminDailyEvalPreview" class="admin-message-preview" style="display:none;"></div>
+          </div>
+        </div>
+
+        <div id="adminPanelRoom" class="admin-panel">
+          <div class="admin-card admin-full-only">
+            <h3 style="margin-top:0;">연습실 예약 알림톡</h3>
+            <p style="font-size:14px; color:#666; line-height:1.6; margin-top:-4px;">
+              예약한 학생 명단을 확인한 뒤 <b>연습실 사용확인</b>, <b>연습실 사용불가</b>, <b>장소·시간 변경</b> 알림톡을 선택 발송합니다.<br>
+              현관 비밀번호는 연습실 예약 스프레드시트의 <b>연습실설정</b> 시트 또는 GAS 스크립트 속성값을 발송 시점에 참조합니다.
+            </p>
+
+            <div class="admin-grid">
+              <div class="admin-field">
+                <label for="adminRoomDate">예약일</label>
+                <input type="date" id="adminRoomDate" onchange="adminLoadRoomReservations(false, true)">
+              </div>
+              <div class="admin-field">
+                <label for="adminRoomKeyword">학생명 / 전화뒷자리 / 연습실 검색</label>
+                <input type="text" id="adminRoomKeyword" placeholder="예: 홍길동, 5875, 4강의실" oninput="adminRenderRoomReservationTable()">
+              </div>
+              <div class="admin-field">
+                <label for="adminRoomStatusFilter">상태 필터</label>
+                <select id="adminRoomStatusFilter" onchange="adminRenderRoomReservationTable()">
+                  <option value="">전체</option>
+                  <option value="예약">예약</option>
+                  <option value="확정">확정</option>
+                  <option value="사용완료">사용완료</option>
+                  <option value="사용불가">사용불가</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="admin-recipient-row admin-full-only" style="margin:8px 0 12px;">
+              <b style="width:100%; color:#111827;">수신 대상</b>
+              <label><input type="checkbox" id="roomRecipientStudent" checked> 학생</label>
+              <label><input type="checkbox" id="roomRecipientParent"> 학부모</label>
+              <div class="admin-permission-note" style="width:100%;">기본은 학생에게 발송합니다. 학부모에게도 보내려면 학부모를 체크하세요.</div>
+            </div>
+
+            <div class="admin-btn-row">
+              <button type="button" class="admin-btn blue" onclick="adminLoadRoomReservations(true, true)">예약 불러오기</button>
+              <button type="button" class="admin-btn gray" onclick="adminSelectAllRoomReservations(true)">전체선택</button>
+              <button type="button" class="admin-btn gray" onclick="adminSelectAllRoomReservations(false)">전체해제</button>
+              <button type="button" class="admin-btn" onclick="adminSendSelectedRoomReservationMessages('confirm')">선택 사용확인</button>
+              <button type="button" class="admin-btn red" onclick="adminSendSelectedRoomReservationMessages('unavailable')">선택 사용불가</button>
+              <button type="button" class="admin-btn orange" onclick="adminSendSelectedRoomReservationMessages('change')">선택 장소·시간 변경</button>
+            </div>
+
+            <div class="admin-summary" style="margin-top:10px;">
+              <span class="admin-chip" id="adminRoomSummary">예약 0건</span>
+            </div>
+            <div id="adminRoomReservationTableWrap" class="admin-table-wrap" style="margin-top:12px;"></div>
+            <div id="adminRoomPreview" class="admin-message-preview" style="display:none;"></div>
           </div>
         </div>
 
@@ -3019,6 +3073,8 @@ let adminStudentSearchRows = [];
 let adminNoticeTargetRows = [];
 let adminNoticeSelectedMap = {};
 let adminNoticeClassStudentCache = {};
+let adminRoomReservations = [];
+let adminRoomSelectedMap = {};
 
 // 학생검색 탭 > 전체 공지 발송용 전체 반 목록입니다.
 // 날짜 기준 출석부가 아니라 학원 전체 개설반 기준으로 항상 표시합니다.
@@ -3245,13 +3301,17 @@ function applyAdminPermissions() {
 
     const paymentPanel = document.getElementById('adminPanelPayment');
     const paymentTab = document.querySelector('.admin-subtab[data-admin-panel="adminPanelPayment"]');
+    const roomPanel = document.getElementById('adminPanelRoom');
+    const roomTab = document.querySelector('.admin-subtab[data-admin-panel="adminPanelRoom"]');
     if (!isFull) {
         if (paymentPanel) paymentPanel.classList.remove('active');
         if (paymentTab) paymentTab.classList.remove('active');
+        if (roomPanel) roomPanel.classList.remove('active');
+        if (roomTab) roomTab.classList.remove('active');
     }
 
     const activePanel = document.querySelector('.admin-panel.active');
-    if (!activePanel || (!isFull && (activePanel.id === 'adminPanelStudents' || activePanel.id === 'adminPanelPayment'))) {
+    if (!activePanel || (!isFull && (activePanel.id === 'adminPanelStudents' || activePanel.id === 'adminPanelPayment' || activePanel.id === 'adminPanelRoom'))) {
         showAdminPanel('adminPanelAttendance');
     }
 
@@ -3419,7 +3479,7 @@ async function adminLoadStudents(showOverlay = true, force = false) {
 }
 
 function adminInitDates() {
-    ['adminAttendanceDate','paymentDateInput','adminDailyEvalDate'].forEach(id => {
+    ['adminAttendanceDate','paymentDateInput','adminDailyEvalDate','adminRoomDate'].forEach(id => {
         const el = document.getElementById(id);
         if (el && !el.value) el.value = getTodayInputValue();
     });
@@ -4256,6 +4316,282 @@ async function adminSendAbsenceForNoticeTargets() {
 }
 
 
+
+
+// =========================================================================================
+// 🏢 관리자 연습실 예약 알림톡 탭 v66
+// =========================================================================================
+function adminGetRoomRecipientTypes() {
+    const list = [];
+    if (document.getElementById('roomRecipientStudent')?.checked) list.push('학생');
+    if (document.getElementById('roomRecipientParent')?.checked) list.push('학부모');
+    return list;
+}
+
+function adminRoomDateValue() {
+    const el = document.getElementById('adminRoomDate');
+    if (el && !el.value) el.value = getTodayInputValue();
+    return el ? el.value : getTodayInputValue();
+}
+
+async function adminLoadRoomReservations(showOverlay = true, force = false) {
+    if (!adminIsFullAdmin()) return alert('연습실 예약 알림은 관리자 권한에서만 가능합니다.');
+
+    const date = adminRoomDateValue();
+    const [year, month] = date.split('-').map(Number);
+
+    try {
+        if (showOverlay) showLoading('연습실 예약 명단 불러오는 중...');
+
+        let rows = [];
+        let loadedBy = 'studentGas';
+
+        try {
+            const data = await adminApi('adminGetRoomReservations', {
+                adminToken,
+                date,
+                year,
+                month,
+                force: force ? '1' : ''
+            });
+            rows = Array.isArray(data.reservations) ? data.reservations : [];
+        } catch (gasErr) {
+            // 학생부 GAS에서 시트 구조를 인식하지 못하는 경우, 기존 연습실 예약 GAS(JSONP) 데이터로 대체합니다.
+            loadedBy = 'roomGas';
+            const data = await roomJsonp({ action: 'getRoomReservations', year, month }, { cacheBust: force });
+            const all = Array.isArray(data && data.reservations) ? data.reservations : [];
+            rows = all.filter(r => String(r.date || '') === date && normalizeStatusForMatch(r.status) !== '취소');
+        }
+
+        adminRoomReservations = rows.map((r, index) => normalizeAdminRoomReservationRow(r, index));
+        adminRoomSelectedMap = {};
+        adminRoomReservations.forEach((r, idx) => { adminRoomSelectedMap[adminRoomRowKey(r, idx)] = false; });
+        adminRenderRoomReservationTable();
+        if (showOverlay) hideLoading();
+
+        const summary = document.getElementById('adminRoomSummary');
+        if (summary) summary.textContent = `예약 ${adminRoomReservations.length}건 / 기준 ${date}`;
+    } catch (e) {
+        if (showOverlay) hideLoading();
+        alert(e.message || '연습실 예약 명단을 불러오지 못했습니다.');
+    }
+}
+
+function normalizeAdminRoomReservationRow(r, index) {
+    const start = adminFormatRoomHour(r.startHour || r.startTime || '');
+    const end = adminFormatRoomHour(r.endHour || r.endTime || '');
+    const rawTime = String(r.time || r.timeText || '').trim();
+    return {
+        id: String(r.id || r.reservationId || r.rowNumber || index + 1),
+        date: String(r.date || r.reserveDate || '').trim(),
+        studentName: String(r.studentName || r.name || '').trim(),
+        phoneLast4: String(r.phoneLast4 || r.phoneSuffix || '').trim(),
+        studentPhone: String(r.studentPhone || r.phone || '').trim(),
+        room: String(r.room || r.roomName || r.practiceRoom || '').trim(),
+        startHour: start,
+        endHour: end,
+        time: start && end ? `${start}~${end}` : (rawTime || start || ''),
+        status: String(r.status || '예약').trim(),
+        memo: String(r.memo || r.note || r.reason || '').trim(),
+        raw: r
+    };
+}
+
+function adminFormatRoomHour(value) {
+    if (value === null || value === undefined || value === '') return '';
+    if (typeof value === 'number') return `${String(Math.round(value)).padStart(2, '0')}:00`;
+    const text = String(value).trim();
+    const m = text.match(/(\d{1,2})(?::\d{2})?/);
+    if (!m) return text;
+    return `${String(Number(m[1])).padStart(2, '0')}:00`;
+}
+
+function adminRoomRowKey(row, index) {
+    return [row.id || index, row.date, row.studentName, row.room, row.startHour].join('|');
+}
+
+function adminVisibleRoomReservations() {
+    const keyword = String(document.getElementById('adminRoomKeyword')?.value || '').replace(/\s+/g, '').toLowerCase();
+    const status = String(document.getElementById('adminRoomStatusFilter')?.value || '').trim();
+    return adminRoomReservations
+        .map((row, index) => ({ row, index }))
+        .filter(item => {
+            const r = item.row;
+            if (status && !String(r.status || '').includes(status)) return false;
+            if (!keyword) return true;
+            const hay = [r.studentName, r.phoneLast4, r.studentPhone, r.room, r.time, r.status, r.memo].join('|').replace(/\s+/g, '').toLowerCase();
+            return hay.includes(keyword);
+        });
+}
+
+function adminRenderRoomReservationTable() {
+    const wrap = document.getElementById('adminRoomReservationTableWrap');
+    if (!wrap) return;
+
+    const visible = adminVisibleRoomReservations();
+    const checked = visible.filter(({ row, index }) => adminRoomSelectedMap[adminRoomRowKey(row, index)]).length;
+    const summary = document.getElementById('adminRoomSummary');
+    if (summary) summary.textContent = `예약 ${visible.length}건 / 선택 ${checked}건`;
+
+    if (!adminRoomReservations.length) {
+        wrap.innerHTML = `<div style="padding:18px; color:#666;">예약일을 선택한 뒤 <b>예약 불러오기</b>를 눌러주세요.</div>`;
+        return;
+    }
+
+    if (!visible.length) {
+        wrap.innerHTML = `<div style="padding:18px; color:#666;">조건에 맞는 예약이 없습니다.</div>`;
+        return;
+    }
+
+    let html = `<table class="admin-table"><thead><tr>
+        <th style="width:44px;">선택</th>
+        <th>예약일</th><th>학생명</th><th>전화뒷자리</th><th>연습실</th><th>시간</th><th>상태</th><th>메모</th><th style="min-width:280px;">알림톡</th>
+    </tr></thead><tbody>`;
+
+    visible.forEach(({ row, index }) => {
+        const key = adminRoomRowKey(row, index);
+        html += `<tr>
+            <td><input type="checkbox" ${adminRoomSelectedMap[key] ? 'checked' : ''} onchange="adminToggleRoomReservation(${index}, this.checked)"></td>
+            <td>${escapeHtml(row.date || '')}</td>
+            <td><b>${escapeHtml(row.studentName || '')}</b></td>
+            <td>${escapeHtml(row.phoneLast4 || '')}</td>
+            <td>${escapeHtml(row.room || '')}</td>
+            <td>${escapeHtml(row.time || '')}</td>
+            <td><span class="admin-status-badge">${escapeHtml(row.status || '예약')}</span></td>
+            <td>${escapeHtml(row.memo || '')}</td>
+            <td>
+              <button type="button" class="admin-btn" style="padding:8px 10px; font-size:12px;" onclick="adminSendRoomReservationMessage(${index}, 'confirm')">사용확인</button>
+              <button type="button" class="admin-btn red" style="padding:8px 10px; font-size:12px;" onclick="adminSendRoomReservationMessage(${index}, 'unavailable')">사용불가</button>
+              <button type="button" class="admin-btn orange" style="padding:8px 10px; font-size:12px;" onclick="adminSendRoomReservationMessage(${index}, 'change')">장소·시간 변경</button>
+            </td>
+        </tr>`;
+    });
+
+    html += `</tbody></table>`;
+    wrap.innerHTML = html;
+}
+
+function adminToggleRoomReservation(index, checked) {
+    const row = adminRoomReservations[index];
+    if (!row) return;
+    adminRoomSelectedMap[adminRoomRowKey(row, index)] = !!checked;
+    adminRenderRoomReservationTable();
+}
+
+function adminSelectAllRoomReservations(checked) {
+    adminVisibleRoomReservations().forEach(({ row, index }) => {
+        adminRoomSelectedMap[adminRoomRowKey(row, index)] = !!checked;
+    });
+    adminRenderRoomReservationTable();
+}
+
+function adminSelectedRoomReservations() {
+    return adminRoomReservations
+        .map((row, index) => ({ row, index }))
+        .filter(({ row, index }) => adminRoomSelectedMap[adminRoomRowKey(row, index)]);
+}
+
+async function adminSendSelectedRoomReservationMessages(actionType) {
+    const selected = adminSelectedRoomReservations();
+    if (!selected.length) return alert('선택된 예약이 없습니다.');
+
+    const option = adminCollectRoomMessageOptions(actionType, selected.length);
+    if (!option) return;
+
+    const names = selected.slice(0, 5).map(x => x.row.studentName).join(', ');
+    const more = selected.length > 5 ? ` 외 ${selected.length - 5}명` : '';
+    if (!confirm(`선택한 ${selected.length}건의 연습실 예약 알림톡을 발송할까요?\n\n대상: ${names}${more}\n구분: ${adminRoomActionLabel(actionType)}`)) return;
+
+    let success = 0;
+    let failed = 0;
+    const errors = [];
+
+    showLoading(`연습실 알림톡 발송 중... 0 / ${selected.length}`);
+    for (let i = 0; i < selected.length; i++) {
+        try {
+            showLoading(`연습실 알림톡 발송 중... ${i + 1} / ${selected.length}`);
+            await adminSendRoomReservationMessage(selected[i].index, actionType, option, true);
+            success++;
+        } catch (e) {
+            failed++;
+            errors.push(`${selected[i].row.studentName}: ${e.message || e}`);
+        }
+    }
+    hideLoading();
+    alert(`연습실 알림톡 발송 완료\n\n성공: ${success}건\n실패: ${failed}건${errors.length ? '\n\n확인 필요:\n' + errors.slice(0, 5).join('\n') : ''}`);
+}
+
+function adminCollectRoomMessageOptions(actionType, count = 1) {
+    const option = {};
+    if (actionType === 'unavailable') {
+        const reason = prompt('연습실 사용불가 사유를 입력해주세요.', '학원 사정');
+        if (reason === null) return null;
+        option.reason = reason.trim() || '학원 사정';
+    }
+    if (actionType === 'change') {
+        const defaultDate = adminRoomDateValue();
+        const newDate = prompt('변경된 예약일을 입력해주세요.', defaultDate);
+        if (newDate === null) return null;
+        const newRoom = prompt('변경된 연습실/장소를 입력해주세요.', '');
+        if (newRoom === null) return null;
+        const newTime = prompt('변경된 시간을 입력해주세요. 예: 15:00~16:00', '');
+        if (newTime === null) return null;
+        option.newDate = newDate.trim() || defaultDate;
+        option.newRoom = newRoom.trim();
+        option.newTime = newTime.trim();
+        if (!option.newRoom || !option.newTime) {
+            alert('변경 연습실과 변경 시간을 모두 입력해야 합니다.');
+            return null;
+        }
+    }
+    return option;
+}
+
+function adminRoomActionLabel(actionType) {
+    if (actionType === 'unavailable') return '연습실 사용불가';
+    if (actionType === 'change') return '장소·시간 변경';
+    return '연습실 사용확인';
+}
+
+async function adminSendRoomReservationMessage(index, actionType, option = null, silent = false) {
+    if (!adminIsFullAdmin()) throw new Error('연습실 예약 알림은 관리자 권한에서만 가능합니다.');
+    const row = adminRoomReservations[index];
+    if (!row) throw new Error('예약 정보를 찾지 못했습니다.');
+
+    const recipientTypes = adminGetRoomRecipientTypes();
+    if (!recipientTypes.length) throw new Error('수신 대상을 선택해주세요.');
+
+    let opt = option;
+    if (!opt) {
+        opt = adminCollectRoomMessageOptions(actionType, 1);
+        if (!opt) return;
+        if (!confirm(`${row.studentName} 학생에게 ${adminRoomActionLabel(actionType)} 알림톡을 발송할까요?\n\n예약일: ${row.date}\n연습실: ${row.room}\n시간: ${row.time}\n수신: ${recipientTypes.join(', ')}`)) return;
+    }
+
+    const params = Object.assign({
+        adminToken,
+        roomAction: actionType,
+        recipientTypes: recipientTypes.join(','),
+        reservationJson: JSON.stringify(row.raw || row)
+    }, opt || {});
+
+    if (!silent) showLoading('연습실 알림톡 발송 중...');
+    try {
+        const data = await adminApi('adminSendRoomReservationMessage', params);
+        if (!silent) {
+            hideLoading();
+            alert(data.message || '연습실 알림톡 발송 요청이 완료되었습니다.');
+        }
+        return data;
+    } catch (e) {
+        if (!silent) {
+            hideLoading();
+            alert(e.message || '연습실 알림톡 발송에 실패했습니다.');
+        }
+        throw e;
+    }
+}
+
 function showAdminPanel(panelId) {
     const isFull = adminIsFullAdmin();
 
@@ -4264,12 +4600,17 @@ function showAdminPanel(panelId) {
         panelId = 'adminPanelAttendance';
     }
 
+    if (panelId === 'adminPanelRoom' && !isFull) {
+        alert('연습실 예약 알림은 관리자 권한에서만 접근할 수 있습니다.');
+        panelId = 'adminPanelAttendance';
+    }
+
     if (panelId === 'adminPanelStudents' && !isFull) {
         panelId = 'adminPanelAttendance';
     }
 
     document.querySelectorAll('.admin-subtab').forEach(btn => {
-        const isHiddenTeacherTab = !isFull && (btn.dataset.adminPanel === 'adminPanelStudents' || btn.dataset.adminPanel === 'adminPanelPayment');
+        const isHiddenTeacherTab = !isFull && (btn.dataset.adminPanel === 'adminPanelStudents' || btn.dataset.adminPanel === 'adminPanelPayment' || btn.dataset.adminPanel === 'adminPanelRoom');
         if (isHiddenTeacherTab) btn.style.display = 'none';
         btn.classList.toggle('active', btn.dataset.adminPanel === panelId);
     });
@@ -4291,6 +4632,12 @@ function showAdminPanel(panelId) {
         adminLoadClassList(document.getElementById('adminDailyEvalDate')?.value || '', false);
         if (!adminDailyEvalTemplateLoaded) adminLoadDailyEvalTemplate();
         adminRenderDailyEvalTable();
+    }
+
+    if (panelId === 'adminPanelRoom' && isFull) {
+        adminInitDates();
+        if (!adminRoomReservations.length) adminLoadRoomReservations(false, false);
+        else adminRenderRoomReservationTable();
     }
 }
 
