@@ -1114,7 +1114,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
 
         <div class="admin-subtabs">
           <button type="button" class="admin-subtab active" id="adminStudentsSubtab" data-admin-panel="adminPanelStudents" onclick="showAdminPanel('adminPanelStudents')">학생검색</button>
-          <button type="button" class="admin-subtab" id="adminAttendanceSubtab" data-admin-panel="adminPanelAttendance" onclick="showAdminPanel('adminPanelAttendance')">출석부 확인/문자</button>
+          <button type="button" class="admin-subtab" id="adminAttendanceSubtab" data-admin-panel="adminPanelAttendance" onclick="showAdminPanel('adminPanelAttendance')">출석부 확인/발송</button>
           <button type="button" class="admin-subtab" data-admin-panel="adminPanelDailyEval" onclick="showAdminPanel('adminPanelDailyEval')">수업 일일평가</button>
           <button type="button" class="admin-subtab admin-full-only" data-admin-panel="adminPanelPayment" onclick="showAdminPanel('adminPanelPayment')">결제관리</button>
         </div>
@@ -1132,7 +1132,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
 
         <div id="adminPanelAttendance" class="admin-panel">
           <div class="admin-card">
-            <h3 id="adminAttendancePanelTitle" style="margin-top:0;">출석부 확인 / 출결 문자 발송</h3>
+            <h3 id="adminAttendancePanelTitle" style="margin-top:0;">출석부 확인 / 출결 발송</h3>
             <p style="font-size:14px; color:#666; line-height:1.6; margin-top:-4px;">
               강사들이 기존 출석부 시트에 O/X/지각 등을 입력하면, 이 화면에서 해당 데이터를 불러와 확인한 뒤 선택 발송합니다.
             </p>
@@ -1173,18 +1173,24 @@ body.admin-mode .admin-only-tab { display:block !important; }
             </div>
 
             <div class="admin-recipient-row admin-full-only">
-              <b style="width:100%; color:#111827;">문자 수신 대상</b>
+              <b style="width:100%; color:#111827;">수신 대상</b>
               <label><input type="checkbox" id="attRecipientStudent" checked> 학생</label>
               <label><input type="checkbox" id="attRecipientParent" checked> 학부모</label>
               <label><input type="checkbox" id="attRecipientInstructor"> 담당강사</label>
               <label><input type="checkbox" id="attRecipientAdmin"> 관리자</label>
-              <div class="admin-permission-note admin-teacher-note" style="display:none; width:100%;">강사 권한은 문자 발송이 제한됩니다. 출석 확인과 일일평가 저장만 가능합니다.</div>
+              <div style="width:100%; border-top:1px solid #e5e7eb; padding-top:10px; margin-top:4px;">
+                <b style="display:block; color:#111827; margin-bottom:6px;">발송 방식</b>
+                <label><input type="radio" name="attendanceSendChannel" value="alimtalk" checked> 알림톡</label>
+                <label><input type="radio" name="attendanceSendChannel" value="sms"> 문자(SMS/LMS)</label>
+                <div class="admin-permission-note">알림톡은 승인된 템플릿 ID가 필요하고, 문자는 SOLAPI 발신번호 등록이 필요합니다.</div>
+              </div>
+              <div class="admin-permission-note admin-teacher-note" style="display:none; width:100%;">강사 권한은 발송이 제한됩니다. 출석 확인과 일일평가 저장만 가능합니다.</div>
             </div>
 
             <div class="admin-btn-row">
               <button type="button" class="admin-btn blue" onclick="adminLoadAttendanceSnapshot()">출석부 반영</button>
-              <button type="button" class="admin-btn orange admin-full-only" onclick="adminPreviewAttendanceMessages()">문자 미리보기</button>
-              <button type="button" class="admin-btn red admin-full-only" onclick="adminSendAttendanceMessages()">선택 문자 발송</button>
+              <button type="button" class="admin-btn orange admin-full-only" onclick="adminPreviewAttendanceMessages()">발송 미리보기</button>
+              <button type="button" class="admin-btn red admin-full-only" onclick="adminSendAttendanceMessages()">선택 발송</button>
             </div>
             <div id="adminAttendanceSummary" style="font-size:13px; color:#666; margin:10px 0;"></div>
             <div id="adminAttendanceTableWrap" class="admin-table-wrap"></div>
@@ -1230,17 +1236,23 @@ body.admin-mode .admin-only-tab { display:block !important; }
             </div>
 
             <div class="admin-recipient-row admin-full-only">
-              <b style="width:100%; color:#111827;">평가 문자 수신 대상</b>
+              <b style="width:100%; color:#111827;">평가 수신 대상</b>
               <label><input type="checkbox" id="dailyRecipientStudent"> 학생</label>
               <label><input type="checkbox" id="dailyRecipientParent" checked> 학부모</label>
               <label><input type="checkbox" id="dailyRecipientInstructor"> 담당강사</label>
               <label><input type="checkbox" id="dailyRecipientAdmin"> 관리자</label>
+              <div style="width:100%; border-top:1px solid #e5e7eb; padding-top:10px; margin-top:4px;">
+                <b style="display:block; color:#111827; margin-bottom:6px;">발송 방식</b>
+                <label><input type="radio" name="dailySendChannel" value="alimtalk" checked> 알림톡</label>
+                <label><input type="radio" name="dailySendChannel" value="sms"> 문자(SMS/LMS)</label>
+                <div class="admin-permission-note">일일평가 알림톡은 승인된 평가 템플릿이 필요합니다.</div>
+              </div>
             </div>
             <div class="admin-btn-row">
               <button type="button" class="admin-btn blue" onclick="adminLoadDailyEvalStudents()">현재 반 학생 불러오기</button>
               <button type="button" class="admin-btn" onclick="adminSaveDailyEvaluations(false)">평가 저장</button>
-              <button type="button" class="admin-btn orange admin-full-only" onclick="adminPreviewDailyEvalMessages()">문자 미리보기</button>
-              <button type="button" class="admin-btn red admin-full-only" onclick="adminSaveDailyEvaluations(true)">저장 후 문자발송</button>
+              <button type="button" class="admin-btn orange admin-full-only" onclick="adminPreviewDailyEvalMessages()">발송 미리보기</button>
+              <button type="button" class="admin-btn red admin-full-only" onclick="adminSaveDailyEvaluations(true)">저장 후 발송</button>
             </div>
             <div id="adminDailyEvalTableWrap" class="admin-table-wrap"></div>
             <div id="adminDailyEvalPreview" class="admin-message-preview" style="display:none;"></div>
@@ -1282,15 +1294,19 @@ body.admin-mode .admin-only-tab { display:block !important; }
               <label for="paymentMemoInput">메모</label>
               <textarea id="paymentMemoInput" rows="3" placeholder="할인, 반 변경, 특이사항 등"></textarea>
             </div>
-            <label class="notice-check-label" style="margin:8px 0 12px;">
-              <input type="checkbox" id="paymentSendSmsCheck" checked>
-              결제 확인 문자 발송
-            </label>
+            <div class="admin-recipient-row admin-full-only" style="margin:8px 0 12px;">
+              <label style="width:100%;"><input type="checkbox" id="paymentSendSmsCheck" checked> 결제 확인 발송</label>
+              <div style="width:100%; border-top:1px solid #e5e7eb; padding-top:10px; margin-top:4px;">
+                <b style="display:block; color:#111827; margin-bottom:6px;">발송 방식</b>
+                <label><input type="radio" name="paymentSendChannel" value="alimtalk" checked> 알림톡</label>
+                <label><input type="radio" name="paymentSendChannel" value="sms"> 문자(SMS/LMS)</label>
+              </div>
+            </div>
             <div class="admin-btn-row">
               <button type="button" class="admin-btn" onclick="adminSavePayment()">결제 등록</button>
             </div>
             <p style="font-size:13px; color:#888; line-height:1.6;">
-              현재 수정본은 결제 내역을 <b>웹결제기록</b> 시트에 저장하고 결제 확인 문자를 발송합니다.
+              현재 수정본은 결제 내역을 <b>웹결제기록</b> 시트에 저장하고 결제 확인 메시지를 발송합니다.
               수입최종 시트 자동 체크는 수입최종 스프레드시트 ID와 열 구조가 확정되면 바로 연결하면 됩니다.
             </p>
           </div>
@@ -3046,9 +3062,9 @@ function applyAdminPermissions() {
     if (!isFull && studentsPanel) studentsPanel.classList.remove('active');
 
     const attendanceTab = document.querySelector('.admin-subtab[data-admin-panel="adminPanelAttendance"]');
-    if (attendanceTab) attendanceTab.textContent = isFull ? '출석부 확인/문자' : '출석부 확인';
+    if (attendanceTab) attendanceTab.textContent = isFull ? '출석부 확인/발송' : '출석부 확인';
     const attendanceTitle = document.getElementById('adminAttendancePanelTitle');
-    if (attendanceTitle) attendanceTitle.textContent = isFull ? '출석부 확인 / 출결 문자 발송' : '출석부 확인';
+    if (attendanceTitle) attendanceTitle.textContent = isFull ? '출석부 확인 / 출결 발송' : '출석부 확인';
 
     const paymentPanel = document.getElementById('adminPanelPayment');
     const paymentTab = document.querySelector('.admin-subtab[data-admin-panel="adminPanelPayment"]');
@@ -3582,31 +3598,46 @@ function buildAttendanceMessageText(record) {
 }
 
 
+
+function adminGetSendChannel(kind) {
+    const name = kind + 'SendChannel';
+    const checked = document.querySelector(`input[name="${name}"]:checked`);
+    return checked ? checked.value : 'alimtalk';
+}
+
+function adminGetSendChannelLabel(channel) {
+    return channel === 'sms' ? '문자(SMS/LMS)' : '알림톡';
+}
+
 function adminPreviewAttendanceMessages() {
-    if (!adminIsFullAdmin()) return alert('문자 미리보기와 발송은 관리자 권한에서만 가능합니다.');
+    if (!adminIsFullAdmin()) return alert('발송 미리보기와 발송은 관리자 권한에서만 가능합니다.');
     const records = adminGetSelectedAttendanceRecords();
     const recipientTypes = adminGetRecipientTypes('attendance');
     const preview = document.getElementById('adminAttendanceMessagePreview');
     if (!records.length) return alert('선택된 출석 데이터가 없습니다.');
-    if (!recipientTypes.length) return alert('문자 수신 대상을 1개 이상 선택해주세요.');
-    const lines = records.map(r => `[${r.studentName} / ${r.status}]\n수신대상: ${recipientTypes.join(', ')}\n${buildAttendanceMessageText(r)}`);
+    if (!recipientTypes.length) return alert('수신 대상을 1개 이상 선택해주세요.');
+    const sendChannel = adminGetSendChannel('attendance');
+    const channelLabel = adminGetSendChannelLabel(sendChannel);
+    const lines = records.map(r => `[${r.studentName} / ${r.status}]\n발송방식: ${channelLabel}\n수신대상: ${recipientTypes.join(', ')}\n${buildAttendanceMessageText(r)}`);
     preview.textContent = lines.join('\n\n--------------------\n\n');
     preview.style.display = 'block';
 }
 
 async function adminSendAttendanceMessages() {
-    if (!adminIsFullAdmin()) return alert('문자 발송은 관리자 권한에서만 가능합니다.');
+    if (!adminIsFullAdmin()) return alert('발송은 관리자 권한에서만 가능합니다.');
     const records = adminGetSelectedAttendanceRecords();
     const recipientTypes = adminGetRecipientTypes('attendance');
     if (!records.length) return alert('선택된 출석 데이터가 없습니다.');
-    if (!recipientTypes.length) return alert('문자 수신 대상을 선택해주세요.');
-    if (!confirm(`선택한 ${records.length}명의 출결 문자를 [${recipientTypes.join(', ')}]에게 발송할까요?`)) return;
+    if (!recipientTypes.length) return alert('수신 대상을 선택해주세요.');
+    const sendChannel = adminGetSendChannel('attendance');
+    const channelLabel = adminGetSendChannelLabel(sendChannel);
+    if (!confirm(`선택한 ${records.length}명의 출결 메시지를 [${recipientTypes.join(', ')}]에게 ${channelLabel}으로 발송할까요?`)) return;
     try {
-        showLoading('출결 문자 발송 중...');
+        showLoading(`출결 ${channelLabel} 발송 중...`);
         // 미리보기에서 본 문구와 실제 발송 문구가 달라지지 않도록
         // 각 행의 최종 문자문구를 messageText로 함께 GAS에 전달합니다.
         const sendRecords = records.map(r => ({ ...r, messageText: buildAttendanceMessageText(r) }));
-        const data = await adminApi('adminSendSelectedAttendanceMessages', { adminToken, recipientTypes: recipientTypes.join(','), records: JSON.stringify(sendRecords) });
+        const data = await adminApi('adminSendSelectedAttendanceMessages', { adminToken, recipientTypes: recipientTypes.join(','), sendChannel, records: JSON.stringify(sendRecords) });
         hideLoading();
         alert(data.message || `처리 완료: ${data.count || 0}건`);
     } catch (e) {
@@ -3865,28 +3896,29 @@ function adminGetSelectedDailyRows() {
 }
 
 function adminPreviewDailyEvalMessages() {
-    if (!adminIsFullAdmin()) return alert('일일평가 문자 미리보기와 발송은 관리자 권한에서만 가능합니다.');
+    if (!adminIsFullAdmin()) return alert('일일평가 발송 미리보기와 발송은 관리자 권한에서만 가능합니다.');
     const rows = adminGetSelectedDailyRows();
     const recipientTypes = adminGetRecipientTypes('daily');
     const preview = document.getElementById('adminDailyEvalPreview');
     if (!rows.length) return alert('저장/발송할 일일평가 내용이 없습니다.');
-    if (!recipientTypes.length) return alert('문자 수신 대상을 선택해주세요.');
-    preview.textContent = rows.map(r => `[${r.studentName}]
-수신대상: ${recipientTypes.join(', ')}
-${r.evaluation}
-- 울림연기학원`).join('\n\n--------------------\n\n');
+    if (!recipientTypes.length) return alert('수신 대상을 선택해주세요.');
+    const sendChannel = adminGetSendChannel('daily');
+    const channelLabel = adminGetSendChannelLabel(sendChannel);
+    preview.textContent = rows.map(r => `[${r.studentName}]\n발송방식: ${channelLabel}\n수신대상: ${recipientTypes.join(', ')}\n${r.evaluation}\n- 울림연기학원`).join('\n\n--------------------\n\n');
     preview.style.display = 'block';
 }
 
 async function adminSaveDailyEvaluations(sendSms = false) {
-    if (sendSms && !adminIsFullAdmin()) return alert('문자 발송은 관리자 권한에서만 가능합니다.');
+    if (sendSms && !adminIsFullAdmin()) return alert('발송은 관리자 권한에서만 가능합니다.');
     const rows = adminGetSelectedDailyRows();
     const recipientTypes = adminGetRecipientTypes('daily');
     if (!rows.length) return alert('저장할 일일평가 내용이 없습니다.');
-    if (sendSms && !recipientTypes.length) return alert('문자 수신 대상을 선택해주세요.');
-    if (sendSms && !confirm(`일일평가를 저장하고 [${recipientTypes.join(', ')}]에게 문자 발송할까요?`)) return;
+    if (sendSms && !recipientTypes.length) return alert('수신 대상을 선택해주세요.');
+    const sendChannel = adminGetSendChannel('daily');
+    const channelLabel = adminGetSendChannelLabel(sendChannel);
+    if (sendSms && !confirm(`일일평가를 저장하고 [${recipientTypes.join(', ')}]에게 ${channelLabel}으로 발송할까요?`)) return;
     try {
-        showLoading(sendSms ? '일일평가 저장 및 문자 발송 중...' : '일일평가 저장 중...');
+        showLoading(sendSms ? `일일평가 저장 및 ${channelLabel} 발송 중...` : '일일평가 저장 중...');
         const compactRows = rows.map(r => ({
             date: r.date || '',
             className: r.className || '',
@@ -3900,7 +3932,7 @@ async function adminSaveDailyEvaluations(sendSms = false) {
             memo: r.memo || '',
             evaluation: r.evaluation || ''
         }));
-        const data = await adminPostNoCors('adminSaveDailyEvaluations', { adminToken, rows: JSON.stringify(compactRows), sendSms: sendSms ? 'Y' : 'N', recipientTypes: recipientTypes.join(',') });
+        const data = await adminPostNoCors('adminSaveDailyEvaluations', { adminToken, rows: JSON.stringify(compactRows), sendSms: sendSms ? 'Y' : 'N', sendChannel, recipientTypes: recipientTypes.join(',') });
         hideLoading();
         const date = document.getElementById('adminDailyEvalDate')?.value || getTodayInputValue();
         const className = document.getElementById('adminDailyEvalClass')?.value.trim() || '';
@@ -3933,10 +3965,11 @@ async function adminSavePayment() {
     const date = document.getElementById('paymentDateInput').value || getTodayInputValue();
     const memo = document.getElementById('paymentMemoInput').value.trim();
     const sendSms = document.getElementById('paymentSendSmsCheck').checked ? 'Y' : 'N';
+    const sendChannel = adminGetSendChannel('payment');
     if (!studentNameValue || !month || !amount) return alert('학생명, 수강월, 결제금액을 입력해주세요.');
     try {
-        showLoading('결제 등록 중...');
-        const data = await adminApi('adminSavePayment', { adminToken, studentName: studentNameValue, studentPhone: student.studentPhone || '', parentPhone: student.parentPhone || '', month, amount, method, date, memo, sendSms });
+        showLoading(sendSms === 'Y' ? `결제 등록 및 ${adminGetSendChannelLabel(sendChannel)} 발송 중...` : '결제 등록 중...');
+        const data = await adminApi('adminSavePayment', { adminToken, studentName: studentNameValue, studentPhone: student.studentPhone || '', parentPhone: student.parentPhone || '', month, amount, method, date, memo, sendSms, sendChannel });
         hideLoading();
         alert(data.message || '결제 등록이 완료되었습니다.');
     } catch (e) {
