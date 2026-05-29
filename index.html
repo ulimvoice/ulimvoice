@@ -5,7 +5,7 @@
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780046248858&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000009a00720bb700192a89b5535d%26ts%3D494459%26p%3Dfs%26cid%3D1%26sig%3D65e4e416c17afa4ca23eee2b2f403cd353f520431788996ee3d2715c3e31013b%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
+<script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780046248858&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000fdf0720ba797df49a9ac7c4d%26fn%3Dindex_notice_fullclass_final.html%26cd%3Dattachment%26ts%3D494459%26p%3Dfs%26cid%3D1%26sig%3D361324c57aeaf750fb44f51f570292f3d4fb0521a412085fa11c1ded0f4087bc%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
 <script src="appdata/vocalization/data.js"></script>
 <script src="appdata/past_questions/data.js"></script>
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -1117,8 +1117,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
         </div>
 
         <div id="adminPanelStudents" class="admin-panel active">
-          <div class="admin-card">
-			  <div class="admin-card" style="display:none;">
+          <div class="admin-card" style="display:none;">
             <h3 style="margin-top:0;">학생 검색</h3>
             <div class="admin-field">
               <label for="adminStudentSearch">학생명 / 전화번호 / 담당강사 검색</label>
@@ -1126,7 +1125,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
             </div>
             <div id="adminStudentTableWrap" class="admin-table-wrap"></div>
           </div>
-		  </div>
+
           <div class="admin-card admin-full-only" style="margin-top:16px;">
             <h3 style="margin-top:0;">전체 공지 발송</h3>
             <p style="font-size:14px; color:#666; line-height:1.6; margin-top:-4px;">
@@ -3026,6 +3025,39 @@ let adminInfo = (() => {
 let adminStudents = [];
 let adminNoticeTargetRows = [];
 let adminNoticeSelectedMap = {};
+
+// 학생검색 탭 > 전체 공지 발송용 전체 반 목록입니다.
+// 날짜 기준 출석부가 아니라 학원 전체 개설반 기준으로 항상 표시합니다.
+const ADMIN_NOTICE_FIXED_CLASS_LIST = [
+  "[김하은T] 토요일 초등 더빙반 (10:30~12:00)",
+  "[김하은T] 토요일 청소년 초중급 (12:30~14:30)",
+  "[박소연T] 토요일 청소년 초급A (11:00~13:00)",
+  "[박소연T] 토요일 청소년 초급B (14:00~16:00)",
+  "[박소연T] 일요일 중고등 기초 (13:00~15:00)",
+  "[양슬기T] 토요일 발음/리딩반 (13:00~15:00)",
+  "[양슬기T] 일요일 청소년 기초 (13:30~15:30)",
+  "[이용우T] 수요일 청소년 기초 (17:00~19:00)",
+  "[이용우T] 토요일 청소년 초급B (10:00~12:00)",
+  "[이용우T] 토요일 청소년 중급A (15:00~17:00)",
+  "[이용우T] 일요일 청소년 중급C (13:00~15:00)",
+  "[최봄결T] 토요일 청소년 초중급 (11:00~13:00)",
+  "[최봄결T] 일요일 청소년 중급B (11:00~13:00)",
+  "[강호철T] 금요일 공채입문 (19:00~22:00)",
+  "[강호철T] 일요일 애니메이션 더빙반 (15:00~18:00)",
+  "[김인혁T] 월요일 낭독반 (19:00~21:00)",
+  "[김인혁T] 목요일 연기 기초 (19:00~22:00)",
+  "[박성광T] 토요일 연기 기초 A반 (13:00~16:00)",
+  "[박성광T] 토요일 연기 기초 B반 (17:00~20:00)",
+  "[박승기T] 일요일 연기 기초 (13:00~16:00)",
+  "[박주광T] 화요일 공채 입문 (19:00~22:00)",
+  "[안수현T] 수요일 공채입문 (19:00~22:00)",
+  "[안수현T] 토요일 연기 기초 A반 (13:00~16:00)",
+  "[안수현T] 토요일 연기 기초 B반 (17:00~20:00)",
+  "[이용우T] 화요일 스피치 (19:00~21:00)",
+  "[이용우T] 목요일 연기기초 (19:00~21:00)",
+  "[이용우T] 토요일 연기기초 (13:00~15:00)",
+  "[최현식T] 목요일 연기기초 (19:00~22:00)"
+];
 let adminClassList = [];
 let adminAttendanceRecords = [];
 let adminDailyEvalRows = [];
@@ -3491,6 +3523,14 @@ function adminToggleClassCombo(inputId, panelId) {
     adminRenderClassPicker(inputId, panelId);
 }
 
+
+function extractTeacherFromClassNameForNotice_(className) {
+    const text = String(className || '').trim();
+    const m = text.match(/\[([^\]]+?)T\]/);
+    if (m && m[1]) return m[1];
+    return '';
+}
+
 function adminBuildNoticeClassList() {
     const map = new Map();
 
@@ -3504,6 +3544,12 @@ function adminBuildNoticeClassList() {
         }
     }
 
+    // 1) 고정 전체 반 목록: 날짜와 관계없이 항상 먼저 표시
+    (ADMIN_NOTICE_FIXED_CLASS_LIST || []).forEach(name => {
+        addClass(name, extractTeacherFromClassNameForNotice_(name));
+    });
+
+    // 2) 출석부/학생부에서 추가로 발견되는 반도 병합
     (adminClassList || []).forEach(c => addClass(c.className, c.teacher));
 
     (adminStudents || []).forEach(s => {
