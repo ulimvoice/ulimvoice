@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>울림연기학원 등하원 체크</title>
+  <title>울림연기학원 등하원 체크 v61</title>
   <style>
     :root {
       --green: #16a34a;
@@ -407,6 +407,44 @@
       to { transform: scale(1); opacity: 1; }
     }
 
+
+    .ad-click-hint {
+      position: absolute;
+      right: 20px;
+      top: 18px;
+      color: #cbd5e1;
+      font-size: 13px;
+      font-weight: 800;
+      opacity: .75;
+      background: rgba(255,255,255,.08);
+      padding: 8px 12px;
+      border-radius: 999px;
+      pointer-events: none;
+    }
+
+    .ad-nav-row {
+      position: absolute;
+      right: 20px;
+      bottom: 58px;
+      display: flex;
+      gap: 8px;
+      z-index: 20;
+    }
+
+    .ad-nav-btn {
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.14);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 900;
+      border: 1px solid rgba(255,255,255,.14);
+    }
+
+    .ad-nav-btn:hover {
+      background: rgba(255,255,255,.22);
+    }
+
     @media (max-width: 900px) {
       body {
         grid-template-columns: 1fr;
@@ -466,15 +504,20 @@
     </div>
   </section>
 
-  <section class="right">
+  <section class="right" onclick="handleAdAreaClick(event)" title="클릭하면 다음 홍보자료로 넘어갑니다.">
     <div class="ad-wrap">
       <h2 class="ad-title" id="adTitle">홍보 영상</h2>
       <div class="ad-box" id="adBox">
         <div class="ad-text">홍보 자료를 불러오는 중입니다.</div>
       </div>
     </div>
+    <div class="ad-click-hint">홍보 영역 클릭 시 다음</div>
     <div class="slide-count" id="slideCount">1 / 1</div>
-    <button class="fullscreen-btn" onclick="toggleFullscreen()">전체화면</button>
+    <div class="ad-nav-row">
+      <button class="ad-nav-btn" onclick="event.stopPropagation(); prevAdSlide(true);">이전</button>
+      <button class="ad-nav-btn" onclick="event.stopPropagation(); nextAdSlide(true);">다음</button>
+    </div>
+    <button class="fullscreen-btn" onclick="event.stopPropagation(); toggleFullscreen()">전체화면</button>
   </section>
 
   <div class="modal-backdrop" id="modalBackdrop" onclick="closeModalByBackdrop(event)">
@@ -803,9 +846,35 @@
       clearTimeout(adTimer);
       const seconds = Math.max(5, Number(slide.seconds || 10));
       adTimer = setTimeout(() => {
-        adIndex = (adIndex + 1) % adSlides.length;
-        renderAdSlide();
+        nextAdSlide(false);
       }, seconds * 1000);
+    }
+
+    function nextAdSlide(manual = true) {
+      if (!adSlides.length) return;
+      clearTimeout(adTimer);
+      adIndex = (adIndex + 1) % adSlides.length;
+      renderAdSlide();
+    }
+
+    function prevAdSlide(manual = true) {
+      if (!adSlides.length) return;
+      clearTimeout(adTimer);
+      adIndex = (adIndex - 1 + adSlides.length) % adSlides.length;
+      renderAdSlide();
+    }
+
+    function handleAdAreaClick(event) {
+      const tag = String((event.target && event.target.tagName) || "").toLowerCase();
+
+      // 버튼 클릭은 각 버튼의 onclick에서 처리합니다.
+      if (event.target && event.target.closest && event.target.closest("button")) return;
+
+      // iframe/video/img 자체 클릭은 재생/제어를 방해하지 않도록 제외합니다.
+      // 오른쪽 배경, 제목, 빈 영역을 누르면 다음 자료로 넘어갑니다.
+      if (["iframe", "video", "img"].includes(tag)) return;
+
+      nextAdSlide(true);
     }
 
     function extractYoutubeId(url) {
@@ -855,6 +924,8 @@
         closeModal();
       }
       if (event.key === "Enter") submitCheck("in");
+      if (event.key === "ArrowRight") nextAdSlide(true);
+      if (event.key === "ArrowLeft") prevAdSlide(true);
     });
   </script>
 </body>
