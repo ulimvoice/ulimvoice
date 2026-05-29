@@ -5,7 +5,7 @@
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780046248858&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000007194720b8fa54b14ab7f7800%26fn%3Dindex_admin_notice_checkbox_final.html%26cd%3Dattachment%26ts%3D494459%26p%3Dfs%26cid%3D1%26sig%3Df7735e3628f198ed6dac25c7ae912e58dc86dae8f2789e8f10da897cff45d1d3%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
+<script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780046248858&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000009a00720bb700192a89b5535d%26ts%3D494459%26p%3Dfs%26cid%3D1%26sig%3D65e4e416c17afa4ca23eee2b2f403cd353f520431788996ee3d2715c3e31013b%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
 <script src="appdata/vocalization/data.js"></script>
 <script src="appdata/past_questions/data.js"></script>
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -1129,8 +1129,28 @@ body.admin-mode .admin-only-tab { display:block !important; }
           <div class="admin-card admin-full-only" style="margin-top:16px;">
             <h3 style="margin-top:0;">전체 공지 발송</h3>
             <p style="font-size:14px; color:#666; line-height:1.6; margin-top:-4px;">
-              출석부 확인/발송처럼 반을 선택하거나 검색한 뒤 학생을 불러오고, 원하는 학생만 체크해서 공지를 발송합니다.
+              반을 선택하거나 검색한 뒤 학생을 불러오고, 원하는 학생만 체크해서 공지를 발송합니다.
             </p>
+
+            <div class="admin-field" style="margin-top:12px;">
+              <label for="noticeMessageText">공지 문구</label>
+              <textarea id="noticeMessageText"
+                class="admin-eval-textarea"
+                style="min-height:150px;"
+                placeholder="보낼 공지 내용을 입력하세요.&#10;&#10;사용 가능 치환어: [학생명], [반이름], [담당강사]"></textarea>
+            </div>
+
+            <div class="admin-recipient-row admin-full-only" style="padding:10px 12px; margin:10px 0 14px;">
+              <b style="color:#111827; margin-right:8px;">수신 대상</b>
+              <label><input type="checkbox" id="noticeRecipientStudent" checked onchange="adminPreviewNoticeCount();"> 학생</label>
+              <label><input type="checkbox" id="noticeRecipientParent" checked onchange="adminPreviewNoticeCount();"> 학부모</label>
+              <label><input type="checkbox" id="noticeRecipientInstructor" onchange="adminPreviewNoticeCount();"> 담당강사</label>
+              <label><input type="checkbox" id="noticeRecipientAdmin" onchange="adminPreviewNoticeCount();"> 관리자</label>
+              <span style="width:1px; height:22px; background:#e5e7eb; margin:0 4px;"></span>
+              <b style="color:#111827; margin-right:4px;">발송 방식</b>
+              <label><input type="radio" name="noticeSendChannel" value="alimtalk" checked onchange="adminPreviewNoticeCount();"> 알림톡</label>
+              <label><input type="radio" name="noticeSendChannel" value="sms" onchange="adminPreviewNoticeCount();"> 문자</label>
+            </div>
 
             <div class="admin-grid">
               <div class="admin-field">
@@ -1151,50 +1171,21 @@ body.admin-mode .admin-only-tab { display:block !important; }
               </div>
             </div>
 
-            <div class="admin-btn-row">
+            <div class="admin-btn-row" style="align-items:center;">
               <button type="button" class="admin-btn blue" onclick="adminLoadNoticeTargets(true)">대상 불러오기</button>
               <button type="button" class="admin-btn" onclick="adminLoadAllNoticeTargets()">전체학생 불러오기</button>
               <button type="button" class="admin-btn gray" onclick="adminSelectAllNoticeTargets(true)">전체선택</button>
               <button type="button" class="admin-btn gray" onclick="adminSelectAllNoticeTargets(false)">전체해제</button>
-            </div>
-
-            <div class="admin-recipient-row admin-full-only">
-              <b style="width:100%; color:#111827;">수신 대상</b>
-              <label><input type="checkbox" id="noticeRecipientStudent" checked onchange="adminPreviewNoticeCount();"> 학생</label>
-              <label><input type="checkbox" id="noticeRecipientParent" checked onchange="adminPreviewNoticeCount();"> 학부모</label>
-              <label><input type="checkbox" id="noticeRecipientInstructor" onchange="adminPreviewNoticeCount();"> 담당강사</label>
-              <label><input type="checkbox" id="noticeRecipientAdmin" onchange="adminPreviewNoticeCount();"> 관리자</label>
-
-              <div style="width:100%; border-top:1px solid #e5e7eb; padding-top:10px; margin-top:4px;">
-                <b style="display:block; color:#111827; margin-bottom:6px;">발송 방식</b>
-                <label><input type="radio" name="noticeSendChannel" value="alimtalk" checked> 알림톡</label>
-                <label><input type="radio" name="noticeSendChannel" value="sms"> 문자(SMS/LMS)</label>
-                <div class="admin-permission-note">
-                  알림톡은 승인된 공지 템플릿이 필요합니다. 문자 발송은 SOLAPI 문자 설정을 사용합니다.
-                </div>
-              </div>
-            </div>
-
-            <div class="admin-summary">
-              <span class="admin-chip" id="noticeTargetCount">공지 대상 0명</span>
-            </div>
-
-            <div id="noticeTargetTableWrap" class="admin-table-wrap" style="margin-top:12px;"></div>
-
-            <div class="admin-field" style="margin-top:16px;">
-              <label for="noticeMessageText">공지 문구</label>
-              <textarea id="noticeMessageText"
-                class="admin-eval-textarea"
-                style="min-height:180px;"
-                placeholder="보낼 공지 내용을 입력하세요.&#10;&#10;사용 가능 치환어: [학생명], [반이름], [담당강사]"></textarea>
-            </div>
-
-            <div class="admin-btn-row">
-              <button type="button" class="admin-btn blue" onclick="adminPreviewNoticeMessages()">공지 미리보기</button>
+              <button type="button" class="admin-btn orange" onclick="adminPreviewNoticeMessages()">공지 미리보기</button>
               <button type="button" class="admin-btn red" onclick="adminSendNoticeMessages()">공지 발송</button>
             </div>
 
+            <div class="admin-summary" style="margin-top:10px;">
+              <span class="admin-chip" id="noticeTargetCount">공지 대상 0명</span>
+            </div>
+
             <div id="noticeMessagePreview" class="admin-message-preview" style="display:none;"></div>
+            <div id="noticeTargetTableWrap" class="admin-table-wrap" style="margin-top:12px;"></div>
           </div>
         </div>
 
@@ -3499,6 +3490,37 @@ function adminToggleClassCombo(inputId, panelId) {
     adminRenderClassPicker(inputId, panelId);
 }
 
+function adminBuildNoticeClassList() {
+    const map = new Map();
+
+    function addClass(name, teacher = '') {
+        const clean = String(name || '').trim();
+        if (!clean || clean === '-' || clean === '없음') return;
+        const key = adminNoticeNormalize_(clean);
+        if (!key || key === '전체반') return;
+        if (!map.has(key)) {
+            map.set(key, { className: clean, teacher: teacher || '', source: 'students' });
+        }
+    }
+
+    (adminClassList || []).forEach(c => addClass(c.className, c.teacher));
+
+    (adminStudents || []).forEach(s => {
+        const teacher = s.instructor || s.instructorName || '';
+        [s.className, s.class, s.반명, s.memo].forEach(value => {
+            const raw = String(value || '').trim();
+            if (!raw) return;
+
+            // 여러 반이 쉼표/줄바꿈으로 들어온 경우도 분리
+            raw.split(/\n|,|;/).map(v => v.trim()).filter(Boolean).forEach(part => {
+                addClass(part, teacher);
+            });
+        });
+    });
+
+    return Array.from(map.values()).sort((a, b) => String(a.className).localeCompare(String(b.className), 'ko'));
+}
+
 function adminRenderClassPicker(inputId, panelId) {
     const panel = document.getElementById(panelId);
     const optionsBox = document.getElementById(panelId + 'Options');
@@ -3509,12 +3531,16 @@ function adminRenderClassPicker(inputId, panelId) {
     const query = normalizeClassSearchText(queryRaw);
     const selectedValue = document.getElementById(inputId)?.value || '';
 
-    let filtered = adminFilterClassListForRole(adminClassList)
+    const sourceList = inputId === 'noticeClass'
+        ? adminBuildNoticeClassList()
+        : adminFilterClassListForRole(adminClassList);
+
+    let filtered = sourceList
         .filter(c => {
             if (!query) return true;
             return normalizeClassSearchText(c.className).includes(query);
         })
-        .slice(0, 80);
+        .slice(0, 120);
 
     const allClassItem = { className: '전체반', teacher: '', source: 'virtual' };
     if (!query || normalizeClassSearchText('전체반').includes(query) || query.includes('전체')) {
@@ -3532,15 +3558,18 @@ function adminRenderClassPicker(inputId, panelId) {
     }
 
     if (!filtered.length && !queryRaw) {
-        html += '<div style="font-size:13px; color:#888; padding:12px;">반 목록이 없습니다. 수업일을 확인하거나 목록을 새로고침하세요.</div>';
+        html += inputId === 'noticeClass'
+            ? '<div style="font-size:13px; color:#888; padding:12px;">반 목록이 없습니다. 학생목록 새로고침을 먼저 눌러주세요.</div>'
+            : '<div style="font-size:13px; color:#888; padding:12px;">반 목록이 없습니다. 수업일을 확인하거나 목록을 새로고침하세요.</div>';
     } else if (!filtered.length) {
         html += '<div style="font-size:13px; color:#888; padding:12px;">검색 결과가 없습니다.</div>';
     } else {
         html += filtered.map(c => {
             const activeMark = c.className === selectedValue ? ' ✓' : '';
+            const teacher = c.teacher ? ` <span style="color:#64748b; font-weight:700;">/ ${escapeHtml(c.teacher)}</span>` : '';
             return `
                 <button type="button" class="admin-class-option" onclick="adminSelectClass('${escapeJsString(c.className)}', '${escapeJsString(inputId)}', '${escapeJsString(panelId)}')">
-                    ${escapeHtml(c.className)}${activeMark}
+                    ${escapeHtml(c.className)}${activeMark}${teacher}
                 </button>
             `;
         }).join('');
