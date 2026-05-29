@@ -442,112 +442,58 @@
       background: rgba(255,255,255,.22);
     }
 
-    @media (max-width: 900px) {
-      html, body {
-        height: auto;
-        min-height: 100%;
-        overflow-x: hidden;
-        overflow-y: auto;
-      }
+    @media (max-width: 1024px) {
 
-      body {
-        display: block;
-        min-height: 100vh;
-        background: #eef2f7;
-      }
+  html,
+  body {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
 
-      .left {
-        min-height: auto;
-        padding: 18px 16px 20px;
-        gap: 14px;
-      }
+  body {
+    display: flex;
+    flex-direction: column;
+    min-height: auto;
+    background: #eef2f7;
+  }
 
-      .top-row {
-        gap: 12px;
-      }
+  .left {
+    width: 100%;
+    max-width: 100%;
+    min-height: auto;
+  }
 
-      .title {
-        font-size: 21px;
-        line-height: 1.2;
-      }
+  .right {
+    width: 100%;
+    min-height: auto;
+    padding: 20px 12px 80px;
+    align-items: center;
+    justify-content: flex-start;
+  }
 
-      .clock-date {
-        font-size: 12px;
-      }
+  .ad-wrap {
+    width: 100%;
+    max-width: 100%;
+  }
 
-      .clock-time {
-        font-size: 20px;
-      }
+  .ad-box {
+    width: 100%;
+    min-height: 200px;
+  }
 
-      .card {
-        padding: 18px;
-        border-radius: 18px;
-      }
+  .ad-box img,
+  .ad-box video {
+    width: 100%;
+    height: auto;
+    max-height: 70vh;
+    object-fit: contain;
+  }
 
-      .input-title {
-        font-size: 17px;
-        margin-bottom: 12px;
-      }
-
-      .pin-display {
-        height: 54px;
-        font-size: 27px;
-        margin-bottom: 12px;
-      }
-
-      .num-btn {
-        height: 46px;
-        font-size: 20px;
-      }
-
-      .action-btn {
-        height: 56px;
-        font-size: 20px;
-      }
-
-      .status-card {
-        min-height: 180px;
-        padding: 22px 16px;
-      }
-
-      .status-card h2 {
-        font-size: 20px;
-      }
-
-      .status-card p {
-        font-size: 14px;
-      }
-
-      .right {
-        min-height: auto;
-        padding: 22px 14px 68px;
-        align-items: flex-start;
-        overflow: visible;
-      }
-
-      .ad-wrap {
-        width: 100%;
-        max-width: 100%;
-      }
-
-      .ad-title {
-        font-size: 27px;
-        margin-bottom: 16px;
-      }
-
-      .ad-box {
-        width: 100%;
-        min-height: 0;
-        max-height: none;
-        background: #020617;
-        border-radius: 16px;
-      }
-
-      .ad-box iframe {
-        width: 100%;
-        aspect-ratio: 16 / 9;
-        max-height: 58vh;
-      }
+  .ad-box iframe {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+  }
+}
 
       .ad-box img,
       .ad-box video {
