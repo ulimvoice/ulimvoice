@@ -1320,7 +1320,47 @@ body.admin-mode .admin-only-tab { display:block !important; }
     Copyright © 울림연기학원. All rights reserved.
 </footer>
 <script>
+/* ===========================
+   📲 PWA 설치 안내창
+   =========================== */
+let deferredPrompt = null;
+const PWA_HIDE_KEY = "ULIM_PWA_INSTALL_HIDE_FOREVER";
 
+window.addEventListener("beforeinstallprompt", function (e) {
+    if (localStorage.getItem(PWA_HIDE_KEY) === "Y") return;
+
+    e.preventDefault();
+    deferredPrompt = e;
+
+    setTimeout(function () {
+        showPwaInstallGuide();
+    }, 800);
+});
+
+function showPwaInstallGuide() {
+    if (!deferredPrompt) return;
+    if (localStorage.getItem(PWA_HIDE_KEY) === "Y") return;
+
+    alertPwaInstall();
+}
+
+function alertPwaInstall() {
+    const result = confirm(
+        "울림연기학원 앱을 홈 화면에 설치하면 더 편하게 사용할 수 있습니다.\n\n확인: 앱 설치하기\n취소: 나중에"
+    );
+
+    if (result) {
+        installPwa();
+    }
+}
+
+async function installPwa() {
+    if (!deferredPrompt) return;
+
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
+}
 // 🟢 헤더 로고 클릭 시 로그인 오버레이를 띄우는 함수 (추가)
 function showLoginOverlay() {
     // 메인 컨텐츠 숨기기
