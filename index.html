@@ -5,7 +5,7 @@
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780046248858&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000e120720baad24c455b552a36%26fn%3Dindex_admin_notice_final.html%26cd%3Dattachment%26ts%3D494458%26p%3Dfs%26cid%3D1%26sig%3D8ccc82b5704540965adcb36451d78816ec8a7fa353bfd73d2700ba067f2e1eea%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
+<script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780046248858&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000edb871f892ad34153960f522%26fn%3Dindex_pwa_admin_notice_final.html%26cd%3Dattachment%26ts%3D494459%26p%3Dfs%26cid%3D1%26sig%3D2f06518040994283d68205b5765061e69f04d50a65176866d06fb948cb473046%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
 <script src="appdata/vocalization/data.js"></script>
 <script src="appdata/past_questions/data.js"></script>
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -1126,44 +1126,65 @@ body.admin-mode .admin-only-tab { display:block !important; }
             <div id="adminStudentTableWrap" class="admin-table-wrap"></div>
           </div>
 
-          <div class="admin-card" style="margin-top:16px;">
+          <div class="admin-card admin-full-only" style="margin-top:16px;">
             <h3 style="margin-top:0;">전체 공지 발송</h3>
             <p style="font-size:14px; color:#666; line-height:1.6; margin-top:-4px;">
-              반/학생을 선택하거나 전체반/전체학생으로 공지를 발송할 수 있습니다.
+              반/학생을 선택하거나 검색해서 대상자를 정한 뒤, 공지 문구를 알림톡 또는 문자로 발송합니다.
             </p>
 
             <div class="admin-grid">
               <div class="admin-field">
                 <label for="noticeClassSelect">반 선택</label>
-                <select id="noticeClassSelect">
+                <select id="noticeClassSelect" onchange="renderNoticeStudentOptions(); adminPreviewNoticeCount();">
                   <option value="">전체반</option>
                 </select>
               </div>
 
               <div class="admin-field">
+                <label for="noticeClassKeyword">반 검색</label>
+                <input type="text" id="noticeClassKeyword" placeholder="반명 일부 입력" oninput="renderNoticeStudentOptions(); adminPreviewNoticeCount();">
+              </div>
+
+              <div class="admin-field">
                 <label for="noticeStudentSelect">학생 선택</label>
-                <select id="noticeStudentSelect">
+                <select id="noticeStudentSelect" onchange="adminPreviewNoticeCount();">
                   <option value="">전체학생</option>
                 </select>
+              </div>
+
+              <div class="admin-field">
+                <label for="noticeStudentKeyword">학생 검색</label>
+                <input type="text" id="noticeStudentKeyword" placeholder="학생명 또는 전화번호 일부 입력" oninput="adminPreviewNoticeCount();">
               </div>
             </div>
 
             <div class="admin-recipient-row admin-full-only">
               <b style="width:100%; color:#111827;">수신 대상</b>
-              <label><input type="checkbox" id="noticeRecipientStudent" checked> 학생</label>
-              <label><input type="checkbox" id="noticeRecipientParent" checked> 학부모</label>
+              <label><input type="checkbox" id="noticeRecipientStudent" checked onchange="adminPreviewNoticeCount();"> 학생</label>
+              <label><input type="checkbox" id="noticeRecipientParent" checked onchange="adminPreviewNoticeCount();"> 학부모</label>
+              <label><input type="checkbox" id="noticeRecipientInstructor" onchange="adminPreviewNoticeCount();"> 담당강사</label>
+              <label><input type="checkbox" id="noticeRecipientAdmin" onchange="adminPreviewNoticeCount();"> 관리자</label>
 
               <div style="width:100%; border-top:1px solid #e5e7eb; padding-top:10px; margin-top:4px;">
                 <b style="display:block; color:#111827; margin-bottom:6px;">발송 방식</b>
                 <label><input type="radio" name="noticeSendChannel" value="alimtalk" checked> 알림톡</label>
                 <label><input type="radio" name="noticeSendChannel" value="sms"> 문자(SMS/LMS)</label>
-                <div class="admin-permission-note">알림톡은 승인된 공지 템플릿이 필요합니다. 미승인 상태에서는 문자 발송을 사용하세요.</div>
+                <div class="admin-permission-note">
+                  알림톡은 공통 템플릿(SOLAPI_TEMPLATE_ID_GENERAL 또는 NOTICE 계열)이 필요합니다. 문자 발송은 SOLAPI 문자 설정을 사용합니다.
+                </div>
               </div>
             </div>
 
             <div class="admin-field">
               <label for="noticeMessageText">공지 문구</label>
-              <textarea id="noticeMessageText" class="admin-eval-textarea" style="min-height:180px;" placeholder="보낼 공지 내용을 입력하세요.&#10;&#10;사용 가능 치환어: [학생명], [반이름], [담당강사]"></textarea>
+              <textarea id="noticeMessageText"
+                class="admin-eval-textarea"
+                style="min-height:180px;"
+                placeholder="보낼 공지 내용을 입력하세요.&#10;&#10;사용 가능 치환어: [학생명], [반이름], [담당강사]"></textarea>
+            </div>
+
+            <div class="admin-summary">
+              <span class="admin-chip" id="noticeTargetCount">공지 대상 0명</span>
             </div>
 
             <div class="admin-btn-row">
@@ -1362,11 +1383,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
 
 </main>
 
-<footer>
-    <b>상담전화</b> : 010-7372-5875 <br>
-    <b>주소</b> : 수원시 영통구 청명남로 28번길 2 아이텐텐빌딩 502호 <br>
-    Copyright © 울림연기학원. All rights reserved.
-	<div id="pwaInstallOverlay" class="notice-overlay">
+<div id="pwaInstallOverlay" class="notice-overlay">
     <div class="notice-modal">
         <div class="notice-header">
             <h2>📲 앱으로 설치하기</h2>
@@ -1374,9 +1391,9 @@ body.admin-mode .admin-only-tab { display:block !important; }
 
         <div class="notice-body">
             <div class="notice-card">
-                <div class="notice-card-title">울림연기학원 앱 설치 안내</div>
+                <div class="notice-card-title">울림연기학원 연습앱 설치 안내</div>
                 <div class="notice-text">
-홈 화면에 설치하면 브라우저를 열지 않고 바로 사용할 수 있습니다.
+홈 화면에 설치하면 브라우저를 열지 않고 연습 프로그램을 바로 사용할 수 있습니다.
                 </div>
             </div>
         </div>
@@ -1396,13 +1413,21 @@ body.admin-mode .admin-only-tab { display:block !important; }
         </div>
     </div>
 </div>
+
+<footer>
+    <b>상담전화</b> : 010-7372-5875 <br>
+    <b>주소</b> : 수원시 영통구 청명남로 28번길 2 아이텐텐빌딩 502호 <br>
+    Copyright © 울림연기학원. All rights reserved.
 </footer>
 <script>
 /* ===========================
    📲 PWA 설치 안내창
+   - index.html 전용
+   - tablet.html과 별도 설치를 위해 manifest-index.json 사용
+   - "다시는 보지 않기"는 브라우저 localStorage에 저장
    =========================== */
 let deferredPrompt = null;
-const PWA_HIDE_KEY = "ULIM_PWA_INSTALL_HIDE_FOREVER";
+const PWA_HIDE_KEY = "ULIM_INDEX_PWA_HIDE";
 
 window.addEventListener("beforeinstallprompt", function (e) {
     if (localStorage.getItem(PWA_HIDE_KEY) === "Y") return;
@@ -1419,26 +1444,33 @@ function showPwaInstallGuide() {
     if (!deferredPrompt) return;
     if (localStorage.getItem(PWA_HIDE_KEY) === "Y") return;
 
-    alertPwaInstall();
+    const overlay = document.getElementById("pwaInstallOverlay");
+    if (overlay) overlay.style.display = "flex";
 }
 
-function alertPwaInstall() {
-    const result = confirm(
-        "울림연기학원 앱을 홈 화면에 설치하면 더 편하게 사용할 수 있습니다.\n\n확인: 앱 설치하기\n취소: 나중에"
-    );
-
-    if (result) {
-        installPwa();
+async function installPwaApp() {
+    if (!deferredPrompt) {
+        closePwaInstallPopup();
+        return;
     }
-}
-
-async function installPwa() {
-    if (!deferredPrompt) return;
 
     deferredPrompt.prompt();
     await deferredPrompt.userChoice;
     deferredPrompt = null;
+    closePwaInstallPopup();
 }
+
+function closePwaInstallPopup() {
+    const overlay = document.getElementById("pwaInstallOverlay");
+    if (overlay) overlay.style.display = "none";
+}
+
+function hidePwaInstallForever() {
+    localStorage.setItem(PWA_HIDE_KEY, "Y");
+    deferredPrompt = null;
+    closePwaInstallPopup();
+}
+
 // 🟢 헤더 로고 클릭 시 로그인 오버레이를 띄우는 함수 (추가)
 function showLoginOverlay() {
     // 메인 컨텐츠 숨기기
@@ -3594,6 +3626,194 @@ function adminRenderStudentTable() {
     wrap.innerHTML = html;
 }
 
+
+function adminInitNoticeSelectors() {
+    const classSelect = document.getElementById('noticeClassSelect');
+    const studentSelect = document.getElementById('noticeStudentSelect');
+    if (!classSelect || !studentSelect) return;
+    if (!Array.isArray(adminStudents)) return;
+
+    const classSet = new Set();
+    adminStudents.forEach(s => {
+        const candidates = [s.className, s.memo].join('\n').split(/\n|,\s*|;/).map(v => v.trim()).filter(Boolean);
+        candidates.forEach(name => {
+            if (name && name.length <= 80) classSet.add(name);
+        });
+    });
+
+    const currentValue = classSelect.value || '';
+    classSelect.innerHTML = `<option value="">전체반</option>` +
+        Array.from(classSet).sort().map(name =>
+            `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`
+        ).join('');
+
+    if (currentValue && Array.from(classSet).includes(currentValue)) {
+        classSelect.value = currentValue;
+    }
+
+    renderNoticeStudentOptions();
+    adminPreviewNoticeCount();
+}
+
+function renderNoticeStudentOptions() {
+    const studentSelect = document.getElementById('noticeStudentSelect');
+    if (!studentSelect) return;
+
+    const selectedClass = document.getElementById('noticeClassSelect')?.value || '';
+    const classKeyword = document.getElementById('noticeClassKeyword')?.value || '';
+    const currentStudent = studentSelect.value || '';
+
+    const list = (adminStudents || []).filter(s => adminNoticeStudentMatchesClass_(s, selectedClass, classKeyword));
+
+    studentSelect.innerHTML = `<option value="">전체학생</option>` +
+        list.map(s => {
+            const name = s.name || s.studentName || '';
+            const phone = s.studentPhone || '';
+            const label = phone ? `${name} (${phone.slice(-4)})` : name;
+            return `<option value="${escapeHtml(name)}">${escapeHtml(label)}</option>`;
+        }).join('');
+
+    if (currentStudent && list.some(s => (s.name || s.studentName || '') === currentStudent)) {
+        studentSelect.value = currentStudent;
+    }
+
+    adminPreviewNoticeCount();
+}
+
+function adminNoticeNormalize_(value) {
+    return String(value || '').replace(/\s+/g, '').toLowerCase();
+}
+
+function adminNoticeStudentMatchesClass_(student, selectedClass, classKeyword) {
+    const classBlob = [student.className, student.memo].join(' ');
+    const normalizedBlob = adminNoticeNormalize_(classBlob);
+    const selectedNorm = adminNoticeNormalize_(selectedClass);
+    const keywordNorm = adminNoticeNormalize_(classKeyword);
+
+    if (selectedNorm && !normalizedBlob.includes(selectedNorm)) return false;
+    if (keywordNorm && !normalizedBlob.includes(keywordNorm)) return false;
+
+    return true;
+}
+
+function getNoticeRecipientTypes() {
+    const ids = ['noticeRecipientStudent', 'noticeRecipientParent', 'noticeRecipientInstructor', 'noticeRecipientAdmin'];
+    const map = ['학생', '학부모', '강사', '관리자'];
+    return ids.map((id, i) => document.getElementById(id)?.checked ? map[i] : '').filter(Boolean);
+}
+
+function getNoticeTargets() {
+    const selectedClass = document.getElementById('noticeClassSelect')?.value || '';
+    const classKeyword = document.getElementById('noticeClassKeyword')?.value || '';
+    const selectedStudent = document.getElementById('noticeStudentSelect')?.value || '';
+    const studentKeyword = document.getElementById('noticeStudentKeyword')?.value || '';
+    const studentKeywordNorm = adminNoticeNormalize_(studentKeyword);
+
+    return (adminStudents || []).filter(s => {
+        if (!adminNoticeStudentMatchesClass_(s, selectedClass, classKeyword)) return false;
+
+        const name = s.name || s.studentName || '';
+        if (selectedStudent && name !== selectedStudent) return false;
+
+        if (studentKeywordNorm) {
+            const studentBlob = adminNoticeNormalize_([name, s.studentPhone, s.parentPhone, s.studentNo].join(' '));
+            if (!studentBlob.includes(studentKeywordNorm)) return false;
+        }
+
+        return true;
+    });
+}
+
+function buildNoticeMessage(rawText, student) {
+    const name = student.name || student.studentName || '';
+    const className = student.className || student.class || '';
+    const instructor = student.instructorName || student.instructor || '';
+
+    return String(rawText || '')
+        .replaceAll('[학생명]', name)
+        .replaceAll('[반이름]', className)
+        .replaceAll('[담당강사]', instructor);
+}
+
+function adminPreviewNoticeCount() {
+    const countEl = document.getElementById('noticeTargetCount');
+    if (!countEl) return;
+    const targets = getNoticeTargets();
+    const recipients = getNoticeRecipientTypes();
+    countEl.textContent = `공지 대상 ${targets.length}명 / 수신 ${recipients.join(', ') || '미선택'}`;
+}
+
+function adminGetNoticeSendChannel() {
+    return document.querySelector('input[name="noticeSendChannel"]:checked')?.value || 'alimtalk';
+}
+
+function adminPreviewNoticeMessages() {
+    if (!adminIsFullAdmin()) return alert('공지 발송은 관리자 권한에서만 가능합니다.');
+
+    const message = document.getElementById('noticeMessageText')?.value || '';
+    const preview = document.getElementById('noticeMessagePreview');
+    const recipientTypes = getNoticeRecipientTypes();
+    const sendChannel = adminGetNoticeSendChannel();
+    const channelLabel = adminGetSendChannelLabel(sendChannel);
+
+    if (!message.trim()) return alert('공지 문구를 입력해주세요.');
+    if (!recipientTypes.length) return alert('수신 대상을 1개 이상 선택해주세요.');
+
+    const targets = getNoticeTargets();
+    if (!targets.length) return alert('발송 대상 학생이 없습니다.');
+
+    const sample = targets.slice(0, 8).map(s => {
+        const name = s.name || s.studentName || '';
+        return `[${name}]\n발송방식: ${channelLabel}\n수신대상: ${recipientTypes.join(', ')}\n${buildNoticeMessage(message, s)}`;
+    }).join('\n\n--------------------\n\n');
+
+    if (preview) {
+        preview.style.display = 'block';
+        preview.textContent =
+            `발송 대상: ${targets.length}명\n` +
+            `발송 방식: ${channelLabel}\n` +
+            `수신 대상: ${recipientTypes.join(', ')}\n\n` +
+            sample +
+            (targets.length > 8 ? `\n\n...외 ${targets.length - 8}명` : '');
+    }
+}
+
+async function adminSendNoticeMessages() {
+    if (!adminIsFullAdmin()) return alert('공지 발송은 관리자 권한에서만 가능합니다.');
+
+    const message = document.getElementById('noticeMessageText')?.value || '';
+    const recipientTypes = getNoticeRecipientTypes();
+    const targets = getNoticeTargets();
+    const sendChannel = adminGetNoticeSendChannel();
+    const channelLabel = adminGetSendChannelLabel(sendChannel);
+
+    if (!message.trim()) return alert('공지 문구를 입력해주세요.');
+    if (!recipientTypes.length) return alert('수신 대상을 1개 이상 선택해주세요.');
+    if (!targets.length) return alert('발송 대상 학생이 없습니다.');
+
+    if (!confirm(`공지 ${targets.length}명에게 [${recipientTypes.join(', ')}] 대상으로 ${channelLabel} 발송할까요?`)) return;
+
+    try {
+        showLoading(`공지 ${channelLabel} 발송 요청 중...`);
+        const data = await adminPostNoCors('adminSendNoticeMessages', {
+            adminToken,
+            selectedClass: document.getElementById('noticeClassSelect')?.value || '',
+            classKeyword: document.getElementById('noticeClassKeyword')?.value || '',
+            selectedStudent: document.getElementById('noticeStudentSelect')?.value || '',
+            studentKeyword: document.getElementById('noticeStudentKeyword')?.value || '',
+            recipientTypes: recipientTypes.join(','),
+            sendChannel,
+            messageText: message
+        });
+        hideLoading();
+        alert(data.message || '공지 발송 요청을 보냈습니다. 문자/알림톡 발송 로그를 확인해주세요.');
+    } catch (e) {
+        hideLoading();
+        alert(e.message);
+    }
+}
+
+
 function showAdminPanel(panelId) {
     const isFull = adminIsFullAdmin();
 
@@ -3617,6 +3837,8 @@ function showAdminPanel(panelId) {
     // 속도 개선: 탭을 열 때 필요한 데이터만 지연 로딩합니다.
     if (panelId === 'adminPanelStudents' && isFull && !adminStudentsLoaded) {
         adminLoadStudents(false, false);
+    } else if (panelId === 'adminPanelStudents' && isFull) {
+        adminInitNoticeSelectors();
     }
 
     if (panelId === 'adminPanelAttendance') {
@@ -3757,165 +3979,6 @@ async function adminSendAttendanceMessages() {
         const data = await adminApi('adminSendSelectedAttendanceMessages', { adminToken, recipientTypes: recipientTypes.join(','), sendChannel, records: JSON.stringify(sendRecords) });
         hideLoading();
         alert(data.message || `처리 완료: ${data.count || 0}건`);
-    } catch (e) {
-        hideLoading();
-        alert(e.message);
-    }
-}
-
-
-/************************************
- * 관리자 학생검색 탭 - 전체 공지 발송
- ************************************/
-function adminGetStudentClassNameForNotice(student) {
-    return String(
-        student.className ||
-        student.class ||
-        student.반명 ||
-        student.classNames ||
-        student.memo ||
-        ''
-    ).trim();
-}
-
-function adminInitNoticeSelectors() {
-    const classSelect = document.getElementById('noticeClassSelect');
-    const studentSelect = document.getElementById('noticeStudentSelect');
-
-    if (!classSelect || !studentSelect) return;
-    if (!Array.isArray(adminStudents)) return;
-
-    const classSet = new Set();
-
-    adminStudents.forEach(student => {
-        const raw = adminGetStudentClassNameForNotice(student);
-        String(raw || '').split(/[,/\n]/).map(v => v.trim()).filter(Boolean).forEach(v => classSet.add(v));
-    });
-
-    classSelect.innerHTML = '<option value="">전체반</option>' +
-        Array.from(classSet).sort().map(className =>
-            `<option value="${escapeHtml(className)}">${escapeHtml(className)}</option>`
-        ).join('');
-
-    classSelect.onchange = renderNoticeStudentOptions;
-    renderNoticeStudentOptions();
-}
-
-function renderNoticeStudentOptions() {
-    const classSelect = document.getElementById('noticeClassSelect');
-    const studentSelect = document.getElementById('noticeStudentSelect');
-
-    if (!classSelect || !studentSelect) return;
-
-    const selectedClass = String(classSelect.value || '').trim();
-
-    const list = (adminStudents || []).filter(student => {
-        if (!selectedClass) return true;
-        const classText = adminGetStudentClassNameForNotice(student);
-        return normalizeForClientMatch(classText).includes(normalizeForClientMatch(selectedClass));
-    });
-
-    studentSelect.innerHTML = '<option value="">전체학생</option>' +
-        list.map(student => {
-            const name = student.name || student.studentName || student.학생명 || '';
-            const phone = student.studentPhone || student.phone || '';
-            return `<option value="${escapeHtml(name)}">${escapeHtml(name)}${phone ? ' / ' + escapeHtml(phone) : ''}</option>`;
-        }).join('');
-}
-
-function adminGetNoticeRecipientTypes() {
-    const result = [];
-    if (document.getElementById('noticeRecipientStudent')?.checked) result.push('학생');
-    if (document.getElementById('noticeRecipientParent')?.checked) result.push('학부모');
-    return result;
-}
-
-function adminGetNoticeTargets() {
-    const selectedClass = String(document.getElementById('noticeClassSelect')?.value || '').trim();
-    const selectedStudent = String(document.getElementById('noticeStudentSelect')?.value || '').trim();
-
-    return (adminStudents || []).filter(student => {
-        const name = String(student.name || student.studentName || student.학생명 || '').trim();
-        const classText = adminGetStudentClassNameForNotice(student);
-
-        if (selectedClass && !normalizeForClientMatch(classText).includes(normalizeForClientMatch(selectedClass))) return false;
-        if (selectedStudent && name !== selectedStudent) return false;
-
-        return true;
-    });
-}
-
-function adminBuildNoticeMessage(rawText, student) {
-    const name = student.name || student.studentName || student.학생명 || '';
-    const className = student.className || student.class || student.반명 || '';
-    const instructor = student.instructorName || student.instructor || student.담당강사 || '';
-
-    return String(rawText || '')
-        .replaceAll('[학생명]', name)
-        .replaceAll('[반이름]', className)
-        .replaceAll('[담당강사]', instructor);
-}
-
-function adminPreviewNoticeMessages() {
-    if (!adminIsFullAdmin()) return alert('전체 공지 발송은 관리자 권한에서만 가능합니다.');
-
-    const message = document.getElementById('noticeMessageText')?.value || '';
-    const preview = document.getElementById('noticeMessagePreview');
-    const recipientTypes = adminGetNoticeRecipientTypes();
-    const sendChannel = document.querySelector('input[name="noticeSendChannel"]:checked')?.value || 'alimtalk';
-    const channelLabel = adminGetSendChannelLabel(sendChannel);
-    const targets = adminGetNoticeTargets();
-
-    if (!message.trim()) return alert('공지 문구를 입력해주세요.');
-    if (!recipientTypes.length) return alert('수신 대상을 1개 이상 선택해주세요.');
-    if (!targets.length) return alert('발송 대상 학생이 없습니다.');
-
-    const sample = targets.slice(0, 5).map(student => {
-        const name = student.name || student.studentName || student.학생명 || '';
-        return `■ ${name}\n${adminBuildNoticeMessage(message, student)}`;
-    }).join('\n\n--------------------\n\n');
-
-    if (preview) {
-        preview.style.display = 'block';
-        preview.textContent =
-            `발송방식: ${channelLabel}\n` +
-            `수신대상: ${recipientTypes.join(', ')}\n` +
-            `발송 대상: ${targets.length}명\n\n` +
-            sample +
-            (targets.length > 5 ? `\n\n...외 ${targets.length - 5}명` : '');
-    }
-}
-
-async function adminSendNoticeMessages() {
-    if (!adminIsFullAdmin()) return alert('전체 공지 발송은 관리자 권한에서만 가능합니다.');
-
-    const message = document.getElementById('noticeMessageText')?.value || '';
-    const selectedClass = String(document.getElementById('noticeClassSelect')?.value || '').trim();
-    const selectedStudent = String(document.getElementById('noticeStudentSelect')?.value || '').trim();
-    const recipientTypes = adminGetNoticeRecipientTypes();
-    const sendChannel = document.querySelector('input[name="noticeSendChannel"]:checked')?.value || 'alimtalk';
-    const channelLabel = adminGetSendChannelLabel(sendChannel);
-    const targets = adminGetNoticeTargets();
-
-    if (!message.trim()) return alert('공지 문구를 입력해주세요.');
-    if (!recipientTypes.length) return alert('수신 대상을 1개 이상 선택해주세요.');
-    if (!targets.length) return alert('발송 대상 학생이 없습니다.');
-
-    const scopeText = selectedStudent ? selectedStudent : (selectedClass ? selectedClass : '전체학생');
-    if (!confirm(`${scopeText} 대상 ${targets.length}명에게 ${channelLabel}으로 공지를 발송할까요?\n수신대상: ${recipientTypes.join(', ')}`)) return;
-
-    try {
-        showLoading(`공지 ${channelLabel} 발송 중...`);
-        const data = await adminApi('adminSendNoticeMessages', {
-            adminToken,
-            className: selectedClass,
-            studentName: selectedStudent,
-            recipientTypes: recipientTypes.join(','),
-            sendChannel,
-            messageText: message
-        });
-        hideLoading();
-        alert(data.message || `공지 발송 처리 완료: ${data.count || 0}건`);
     } catch (e) {
         hideLoading();
         alert(e.message);
