@@ -5,7 +5,7 @@
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780046248858&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000fdf0720ba797df49a9ac7c4d%26fn%3Dindex_notice_fullclass_final.html%26cd%3Dattachment%26ts%3D494459%26p%3Dfs%26cid%3D1%26sig%3D361324c57aeaf750fb44f51f570292f3d4fb0521a412085fa11c1ded0f4087bc%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
+<script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780046248858&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000009e74720ba966eae5bdcb5a59%26fn%3Dindex_notice_fullclass_students_fixed.html%26cd%3Dattachment%26ts%3D494460%26p%3Dfs%26cid%3D1%26sig%3Debe6f10a40d0134af333297f5fb7597e7eab2d5a9368c1e88c313524182faee1%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
 <script src="appdata/vocalization/data.js"></script>
 <script src="appdata/past_questions/data.js"></script>
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -3726,15 +3726,96 @@ function adminGetNoticeClassValue() {
 }
 
 function adminNoticeNormalize_(value) {
-    return String(value || '').replace(/\s+/g, '').replace(/-/g, '').toLowerCase().normalize('NFC');
+    return String(value || '')
+        .toLowerCase()
+        .replace(/[\s  -‏
+-  -⁯　﻿]/g, '')
+        .replace(/[\[\]\(\){}~～:：\-–—_,./\|]/g, '')
+        .replace(/t/g, '')
+        .normalize('NFC');
+}
+
+function adminNoticeExtractTeacher_(className) {
+    const text = String(className || '').trim();
+    const m = text.match(/\[([^\]]+?)T\]/i);
+    if (m && m[1]) return m[1].trim();
+    return '';
+}
+
+function adminNoticeCoreClassText_(className) {
+    return String(className || '')
+        .replace(/\[[^\]]+?T\]/gi, ' ')
+        .replace(/\([^)]*\)/g, ' ')
+        .replace(/\d{1,2}\s*[:：]\s*\d{2}\s*[~～-]\s*\d{1,2}\s*[:：]\s*\d{2}/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function adminNoticeTokenizeClass_(value) {
+    const text = adminNoticeCoreClassText_(value);
+    return text
+        .split(/\s+|,|;|\//)
+        .map(v => v.trim())
+        .filter(Boolean)
+        .filter(v => !/^\d+$/.test(v))
+        .filter(v => !['반', '수업', '강의', '전체반'].includes(v));
+}
+
+function adminNoticeTeacherMatches_(student, selectedClass) {
+    const selectedTeacher = adminNoticeExtractTeacher_(selectedClass);
+    if (!selectedTeacher) return false;
+
+    const teacherNorm = adminNoticeNormalize_(selectedTeacher);
+    const studentTeacherNorm = adminNoticeNormalize_(student.instructor || student.instructorName || '');
+
+    return !!teacherNorm && !!studentTeacherNorm &&
+        (studentTeacherNorm.includes(teacherNorm) || teacherNorm.includes(studentTeacherNorm));
 }
 
 function adminNoticeStudentMatchesClass_(student, selectedClass) {
     if (!selectedClass) return true;
-    const classBlob = [student.className, student.memo].join(' ');
-    const normalizedBlob = adminNoticeNormalize_(classBlob);
+
     const selectedNorm = adminNoticeNormalize_(selectedClass);
-    return !selectedNorm || normalizedBlob.includes(selectedNorm);
+    if (!selectedNorm || selectedNorm === adminNoticeNormalize_('전체반')) return true;
+
+    const classBlobRaw = [
+        student.className,
+        student.class,
+        student.반명,
+        student.memo,
+        student.instructor,
+        student.instructorName
+    ].join(' ');
+
+    const blobNorm = adminNoticeNormalize_(classBlobRaw);
+
+    // 1. 완전/부분 문자열 매칭: 학생부 반명이 전체 반명과 거의 같은 경우
+    if (blobNorm && (blobNorm.includes(selectedNorm) || selectedNorm.includes(blobNorm))) {
+        return true;
+    }
+
+    // 2. 교사명 + 핵심 단어 매칭: [이용우T] 토요일 청소년 중급A 같은 전체 반명과 학생부 반명 일부가 다를 때
+    const teacherMatch = adminNoticeTeacherMatches_(student, selectedClass);
+    const tokens = adminNoticeTokenizeClass_(selectedClass)
+        .map(adminNoticeNormalize_)
+        .filter(Boolean);
+
+    if (teacherMatch && tokens.length > 0) {
+        const matchedTokenCount = tokens.filter(t => blobNorm.includes(t)).length;
+
+        // 학생부 반/메모에 수업명이 조금이라도 들어있으면 핵심 단어 하나 이상으로 매칭
+        const hasClassText = !!adminNoticeNormalize_([student.className, student.class, student.반명, student.memo].join(' '));
+        if (hasClassText && matchedTokenCount >= 1) return true;
+
+        // 학생부에 반 정보가 비어 있으면 교사명 기준으로라도 보여줌
+        if (!hasClassText) return true;
+    }
+
+    // 3. 학생부에 반 정보가 없고 교사만 있는 기존 학생명단 대응
+    const studentClassOnly = adminNoticeNormalize_([student.className, student.class, student.반명, student.memo].join(' '));
+    if (!studentClassOnly && teacherMatch) return true;
+
+    return false;
 }
 
 function adminNoticeStudentMatchesKeyword_(student, keyword) {
