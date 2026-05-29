@@ -1124,6 +1124,52 @@ body.admin-mode .admin-only-tab { display:block !important; }
               <input type="text" id="adminStudentSearch" placeholder="예: 홍길동, 010" oninput="adminRenderStudentTable()">
             </div>
             <div id="adminStudentTableWrap" class="admin-table-wrap"></div>
+			  <div class="admin-card" style="margin-top:16px;">
+  <h3 style="margin-top:0;">전체 공지 발송</h3>
+
+  <div class="admin-grid">
+    <div class="admin-field">
+      <label>반 선택</label>
+      <select id="noticeClassSelect">
+        <option value="">전체반</option>
+      </select>
+    </div>
+
+    <div class="admin-field">
+      <label>학생 선택</label>
+      <select id="noticeStudentSelect">
+        <option value="">전체학생</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="admin-recipient-row admin-full-only">
+    <b style="width:100%; color:#111827;">수신 대상</b>
+    <label><input type="checkbox" id="noticeRecipientStudent" checked> 학생</label>
+    <label><input type="checkbox" id="noticeRecipientParent" checked> 학부모</label>
+
+    <div style="width:100%; border-top:1px solid #e5e7eb; padding-top:10px; margin-top:4px;">
+      <b style="display:block; color:#111827; margin-bottom:6px;">발송 방식</b>
+      <label><input type="radio" name="noticeSendChannel" value="alimtalk" checked> 알림톡</label>
+      <label><input type="radio" name="noticeSendChannel" value="sms"> 문자</label>
+    </div>
+  </div>
+
+  <div class="admin-field">
+    <label>공지 문구</label>
+    <textarea id="noticeMessageText"
+      class="admin-eval-textarea"
+      style="min-height:180px;"
+      placeholder="보낼 공지 내용을 입력하세요.&#10;&#10;사용 가능 치환어: [학생명], [반이름], [담당강사]"></textarea>
+  </div>
+
+  <div class="admin-btn-row">
+    <button type="button" class="admin-btn blue" onclick="adminPreviewNoticeMessages()">공지 미리보기</button>
+    <button type="button" class="admin-btn red" onclick="adminSendNoticeMessages()">공지 발송</button>
+  </div>
+
+  <div id="noticeMessagePreview" class="admin-message-preview" style="display:none;"></div>
+</div>
           </div>
         </div>
 
