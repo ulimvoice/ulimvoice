@@ -5,7 +5,7 @@
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780046248858&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_0000000069987206b2dfff72263f615e%26fn%3Dindex_notice_syntax_fixed.html%26cd%3Dattachment%26ts%3D494460%26p%3Dfs%26cid%3D1%26sig%3D67118c8fdc96b4e4177ab4eb486c4780d07cc64118e2f4e70d7687a0ceb5a83d%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
+<script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780046248858&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000001d447209bf3739bb906fcedf%26fn%3Dindex_notice_currentclass_teachersearch_final.html%26cd%3Dattachment%26ts%3D494460%26p%3Dfs%26cid%3D1%26sig%3De6fd9f806c8c355ff781f58178dfd5385c456a2e49099f43bbfbeceb1667d7b1%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
 <script src="appdata/vocalization/data.js"></script>
 <script src="appdata/past_questions/data.js"></script>
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -3728,8 +3728,8 @@ function adminGetNoticeClassValue() {
 function adminNoticeNormalize_(value) {
     return String(value || '')
         .toLowerCase()
-        .replace(/[\s\u00A0\u2000-\u200F\u2028-\u202F\u205F-\u206F\u3000\ufeff]/g, '')
-        .replace(/[\[\]\(\){}~～:：\-–—_,./\|]/g, '')
+        .replace(/[\s\u00A0\u1680\u180E\u2000-\u200F\u2028-\u202F\u205F-\u206F\u3000\uFEFF]/g, '')
+        .replace(/[\[\]\(\){}~～:：\-–—_,.\/\|]/g, '')
         .replace(/t/g, '')
         .normalize('NFC');
 }
@@ -3777,42 +3777,43 @@ function adminNoticeStudentMatchesClass_(student, selectedClass) {
     const selectedNorm = adminNoticeNormalize_(selectedClass);
     if (!selectedNorm || selectedNorm === adminNoticeNormalize_('전체반')) return true;
 
-    const classBlobRaw = [
+    // 공지 발송의 "반 선택"은 출석부가 아니라 학생부 학생명단의 현재반/반명 기준으로만 매칭합니다.
+    // 담당강사명만 같다는 이유로 해당 반 학생으로 포함하지 않습니다.
+    const currentClassRaw = [
         student.className,
         student.class,
-        student.반명,
-        student.memo,
-        student.instructor,
-        student.instructorName
+        student['반명'],
+        student.currentClass,
+        student['현재반'],
+        student.memo
     ].join(' ');
 
-    const blobNorm = adminNoticeNormalize_(classBlobRaw);
+    const currentClassNorm = adminNoticeNormalize_(currentClassRaw);
+    if (!currentClassNorm) return false;
 
-    // 1. 완전/부분 문자열 매칭: 학생부 반명이 전체 반명과 거의 같은 경우
-    if (blobNorm && (blobNorm.includes(selectedNorm) || selectedNorm.includes(blobNorm))) {
+    // 1. 학생부 현재반과 선택 반명이 거의 동일한 경우
+    if (currentClassNorm.includes(selectedNorm) || selectedNorm.includes(currentClassNorm)) {
         return true;
     }
 
-    // 2. 교사명 + 핵심 단어 매칭: [이용우T] 토요일 청소년 중급A 같은 전체 반명과 학생부 반명 일부가 다를 때
-    const teacherMatch = adminNoticeTeacherMatches_(student, selectedClass);
-    const tokens = adminNoticeTokenizeClass_(selectedClass)
-        .map(adminNoticeNormalize_)
-        .filter(Boolean);
-
-    if (teacherMatch && tokens.length > 0) {
-        const matchedTokenCount = tokens.filter(t => blobNorm.includes(t)).length;
-
-        // 학생부 반/메모에 수업명이 조금이라도 들어있으면 핵심 단어 하나 이상으로 매칭
-        const hasClassText = !!adminNoticeNormalize_([student.className, student.class, student.반명, student.memo].join(' '));
-        if (hasClassText && matchedTokenCount >= 1) return true;
-
-        // 학생부에 반 정보가 비어 있으면 교사명 기준으로라도 보여줌
-        if (!hasClassText) return true;
+    // 2. [강사T], 요일, 시간 표기가 섞인 반명 대응
+    // 예: 선택값 "[강호철T] - 금요일 공채입문 19:00 ~ 22:00"
+    // 학생부 현재반 "금요일 공채입문" / "공채입문" 등도 매칭
+    const selectedCoreNorm = adminNoticeNormalize_(adminNoticeCoreClassText_(selectedClass));
+    if (selectedCoreNorm && (currentClassNorm.includes(selectedCoreNorm) || selectedCoreNorm.includes(currentClassNorm))) {
+        return true;
     }
 
-    // 3. 학생부에 반 정보가 없고 교사만 있는 기존 학생명단 대응
-    const studentClassOnly = adminNoticeNormalize_([student.className, student.class, student.반명, student.memo].join(' '));
-    if (!studentClassOnly && teacherMatch) return true;
+    const tokens = adminNoticeTokenizeClass_(selectedClass)
+        .map(adminNoticeNormalize_)
+        .filter(Boolean)
+        .filter(t => !['월요일','화요일','수요일','목요일','금요일','토요일','일요일'].map(adminNoticeNormalize_).includes(t));
+
+    if (tokens.length > 0) {
+        const matchedTokenCount = tokens.filter(t => currentClassNorm.includes(t)).length;
+        // 핵심 단어 2개 이상, 또는 토큰이 1개뿐이면 1개 매칭으로 인정
+        if (matchedTokenCount >= Math.min(2, tokens.length)) return true;
+    }
 
     return false;
 }
