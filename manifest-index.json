@@ -1,20 +1,20 @@
 {
-  "id": "/ulimvoice/index.html",
+  "id": "https://ulimvoice.github.io/ulimvoice/index.html",
   "name": "울림연기학원",
   "short_name": "울림",
-  "start_url": "./index.html",
-  "scope": "./",
+  "start_url": "https://ulimvoice.github.io/ulimvoice/index.html",
+  "scope": "https://ulimvoice.github.io/ulimvoice/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#2ecc71",
   "icons": [
     {
-      "src": "./icons/icon-192.png",
+      "src": "https://ulimvoice.github.io/ulimvoice/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "./icons/icon-512.png",
+      "src": "https://ulimvoice.github.io/ulimvoice/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
