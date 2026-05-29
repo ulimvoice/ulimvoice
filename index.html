@@ -3534,11 +3534,11 @@ function adminRenderAttendanceTable() {
         return;
     }
     const isFull = adminIsFullAdmin();
-    let html = `<table class="admin-table"><thead><tr><th><input type="checkbox" id="adminAttendSelectAll" onchange="adminToggleAttendanceAll(this.checked)" checked></th><th>출결상태</th><th>특이사항</th><th>학생명</th><th>반명/수업명</th><th>담당강사</th>${isFull ? '<th>학생전화</th><th>학부모전화</th>' : ''}<th>메모</th></tr></thead><tbody>`;
+    let html = `<table class="admin-table"><thead><tr><th><input type="checkbox" id="adminAttendSelectAll" onchange="adminToggleAttendanceAll(this.checked)" checked></th><th>출결상태</th><th>특이사항</th><th>학생명</th><th>반명/수업명</th><th>강의실</th><th>담당강사</th>${isFull ? '<th>학생전화</th><th>학부모전화</th>' : ''}<th>메모</th></tr></thead><tbody>`;
     adminAttendanceRecords.forEach((r, idx) => {
         const statusClass = r.status === '출석' ? 'attendance-ok' : (r.status === '결석' ? 'attendance-no' : '');
         const phoneCells = isFull ? `<td>${escapeHtml(r.studentPhone || '')}</td><td>${escapeHtml(r.parentPhone || '')}</td>` : '';
-        html += `<tr data-att-index="${idx}"><td><input type="checkbox" class="admin-att-check" checked></td><td><span class="admin-status-badge ${statusClass}">${escapeHtml(r.status || '미체크')}</span></td><td>${r.specialStatus ? `<span class="admin-status-badge">${escapeHtml(r.specialStatus)}</span>` : '-'}</td><td><b>${escapeHtml(r.studentName)}</b></td><td>${escapeHtml(r.className || '')}</td><td>${escapeHtml(r.instructor || '')}</td>${phoneCells}<td><input class="admin-small-input" data-field="memo" value="${escapeHtml(r.memo || '')}" placeholder="메모"></td></tr>`;
+        html += `<tr data-att-index="${idx}"><td><input type="checkbox" class="admin-att-check" checked></td><td><span class="admin-status-badge ${statusClass}">${escapeHtml(r.status || '미체크')}</span></td><td>${r.specialStatus ? `<span class="admin-status-badge">${escapeHtml(r.specialStatus)}</span>` : '-'}</td><td><b>${escapeHtml(r.studentName)}</b></td><td>${escapeHtml(r.className || '')}</td><td>${escapeHtml(r.classroom || r.roomName || r.room || '')}</td><td>${escapeHtml(r.instructor || '')}</td>${phoneCells}<td><input class="admin-small-input" data-field="memo" value="${escapeHtml(r.memo || '')}" placeholder="메모"></td></tr>`;
     });
     html += `</tbody></table>`;
     wrap.innerHTML = html;
@@ -3562,18 +3562,20 @@ function adminGetSelectedAttendanceRecords() {
 
 function buildAttendanceMessageText(record) {
     const classText = record.className ? ` ${record.className}` : '';
-    const base = `${record.studentName} 학생${classText} ${record.date}`;
+    const roomText = (record.classroom || record.roomName || record.room) ? ` [${record.classroom || record.roomName || record.room}]` : '';
+    const base = `${record.studentName} 학생${classText}${roomText} ${record.date}`;
     const effectiveStatus = record.specialStatus || record.status;
-    if (record.specialStatus === '신규') return `${record.studentName} 학생의 신규 수업 안내입니다.${classText}\n수업일: ${record.date}\n- 울림연기학원`;
-    if (record.specialStatus === '반이동') return `${record.studentName} 학생의 반 이동 안내입니다.${classText}\n수업일: ${record.date}\n- 울림연기학원`;
-    if (record.specialStatus === '보강') return `${record.studentName} 학생의 보강 수업 안내입니다.${classText}\n수업일: ${record.date}\n- 울림연기학원`;
+
+    if (record.specialStatus === '신규') return `${record.studentName} 학생의 신규 수업 안내입니다.${classText}${roomText}\n수업일: ${record.date}\n- 울림연기학원`;
+    if (record.specialStatus === '반이동') return `${record.studentName} 학생의 반 이동 안내입니다.${classText}${roomText}\n수업일: ${record.date}\n- 울림연기학원`;
+    if (record.specialStatus === '보강') return `${record.studentName} 학생의 보강 수업 안내입니다.${classText}${roomText}\n수업일: ${record.date}\n- 울림연기학원`;
     if (effectiveStatus === '출석') return `${base} 수업 출석이 확인되었습니다.\n- 울림연기학원`;
     if (effectiveStatus === '결석') return `${base} 수업 결석으로 확인되었습니다.\n- 울림연기학원`;
     if (effectiveStatus === '지각') return `${base} 수업 지각으로 기록되었습니다.\n- 울림연기학원`;
     if (effectiveStatus === '보강') return `${base} 보강 수업으로 기록되었습니다.\n- 울림연기학원`;
     if (effectiveStatus === '휴원') return `${base} 휴원으로 기록되었습니다.\n- 울림연기학원`;
-    if (effectiveStatus === '신규') return `${record.studentName} 학생의 첫 수업 안내입니다.${classText}\n자세한 사항은 학원 안내를 확인해주세요.\n- 울림연기학원`;
-    if (effectiveStatus === '반이동') return `${record.studentName} 학생의 반 이동 안내입니다.${classText}\n변경된 수업 정보를 확인해주세요.\n- 울림연기학원`;
+    if (effectiveStatus === '신규') return `${record.studentName} 학생의 첫 수업 안내입니다.${classText}${roomText}\n자세한 사항은 학원 안내를 확인해주세요.\n- 울림연기학원`;
+    if (effectiveStatus === '반이동') return `${record.studentName} 학생의 반 이동 안내입니다.${classText}${roomText}\n변경된 수업 정보를 확인해주세요.\n- 울림연기학원`;
     return `${base} 출결 상태가 [${record.status || '미체크'}]로 확인되었습니다.\n- 울림연기학원`;
 }
 
