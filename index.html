@@ -3603,7 +3603,10 @@ async function adminSendAttendanceMessages() {
     if (!confirm(`선택한 ${records.length}명의 출결 문자를 [${recipientTypes.join(', ')}]에게 발송할까요?`)) return;
     try {
         showLoading('출결 문자 발송 중...');
-        const data = await adminApi('adminSendSelectedAttendanceMessages', { adminToken, recipientTypes: recipientTypes.join(','), records: JSON.stringify(records) });
+        // 미리보기에서 본 문구와 실제 발송 문구가 달라지지 않도록
+        // 각 행의 최종 문자문구를 messageText로 함께 GAS에 전달합니다.
+        const sendRecords = records.map(r => ({ ...r, messageText: buildAttendanceMessageText(r) }));
+        const data = await adminApi('adminSendSelectedAttendanceMessages', { adminToken, recipientTypes: recipientTypes.join(','), records: JSON.stringify(sendRecords) });
         hideLoading();
         alert(data.message || `처리 완료: ${data.count || 0}건`);
     } catch (e) {
