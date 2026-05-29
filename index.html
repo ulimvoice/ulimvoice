@@ -5,7 +5,7 @@
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780046248858&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000ed207209bcc180195b5718ae%26fn%3Dindex_notice_class_from_attendance_teacher_from_students.html%26cd%3Dattachment%26ts%3D494460%26p%3Dfs%26cid%3D1%26sig%3D5b62499cd1645e1e77a6f1cf1b62823cfcbe4706132c5d314e85bd4fa4679511%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
+<script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780058918039&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000cd187206a122267d16537832%26fn%3Dindex_%25EC%2588%2598%25EC%25A0%2595%25EB%25B3%25B8_%25EB%25B0%2598%25EC%2584%25A0%25ED%2583%259D%25ED%2595%2599%25EC%2583%259D%25ED%2591%259C%25EC%258B%259C.html%26cd%3Dattachment%26ts%3D494460%26p%3Dfs%26cid%3D1%26sig%3D37fb905c4585792305cbfa047fe899c53928c3c824914dc5ec3270571c51c5c2%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780046248858&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000ed207209bcc180195b5718ae%26fn%3Dindex_notice_class_from_attendance_teacher_from_students.html%26cd%3Dattachment%26ts%3D494460%26p%3Dfs%26cid%3D1%26sig%3D5b62499cd1645e1e77a6f1cf1b62823cfcbe4706132c5d314e85bd4fa4679511%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
 <script src="appdata/vocalization/data.js"></script>
 <script src="appdata/past_questions/data.js"></script>
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -3025,6 +3025,7 @@ let adminInfo = (() => {
 let adminStudents = [];
 let adminNoticeTargetRows = [];
 let adminNoticeSelectedMap = {};
+let adminNoticeClassStudentCache = {};
 
 // 학생검색 탭 > 전체 공지 발송용 전체 반 목록입니다.
 // 날짜 기준 출석부가 아니라 학원 전체 개설반 기준으로 항상 표시합니다.
@@ -3044,11 +3045,11 @@ const ADMIN_NOTICE_FIXED_CLASS_LIST = [
   "[최봄결T] 일요일 청소년 중급B (11:00~13:00)",
   "[강호철T] 금요일 공채입문 (19:00~22:00)",
   "[강호철T] 일요일 애니메이션 더빙반 (15:00~18:00)",
-  "[김인혁T] 월요일 낭독반 (19:00~21:00)",
-  "[김인혁T] 목요일 연기 기초 (19:00~22:00)",
+  "[김인형T] 월요일 낭독반 (19:00~21:00)",
+  "[김인형T] 목요일 연기 기초 (19:00~22:00)",
   "[박성광T] 토요일 연기 기초 A반 (13:00~16:00)",
   "[박성광T] 토요일 연기 기초 B반 (17:00~20:00)",
-  "[박승기T] 일요일 연기 기초 (13:00~16:00)",
+  "[박송T] 일요일 연기 기초 (13:00~16:00)",
   "[박주광T] 화요일 공채 입문 (19:00~22:00)",
   "[안수현T] 수요일 공채입문 (19:00~22:00)",
   "[안수현T] 토요일 연기 기초 A반 (13:00~16:00)",
@@ -3180,8 +3181,16 @@ function adminIsTeacherMode() {
     return !!adminInfo && !adminIsFullAdmin();
 }
 
-function adminNormalizeKoreanName(value) {
+function adminCanonicalizeTeacherText(value) {
     return String(value || '')
+        .replace(/김\s*인\s*혁/g, '김인형')
+        .replace(/김\s*인\s*형/g, '김인형')
+        .replace(/박\s*승\s*기/g, '박송')
+        .replace(/박\s*송/g, '박송');
+}
+
+function adminNormalizeKoreanName(value) {
+    return adminCanonicalizeTeacherText(value)
         .replace(/\s+/g, '')
         .replace(/-/g, '')
         .replace(/–/g, '')
@@ -3382,13 +3391,13 @@ async function adminLoadInitialData() {
 }
 
 async function adminLoadStudents(showOverlay = true, force = false) {
-    if (!adminToken) return;
-    if (!adminIsFullAdmin()) return;
+    if (!adminToken) return null;
+    if (!adminIsFullAdmin()) return null;
     if (adminStudentsLoaded && !force) {
         adminRenderStudentDatalist();
         adminRenderStudentTable();
         adminInitNoticeSelectors();
-        return;
+        return { status: 'success', students: adminStudents, admin: adminInfo };
     }
     try {
         if (showOverlay) showLoading('학생 목록 불러오는 중...');
@@ -3407,10 +3416,12 @@ async function adminLoadStudents(showOverlay = true, force = false) {
         adminRenderStudentTable();
         adminInitNoticeSelectors();
         adminInitDates();
+        return data;
     } catch (e) {
         if (showOverlay) hideLoading();
         alert(e.message);
         if (String(e.message).includes('토큰') || String(e.message).includes('로그인')) adminLogout();
+        return null;
     }
 }
 
@@ -3424,7 +3435,7 @@ function adminInitDates() {
 function getAdminClassListCacheKey(date) {
     const role = adminRoleText() || 'unknown';
     const name = (adminInfo && (adminInfo.name || adminInfo.id)) || 'unknown';
-    return `ulim_admin_classes_${adminToken}_${date}_${role}_${name}`;
+    return `ulim_admin_classes_v2_${adminToken}_${date}_${role}_${name}`;
 }
 
 function readAdminClassListCache(key) {
@@ -3626,7 +3637,7 @@ function adminRenderClassPicker(inputId, panelId) {
 }
 
 function normalizeClassSearchText(value) {
-    return String(value || '')
+    return adminCanonicalizeTeacherText(value)
         .toLowerCase()
         .replace(/\s+/g, '')
         .replace(/[\[\]\(\)~～\-]/g, '');
@@ -3657,7 +3668,13 @@ function adminSelectClass(className, targetId = 'adminAttendanceClass', panelId 
         document.activeElement.blur();
     }
 
-    if (targetId === 'adminDailyEvalClass') adminRenderDailyEvalTable();
+    if (targetId === 'adminAttendanceClass' && className && className !== '전체반') {
+        adminLoadAttendanceSnapshot(false);
+    }
+    if (targetId === 'adminDailyEvalClass') {
+        adminRenderDailyEvalTable();
+        if (className && className !== '전체반') adminLoadDailyEvalStudents();
+    }
     if (targetId === 'noticeClass') adminLoadNoticeTargets(true);
 }
 
@@ -3879,17 +3896,88 @@ function adminNoticeTargetKey(student) {
     return String(student.studentNo || '') + '|' + String(student.name || '');
 }
 
-function adminLoadNoticeTargets(selectAll = true) {
-    adminNoticeTargetRows = adminGetNoticeFilteredStudents();
-    adminNoticeSelectedMap = {};
-    if (selectAll) {
-        adminNoticeTargetRows.forEach(s => adminNoticeSelectedMap[adminNoticeTargetKey(s)] = true);
-    }
-    adminRenderNoticeTargetTable();
-    adminPreviewNoticeCount();
+async function adminEnsureStudentsLoaded(showOverlay = false) {
+    if (adminStudentsLoaded && Array.isArray(adminStudents)) return true;
+    const data = await adminLoadStudents(showOverlay, false);
+    return !!(data && Array.isArray(adminStudents));
 }
 
-function adminLoadAllNoticeTargets() {
+function adminNoticeClassCacheKey_(className, keyword = '') {
+    return [adminToken || '', adminNoticeNormalize_(className || ''), adminNoticeNormalize_(keyword || '')].join('|');
+}
+
+function adminNoticeTargetKeyFromAny_(student) {
+    return String(student.studentNo || '') + '|' + String(student.name || student.studentName || '');
+}
+
+async function adminLoadStudentsBySelectedClassFromAttendance_(selectedClass, keyword = '') {
+    if (!selectedClass) return [];
+
+    const cacheKey = adminNoticeClassCacheKey_(selectedClass, keyword);
+    if (adminNoticeClassStudentCache[cacheKey]) return adminNoticeClassStudentCache[cacheKey];
+
+    const data = await adminApi('adminGetStudentsByClass', {
+        adminToken,
+        className: selectedClass,
+        keyword
+    });
+
+    const rows = (data.students || []).map(s => ({
+        studentNo: s.studentNo || '',
+        name: s.name || s.studentName || '',
+        studentName: s.studentName || s.name || '',
+        studentPhone: s.studentPhone || '',
+        parentPhone: s.parentPhone || '',
+        instructor: s.instructor || s.instructorName || adminNoticeExtractTeacher_(selectedClass) || '',
+        className: s.className || s.currentClass || selectedClass,
+        currentClass: s.currentClass || s.className || selectedClass,
+        memo: s.memo || '',
+        source: s.source || data.source || '출석부 현재반'
+    }));
+
+    adminNoticeClassStudentCache[cacheKey] = rows;
+    return rows;
+}
+
+async function adminLoadNoticeTargets(selectAll = true) {
+    if (!adminToken) return;
+
+    const selectedClass = adminGetNoticeClassValue();
+    const keyword = document.getElementById('noticeStudentKeyword')?.value || '';
+    const shouldShowOverlay = !!selectAll || !adminStudentsLoaded;
+
+    try {
+        if (shouldShowOverlay) showLoading('공지 대상 불러오는 중...');
+
+        await adminEnsureStudentsLoaded(false);
+
+        if (selectedClass) {
+            // 반 선택 시에는 학생명단의 반명 텍스트가 아니라 출석부 현재반 블록을 기준으로 학생을 불러옵니다.
+            adminNoticeTargetRows = await adminLoadStudentsBySelectedClassFromAttendance_(selectedClass, keyword);
+
+            // 출석부 구조가 아직 해당 반을 못 찾는 예외 상황에서는 기존 학생명단 필터로 마지막 보정합니다.
+            if (!adminNoticeTargetRows.length) {
+                adminNoticeTargetRows = adminGetNoticeFilteredStudents();
+            }
+        } else {
+            // 반 미선택 또는 전체반은 학생명단 기준. 이때 강사명 검색은 학생명단의 담당강사와 매칭됩니다.
+            adminNoticeTargetRows = adminGetNoticeFilteredStudents();
+        }
+
+        adminNoticeSelectedMap = {};
+        if (selectAll) {
+            adminNoticeTargetRows.forEach(s => adminNoticeSelectedMap[adminNoticeTargetKey(s)] = true);
+        }
+        adminRenderNoticeTargetTable();
+        adminPreviewNoticeCount();
+        if (shouldShowOverlay) hideLoading();
+    } catch (e) {
+        if (shouldShowOverlay) hideLoading();
+        alert(e.message || '공지 대상을 불러오지 못했습니다.');
+    }
+}
+
+async function adminLoadAllNoticeTargets() {
     const classInput = document.getElementById('noticeClass');
     const classDisplay = document.getElementById('noticeClassDisplay');
     const studentKeyword = document.getElementById('noticeStudentKeyword');
@@ -3899,7 +3987,7 @@ function adminLoadAllNoticeTargets() {
         classDisplay.classList.remove('empty');
     }
     if (studentKeyword) studentKeyword.value = '';
-    adminLoadNoticeTargets(true);
+    await adminLoadNoticeTargets(true);
 }
 
 function adminToggleNoticeTarget(key, checked) {
@@ -4236,8 +4324,7 @@ function adminFilteredStudentsForDaily() {
     const keyword = (document.getElementById('adminDailyEvalFilter')?.value || '').trim().toLowerCase();
     return adminStudents.filter(s => {
         const nameText = String(s.name || '').toLowerCase();
-        const classBlob = [s.className, s.memo].join(' ').toLowerCase();
-        if (className && className !== '전체반' && !normalizeForClientMatch(classBlob).includes(normalizeForClientMatch(className))) return false;
+        if (className && className !== '전체반' && !adminNoticeStudentMatchesClass_(s, className)) return false;
         if (keyword && !nameText.includes(keyword)) return false;
         return true;
     });
@@ -4394,33 +4481,68 @@ async function adminLoadDailyEvalStudents() {
 
     try {
         showLoading('출석부 기준 현재 반 학생 불러오는 중...');
-        const data = await adminApi('adminGetAttendanceSnapshot', { adminToken, date, className, keyword, statusFilter: '' });
-        hideLoading();
-        const records = data.records || [];
+        let records = [];
 
-        if (!records.length) {
-            adminBuildDailyRowsFromStudents();
+        // 날짜가 있는 출석부 기록이 있으면 출결 상태까지 포함해서 사용합니다.
+        try {
+            const data = await adminApi('adminGetAttendanceSnapshot', { adminToken, date, className, keyword, statusFilter: '' });
+            records = data.records || [];
+        } catch (snapshotErr) {
+            console.warn('출석 현황 조회 오류, 현재반 명단 조회로 보정:', snapshotErr);
+        }
+
+        if (records.length) {
+            hideLoading();
+            adminDailyEvalRows = records.map(r => ({
+                date: r.date || date,
+                className: r.className || className,
+                studentName: r.studentName,
+                name: r.studentName,
+                studentNo: r.studentNo || '',
+                studentPhone: r.studentPhone || '',
+                parentPhone: r.parentPhone || '',
+                instructor: r.instructor || '',
+                attendanceStatus: r.status || '',
+                specialStatus: r.specialStatus || '',
+                memo: r.memo || '',
+                evaluation: ''
+            }));
             await adminMergeSavedDailyEvaluations(date, className, keyword);
-            adminRenderDailyEvalRows('출석부에서 해당 반 학생을 찾지 못해 학생부 기준으로 표시했습니다.');
+            adminRenderDailyEvalRows('출석부 수업일 기준으로 학생을 불러왔습니다.');
             return;
         }
 
-        adminDailyEvalRows = records.map(r => ({
-            date: r.date || date,
-            className: r.className || className,
-            studentName: r.studentName,
-            name: r.studentName,
-            studentNo: r.studentNo || '',
-            studentPhone: r.studentPhone || '',
-            parentPhone: r.parentPhone || '',
-            instructor: r.instructor || '',
-            attendanceStatus: r.status || '',
-            specialStatus: r.specialStatus || '',
-            memo: r.memo || '',
-            evaluation: ''
-        }));
+        // 선택한 날짜에 출석 체크 칸이 없어도, 반 선택 시에는 출석부 현재반 블록에서 학생을 읽습니다.
+        if (className && className !== '전체반') {
+            const roster = await adminApi('adminGetStudentsByClass', { adminToken, className, keyword });
+            const students = roster.students || [];
+            if (students.length) {
+                hideLoading();
+                adminDailyEvalRows = students.map(s => ({
+                    date,
+                    className: s.className || s.currentClass || className,
+                    studentName: s.studentName || s.name,
+                    name: s.name || s.studentName,
+                    studentNo: s.studentNo || '',
+                    studentPhone: s.studentPhone || '',
+                    parentPhone: s.parentPhone || '',
+                    instructor: s.instructor || s.instructorName || adminNoticeExtractTeacher_(className) || '',
+                    attendanceStatus: '',
+                    specialStatus: '',
+                    memo: s.memo || '',
+                    evaluation: ''
+                }));
+                await adminMergeSavedDailyEvaluations(date, className, keyword);
+                adminRenderDailyEvalRows(roster.message || '출석부 현재반 기준으로 학생을 불러왔습니다.');
+                return;
+            }
+        }
+
+        await adminEnsureStudentsLoaded(false);
+        adminBuildDailyRowsFromStudents();
         await adminMergeSavedDailyEvaluations(date, className, keyword);
-        adminRenderDailyEvalRows(data.message || '출석부 기준으로 학생을 불러왔습니다.');
+        hideLoading();
+        adminRenderDailyEvalRows('출석부에서 해당 반 학생을 찾지 못해 학생명단 기준으로 표시했습니다.');
     } catch (e) {
         hideLoading();
         alert(e.message);
