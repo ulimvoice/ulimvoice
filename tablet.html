@@ -751,6 +751,14 @@
     let tabletPreloadAt = 0;
     let tabletPreloadLoading = false;
 
+    // v94 실사용 안정형:
+    // 1초 안에 현재 입력 건의 응답이 도착한 경우에만 학생명/반명/강의실을 표시합니다.
+    // 1초를 넘기거나, 다음 학생 입력이 이미 시작된 뒤 도착한 예전 응답은 화면에 표시하지 않습니다.
+    let statusRequestSeq = 0;
+    let statusResetTimer = null;
+    const FAST_RESULT_LIMIT_MS = 1000;
+    const STATUS_RESET_DELAY_MS = 1800;
+
     function pad2(n) {
       return String(n).padStart(2, "0");
     }
@@ -806,15 +814,53 @@
       return `${API_URL}?${q.toString()}`;
     }
 
+    function setDefaultStatus() {
+      setStatus(
+        "출결번호를 입력해주세요.",
+        "출결번호는 휴대폰 번호 뒤 네 자리",
+        "success"
+      );
+    }
+
+    function resetStatusSoon(delay = STATUS_RESET_DELAY_MS) {
+      if (statusResetTimer) clearTimeout(statusResetTimer);
+      statusResetTimer = setTimeout(() => {
+        setDefaultStatus();
+      }, delay);
+    }
+
+    function isCurrentFastResult(seq, startedAt) {
+      return seq === statusRequestSeq && (performance.now() - startedAt) <= FAST_RESULT_LIMIT_MS;
+    }
+
+    function showInstantGreeting(mode) {
+      const instantTitle = mode === "out"
+        ? "안녕히 가세요!"
+        : "어서오세요!";
+
+      const instantMessage = mode === "out"
+        ? "오늘도 수고 많았습니다."
+        : "오늘도 즐거운 수업 되시길 바랍니다.";
+
+      setStatus(instantTitle, instantMessage, "success");
+      resetStatusSoon();
+    }
+
     async function submitCheck(mode, extra = {}) {
-      // v93 실사용 속도개선:
-      // GAS 응답을 기다리지 않고 버튼 누르는 즉시 입력칸을 비웁니다.
-      // 다음 학생이 바로 출결번호를 입력할 수 있게 전역 busy 잠금을 사용하지 않습니다.
+      // v94 실사용 안정형:
+      // 1) 버튼을 누르면 즉시 입력칸을 비우고 인사말을 표시합니다.
+      // 2) 다음 학생 입력은 막지 않습니다.
+      // 3) 현재 입력 건의 응답이 1초 안에 도착했을 때만 학생명/반명/강의실을 표시합니다.
+      // 4) 1초를 넘기거나, 다음 학생 입력 후 도착한 이전 응답은 화면에 표시하지 않습니다.
       const attendanceNo = extra.attendanceNo || pin;
       if (!attendanceNo) {
         showModal("출결번호를 입력해주세요.", "", "warning");
+        resetStatusSoon();
         return;
       }
+
+      const seq = ++statusRequestSeq;
+      const startedAt = performance.now();
 
       lastMode = mode;
       lastAttendanceNo = attendanceNo;
@@ -824,18 +870,11 @@
         clearPin();
       }
 
+      showInstantGreeting(mode);
+
       if (tryHandleWithPreload(attendanceNo, mode, extra || {})) {
         return;
       }
-const instantTitle = mode === "out"
-  ? "안녕히 가세요!"
-  : "어서오세요!";
-
-const instantMessage = mode === "out"
-  ? "오늘도 수고 많았습니다."
-  : "오늘도 즐거운 수업 되시길 바랍니다.";
-
-setStatus(instantTitle, instantMessage, "success");
 
       try {
         const params = {
@@ -856,6 +895,12 @@ setStatus(instantTitle, instantMessage, "success");
         const res = await fetch(apiUrl(params), { method: "GET", cache: "no-store" });
         const data = await res.json();
 
+        // 1초 초과 또는 다음 학생 입력 후 도착한 예전 응답은 화면에 표시하지 않습니다.
+        // 단, 서버 기록 자체는 이미 정상 요청되었으므로 화면만 무시합니다.
+        if (!isCurrentFastResult(seq, startedAt)) {
+          return;
+        }
+
         if (data && (data.duplicate === true || data.status === "duplicate" || data.status === "already")) {
           const modeText = data.mode || (mode === "out" ? "하원" : "등원");
           const duplicateMessage =
@@ -864,6 +909,7 @@ setStatus(instantTitle, instantMessage, "success");
             (modeText === "하원" ? "이미 하원처리되었습니다." : "이미 등원처리되었습니다.");
 
           setStatus(duplicateMessage, "", "warning");
+          resetStatusSoon();
           return;
         }
 
@@ -880,15 +926,19 @@ setStatus(instantTitle, instantMessage, "success");
         if (data.status !== "success") {
           const msg = data.message || "처리에 실패했습니다.";
           setStatus("처리 실패", msg, "error");
-          showModal("처리 실패", msg, "error");
+          // 실사용 중 흐름을 막지 않기 위해 오류 모달은 띄우지 않고 상태창만 표시합니다.
+          resetStatusSoon();
           return;
         }
 
         renderSuccess(data);
 
       } catch (err) {
-        setStatus("처리 실패", err.message || String(err), "error");
-        showModal("처리 실패", err.message || String(err), "error");
+        // 네트워크/GAS 지연 오류도 화면을 막지 않고 잠깐 표시 후 초기화합니다.
+        if (seq === statusRequestSeq) {
+          setStatus("처리 확인 필요", "네트워크 상태를 확인해주세요.", "warning");
+          resetStatusSoon();
+        }
       }
     }
 
@@ -907,13 +957,7 @@ setStatus(instantTitle, instantMessage, "success");
       // 실사용 태블릿에서는 완료 모달을 띄우지 않습니다.
       // 모달이 뜨면 다음 학생 입력을 막기 때문에 상태카드만 갱신합니다.
       setStatus(title, lines.join("\n"), "success");
-      setTimeout(() => {
-  setStatus(
-    "출결번호를 입력해주세요.",
-    "출결번호는 휴대폰 번호 뒤 네 자리",
-    "success"
-  );
-}, 1800);
+      resetStatusSoon();
     }
 
     function setStatus(title, message, type = "success") {
@@ -1051,7 +1095,7 @@ setStatus(instantTitle, instantMessage, "success");
       selectedStudent = null;
       setBusy(false);
       closeModal();
-      setStatus("출결번호를 입력해주세요.", "등원 또는 하원 버튼을 누르면 출결이 기록됩니다.", "success");
+      setDefaultStatus();
     }
 
     function focusSelectSoon(id) {
