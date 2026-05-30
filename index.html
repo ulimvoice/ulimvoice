@@ -6154,67 +6154,65 @@ initializeRoomReservationFeature();
 
 
 </script>
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyAW-sqtUQ_mJ6ZS_aV8pTOAKvHTSX-FXUM",
-  authDomain: "ulim-7b09a.firebaseapp.com",
-  projectId: "ulim-7b09a",
-  storageBucket: "ulim-7b09a.firebasestorage.app",
-  messagingSenderId: "364788231295",
-  appId: "1:364788231295:web:b43fb49527bb6af1c6634a",
-  measurementId: "G-V3FH7V87E4"
-};
-const firebaseApp = initializeApp(firebaseConfig);
-const roomMessaging = getMessaging(firebaseApp);
-
+<script>
 window.registerRoomPushTokenManual = async function () {
+  alert("푸시 알림 등록을 시작합니다.");
+
   try {
-    if (!("Notification" in window)) {
-      alert("이 브라우저는 푸시 알림을 지원하지 않습니다.");
-      return;
-    }
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js");
+    const { getMessaging, getToken } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging.js");
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAW-sqtUQ_mJ6ZS_aV8pTOAKvHTSX-FXUM",
+      authDomain: "ulim-7b09a.firebaseapp.com",
+      projectId: "ulim-7b09a",
+      storageBucket: "ulim-7b09a.firebasestorage.app",
+      messagingSenderId: "364788231295",
+      appId: "1:364788231295:web:b43fb49527bb6af1c6634a",
+      measurementId: "G-V3FH7V87E4"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const messaging = getMessaging(app);
 
     const permission = await Notification.requestPermission();
-
     if (permission !== "granted") {
-      alert("알림 권한을 허용해야 푸시 알림 등록이 가능합니다.");
+      alert("알림 권한을 허용해야 합니다.");
       return;
     }
 
-    const token = await getToken(roomMessaging, {
+    const token = await getToken(messaging, {
       vapidKey: "BI6tfHhb4rc1M92JzFqVk1j2ZgwAoQDzgmUewsAtWclw5BzMasH8QZSPk-oaMkAL1I_TSGLX17PXCSHJg5pY1OU"
     });
 
     if (!token) {
-      alert("FCM 토큰을 가져오지 못했습니다.");
+      alert("FCM 토큰 발급 실패");
       return;
     }
 
-    const adminName =
-      (window.currentAdmin && (currentAdmin.name || currentAdmin.id)) ||
-      (window.adminInfo && (adminInfo.name || adminInfo.id)) ||
-      "관리자";
+    const callbackName = "pushCallback_" + Date.now();
 
-    const deviceInfo = navigator.userAgent || "";
+    window[callbackName] = function (data) {
+      delete window[callbackName];
+      if (data && data.status === "success") {
+        alert("푸시 알림 등록 완료");
+      } else {
+        alert((data && data.message) || "푸시 토큰 저장 실패");
+      }
+    };
 
     const url =
       "https://script.google.com/macros/s/AKfycbxgLt5ngGxRQJ3WtEtIkmAyUlFQMnAc2y6SjEXnL1tQDUW8ZdRcLh628_inbHmqktNIvg/exec" +
       "?action=saveAdminPushToken" +
       "&token=" + encodeURIComponent(token) +
-      "&adminName=" + encodeURIComponent(adminName) +
-      "&deviceInfo=" + encodeURIComponent(deviceInfo);
+      "&adminName=" + encodeURIComponent("관리자") +
+      "&deviceInfo=" + encodeURIComponent(navigator.userAgent || "") +
+      "&callback=" + callbackName;
 
-    const res = await fetch(url);
-    const data = await res.json();
+    const script = document.createElement("script");
+    script.src = url;
+    document.body.appendChild(script);
 
-    if (data.status === "success") {
-      alert("푸시 알림 등록 완료");
-    } else {
-      alert(data.message || "푸시 알림 등록 실패");
-    }
   } catch (err) {
     console.error(err);
     alert("푸시 알림 등록 오류: " + err.message);
