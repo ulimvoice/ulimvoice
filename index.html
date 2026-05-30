@@ -1284,7 +1284,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
                 <button type="button" class="admin-btn admin-full-only" onclick="adminSaveDailyEvalTemplate()">기본 문구 저장</button>
                 <button type="button" class="admin-btn blue" onclick="adminApplyTemplateToVisibleRows()">현재 학생들에게 문구 적용</button>
               </div>
-              <div class="admin-permission-note">사용 가능 치환어: [반이름], [학생명], [담당강사], [수업일]</div>
+              <div class="admin-permission-note">사용 가능 치환어: [학생명], [반명], [출석여부], [담당강사], [수업일]</div>
             </div>
 
             <div class="admin-recipient-row admin-full-only">
@@ -4839,15 +4839,41 @@ async function adminSaveDailyEvalTemplate() {
     }
 }
 
+function adminCleanDailyEvalClassName(className) {
+    return String(className || '')
+        // [최봄결T] - 토요일 청소년 초중급 11:00 ~ 13:00 -> 토요일 청소년 초중급 11:00 ~ 13:00
+        .replace(/^\s*\[[^\]]+T?\]\s*[-–—]?\s*/g, '')
+        // 최봄결T - 토요일 청소년 초중급 -> 토요일 청소년 초중급
+        .replace(/^\s*[가-힣]{2,4}\s*T?\s*[-–—]\s*/g, '')
+        .trim();
+}
+
+function adminGetDailyEvalAttendanceText(student) {
+    const status = String(student.attendanceStatus || student.status || '').trim();
+    const special = String(student.specialStatus || '').trim();
+    if (status && special) return `${status} / ${special}`;
+    return status || special || '미체크';
+}
+
 function buildDailyEvalTemplateForStudent(student) {
     const date = document.getElementById('adminDailyEvalDate')?.value || getTodayInputValue();
-    const selectedClass = document.getElementById('adminDailyEvalClass')?.value || student.className || '';
+    const selectedClassRaw = document.getElementById('adminDailyEvalClass')?.value || student.className || '';
+    const classNameRaw = selectedClassRaw || student.className || '';
+    const classNameOnly = adminCleanDailyEvalClassName(classNameRaw);
+    const studentName = student.name || student.studentName || '';
+    const attendanceText = adminGetDailyEvalAttendanceText(student);
     const template = document.getElementById('adminDailyEvalTemplate')?.value || adminDailyEvalTemplateText;
+
     return template
-        .replaceAll('[반이름]', selectedClass || student.className || '')
-        .replaceAll('[학생명]', student.name || student.studentName || '')
+        // 기존 표기와 현재 시트 표기를 모두 지원
+        .replaceAll('[반이름]', classNameOnly)
+        .replaceAll('[반명]', classNameOnly)
+        .replaceAll('[학생명]', studentName)
         .replaceAll('[담당강사]', student.instructor || '')
-        .replaceAll('[수업일]', date);
+        .replaceAll('[수업일]', date)
+        .replaceAll('[출석여부]', attendanceText)
+        .replaceAll('[구분]', attendanceText)
+        .replaceAll('[수업영상링크]', student.videoLink || student.classVideoLink || '');
 }
 
 function adminApplyTemplateToVisibleRows() {
@@ -5048,9 +5074,9 @@ function adminGetSelectedDailyRows() {
         const base = Object.assign({}, adminDailyEvalRows[idx] || {});
         base.date = date;
         if (className && className !== '전체반') {
-            base.className = className;
+            base.className = adminCleanDailyEvalClassName(className);
         } else {
-            base.className = base.className || className || '';
+            base.className = adminCleanDailyEvalClassName(base.className || className || '');
         }
         base.evaluation = row.querySelector('.admin-eval-textarea')?.value.trim() || '';
         return base.evaluation ? base : null;
