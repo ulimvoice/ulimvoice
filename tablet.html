@@ -907,6 +907,13 @@ setStatus(instantTitle, instantMessage, "success");
       // 실사용 태블릿에서는 완료 모달을 띄우지 않습니다.
       // 모달이 뜨면 다음 학생 입력을 막기 때문에 상태카드만 갱신합니다.
       setStatus(title, lines.join("\n"), "success");
+      setTimeout(() => {
+  setStatus(
+    "출결번호를 입력해주세요.",
+    "출결번호는 휴대폰 번호 뒤 네 자리",
+    "success"
+  );
+}, 1800);
     }
 
     function setStatus(title, message, type = "success") {
