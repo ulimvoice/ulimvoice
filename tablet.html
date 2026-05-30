@@ -9,7 +9,7 @@
 <link rel="dns-prefetch" href="https://script.googleusercontent.com">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>울림연기학원 등하원 체크 v90</title>
+  <title>울림연기학원 등하원 체크 v92</title>
   <style>
     :root {
       --green: #16a34a;
@@ -765,20 +765,17 @@
     }
 
     function pressNum(num) {
-      if (busy) return;
       if (pin.length >= 8) return;
       pin += num;
       renderPin();
     }
 
     function backspacePin() {
-      if (busy) return;
       pin = pin.slice(0, -1);
       renderPin();
     }
 
     function clearPin() {
-      if (busy) return;
       pin = "";
       selectedStudent = null;
       renderPin();
@@ -792,6 +789,7 @@
         el.textContent = pin;
       }
     }
+
     function setBusy(value) {
       busy = value;
       document.getElementById("checkInBtn").disabled = value;
@@ -814,8 +812,9 @@
         return;
       }
 
-      // ✅ 실사용 속도 개선: 등원/하원 버튼을 누르는 즉시 입력값을 비웁니다.
-      // GAS 응답을 기다리지 않으므로 다음 학생이 바로 입력할 수 있습니다.
+      // ✅ 태블릿 실사용 개선:
+      // 등원/하원 버튼을 누르는 즉시 입력칸을 비워 다음 입력을 받을 수 있게 합니다.
+      // 단, 학생/수업 선택 후 재호출되는 경우(extra.attendanceNo 있음)는 선택 흐름 유지를 위해 여기서 지우지 않습니다.
       if (!extra.attendanceNo) {
         pin = "";
         selectedStudent = null;
@@ -875,6 +874,7 @@
           showClassChoice(data);
           return;
         }
+
         if (data.status !== "success") {
           const msg = data.message || "처리에 실패했습니다.";
           setStatus("처리 실패", msg, "error");
@@ -1002,7 +1002,6 @@
           cls.className || "수업명 확인 필요",
           cls.roomName ? `강의실: ${cls.roomName}` : "강의실: 데스크문의"
         ].filter(Boolean).join(" / ");
-
         return `<option value="${index}">${escapeHtml(label)}</option>`;
       }).join("");
 
@@ -1021,6 +1020,7 @@
       showCustomModal(title, message, inner, "warning", "select-modal");
       focusSelectSoon("classChoiceSelect");
     }
+
     function confirmClassChoice() {
       const select = document.getElementById("classChoiceSelect");
       const index = select ? Number(select.value) : 0;
@@ -1084,3 +1084,265 @@
 
     function closeModal() {
       document.getElementById("modalBackdrop").style.display = "none";
+    }
+    function closeModalByBackdrop(event) {
+      if (event.target && event.target.id === "modalBackdrop") closeModal();
+    }
+
+    async function loadAds() {
+      try {
+        const res = await fetch(apiUrl({ action: "tabletGetAds" }), { method: "GET", cache: "no-store" });
+        const data = await res.json();
+        adSlides = data.slides && data.slides.length ? data.slides : defaultSlides();
+      } catch (err) {
+        adSlides = defaultSlides();
+      }
+      adIndex = 0;
+      renderAdSlide();
+    }
+
+    function defaultSlides() {
+      return [
+        {
+          type: "공지",
+          title: "홍보 영상",
+          content: "울림연기학원에 오신 것을 환영합니다.",
+          imageUrl: "",
+          videoUrl: "",
+          seconds: 8
+        }
+      ];
+    }
+
+    function renderAdSlide() {
+      if (!adSlides.length) adSlides = defaultSlides();
+
+      const slide = adSlides[adIndex] || adSlides[0];
+      document.getElementById("adTitle").textContent = slide.title || "홍보 영상";
+      document.getElementById("slideCount").textContent = `${adIndex + 1} / ${adSlides.length}`;
+
+      const box = document.getElementById("adBox");
+      const videoUrl = slide.videoUrl || "";
+      const imageUrl = slide.imageUrl || "";
+
+      if (videoUrl) {
+        if (videoUrl.includes("youtube.com/embed/")) {
+          box.innerHTML = `<iframe src="${escapeAttr(videoUrl)}?autoplay=1&mute=1&loop=1&playlist=${extractYoutubeId(videoUrl)}"
+            allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+        } else {
+          box.innerHTML = `<video src="${escapeAttr(videoUrl)}" autoplay muted loop playsinline></video>`;
+        }
+      } else if (imageUrl) {
+        box.innerHTML = `<img src="${escapeAttr(imageUrl)}" alt="홍보 이미지" onerror="this.parentElement.innerHTML=\`<div class=\'ad-text\'>이미지를 불러오지 못했습니다.<br>이미지URL과 공유 권한을 확인해주세요.</div>\`;">`;
+      } else {
+        box.innerHTML = `<div class="ad-text">${escapeHtml(slide.content || "오늘도 좋은 수업 되세요.")}</div>`;
+      }
+
+      clearTimeout(adTimer);
+      const seconds = Math.max(5, Number(slide.seconds || 10));
+      adTimer = setTimeout(() => {
+        nextAdSlide(false);
+      }, seconds * 1000);
+    }
+
+    function nextAdSlide(manual = true) {
+      if (!adSlides.length) return;
+      clearTimeout(adTimer);
+      adIndex = (adIndex + 1) % adSlides.length;
+      renderAdSlide();
+    }
+
+    function prevAdSlide(manual = true) {
+      if (!adSlides.length) return;
+      clearTimeout(adTimer);
+      adIndex = (adIndex - 1 + adSlides.length) % adSlides.length;
+      renderAdSlide();
+    }
+
+    function handleAdAreaClick(event) {
+      const tag = String((event.target && event.target.tagName) || "").toLowerCase();
+
+      // 버튼 클릭은 각 버튼의 onclick에서 처리합니다.
+      if (event.target && event.target.closest && event.target.closest("button")) return;
+
+      // iframe/video/img 자체 클릭은 재생/제어를 방해하지 않도록 제외합니다.
+      // 오른쪽 배경, 제목, 빈 영역을 누르면 다음 자료로 넘어갑니다.
+      if (["iframe", "video", "img"].includes(tag)) return;
+      nextAdSlide(true);
+    }
+
+    function extractYoutubeId(url) {
+      const m = String(url || "").match(/embed\/([^?&/]+)/);
+      return m ? m[1] : "";
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value).replace(/`/g, "&#096;");
+    }
+    async function loadTabletPreload(force = false) {
+      const now = Date.now();
+      if (!force && tabletPreload && now - tabletPreloadAt < 2 * 60 * 1000) return tabletPreload;
+      if (tabletPreloadLoading) return tabletPreload;
+
+      tabletPreloadLoading = true;
+      try {
+        const res = await fetch(apiUrl({ action: "tabletPreload" }), { method: "GET", cache: "no-store" });
+        const data = await res.json();
+
+        if (data && data.status === "success" && data.attendanceMap) {
+          tabletPreload = data;
+          tabletPreloadAt = Date.now();
+        }
+      } catch (err) {
+        // 사전 캐시 실패 시 기존 tabletCheck 경로로 처리합니다.
+      } finally {
+        tabletPreloadLoading = false;
+      }
+
+      return tabletPreload;
+    }
+
+    function normalizeAttendanceNoClient(value) {
+      return String(value || "").replace(/[^0-9]/g, "");
+    }
+
+    function getPreloadedCandidates(attendanceNo) {
+      if (!tabletPreload || !tabletPreload.attendanceMap) return null;
+      const key = normalizeAttendanceNoClient(attendanceNo);
+      return tabletPreload.attendanceMap[key] || null;
+    }
+
+    function tryHandleWithPreload(attendanceNo, mode, extra) {
+      if (!tabletPreload || !tabletPreload.attendanceMap) return false;
+      if (extra && (extra.selectedClassIndex !== undefined || extra.classIndex !== undefined || extra.selectedRowNumber || extra.rowNumber)) {
+        return false;
+      }
+
+      const candidates = getPreloadedCandidates(attendanceNo);
+      if (!candidates || !candidates.length) return false;
+      lastMode = mode;
+      lastAttendanceNo = attendanceNo;
+
+      if (candidates.length > 1) {
+        showStudentChoice({
+          status: "multiple",
+          attendanceNo: attendanceNo,
+          candidates: candidates
+        });
+        return true;
+      }
+
+      const student = candidates[0];
+      selectedStudent = student;
+
+      const classes = Array.isArray(student.classes) ? student.classes : [];
+      if (classes.length > 1) {
+        showClassChoice({
+          status: "multipleClasses",
+          attendanceNo: attendanceNo,
+          studentName: student.name,
+          classes: classes
+        });
+        return true;
+      }
+
+      const selectedClassIndex = classes.length === 1 ? classes[0].index : undefined;
+      submitCheck(mode, {
+        attendanceNo: attendanceNo,
+        selectedRowNumber: student.rowNumber,
+        selectedStudentName: student.name,
+        selectedClassIndex: selectedClassIndex
+      });
+      return true;
+    }
+
+    async function warmup() {
+      try {
+        await fetch(apiUrl({ action: "tabletWarmup" }), { method: "GET", cache: "no-store" });
+      } catch (err) {}
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+    renderPin();
+    loadAds();
+    warmup();
+    loadTabletPreload(true);
+    // Apps Script 콜드스타트 방지를 위해 주기적으로 가볍게 예열합니다.
+    // 태블릿 출결 버튼을 눌렀을 때 첫 응답 대기 시간을 줄이는 용도입니다.
+    setInterval(warmup, 4 * 60 * 1000);
+    setInterval(() => loadTabletPreload(true), 2 * 60 * 1000);
+
+    // 키보드 숫자 입력도 지원
+    document.addEventListener("keydown", event => {
+      if (/^\d$/.test(event.key)) pressNum(event.key);
+      if (event.key === "Backspace") backspacePin();
+      if (event.key === "Escape") {
+        clearPin();
+        closeModal();
+      }
+      if (event.key === "Enter") submitCheck("in");
+      if (event.key === "ArrowRight") nextAdSlide(true);
+      if (event.key === "ArrowLeft") prevAdSlide(true);
+    });
+  </script>
+  <script>
+let deferredPrompt = null;
+const PWA_HIDE_KEY = "ULIM_TABLET_PWA_HIDE";
+window.addEventListener("beforeinstallprompt", function (e) {
+
+  if (localStorage.getItem(PWA_HIDE_KEY) === "Y") {
+    return;
+  }
+
+  e.preventDefault();
+  deferredPrompt = e;
+
+  setTimeout(function () {
+    showPwaInstallGuide();
+  }, 1800);
+});
+
+function showPwaInstallGuide() {
+  if (!deferredPrompt) return;
+
+  showCustomModal(
+  "앱으로 설치하기",
+  "울림연기학원 앱을 홈 화면에 설치하면 더 편하게 사용할 수 있습니다.",
+  `
+    <div class="modal-actions">
+      <button class="modal-btn" onclick="installPwa()">앱 설치하기</button>
+      <button class="modal-btn gray" onclick="closeModal()">나중에</button>
+      <button class="modal-btn gray" onclick="hidePwaForever()">다시는 보지 않기</button>
+    </div>
+  `,
+  "success"
+  );
+}
+
+async function installPwa() {
+  if (!deferredPrompt) {
+    closeModal();
+    return;
+  }
+
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  closeModal();
+}
+function hidePwaForever() {
+  localStorage.setItem(PWA_HIDE_KEY, "Y");
+  closeModal();
+}
+</script>
+</body>
+</html>
