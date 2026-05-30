@@ -6156,12 +6156,13 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/fireba
 import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging.js";
 
 const firebaseConfig = {
-  apiKey: "여기에_API_KEY",
+  apiKey: "AIzaSyAW-sqtUQ_mJ6ZS_aV8pTOAKvHTSX-FXUM",
   authDomain: "ulim-7b09a.firebaseapp.com",
   projectId: "ulim-7b09a",
   storageBucket: "ulim-7b09a.firebasestorage.app",
-  messagingSenderId: "여기에_SENDER_ID",
-  appId: "여기에_APP_ID"
+  messagingSenderId: "364788231295",
+  appId: "1:364788231295:web:b43fb49527bb6af1c6634a",
+  measurementId: "G-V3FH7V87E4"
 };
 
 const roomPushApp = initializeApp(firebaseConfig);
@@ -6182,7 +6183,7 @@ window.registerRoomPushTokenManual = async function () {
     }
 
     const token = await getToken(roomMessaging, {
-      vapidKey: "여기에_웹푸시인증서키_VAPID_KEY"
+      vapidKey: "BI6tfHhb4rc1M92JzFqVk1j2ZgwAoQDzgmUewsAtWclw5BzMasH8QZSPk-oaMkAL1I_TSGLX17PXCSHJg5pY1OU"
     });
 
     if (!token) {
