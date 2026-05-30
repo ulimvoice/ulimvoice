@@ -827,9 +827,15 @@
       if (tryHandleWithPreload(attendanceNo, mode, extra || {})) {
         return;
       }
+const instantTitle = mode === "out"
+  ? "안녕히 가세요!"
+  : "어서오세요!";
 
-      const modeTextNow = mode === "out" ? "하원" : "등원";
-      setStatus(`${attendanceNo} ${modeTextNow} 접수`);
+const instantMessage = mode === "out"
+  ? "오늘도 수고 많았습니다."
+  : "오늘도 즐거운 수업 되시길 바랍니다.";
+
+setStatus(instantTitle, instantMessage, "success");
 
       try {
         const params = {
