@@ -6181,7 +6181,9 @@ window.registerRoomPushTokenManual = async function () {
       return;
     }
 
-    const registration = await navigator.serviceWorker.register("./firebase-messaging-sw.js");
+    const registration = await navigator.serviceWorker.register(
+  "/ulimvoice/firebase-messaging-sw.js"
+);
 
 const token = await getToken(messaging, {
   vapidKey: "BI6tfHhb4rc1M92JzFqVk1j2ZgwAoQDzgmUewsAtWclw5BzMasH8QZSPk-oaMkAL1I_TSGLX17PXCSHJg5pY1OU",
