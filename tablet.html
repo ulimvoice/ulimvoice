@@ -9,7 +9,7 @@
 <link rel="dns-prefetch" href="https://script.googleusercontent.com">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>울림연기학원 등하원 체크 v92</title>
+  <title>울림연기학원 등하원 체크 v90</title>
   <style>
     :root {
       --green: #16a34a;
@@ -39,6 +39,7 @@
       background: var(--bg);
       overflow: hidden;
     }
+
     body {
       display: grid;
       grid-template-columns: minmax(520px, 1fr) minmax(520px, 1fr);
@@ -332,6 +333,7 @@
       text-align: center;
       animation: pop .12s ease-out;
     }
+
     .modal.error {
       border-color: #fecaca;
     }
@@ -625,6 +627,7 @@
       .clock-time {
         font-size: 18px;
       }
+
       .card {
         padding: 16px;
       }
@@ -804,32 +807,29 @@
     }
 
     async function submitCheck(mode, extra = {}) {
-      if (busy) return;
-
+      // v93 실사용 속도개선:
+      // GAS 응답을 기다리지 않고 버튼 누르는 즉시 입력칸을 비웁니다.
+      // 다음 학생이 바로 출결번호를 입력할 수 있게 전역 busy 잠금을 사용하지 않습니다.
       const attendanceNo = extra.attendanceNo || pin;
       if (!attendanceNo) {
         showModal("출결번호를 입력해주세요.", "", "warning");
         return;
       }
 
-      // ✅ 태블릿 실사용 개선:
-      // 등원/하원 버튼을 누르는 즉시 입력칸을 비워 다음 입력을 받을 수 있게 합니다.
-      // 단, 학생/수업 선택 후 재호출되는 경우(extra.attendanceNo 있음)는 선택 흐름 유지를 위해 여기서 지우지 않습니다.
-      if (!extra.attendanceNo) {
-        pin = "";
-        selectedStudent = null;
-        renderPin();
-      }
-
       lastMode = mode;
       lastAttendanceNo = attendanceNo;
+
+      // 선택창에서 다시 호출된 경우가 아니라면, 입력값을 즉시 초기화합니다.
+      if (!extra || (!extra.selectedRowNumber && extra.selectedClassIndex === undefined && extra.classIndex === undefined)) {
+        clearPin();
+      }
 
       if (tryHandleWithPreload(attendanceNo, mode, extra || {})) {
         return;
       }
 
-      setBusy(true);
-      setStatus("처리 중입니다.", "잠시만 기다려주세요.", "warning");
+      const modeTextNow = mode === "out" ? "하원" : "등원";
+      setStatus(`${attendanceNo} ${modeTextNow} 접수`, "처리 중이어도 다음 학생은 바로 입력할 수 있습니다.", "success");
 
       try {
         const params = {
@@ -850,8 +850,6 @@
         const res = await fetch(apiUrl(params), { method: "GET", cache: "no-store" });
         const data = await res.json();
 
-        // v60 핵심: 중복 등원/하원은 성공 화면을 띄우지 않고 안내 메시지만 표시합니다.
-        // 이 경우 GAS에서 등하원기록, 출석부 자동표시, 알림톡 대기열 등록은 모두 차단됩니다.
         if (data && (data.duplicate === true || data.status === "duplicate" || data.status === "already")) {
           const modeText = data.mode || (mode === "out" ? "하원" : "등원");
           const duplicateMessage =
@@ -860,8 +858,6 @@
             (modeText === "하원" ? "이미 하원처리되었습니다." : "이미 등원처리되었습니다.");
 
           setStatus(duplicateMessage, "", "warning");
-          showModal(duplicateMessage, "", "warning");
-          clearPin();
           return;
         }
 
@@ -883,13 +879,10 @@
         }
 
         renderSuccess(data);
-        clearPin();
 
       } catch (err) {
         setStatus("처리 실패", err.message || String(err), "error");
         showModal("처리 실패", err.message || String(err), "error");
-      } finally {
-        setBusy(false);
       }
     }
 
@@ -905,8 +898,9 @@
         `오늘 강의실: ${roomName}`
       ];
 
+      // 실사용 태블릿에서는 완료 모달을 띄우지 않습니다.
+      // 모달이 뜨면 다음 학생 입력을 막기 때문에 상태카드만 갱신합니다.
       setStatus(title, lines.join("\n"), "success");
-      showModal(title, lines.join("\n"), "success");
     }
 
     function setStatus(title, message, type = "success") {
@@ -1002,6 +996,7 @@
           cls.className || "수업명 확인 필요",
           cls.roomName ? `강의실: ${cls.roomName}` : "강의실: 데스크문의"
         ].filter(Boolean).join(" / ");
+
         return `<option value="${index}">${escapeHtml(label)}</option>`;
       }).join("");
 
@@ -1085,6 +1080,7 @@
     function closeModal() {
       document.getElementById("modalBackdrop").style.display = "none";
     }
+
     function closeModalByBackdrop(event) {
       if (event.target && event.target.id === "modalBackdrop") closeModal();
     }
@@ -1168,6 +1164,7 @@
       // iframe/video/img 자체 클릭은 재생/제어를 방해하지 않도록 제외합니다.
       // 오른쪽 배경, 제목, 빈 영역을 누르면 다음 자료로 넘어갑니다.
       if (["iframe", "video", "img"].includes(tag)) return;
+
       nextAdSlide(true);
     }
 
@@ -1188,6 +1185,7 @@
     function escapeAttr(value) {
       return escapeHtml(value).replace(/`/g, "&#096;");
     }
+
     async function loadTabletPreload(force = false) {
       const now = Date.now();
       if (!force && tabletPreload && now - tabletPreloadAt < 2 * 60 * 1000) return tabletPreload;
@@ -1229,6 +1227,7 @@
 
       const candidates = getPreloadedCandidates(attendanceNo);
       if (!candidates || !candidates.length) return false;
+
       lastMode = mode;
       lastAttendanceNo = attendanceNo;
 
@@ -1270,6 +1269,7 @@
         await fetch(apiUrl({ action: "tabletWarmup" }), { method: "GET", cache: "no-store" });
       } catch (err) {}
     }
+
     updateClock();
     setInterval(updateClock, 1000);
     renderPin();
