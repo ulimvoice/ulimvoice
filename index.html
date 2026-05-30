@@ -6181,9 +6181,12 @@ window.registerRoomPushTokenManual = async function () {
       return;
     }
 
-    const token = await getToken(messaging, {
-      vapidKey: "BI6tfHhb4rc1M92JzFqVk1j2ZgwAoQDzgmUewsAtWclw5BzMasH8QZSPk-oaMkAL1I_TSGLX17PXCSHJg5pY1OU"
-    });
+    const registration = await navigator.serviceWorker.register("./firebase-messaging-sw.js");
+
+const token = await getToken(messaging, {
+  vapidKey: "BI6tfHhb4rc1M92JzFqVk1j2ZgwAoQDzgmUewsAtWclw5BzMasH8QZSPk-oaMkAL1I_TSGLX17PXCSHJg5pY1OU",
+  serviceWorkerRegistration: registration
+});
 
     if (!token) {
       alert("FCM 토큰 발급 실패");
