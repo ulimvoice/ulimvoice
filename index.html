@@ -1284,7 +1284,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
                 <button type="button" class="admin-btn admin-full-only" onclick="adminSaveDailyEvalTemplate()">기본 문구 저장</button>
                 <button type="button" class="admin-btn blue" onclick="adminApplyTemplateToVisibleRows()">현재 학생들에게 문구 적용</button>
               </div>
-              <div class="admin-permission-note">사용 가능 치환어: [학생명], [반명], [출석여부], [담당강사], [수업일]</div>
+              <div class="admin-permission-note">사용 가능 치환어: [학생명], [반명], [반이름], [출석여부], [수업일], [담당강사], [수업영상링크]</div>
             </div>
 
             <div class="admin-recipient-row admin-full-only">
@@ -4839,41 +4839,59 @@ async function adminSaveDailyEvalTemplate() {
     }
 }
 
-function adminCleanDailyEvalClassName(className) {
+function adminCleanClassNameOnly_(className) {
     return String(className || '')
-        // [최봄결T] - 토요일 청소년 초중급 11:00 ~ 13:00 -> 토요일 청소년 초중급 11:00 ~ 13:00
         .replace(/^\s*\[[^\]]+T?\]\s*[-–—]?\s*/g, '')
-        // 최봄결T - 토요일 청소년 초중급 -> 토요일 청소년 초중급
         .replace(/^\s*[가-힣]{2,4}\s*T?\s*[-–—]\s*/g, '')
+        .replace(/\s+/g, ' ')
         .trim();
 }
 
-function adminGetDailyEvalAttendanceText(student) {
-    const status = String(student.attendanceStatus || student.status || '').trim();
-    const special = String(student.specialStatus || '').trim();
-    if (status && special) return `${status} / ${special}`;
-    return status || special || '미체크';
+function adminGetClassItemByName_(className) {
+    const target = normalizeClassSearchText(className || '');
+    if (!target) return null;
+    return (adminClassList || []).find(c => normalizeClassSearchText(c.className || '') === target)
+        || (adminClassList || []).find(c => normalizeClassSearchText(adminCleanClassNameOnly_(c.className || '')) === normalizeClassSearchText(adminCleanClassNameOnly_(className || '')))
+        || null;
+}
+
+function adminGetVideoLinkForClassName_(className) {
+    const item = adminGetClassItemByName_(className);
+    return item && item.videoLink ? String(item.videoLink || '').trim() : '';
+}
+
+function adminBuildDailyEvalReplaceMap_(student) {
+    const date = document.getElementById('adminDailyEvalDate')?.value || getTodayInputValue();
+    const selectedClass = document.getElementById('adminDailyEvalClass')?.value || student.className || '';
+    const rawClassName = selectedClass || student.className || '';
+    const cleanClassName = adminCleanClassNameOnly_(rawClassName);
+    const attendanceStatus = student.attendanceStatus || student.status || student.specialStatus || '';
+    const videoLink = student.videoLink || adminGetVideoLinkForClassName_(rawClassName) || adminGetVideoLinkForClassName_(student.className || '');
+
+    return {
+        '[반이름]': cleanClassName,
+        '[반명]': cleanClassName,
+        '[학생명]': student.name || student.studentName || '',
+        '[담당강사]': student.instructor || student.instructorName || '',
+        '[수업일]': date,
+        '[출석여부]': attendanceStatus,
+        '[구분]': attendanceStatus,
+        '[수업영상링크]': videoLink || ''
+    };
+}
+
+function adminApplyDailyEvalTemplateReplacements_(template, student) {
+    let result = String(template || '');
+    const map = adminBuildDailyEvalReplaceMap_(student || {});
+    Object.keys(map).forEach(key => {
+        result = result.split(key).join(map[key] || '');
+    });
+    return result;
 }
 
 function buildDailyEvalTemplateForStudent(student) {
-    const date = document.getElementById('adminDailyEvalDate')?.value || getTodayInputValue();
-    const selectedClassRaw = document.getElementById('adminDailyEvalClass')?.value || student.className || '';
-    const classNameRaw = selectedClassRaw || student.className || '';
-    const classNameOnly = adminCleanDailyEvalClassName(classNameRaw);
-    const studentName = student.name || student.studentName || '';
-    const attendanceText = adminGetDailyEvalAttendanceText(student);
     const template = document.getElementById('adminDailyEvalTemplate')?.value || adminDailyEvalTemplateText;
-
-    return template
-        // 기존 표기와 현재 시트 표기를 모두 지원
-        .replaceAll('[반이름]', classNameOnly)
-        .replaceAll('[반명]', classNameOnly)
-        .replaceAll('[학생명]', studentName)
-        .replaceAll('[담당강사]', student.instructor || '')
-        .replaceAll('[수업일]', date)
-        .replaceAll('[출석여부]', attendanceText)
-        .replaceAll('[구분]', attendanceText)
-        .replaceAll('[수업영상링크]', student.videoLink || student.classVideoLink || '');
+    return adminApplyDailyEvalTemplateReplacements_(template, student || {});
 }
 
 function adminApplyTemplateToVisibleRows() {
@@ -4897,6 +4915,7 @@ function adminBuildDailyRowsFromStudents() {
         studentPhone: s.studentPhone,
         parentPhone: s.parentPhone,
         instructor: s.instructor,
+        videoLink: adminGetVideoLinkForClassName_(((document.getElementById('adminDailyEvalClass')?.value || '') === '전체반') ? (s.className || '전체반') : (document.getElementById('adminDailyEvalClass')?.value || s.className || '')),
         evaluation: ''
     }));
 }
@@ -4945,7 +4964,8 @@ async function adminMergeSavedDailyEvaluations(date, className, keyword = '') {
                 savedBy: saved.adminName || saved.adminId || '',
                 smsResult: saved.smsResult || '',
                 className: row.className || saved.className || '',
-                instructor: row.instructor || saved.instructor || ''
+                instructor: row.instructor || saved.instructor || '',
+                videoLink: row.videoLink || adminGetVideoLinkForClassName_(row.className || saved.className || '')
             });
         });
     } catch (e) {
@@ -4986,6 +5006,7 @@ async function adminLoadDailyEvalStudents() {
                 attendanceStatus: r.status || '',
                 specialStatus: r.specialStatus || '',
                 memo: r.memo || '',
+                videoLink: r.videoLink || adminGetVideoLinkForClassName_(r.className || className),
                 evaluation: ''
             }));
             await adminMergeSavedDailyEvaluations(date, className, keyword);
@@ -5011,6 +5032,7 @@ async function adminLoadDailyEvalStudents() {
                     attendanceStatus: '',
                     specialStatus: '',
                     memo: s.memo || '',
+                    videoLink: s.videoLink || adminGetVideoLinkForClassName_(s.className || s.currentClass || className),
                     evaluation: ''
                 }));
                 await adminMergeSavedDailyEvaluations(date, className, keyword);
@@ -5073,11 +5095,9 @@ function adminGetSelectedDailyRows() {
         if (!checked) return null;
         const base = Object.assign({}, adminDailyEvalRows[idx] || {});
         base.date = date;
-        if (className && className !== '전체반') {
-            base.className = adminCleanDailyEvalClassName(className);
-        } else {
-            base.className = adminCleanDailyEvalClassName(base.className || className || '');
-        }
+        const rawClassName = (className && className !== '전체반') ? className : (base.className || className || '');
+        base.className = adminCleanClassNameOnly_(rawClassName);
+        base.videoLink = base.videoLink || adminGetVideoLinkForClassName_(rawClassName);
         base.evaluation = row.querySelector('.admin-eval-textarea')?.value.trim() || '';
         return base.evaluation ? base : null;
     }).filter(Boolean);
