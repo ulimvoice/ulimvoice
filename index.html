@@ -6182,7 +6182,7 @@ window.registerRoomPushTokenManual = async function () {
     }
 
     const registration = await navigator.serviceWorker.register(
-  "/firebase-messaging-sw.js"
+  "/ulimvoice/firebase-messaging-sw.js"
 );
 
 const token = await getToken(messaging, {
