@@ -2248,7 +2248,7 @@ async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeT
         mediaKind: extraMeta.mediaKind || (String(mimeType || '').indexOf('video/') === 0 ? 'video' : 'audio'),
         analysisText: extraMeta.analysisText || '',
         originalSentence: extraMeta.originalSentence || sentenceText,
-        localWhisperText: extraMeta.localWhisperText || '',
+        localVoiceAIText: extraMeta.localVoiceAIText || '',
         preferredExtension: getExtensionFromMime_(mimeType, 'webm')
     };
 
@@ -2683,8 +2683,8 @@ async function completeTraining() {
     let analysisText = "";
 
     try {
-        showLoading("로컬 Whisper 분석 및 결과 영상 제작 중...");
-        analysisText = await ensureTrainingLocalWhisperAnalysis_();
+        showLoading("AI가 분석중입니다. 결과 영상을 제작 중입니다...");
+        analysisText = await ensureTrainingLocalVoiceAIAnalysis_();
         const videoBlob = await createTrainingResultVideoBlob_(lastRecordedBlob, currentTrainObj.text, analysisText);
         if (videoBlob && videoBlob.size > 0) {
             uploadBlob = videoBlob;
@@ -2717,7 +2717,7 @@ async function completeTraining() {
             mediaKind: uploadMimeType.indexOf('video/') === 0 ? 'video' : 'audio',
             analysisText: analysisText,
             originalSentence: currentTrainObj.text,
-            localWhisperText: recognitionResult || ''
+            localVoiceAIText: recognitionResult || ''
         }
     );
 
@@ -2980,13 +2980,13 @@ async function handleAction() {
 function startRecognition() {
     if(window.location.protocol === 'file:') return alert("서버 환경(http/https)에서만 마이크 사용이 가능합니다.");
     if(!isRecording) {
-        startTrainingLocalWhisperCheck();
+        startTrainingLocalVoiceAICheck();
     } else {
-        stopTrainingLocalWhisperCheck();
+        stopTrainingLocalVoiceAICheck();
     }
 }
 
-async function startTrainingLocalWhisperCheck() {
+async function startTrainingLocalVoiceAICheck() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const options = pickSupportedAudioRecorderOptions_();
@@ -2998,18 +2998,18 @@ async function startTrainingLocalWhisperCheck() {
         const btn = document.getElementById('micBtn');
         btn.textContent = '⬛';
         btn.classList.add('recording');
-        document.getElementById('recStatus').textContent = "로컬 Whisper 체크용 녹음 중...";
+        document.getElementById('recStatus').textContent = "녹음 중...";
         document.getElementById('resultBox').style.display='block';
-        document.getElementById('sttResult').textContent = "녹음 중입니다. 중지하면 로컬 Whisper가 분석합니다.";
+        document.getElementById('sttResult').textContent = "녹음 중입니다.";
         document.getElementById('accBadge').className = 'accuracy-badge acc-wait';
         document.getElementById('accBadge').textContent = '녹음중';
         mediaRecorder.addEventListener("dataavailable", e => { if (e.data && e.data.size) audioChunks.push(e.data); });
         mediaRecorder.addEventListener("stop", async () => {
             const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || options.mimeType || 'audio/webm' });
             stream.getTracks().forEach(track => track.stop());
-            document.getElementById('sttResult').textContent = "로컬 Whisper 모델 분석 중입니다. 첫 실행은 모델 다운로드 때문에 오래 걸릴 수 있습니다.";
+            document.getElementById('sttResult').textContent = "AI가 분석중입니다. 첫 실행은 시간이 걸릴 수 있습니다.";
             try {
-                await runLocalWhisperForTraining(audioBlob, {
+                await runLocalVoiceAIForTraining(audioBlob, {
                     targetText: currentTrainObj ? currentTrainObj.text : '',
                     onStatus: msg => {
                         const el = document.getElementById('sttResult');
@@ -3018,7 +3018,7 @@ async function startTrainingLocalWhisperCheck() {
                 });
             } catch (err) {
                 console.error(err);
-                document.getElementById('sttResult').textContent = "로컬 Whisper 분석 실패: " + (err.message || err);
+                document.getElementById('sttResult').textContent = "AI 분석 실패: " + (err.message || err);
                 document.getElementById('accBadge').className = 'accuracy-badge acc-bad';
                 document.getElementById('accBadge').textContent = '분석 실패';
             }
@@ -3034,15 +3034,15 @@ async function startTrainingLocalWhisperCheck() {
     }
 }
 
-function stopTrainingLocalWhisperCheck() {
+function stopTrainingLocalVoiceAICheck() {
     try { if(mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop(); } catch(e) {}
 }
 
-async function runLocalWhisperForTraining(audioBlob, options = {}) {
-    if (!window.UlimLocalWhisper || typeof window.UlimLocalWhisper.transcribe !== "function") {
-        throw new Error("로컬 Whisper 모듈이 아직 준비되지 않았습니다. 인터넷 연결 상태에서 한 번 새로고침 후 다시 시도해주세요.");
+async function runLocalVoiceAIForTraining(audioBlob, options = {}) {
+    if (!window.UlimLocalVoiceAI || typeof window.UlimLocalVoiceAI.transcribe !== "function") {
+        throw new Error("AI 분석 모듈이 아직 준비되지 않았습니다. 인터넷 연결 상태에서 한 번 새로고침 후 다시 시도해주세요.");
     }
-    const result = await window.UlimLocalWhisper.transcribe(audioBlob, {
+    const result = await window.UlimLocalVoiceAI.transcribe(audioBlob, {
         language: "ko",
         task: "transcribe",
         model: ULIM_LOCAL_WHISPER_MODEL,
@@ -3125,18 +3125,18 @@ function buildTrainingAiAnalysisText_(transcript) {
     else if (similarity >= 70) level = '양호';
     else if (similarity >= 45) level = '부분 점검 필요';
     return `AI 분석결과
-- 로컬 Whisper 인식: ${transcript || '인식 실패'}
+- AI 인식결과: ${transcript || '인식 실패'}
 - 원문 일치도: ${similarity}%
 - 평가: ${level}
 - 표준발음 참고: ${pron || '표준발음 데이터 없음'}`;
 }
 
-async function ensureTrainingLocalWhisperAnalysis_() {
+async function ensureTrainingLocalVoiceAIAnalysis_() {
     if (!lastRecordedBlob) throw new Error('녹음 파일이 없습니다.');
     if (!recognitionResult) {
         const status = document.getElementById('recStatus');
-        if (status) status.textContent = '최종 녹음 로컬 Whisper 분석 중...';
-        await runLocalWhisperForTraining(lastRecordedBlob, {
+        if (status) status.textContent = 'AI가 분석중입니다.';
+        await runLocalVoiceAIForTraining(lastRecordedBlob, {
             targetText: currentTrainObj ? currentTrainObj.text : '',
             onStatus: msg => { if (status && msg) status.textContent = msg; }
         });
@@ -3264,17 +3264,17 @@ async function toggleRecord() {
                 document.getElementById('myTime').textContent = duration.toFixed(1) + "s";
                 document.getElementById('resultBox').style.display='block'; 
                 stream.getTracks().forEach(track => track.stop());
-                runLocalWhisperForTraining(audioBlob, {
+                runLocalVoiceAIForTraining(audioBlob, {
                     targetText: currentTrainObj ? currentTrainObj.text : '',
                     onStatus: msg => {
                         const el = document.getElementById('recStatus');
                         if (el && msg) el.textContent = msg;
                     }
                 }).then(() => {
-                    document.getElementById('recStatus').textContent = '녹음 완료 / 로컬 Whisper 분석 완료';
+                    document.getElementById('recStatus').textContent = '녹음 완료 / AI 분석 완료';
                 }).catch(err => {
-                    console.warn('Local Whisper final analysis failed:', err);
-                    document.getElementById('recStatus').textContent = '녹음 완료 / 로컬 Whisper 분석 실패';
+                    console.warn('Local analysis failed:', err);
+                    document.getElementById('recStatus').textContent = '녹음 완료 / AI 분석 실패';
                 });
             });
         } catch (e) { alert("마이크 권한 필요"); }
@@ -7018,45 +7018,89 @@ const PRON_CLUSTER_SPLIT = {
     "ㄺ":["ㄹ","ㄱ"], "ㄻ":["ㄹ","ㅁ"], "ㄼ":["ㄹ","ㅂ"], "ㄽ":["ㄹ","ㅅ"], "ㄾ":["ㄹ","ㅌ"], "ㄿ":["ㄹ","ㅍ"], "ㅀ":["ㄹ","ㅎ"], "ㅄ":["ㅂ","ㅅ"]
 };
 const PRON_EXCEPTION_WORDS = {
-    "꽃잎": { out:"꼰닙", rule:"예외/ㄴ첨가", desc:"합성어·파생어에서 앞말이 자음으로 끝나고 뒷말이 이/야/여/요/유로 시작하는 경우 ㄴ 소리가 첨가될 수 있습니다." },
-    "꽃잎을": { out:"꼰니플", rule:"예외/ㄴ첨가+연음", desc:"꽃잎은 [꼰닙]으로 처리한 뒤 조사 '을'이 이어져 [꼰니플]처럼 납니다." },
-    "꽃잎이": { out:"꼰니피", rule:"예외/ㄴ첨가+연음", desc:"꽃잎은 [꼰닙]으로 처리한 뒤 조사 '이'가 이어져 [꼰니피]처럼 납니다." },
-    "깻잎": { out:"깬닙", rule:"예외/ㄴ첨가", desc:"사이시옷이 있는 합성어로 ㄴ첨가와 비음화가 함께 반영되는 대표 예외입니다." },
-    "깻잎을": { out:"깬니플", rule:"예외/ㄴ첨가+연음", desc:"깻잎은 [깬닙]으로 처리한 뒤 조사 '을'이 이어집니다." },
-    "나뭇잎": { out:"나문닙", rule:"예외/ㄴ첨가", desc:"나뭇잎은 사이시옷과 ㄴ첨가가 반영되는 낱말입니다." },
-    "솜이불": { out:"솜니불", rule:"ㄴ첨가", desc:"앞말이 자음으로 끝나고 뒷말이 이로 시작해 [니] 계열 소리가 첨가되는 경우입니다." },
-    "한여름": { out:"한녀름", rule:"ㄴ첨가", desc:"합성어 경계에서 ㄴ 소리가 첨가되는 예입니다." },
-    "신라": { out:"실라", rule:"유음화", desc:"ㄴ과 ㄹ이 만날 때 [ㄹㄹ]로 발음되는 대표 예입니다." },
-    "난로": { out:"날로", rule:"유음화", desc:"ㄴ+ㄹ 환경에서 ㄴ이 ㄹ로 바뀝니다." },
-    "종로": { out:"종노", rule:"비음화", desc:"받침 ㅇ 뒤 ㄹ이 ㄴ으로 발음되는 관용적 표준발음입니다." },
-    "대관령": { out:"대괄령", rule:"유음화", desc:"ㄴ과 ㄹ의 연결에서 유음화가 반영되는 낱말입니다." },
-    "밟다": { out:"밥따", rule:"겹받침 예외+된소리", desc:"밟-은 자음 앞에서 [밥]으로 줄어들고 뒤소리가 된소리로 납니다." },
-    "밟고": { out:"밥꼬", rule:"겹받침 예외+된소리", desc:"밟고는 [밥꼬]로 발음합니다." },
+    // 국립국어원 표준 발음법 예시와 연습에서 자주 다루는 낱말 위주 예외 사전입니다.
+    // 모르는 낱말은 억지로 바꾸지 않고, 안전한 규칙만 적용합니다.
+    "꽃": { out:"꼳", rule:"받침 대표음", desc:"단독 또는 자음 앞에서 ㅊ 받침은 대표음 [ㄷ]으로 납니다." },
+    "꽃이": { out:"꼬치", rule:"연음", desc:"받침 ㅊ이 뒤 음절의 빈 초성 자리로 이어져 [치]로 납니다." },
+    "꽃을": { out:"꼬츨", rule:"연음", desc:"받침 ㅊ이 조사 '을'로 이어져 [츨]로 납니다." },
+    "꽃은": { out:"꼬츤", rule:"연음", desc:"받침 ㅊ이 조사 '은'으로 이어져 [츤]으로 납니다." },
+    "꽃도": { out:"꼳또", rule:"받침 대표음+된소리되기", desc:"ㅊ 받침이 [ㄷ]으로 바뀐 뒤 뒤의 ㄷ이 된소리로 납니다." },
+    "꽃다발": { out:"꼳따발", rule:"받침 대표음+된소리되기", desc:"ㅊ 받침이 [ㄷ]으로 바뀐 뒤 뒤의 ㄷ이 된소리로 납니다." },
+    "꽃잎": { out:"꼰닙", rule:"ㄴ첨가+비음화", desc:"합성어에서 ㄴ이 첨가되고, 앞 받침이 비음화됩니다." },
+    "꽃잎을": { out:"꼰니플", rule:"ㄴ첨가+연음", desc:"꽃잎은 [꼰닙] 계열로 난 뒤 조사와 이어져 [꼰니플]로 납니다." },
+    "꽃잎이": { out:"꼰니피", rule:"ㄴ첨가+연음", desc:"꽃잎은 [꼰닙] 계열로 난 뒤 조사와 이어져 [꼰니피]로 납니다." },
+    "깻잎": { out:"깬닙", rule:"사이시옷+ㄴ첨가", desc:"사이시옷이 있는 합성어로 ㄴ첨가와 비음화가 함께 반영됩니다." },
+    "깻잎을": { out:"깬니플", rule:"사이시옷+ㄴ첨가+연음", desc:"깻잎은 [깬닙] 계열로 난 뒤 조사와 이어집니다." },
+    "나뭇잎": { out:"나문닙", rule:"사이시옷+ㄴ첨가", desc:"사이시옷과 ㄴ첨가가 함께 반영되는 낱말입니다." },
+    "솜이불": { out:"솜니불", rule:"ㄴ첨가", desc:"합성어 경계에서 ㄴ 소리가 첨가되는 낱말입니다." },
+    "한여름": { out:"한녀름", rule:"ㄴ첨가", desc:"합성어 경계에서 ㄴ 소리가 첨가되는 낱말입니다." },
+    "맨입": { out:"맨닙", rule:"ㄴ첨가", desc:"합성어 경계에서 ㄴ 소리가 첨가되는 낱말입니다." },
+    "밖": { out:"박", rule:"받침 대표음", desc:"ㄲ 받침은 단독 또는 자음 앞에서 [ㄱ]으로 납니다." },
+    "밖에": { out:"바께", rule:"연음", desc:"ㄲ 받침이 모음 앞에서 뒤 음절로 이어져 [께]로 납니다." },
+    "부엌": { out:"부억", rule:"받침 대표음", desc:"ㅋ 받침은 단독 또는 자음 앞에서 [ㄱ]으로 납니다." },
+    "부엌에": { out:"부어케", rule:"연음", desc:"ㅋ 받침이 모음 앞에서 뒤 음절로 이어져 [케]로 납니다." },
+    "앞": { out:"압", rule:"받침 대표음", desc:"ㅍ 받침은 단독 또는 자음 앞에서 [ㅂ]으로 납니다." },
+    "앞에": { out:"아페", rule:"연음", desc:"ㅍ 받침이 모음 앞에서 뒤 음절로 이어져 [페]로 납니다." },
+    "옷": { out:"옫", rule:"받침 대표음", desc:"ㅅ 받침은 단독 또는 자음 앞에서 [ㄷ]으로 납니다." },
+    "옷이": { out:"오시", rule:"연음", desc:"ㅅ 받침이 모음 앞에서 뒤 음절로 이어져 [시]로 납니다." },
+    "옷을": { out:"오슬", rule:"연음", desc:"ㅅ 받침이 모음 앞에서 뒤 음절로 이어져 [슬]로 납니다." },
+    "값": { out:"갑", rule:"겹받침", desc:"겹받침 ㅄ은 단독 또는 자음 앞에서 [ㅂ]으로 납니다." },
+    "값이": { out:"갑씨", rule:"겹받침+된소리", desc:"겹받침 ㅄ 뒤 모음이 이어질 때 [갑씨]로 납니다." },
+    "값을": { out:"갑쓸", rule:"겹받침+된소리", desc:"겹받침 ㅄ 뒤 모음이 이어질 때 [갑쓸]로 납니다." },
+    "값만": { out:"감만", rule:"겹받침+비음화", desc:"ㅂ 계열 받침이 ㅁ 앞에서 [ㅁ]으로 비음화됩니다." },
+    "값지다": { out:"갑찌다", rule:"겹받침+된소리되기", desc:"받침 뒤의 ㅈ이 된소리로 납니다." },
+    "밟다": { out:"밥따", rule:"겹받침 예외+된소리되기", desc:"밟-은 자음 앞에서 [밥] 계열로 줄고 뒤소리가 된소리로 납니다." },
+    "밟고": { out:"밥꼬", rule:"겹받침 예외+된소리되기", desc:"밟고는 [밥꼬]로 발음합니다." },
     "밟는": { out:"밤는", rule:"겹받침 예외+비음화", desc:"밟- 뒤 ㄴ이 오면 [밤는]으로 발음합니다." },
-    "넓다": { out:"널따", rule:"겹받침 예외+된소리", desc:"넓-은 일반적으로 [널] 계열로 발음합니다." },
-    "넓고": { out:"널꼬", rule:"겹받침 예외+된소리", desc:"넓고는 [널꼬]로 발음합니다." },
-    "맑다": { out:"막따", rule:"겹받침 예외+된소리", desc:"맑다는 [막따]로 발음합니다." },
-    "맑게": { out:"말께", rule:"겹받침 예외+된소리", desc:"맑게는 활용 환경에 따라 [말께]로 발음합니다." },
-    "읽다": { out:"익따", rule:"겹받침 예외+된소리", desc:"읽다는 [익따]로 발음합니다." },
-    "읽고": { out:"일꼬", rule:"겹받침 예외+된소리", desc:"읽고는 [일꼬]로 발음합니다." },
+    "밟지": { out:"밥찌", rule:"겹받침 예외+된소리되기", desc:"밟- 뒤 ㅈ이 된소리로 납니다." },
+    "넓다": { out:"널따", rule:"겹받침 예외+된소리되기", desc:"넓-은 일반적으로 [널] 계열로 발음합니다." },
+    "넓고": { out:"널꼬", rule:"겹받침 예외+된소리되기", desc:"넓고는 [널꼬]로 발음합니다." },
+    "넓게": { out:"널께", rule:"겹받침 예외+된소리되기", desc:"넓게는 [널께]로 발음합니다." },
+    "맑다": { out:"막따", rule:"겹받침 예외+된소리되기", desc:"맑다는 [막따]로 발음합니다." },
+    "맑고": { out:"말꼬", rule:"겹받침 예외+된소리되기", desc:"맑고는 [말꼬]로 발음합니다." },
+    "맑게": { out:"말께", rule:"겹받침 예외+된소리되기", desc:"맑게는 [말께]로 발음합니다." },
+    "읽다": { out:"익따", rule:"겹받침 예외+된소리되기", desc:"읽다는 [익따]로 발음합니다." },
+    "읽고": { out:"일꼬", rule:"겹받침 예외+된소리되기", desc:"읽고는 [일꼬]로 발음합니다." },
     "읽는": { out:"잉는", rule:"겹받침 예외+비음화", desc:"읽는은 [잉는]으로 발음합니다." },
-    "읊다": { out:"읍따", rule:"겹받침 예외+된소리", desc:"읊다는 [읍따]로 발음합니다." },
-    "같이": { out:"가치", rule:"구개음화", desc:"ㄷ/ㅌ 받침 뒤 이 계열 모음이 이어지면 ㅈ/ㅊ 계열로 발음됩니다." },
-    "굳이": { out:"구지", rule:"구개음화", desc:"ㄷ 받침 뒤 이가 이어져 [지]로 발음되는 예입니다." },
-    "해돋이": { out:"해도지", rule:"구개음화", desc:"ㄷ 받침 뒤 이가 이어져 [지]로 발음되는 예입니다." },
-    "좋아": { out:"조아", rule:"ㅎ 탈락", desc:"ㅎ 받침이 모음 앞에서 약해지거나 탈락하는 대표 예입니다." },
+    "닭": { out:"닥", rule:"겹받침", desc:"ㄺ 받침은 단독일 때 [ㄱ]으로 납니다." },
+    "닭이": { out:"달기", rule:"겹받침+연음", desc:"ㄺ 겹받침에서 뒤소리 ㄱ이 모음 앞에서 이어집니다." },
+    "닭도": { out:"닥또", rule:"겹받침+된소리되기", desc:"ㄺ 받침이 [ㄱ]으로 정리된 뒤 뒤의 ㄷ이 된소리로 납니다." },
+    "여덟": { out:"여덜", rule:"겹받침", desc:"ㄼ 받침은 단독에서 [ㄹ]로 납니다." },
+    "읊다": { out:"읍따", rule:"겹받침+된소리되기", desc:"ㄿ 받침은 [ㅂ]으로 정리되고 뒤소리가 된소리로 납니다." },
+    "국물": { out:"궁물", rule:"비음화", desc:"받침 ㄱ이 뒤의 ㅁ 앞에서 [ㅇ]으로 바뀝니다." },
+    "국밥": { out:"국빱", rule:"된소리되기", desc:"받침 ㄱ 뒤의 ㅂ이 된소리로 납니다." },
+    "먹고": { out:"먹꼬", rule:"된소리되기", desc:"받침 ㄱ 뒤의 ㄱ이 된소리로 납니다." },
+    "먹는": { out:"멍는", rule:"비음화", desc:"받침 ㄱ이 뒤의 ㄴ 앞에서 [ㅇ]으로 바뀝니다." },
+    "닫는": { out:"단는", rule:"비음화", desc:"받침 ㄷ이 ㄴ 앞에서 [ㄴ]으로 바뀝니다." },
+    "밥물": { out:"밤물", rule:"비음화", desc:"받침 ㅂ이 ㅁ 앞에서 [ㅁ]으로 바뀝니다." },
+    "있는": { out:"인는", rule:"비음화", desc:"ㅆ 받침이 대표음 [ㄷ]으로 정리된 뒤 ㄴ 앞에서 [ㄴ]으로 바뀝니다." },
+    "없는": { out:"엄는", rule:"비음화", desc:"ㅂ 받침이 ㄴ 앞에서 [ㅁ]으로 바뀝니다." },
+    "신라": { out:"실라", rule:"유음화", desc:"ㄴ과 ㄹ이 만날 때 [ㄹㄹ]로 발음됩니다." },
+    "난로": { out:"날로", rule:"유음화", desc:"ㄴ+ㄹ 환경에서 ㄴ이 ㄹ로 바뀝니다." },
+    "칼날": { out:"칼랄", rule:"유음화", desc:"ㄹ+ㄴ 환경에서 ㄴ이 ㄹ로 바뀝니다." },
+    "줄넘기": { out:"줄럼끼", rule:"유음화+된소리되기", desc:"ㄹ+ㄴ 환경에서 유음화가 일어나고 뒤소리가 된소리로 납니다." },
+    "종로": { out:"종노", rule:"비음화", desc:"관용적으로 [종노]로 발음되는 낱말입니다." },
+    "대관령": { out:"대괄령", rule:"유음화", desc:"ㄴ과 ㄹ의 연결에서 유음화가 반영됩니다." },
+    "같이": { out:"가치", rule:"구개음화", desc:"ㅌ 받침 뒤 이 계열 모음이 이어져 [치]로 발음됩니다." },
+    "굳이": { out:"구지", rule:"구개음화", desc:"ㄷ 받침 뒤 이가 이어져 [지]로 발음됩니다." },
+    "해돋이": { out:"해도지", rule:"구개음화", desc:"ㄷ 받침 뒤 이가 이어져 [지]로 발음됩니다." },
+    "붙이다": { out:"부치다", rule:"구개음화", desc:"ㅌ 받침 뒤 이 계열 모음이 이어져 [치]로 발음됩니다." },
+    "좋아": { out:"조아", rule:"ㅎ 탈락", desc:"ㅎ 받침이 모음 앞에서 탈락합니다." },
+    "좋은": { out:"조은", rule:"ㅎ 탈락", desc:"ㅎ 받침이 모음 앞에서 탈락합니다." },
     "놓고": { out:"노코", rule:"ㅎ 축약", desc:"ㅎ 받침과 ㄱ이 만나 [ㅋ]으로 축약됩니다." },
-    "많다": { out:"만타", rule:"ㅎ 축약", desc:"ㅎ 계열 겹받침과 뒤 자음이 만나 거센소리로 축약됩니다." },
-    "않고": { out:"안코", rule:"ㅎ 축약", desc:"ㅎ 계열 겹받침과 ㄱ이 만나 [ㅋ]으로 축약됩니다." },
+    "좋다": { out:"조타", rule:"ㅎ 축약", desc:"ㅎ 받침과 ㄷ이 만나 [ㅌ]으로 축약됩니다." },
+    "많다": { out:"만타", rule:"ㅎ 축약", desc:"ㅎ 계열 겹받침과 ㄷ이 만나 거센소리로 축약됩니다." },
+    "않고": { out:"안코", rule:"ㅎ 축약", desc:"ㅎ 계열 겹받침과 ㄱ이 만나 거센소리로 축약됩니다." },
     "학교": { out:"학꾜", rule:"된소리되기", desc:"받침 ㄱ 뒤의 ㄱ이 된소리 [ㄲ]로 납니다." },
     "학교에": { out:"학꾜에", rule:"된소리되기", desc:"학교는 [학꾜]로 발음합니다." },
-    "국밥": { out:"국빱", rule:"된소리되기", desc:"받침 ㄱ 뒤의 ㅂ이 된소리 [ㅃ]로 납니다." },
-    "먹고": { out:"먹꼬", rule:"된소리되기", desc:"받침 ㄱ 뒤의 ㄱ이 된소리 [ㄲ]로 납니다." },
-    "먹는": { out:"멍는", rule:"비음화", desc:"받침 ㄱ이 뒤의 ㄴ 앞에서 [ㅇ]으로 바뀝니다." },
-    "국물": { out:"궁물", rule:"비음화", desc:"받침 ㄱ이 뒤의 ㅁ 앞에서 [ㅇ]으로 바뀝니다." },
-    "국물을": { out:"궁무를", rule:"비음화+연음", desc:"국물 내부의 비음화 뒤 조사 '을'이 연음됩니다." },
-    "감기": { out:"감기", rule:"주의 단어", desc:"감기는 의미와 품사에 따라 발음 판단이 달라질 수 있어 자동치환 결과를 확인해야 합니다." },
-    "신고": { out:"신고", rule:"주의 단어", desc:"신고는 '알리다'의 신고와 '신발을 신고'의 신고가 문맥에 따라 달라질 수 있습니다." }
+    "국수": { out:"국쑤", rule:"된소리되기", desc:"받침 ㄱ 뒤의 ㅅ이 된소리로 납니다." },
+    "옆집": { out:"엽찝", rule:"받침 대표음+된소리되기", desc:"ㅍ 받침이 [ㅂ]으로 정리된 뒤 뒤의 ㅈ이 된소리로 납니다." },
+    "희망": { out:"히망", rule:"ㅢ 발음", desc:"자음을 첫소리로 가진 음절의 ㅢ는 [ㅣ]로 납니다." },
+    "민주주의": { out:"민주주의", rule:"주의", desc:"조사 '의'는 [의] 또는 [에]가 허용되는 경우가 있어 자동 단정하지 않습니다." },
+    "나의": { out:"나의/나에", rule:"허용 발음", desc:"조사 '의'는 [의]와 [에]가 모두 허용됩니다." },
+    "우리의": { out:"우리의/우리에", rule:"허용 발음", desc:"조사 '의'는 [의]와 [에]가 모두 허용됩니다." },
+    "감기": { out:"감기", rule:"주의 단어", desc:"의미와 품사에 따라 발음 판단이 달라질 수 있어 자동 변환하지 않습니다." },
+    "신고": { out:"신고", rule:"주의 단어", desc:"의미에 따라 발음이 달라질 수 있어 자동 변환하지 않습니다." }
 };
 let pronLastRules = [];
 let pronMediaRecorder = null;
@@ -7075,8 +7119,8 @@ let pronAudioStats = null;
 let pronRecordedBlob = null;
 let pronEtriPollingTimer = null;
 let pronEtriPollingCount = 0;
-let pronWhisperPollingTimer = null;
-let pronWhisperPollingCount = 0;
+let pronVoiceAIPollingTimer = null;
+let pronVoiceAIPollingCount = 0;
 const PRON_ETRI_GAS_URL = typeof GET_API_URL !== "undefined" ? GET_API_URL : "";
 const ULIM_LOCAL_WHISPER_MODEL = "Xenova/whisper-tiny";
 window.ULIM_LOCAL_WHISPER_MODEL = ULIM_LOCAL_WHISPER_MODEL;
@@ -7370,24 +7414,68 @@ function pronSetRecordingUi(isRecording, labelText) {
     }
 }
 function pronWordToParts(word) {
-    return Array.from(word).map(ch => {
+    return Array.from(String(word || "")).map(ch => {
         const d = pronDecompose(ch);
         return d ? d : { raw: ch };
     });
 }
-function pronApplyGeneralRulesToWord(word, rules) {
-    if (!/[가-힣]/.test(word)) return word;
-
-    const exception = PRON_EXCEPTION_WORDS[word];
-    if (exception) {
-        pronAddRule(rules, exception.rule, word, exception.out, exception.desc);
-        return exception.out;
+function pronNormalizeRuleValue(value) {
+    return String(value || "").replace(/\s+/g, "").trim();
+}
+function pronLookupException(word, rules) {
+    const exact = PRON_EXCEPTION_WORDS[word];
+    if (exact) {
+        if (exact.out !== word || exact.rule !== "주의 단어") {
+            pronAddRule(rules, exact.rule, word, exact.out, exact.desc);
+        }
+        return exact.out;
     }
+    return null;
+}
+function pronAttachPronouncedSuffix(baseOut, suffix) {
+    const parts = pronWordToParts(baseOut + suffix);
+    const baseLen = Array.from(baseOut).length;
+    if (!suffix || baseLen <= 0 || parts.length <= baseLen) return baseOut + suffix;
+    const a = parts[baseLen - 1];
+    const b = parts[baseLen];
+    if (!a || !b || a.raw || b.raw || !a.jong || a.jong === "ㅇ" || b.cho !== "ㅇ") return baseOut + suffix;
+    if (PRON_CLUSTER_SPLIT[a.jong]) {
+        const [remain, move] = PRON_CLUSTER_SPLIT[a.jong];
+        if (PRON_CHO_INDEX[move] !== undefined) {
+            a.jong = remain;
+            b.cho = move;
+            return pronPartsToString(parts);
+        }
+    }
+    if (PRON_CHO_INDEX[a.jong] !== undefined) {
+        b.cho = a.jong;
+        a.jong = "";
+        return pronPartsToString(parts);
+    }
+    return baseOut + suffix;
+}
+function pronTryDictionaryWithSuffix(word, rules) {
+    const direct = pronLookupException(word, rules);
+    if (direct !== null) return direct;
 
-    const beforeWord = word;
-    let parts = pronWordToParts(word);
+    const suffixes = ["으로", "로", "에서", "에게", "한테", "까지", "부터", "처럼", "보다", "만", "도", "은", "는", "이", "가", "을", "를", "에", "와", "과"];
+    const bases = Object.keys(PRON_EXCEPTION_WORDS).filter(base => base.length >= 2).sort((a, b) => b.length - a.length);
 
-    // ㅎ 탈락/축약
+    for (const base of bases) {
+        if (!word.startsWith(base) || word === base) continue;
+        const suffix = word.slice(base.length);
+        if (!suffixes.includes(suffix)) continue;
+        const entry = PRON_EXCEPTION_WORDS[base];
+        if (!entry || entry.rule === "주의 단어") continue;
+        const combined = pronAttachPronouncedSuffix(entry.out, suffix);
+        if (combined && combined !== word) {
+            pronAddRule(rules, entry.rule + "+조사 연결", word, combined, "사전에 등록된 발음형에 조사가 이어진 형태입니다.");
+            return combined;
+        }
+    }
+    return null;
+}
+function pronApplyHieutRules(parts, rules) {
     for (let i = 0; i < parts.length - 1; i++) {
         const a = parts[i], b = parts[i + 1];
         if (a.raw || b.raw || !a.jong) continue;
@@ -7395,17 +7483,19 @@ function pronApplyGeneralRulesToWord(word, rules) {
             if (b.cho === "ㅇ") {
                 const old = pronPartsToString(parts);
                 a.jong = a.jong === "ㅎ" ? "" : (a.jong === "ㄶ" ? "ㄴ" : "ㄹ");
-                pronAddRule(rules, "ㅎ 탈락", old, pronPartsToString(parts), "ㅎ 받침이 모음 앞에서 약해지거나 탈락합니다.");
+                const now = pronPartsToString(parts);
+                if (old !== now) pronAddRule(rules, "ㅎ 탈락", old, now, "ㅎ 받침이 모음 앞에서 탈락하거나 약해집니다.");
             } else if ({"ㄱ":"ㅋ", "ㄷ":"ㅌ", "ㅈ":"ㅊ"}[b.cho]) {
                 const old = pronPartsToString(parts);
                 b.cho = {"ㄱ":"ㅋ", "ㄷ":"ㅌ", "ㅈ":"ㅊ"}[b.cho];
                 a.jong = a.jong === "ㅎ" ? "" : (a.jong === "ㄶ" ? "ㄴ" : "ㄹ");
-                pronAddRule(rules, "ㅎ 축약", old, pronPartsToString(parts), "ㅎ 받침과 뒤 자음이 만나 거센소리로 축약됩니다.");
+                const now = pronPartsToString(parts);
+                if (old !== now) pronAddRule(rules, "ㅎ 축약", old, now, "ㅎ 받침과 뒤 자음이 만나 거센소리로 축약됩니다.");
             }
         }
     }
-
-    // 구개음화: ㄷ/ㅌ + 이
+}
+function pronApplyPalatalization(parts, rules) {
     for (let i = 0; i < parts.length - 1; i++) {
         const a = parts[i], b = parts[i + 1];
         if (a.raw || b.raw) continue;
@@ -7413,43 +7503,44 @@ function pronApplyGeneralRulesToWord(word, rules) {
             const old = pronPartsToString(parts);
             b.cho = a.jong === "ㄷ" ? "ㅈ" : "ㅊ";
             a.jong = "";
-            pronAddRule(rules, "구개음화", old, pronPartsToString(parts), "ㄷ/ㅌ 받침 뒤에 이 계열 모음이 오면 ㅈ/ㅊ 계열로 발음됩니다.");
+            const now = pronPartsToString(parts);
+            if (old !== now) pronAddRule(rules, "구개음화", old, now, "ㄷ/ㅌ 받침 뒤에 이 계열 모음이 오면 ㅈ/ㅊ 계열로 발음됩니다.");
         }
     }
-
-    // 연음: 받침 + ㅇ 초성
+}
+function pronApplyLiaison(parts, rules) {
     for (let i = 0; i < parts.length - 1; i++) {
         const a = parts[i], b = parts[i + 1];
-        if (a.raw || b.raw || !a.jong || b.cho !== "ㅇ") continue;
+        if (a.raw || b.raw || !a.jong || a.jong === "ㅇ" || b.cho !== "ㅇ") continue;
         const old = pronPartsToString(parts);
         if (PRON_CLUSTER_SPLIT[a.jong]) {
             const [remain, move] = PRON_CLUSTER_SPLIT[a.jong];
             if (PRON_CHO_INDEX[move] !== undefined) {
                 a.jong = remain;
                 b.cho = move;
-                pronAddRule(rules, "연음", old, pronPartsToString(parts), "받침이 뒤 음절의 빈 초성 자리로 이어져 발음됩니다.");
             }
         } else if (PRON_CHO_INDEX[a.jong] !== undefined) {
             b.cho = a.jong;
             a.jong = "";
-            pronAddRule(rules, "연음", old, pronPartsToString(parts), "받침이 뒤 음절의 빈 초성 자리로 이어져 발음됩니다.");
         }
+        const now = pronPartsToString(parts);
+        if (old !== now) pronAddRule(rules, "연음", old, now, "받침이 뒤 음절의 빈 초성 자리로 이어져 발음됩니다.");
     }
-
-    // 받침 대표음: 단어 끝 또는 자음 앞
+}
+function pronApplyFinalRepresentative(parts, rules) {
     for (let i = 0; i < parts.length; i++) {
         const a = parts[i];
         if (a.raw || !a.jong) continue;
         const next = parts[i + 1];
-        const before = a.jong;
-        if ((!next || next.raw || next.cho !== "ㅇ") && PRON_REP_FINAL[before]) {
+        if ((!next || next.raw || next.cho !== "ㅇ") && PRON_REP_FINAL[a.jong]) {
             const old = pronPartsToString(parts);
-            a.jong = PRON_REP_FINAL[before];
-            pronAddRule(rules, "받침 대표음", old, pronPartsToString(parts), "음절 끝소리는 대표 받침소리로 정리되어 발음됩니다.");
+            a.jong = PRON_REP_FINAL[a.jong];
+            const now = pronPartsToString(parts);
+            if (old !== now) pronAddRule(rules, "받침 대표음", old, now, "음절 끝소리는 대표 받침소리로 정리되어 발음됩니다.");
         }
     }
-
-    // 비음화: ㄱ/ㄷ/ㅂ + ㄴ/ㅁ
+}
+function pronApplyNasalization(parts, rules) {
     for (let i = 0; i < parts.length - 1; i++) {
         const a = parts[i], b = parts[i + 1];
         if (a.raw || b.raw || !a.jong) continue;
@@ -7458,47 +7549,89 @@ function pronApplyGeneralRulesToWord(word, rules) {
             if (a.jong === "ㄱ") a.jong = "ㅇ";
             else if (a.jong === "ㄷ") a.jong = "ㄴ";
             else if (a.jong === "ㅂ") a.jong = "ㅁ";
-            pronAddRule(rules, "비음화", old, pronPartsToString(parts), "받침 ㄱ·ㄷ·ㅂ이 ㄴ·ㅁ 앞에서 각각 ㅇ·ㄴ·ㅁ으로 바뀝니다.");
+            const now = pronPartsToString(parts);
+            if (old !== now) pronAddRule(rules, "비음화", old, now, "받침 ㄱ·ㄷ·ㅂ이 ㄴ·ㅁ 앞에서 각각 ㅇ·ㄴ·ㅁ으로 바뀝니다.");
         }
     }
-
-    // 유음화: ㄴ+ㄹ, ㄹ+ㄴ
+}
+function pronApplyLiquidization(parts, rules) {
     for (let i = 0; i < parts.length - 1; i++) {
         const a = parts[i], b = parts[i + 1];
         if (a.raw || b.raw || !a.jong) continue;
         if (a.jong === "ㄴ" && b.cho === "ㄹ") {
             const old = pronPartsToString(parts);
             a.jong = "ㄹ";
-            pronAddRule(rules, "유음화", old, pronPartsToString(parts), "ㄴ과 ㄹ이 이어질 때 [ㄹㄹ]로 발음됩니다.");
+            const now = pronPartsToString(parts);
+            if (old !== now) pronAddRule(rules, "유음화", old, now, "ㄴ과 ㄹ이 이어질 때 [ㄹㄹ]로 발음됩니다.");
         } else if (a.jong === "ㄹ" && b.cho === "ㄴ") {
             const old = pronPartsToString(parts);
             b.cho = "ㄹ";
-            pronAddRule(rules, "유음화", old, pronPartsToString(parts), "ㄹ과 ㄴ이 이어질 때 [ㄹㄹ]로 발음됩니다.");
+            const now = pronPartsToString(parts);
+            if (old !== now) pronAddRule(rules, "유음화", old, now, "ㄹ과 ㄴ이 이어질 때 [ㄹㄹ]로 발음됩니다.");
         }
     }
-
-    // 된소리되기: ㄱ/ㄷ/ㅂ 뒤 평음
+}
+function pronApplyTensification(parts, rules) {
     for (let i = 0; i < parts.length - 1; i++) {
         const a = parts[i], b = parts[i + 1];
         if (a.raw || b.raw || !a.jong) continue;
         if (["ㄱ", "ㄷ", "ㅂ"].includes(a.jong) && PRON_TENSE_MAP[b.cho]) {
             const old = pronPartsToString(parts);
             b.cho = PRON_TENSE_MAP[b.cho];
-            pronAddRule(rules, "된소리되기", old, pronPartsToString(parts), "받침 ㄱ·ㄷ·ㅂ 뒤의 평음 ㄱ·ㄷ·ㅂ·ㅅ·ㅈ이 된소리로 발음됩니다.");
+            const now = pronPartsToString(parts);
+            if (old !== now) pronAddRule(rules, "된소리되기", old, now, "받침 ㄱ·ㄷ·ㅂ 뒤의 평음 ㄱ·ㄷ·ㅂ·ㅅ·ㅈ이 된소리로 발음됩니다.");
         }
     }
-
-    const out = pronPartsToString(parts);
-    if (out !== beforeWord && !rules.some(r => r.before === beforeWord && r.after === out)) {
-        // 세부 규칙이 이미 추가되므로 여기서는 보조 표시는 생략합니다.
+}
+function pronApplyUiVowelRule(word, rules) {
+    const parts = pronWordToParts(word);
+    let changed = false;
+    for (let i = 0; i < parts.length; i++) {
+        const p = parts[i];
+        if (p.raw) continue;
+        if (p.jung === "ㅢ" && p.cho !== "ㅇ") {
+            p.jung = "ㅣ";
+            changed = true;
+        }
     }
+    if (!changed) return null;
+    const out = pronPartsToString(parts);
+    if (out !== word) pronAddRule(rules, "ㅢ 발음", word, out, "자음을 첫소리로 가진 음절의 ㅢ는 [ㅣ]로 발음합니다.");
     return out;
+}
+function pronApplyGeneralRulesToWord(word, rules) {
+    if (!/[가-힣]/.test(word)) return word;
+    const dict = pronTryDictionaryWithSuffix(word, rules);
+    if (dict !== null) return dict;
+    const ui = pronApplyUiVowelRule(word, rules);
+    if (ui !== null) word = ui;
+    let parts = pronWordToParts(word);
+    pronApplyHieutRules(parts, rules);
+    pronApplyPalatalization(parts, rules);
+    pronApplyLiaison(parts, rules);
+    pronApplyFinalRepresentative(parts, rules);
+    pronApplyNasalization(parts, rules);
+    pronApplyLiquidization(parts, rules);
+    pronApplyTensification(parts, rules);
+    return pronPartsToString(parts) || word;
 }
 function pronConvertText(rawText) {
     const rules = [];
     const tokens = String(rawText || "").match(/[가-힣]+|[^가-힣]+/g) || [];
     const converted = tokens.map(token => /[가-힣]/.test(token) ? pronApplyGeneralRulesToWord(token, rules) : token).join("");
-    return { converted, rules };
+    const cleanedRules = [];
+    const seen = new Set();
+    rules.forEach(r => {
+        if (!r) return;
+        const before = pronNormalizeRuleValue(r.before || r.from);
+        const after = pronNormalizeRuleValue(r.after || r.to);
+        if (!before || !after || before === after) return;
+        const key = `${r.title || r.rule}|${before}|${after}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        cleanedRules.push(r);
+    });
+    return { converted, rules: cleanedRules };
 }
 function pronEscapeHtml(str) {
     return String(str || "").replace(/[&<>"]/g, s => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[s]));
@@ -7529,18 +7662,20 @@ function pronRenderRules() {
     const box = document.getElementById("pronRuleBox");
     if (!box) return;
     const baseRules = [
-        { title:"받침 대표음", desc:"음절 끝의 ㄲ·ㅋ은 ㄱ, ㅅ·ㅆ·ㅈ·ㅊ·ㅌ·ㅎ은 ㄷ, ㅍ은 ㅂ 계열로 정리됩니다." },
-        { title:"연음", desc:"받침 뒤에 모음으로 시작하는 조사·어미가 오면 받침이 뒤 음절 첫소리로 이어집니다." },
-        { title:"비음화", desc:"ㄱ·ㄷ·ㅂ 받침이 ㄴ·ㅁ 앞에서 ㅇ·ㄴ·ㅁ으로 바뀝니다. 예: 국물→궁물, 먹는→멍는." },
-        { title:"유음화", desc:"ㄴ과 ㄹ이 만날 때 [ㄹㄹ]로 발음됩니다. 예: 신라→실라, 난로→날로." },
-        { title:"된소리되기", desc:"받침 ㄱ·ㄷ·ㅂ 뒤의 ㄱ·ㄷ·ㅂ·ㅅ·ㅈ이 된소리로 납니다. 예: 학교→학꾜." },
-        { title:"구개음화", desc:"ㄷ·ㅌ 받침 뒤 이 계열 모음이 이어지면 ㅈ·ㅊ 계열로 발음됩니다. 예: 같이→가치." },
-        { title:"ㅎ 탈락/축약", desc:"ㅎ 받침은 모음 앞에서 약해지거나, ㄱ·ㄷ·ㅈ과 만나 ㅋ·ㅌ·ㅊ으로 축약됩니다." },
-        { title:"ㄴ첨가와 예외", desc:"꽃잎·깻잎·솜이불처럼 합성어/파생어 경계에서 ㄴ이 첨가되는 낱말은 예외 사전으로 우선 처리합니다." }
+        { title:"받침 대표음", desc:"음절 끝소리는 ㄱ·ㄴ·ㄷ·ㄹ·ㅁ·ㅂ·ㅇ의 일곱 대표음으로 정리됩니다. 예: 꽃→꼳, 밖→박, 앞→압." },
+        { title:"연음", desc:"받침 뒤에 모음으로 시작하는 조사나 어미가 오면 받침이 뒤 음절 첫소리로 이어집니다. 예: 꽃이→꼬치, 앞에→아페." },
+        { title:"비음화", desc:"ㄱ·ㄷ·ㅂ 계열 받침이 ㄴ·ㅁ 앞에서 ㅇ·ㄴ·ㅁ으로 바뀝니다. 예: 국물→궁물, 먹는→멍는, 밥물→밤물." },
+        { title:"유음화", desc:"ㄴ과 ㄹ이 만날 때 [ㄹㄹ]로 발음됩니다. 예: 신라→실라, 난로→날로, 칼날→칼랄." },
+        { title:"된소리되기", desc:"받침 ㄱ·ㄷ·ㅂ 뒤의 ㄱ·ㄷ·ㅂ·ㅅ·ㅈ이 된소리로 납니다. 예: 학교→학꾜, 국밥→국빱." },
+        { title:"구개음화", desc:"ㄷ·ㅌ 받침 뒤에 이 계열 모음이 이어지면 ㅈ·ㅊ 계열로 발음됩니다. 예: 굳이→구지, 같이→가치." },
+        { title:"ㅎ 탈락/축약", desc:"ㅎ 받침은 모음 앞에서 탈락하거나 ㄱ·ㄷ·ㅈ과 만나 ㅋ·ㅌ·ㅊ으로 축약됩니다. 예: 좋아→조아, 놓고→노코." },
+        { title:"ㄴ첨가/사이시옷", desc:"일부 합성어·파생어에서는 ㄴ이 첨가됩니다. 예: 꽃잎→꼰닙, 깻잎→깬닙, 솜이불→솜니불." },
+        { title:"ㅢ 발음", desc:"자음을 첫소리로 가진 음절의 ㅢ는 [ㅣ]로 나며, 조사 '의'는 [의]/[에]가 모두 허용되는 경우가 있습니다." },
+        { title:"주의", desc:"문맥·품사에 따라 달라지는 단어는 자동 단정하지 않습니다. 예: 신고, 감기." }
     ];
     const appliedHtml = pronLastRules.length
         ? pronLastRules.map(r => `<div class="pron-rule-item"><span class="pron-rule-title">${pronEscapeHtml(r.title)} : ${pronEscapeHtml(r.before)} → ${pronEscapeHtml(r.after)}</span>${pronEscapeHtml(r.desc)}</div>`).join("")
-        : `<div class="pron-rule-item"><span class="pron-rule-title">적용된 특수 규칙 없음</span>입력문에서 자동으로 감지된 주요 음운 변동이 없습니다. 단, 문맥에 따라 별도 발음 확인가 필요할 수 있습니다.</div>`;
+        : `<div class="pron-rule-item"><span class="pron-rule-title">적용된 특수 규칙 없음</span>입력문에서 자동 감지된 주요 표준발음 규칙이 없습니다. 문맥에 따라 별도 확인이 필요한 단어는 직접 확인해주세요.</div>`;
     const helpHtml = baseRules.map(r => `<div class="pron-rule-item"><span class="pron-rule-title">${pronEscapeHtml(r.title)}</span>${pronEscapeHtml(r.desc)}</div>`).join("");
     box.innerHTML = `<div class="pron-rule-item"><span class="pron-rule-title">이번 문장에 적용된 규칙</span></div>${appliedHtml}<div class="pron-rule-item"><span class="pron-rule-title">기본 발음법 참고</span></div>${helpHtml}`;
 }
@@ -7701,14 +7836,14 @@ function pronRunGeneralAnalysis() {
         return;
     }
     pronShowGeneralAnalysisUi();
-    pronRunWhisperTranscription();
+    pronRunVoiceAITranscription();
 }
 
-function pronBuildWhisperRequestId() {
+function pronBuildVoiceAIRequestId() {
     return "WSP_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
 }
 
-async function pronRunWhisperTranscription() {
+async function pronRunVoiceAITranscription() {
     const source = document.getElementById("pronInputText")?.value.trim() || "";
     const status = document.getElementById("pronVoiceStatus");
     if (!source) {
@@ -7720,40 +7855,40 @@ async function pronRunWhisperTranscription() {
         return;
     }
     try {
-        if (!window.UlimLocalWhisper || typeof window.UlimLocalWhisper.transcribe !== "function") {
-            throw new Error("로컬 Whisper 모듈이 아직 준비되지 않았습니다. 인터넷 연결 상태에서 한 번 새로고침 후 다시 시도해주세요.");
+        if (!window.UlimLocalVoiceAI || typeof window.UlimLocalVoiceAI.transcribe !== "function") {
+            throw new Error("AI 분석 모듈이 아직 준비되지 않았습니다. 인터넷 연결 상태에서 한 번 새로고침 후 다시 시도해주세요.");
         }
         pronShowGeneralAnalysisUi();
-        if (status) status.textContent = "분석을 준비하는 중입니다. 첫 실행은 시간이 걸릴 수 있습니다.";
-        const result = await window.UlimLocalWhisper.transcribe(pronRecordedBlob, {
+        if (status) status.textContent = "AI가 분석중입니다.";
+        const result = await window.UlimLocalVoiceAI.transcribe(pronRecordedBlob, {
             language: "ko",
             task: "transcribe",
             model: ULIM_LOCAL_WHISPER_MODEL,
-            onStatus: (msg) => {
+            onStatus: () => {
                 const el = document.getElementById("pronVoiceStatus");
-                if (el && msg) el.textContent = msg;
+                if (el) el.textContent = "AI가 분석중입니다.";
             }
         });
-        pronRenderWhisperResult({ ok: true, status: "success", text: result.text || "", local: true, model: result.model || ULIM_LOCAL_WHISPER_MODEL });
+        pronRenderVoiceAIResult({ ok: true, status: "success", text: result.text || "", local: true, model: result.model || ULIM_LOCAL_WHISPER_MODEL });
     } catch (err) {
         console.error(err);
-        if (status) status.textContent = "일반분석 실패: " + (err.message || err);
+        if (status) status.textContent = "일반분석 실패: " + String(err.message || err).replace(/VoiceAI/gi, "AI").replace(/ETRI/gi, "AI");
         pronUpdateVoiceScore();
     }
 }
 
-function pronPollWhisperResult(requestId) {
-    // 로컬 Whisper 방식에서는 GAS 결과 폴링을 사용하지 않습니다.
+function pronPollVoiceAIResult(requestId) {
+    // 로컬 분석 방식에서는 서버 결과 조회를 사용하지 않습니다.
     return;
 }
 
-function pronRenderWhisperResult(data) {
+function pronRenderVoiceAIResult(data) {
     const text = pronCleanExtractedText(data.text || data.transcript || data.whisper?.text || "");
     pronLastSttText = text;
     const status = document.getElementById("pronVoiceStatus");
     pronShowGeneralAnalysisUi();
     if (status) status.textContent = text
-        ? `인식결과: ${text}\n분석 결과를 계산하는 중입니다.`
+        ? `인식결과: ${text}\nAI가 분석중입니다.`
         : "인식된 문장이 없습니다.";
     pronUpdateVoiceScore();
 }
@@ -7802,7 +7937,7 @@ function pronUpdateEtriUsageBadge(used, remaining) {
     if (!badge) return;
     const safeUsed = Math.max(0, Number(used) || 0);
     const safeRemain = Math.max(0, Number.isFinite(Number(remaining)) ? Number(remaining) : PRON_ETRI_DAILY_LIMIT - safeUsed);
-    badge.textContent = "";
+    badge.textContent = `고급분석 잔여횟수: ${safeRemain}/${PRON_ETRI_DAILY_LIMIT}회`;
 }
 function pronBuildRequestId() {
     return "PRON_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
@@ -7921,16 +8056,16 @@ function pronJsonpRequest(params, timeoutMs = 12000) {
 }
 async function pronRefreshEtriUsage() {
     try {
-        pronSetAdvancedStatus("고급분석 사용 가능 여부를 확인하는 중입니다.");
+        pronSetAdvancedStatus("AI가 분석중입니다.");
         const data = await pronJsonpRequest({ action: "getEtriPronunciationUsage", userKey: pronGetEtriUserKey(), dateKey: pronTodayKey(), _: Date.now() }, 10000);
-        if (!data || !data.ok) throw new Error(data && data.message ? data.message : "고급분석 확인 실패");
+        if (!data || !data.ok) throw new Error(data && data.message ? data.message : "잔여횟수 확인 실패");
         pronSetLocalEtriUsed(data.used || 0);
         pronUpdateEtriUsageBadge(data.used || 0, data.remaining);
-        pronSetAdvancedStatus("고급분석을 사용할 수 있습니다.", "success");
+        pronSetAdvancedStatus("고급분석 준비가 완료되었습니다.", "success");
     } catch (err) {
         const localUsed = pronGetLocalEtriUsed();
         pronUpdateEtriUsageBadge(localUsed, PRON_ETRI_DAILY_LIMIT - localUsed);
-        pronSetAdvancedStatus("고급분석 사용 가능 여부 확인에 실패했습니다.\n" + (err.message || err), "error");
+        pronSetAdvancedStatus("고급분석 상태 확인에 실패했습니다. GAS 배포 주소와 권한을 확인해주세요.\n" + String(err.message || err).replace(/ETRI/gi, "AI").replace(/VoiceAI/gi, "AI"), "error");
     }
 }
 async function pronRunEtriAdvancedAnalysis() {
@@ -7944,7 +8079,7 @@ async function pronRunEtriAdvancedAnalysis() {
         return;
     }
     if (!PRON_ETRI_GAS_URL || !PRON_ETRI_GAS_URL.includes("script.google.com/macros/s/")) {
-        pronSetAdvancedStatus("고급분석용 GAS 주소가 설정되지 않았습니다. PRON_ETRI_GAS_URL 값을 확인해주세요.", "error");
+        pronSetAdvancedStatus("고급분석용 GAS 주소가 설정되지 않았습니다. 앱 설정을 확인해주세요.", "error");
         return;
     }
     const localUsed = pronGetLocalEtriUsed();
@@ -8010,17 +8145,17 @@ function pronPollEtriResult(requestId) {
             if (data.status === "limit") {
                 pronSetLocalEtriUsed(data.used || PRON_ETRI_DAILY_LIMIT);
                 pronUpdateEtriUsageBadge(data.used || PRON_ETRI_DAILY_LIMIT, data.remaining || 0);
-                pronSetAdvancedStatus(data.message || "오늘 고급분석 사용 한도를 모두 사용했습니다. 내일 다시 이용해주세요.", "error");
+                pronSetAdvancedStatus(data.message || "오늘 고급분석 사용 한도를 초과했습니다.", "error");
                 return;
             }
             if (!data.ok || data.status === "error") {
-                pronSetAdvancedStatus(data.message || "AI 고급분석 처리 중 오류가 발생했습니다.", "error");
+                pronSetAdvancedStatus((data.message || "AI 고급분석 처리 중 오류가 발생했습니다.").replace(/ETRI/gi, "AI").replace(/VoiceAI/gi, "AI"), "error");
                 return;
             }
             pronRenderEtriResult(data);
         } catch (err) {
             if (pronEtriPollingCount > 20) {
-                pronSetAdvancedStatus("고급분석 결과 조회 실패: " + (err.message || err), "error");
+                pronSetAdvancedStatus("고급분석 결과 조회 실패: " + String(err.message || err).replace(/ETRI/gi, "AI").replace(/VoiceAI/gi, "AI"), "error");
                 return;
             }
             pronEtriPollingTimer = setTimeout(poll, 2500);
@@ -8233,17 +8368,17 @@ const token = await getToken(messaging, {
 
 <script type="module">
 // ================================================================
-// 울림앱 로컬 Whisper STT 어댑터
-// - OpenAI API를 호출하지 않고 브라우저 안에서 Transformers.js + Whisper ONNX 모델을 실행합니다.
+// 울림앱 AI 분석 STT 어댑터
+// - 외부 음성 API를 호출하지 않고 브라우저 안에서 음성인식 모델을 실행합니다.
 // - 첫 실행 시 모델 다운로드가 필요하며, 이후 브라우저 캐시에 재사용됩니다.
 // ================================================================
 const ULIM_WHISPER_CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.6/dist/transformers.min.js';
-let ulimWhisperPipelinePromise = null;
-let ulimWhisperLibPromise = null;
+let ulimVoiceAIPipelinePromise = null;
+let ulimVoiceAILibPromise = null;
 
-async function importUlimWhisperLib_() {
-  if (!ulimWhisperLibPromise) {
-    ulimWhisperLibPromise = import(ULIM_WHISPER_CDN).then(mod => {
+async function importUlimVoiceAILib_() {
+  if (!ulimVoiceAILibPromise) {
+    ulimVoiceAILibPromise = import(ULIM_WHISPER_CDN).then(mod => {
       try {
         if (mod.env) {
           mod.env.allowLocalModels = false;
@@ -8258,27 +8393,27 @@ async function importUlimWhisperLib_() {
       return mod;
     });
   }
-  return ulimWhisperLibPromise;
+  return ulimVoiceAILibPromise;
 }
 
-async function getUlimWhisperPipeline_(model, onStatus) {
-  if (!ulimWhisperPipelinePromise) {
-    ulimWhisperPipelinePromise = (async () => {
-      onStatus && onStatus('로컬 Whisper 라이브러리를 불러오는 중입니다.');
-      const { pipeline } = await importUlimWhisperLib_();
+async function getUlimVoiceAIPipeline_(model, onStatus) {
+  if (!ulimVoiceAIPipelinePromise) {
+    ulimVoiceAIPipelinePromise = (async () => {
+      onStatus && onStatus('AI가 분석중입니다.');
+      const { pipeline } = await importUlimVoiceAILib_();
       const modelId = model || window.ULIM_LOCAL_WHISPER_MODEL || 'Xenova/whisper-tiny';
-      onStatus && onStatus('로컬 Whisper 모델 다운로드/초기화 중입니다. 첫 실행은 오래 걸릴 수 있습니다.\n모델: ' + modelId);
+      onStatus && onStatus('AI가 분석중입니다.');
       try {
         if (navigator.gpu) {
           return await pipeline('automatic-speech-recognition', modelId, { device: 'webgpu' });
         }
       } catch (gpuErr) {
-        console.warn('WebGPU Whisper 초기화 실패, WASM으로 전환:', gpuErr);
+        console.warn('WebGPU 초기화 실패, WASM으로 전환:', gpuErr);
       }
       return await pipeline('automatic-speech-recognition', modelId);
     })();
   }
-  return ulimWhisperPipelinePromise;
+  return ulimVoiceAIPipelinePromise;
 }
 
 async function blobToMonoFloat32_(blob, targetRate = 16000) {
@@ -8311,14 +8446,14 @@ async function blobToMonoFloat32_(blob, targetRate = 16000) {
   return out;
 }
 
-window.UlimLocalWhisper = {
+window.UlimLocalVoiceAI = {
   async transcribe(blob, options = {}) {
     const onStatus = typeof options.onStatus === 'function' ? options.onStatus : null;
     const model = options.model || window.ULIM_LOCAL_WHISPER_MODEL || 'Xenova/whisper-tiny';
-    const pipe = await getUlimWhisperPipeline_(model, onStatus);
-    onStatus && onStatus('녹음 파일을 16kHz 음성 데이터로 변환 중입니다.');
+    const pipe = await getUlimVoiceAIPipeline_(model, onStatus);
+    onStatus && onStatus('AI가 분석중입니다.');
     const audio = await blobToMonoFloat32_(blob, 16000);
-    onStatus && onStatus('로컬 Whisper가 문장을 인식하는 중입니다. 기기 성능에 따라 시간이 걸릴 수 있습니다.');
+    onStatus && onStatus('AI가 분석중입니다.');
     const result = await pipe(audio, {
       language: options.language || 'ko',
       task: options.task || 'transcribe',
@@ -8326,7 +8461,7 @@ window.UlimLocalWhisper = {
       stride_length_s: 5
     });
     const text = typeof result === 'string' ? result : (result && result.text ? result.text : '');
-    onStatus && onStatus('로컬 Whisper 인식 완료');
+    onStatus && onStatus('AI 분석 완료');
     return { text: String(text || '').trim(), raw: result, model, local: true };
   }
 };
