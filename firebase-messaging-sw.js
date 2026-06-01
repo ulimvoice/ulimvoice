@@ -42,7 +42,17 @@ function showUlimNotification(payload) {
     }
   });
 }
+self.addEventListener('push', (event) => {
+  let payload = {};
 
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch (e) {
+    payload = {};
+  }
+
+  event.waitUntil(showUlimNotification(payload));
+});
 messaging.onBackgroundMessage((payload) => {
   return showUlimNotification(payload);
 });
