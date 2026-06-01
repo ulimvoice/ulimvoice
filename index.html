@@ -7742,7 +7742,7 @@ function pronAttachPronouncedSuffix(baseOut, suffix) {
     if (!suffix || baseLen <= 0 || parts.length <= baseLen) return baseOut + suffix;
     const a = parts[baseLen - 1];
     const b = parts[baseLen];
-    if (!a || !b || a.raw || b.raw || !a.jong || b.cho !== "ㅇ" || a.jong === "ㅇ") return baseOut + suffix;
+    if (!a || !b || a.raw || b.raw || !a.jong || b.cho !== "ㅇ") return baseOut + suffix;
     if (PRON_CLUSTER_SPLIT[a.jong]) {
         const [remain, move] = PRON_CLUSTER_SPLIT[a.jong];
         if (PRON_CHO_INDEX[move] !== undefined) {
@@ -7783,40 +7783,18 @@ function pronApplyHieutRules(parts, rules) {
     for (let i = 0; i < parts.length - 1; i++) {
         const a = parts[i], b = parts[i + 1];
         if (a.raw || b.raw || !a.jong) continue;
-        // ① ㅎ 계열 받침(ㅎ, ㄶ, ㅀ) 처리
         if (a.jong === "ㅎ" || a.jong === "ㄶ" || a.jong === "ㅀ") {
-            const jongRem = a.jong === "ㅎ" ? "" : (a.jong === "ㄶ" ? "ㄴ" : "ㄹ");
             if (b.cho === "ㅇ") {
-                // 모음 앞 ㅎ 탈락: 낳아→나아, 않아→아나 (표준발음법 12항 1)
                 const old = pronPartsToString(parts);
-                a.jong = jongRem;
+                a.jong = a.jong === "ㅎ" ? "" : (a.jong === "ㄶ" ? "ㄴ" : "ㄹ");
                 const now = pronPartsToString(parts);
-                if (old !== now) pronAddRule(rules, "ㅎ 탈락", old, now, "ㅎ 받침이 모음 앞에서 탈락합니다.");
+                if (old !== now) pronAddRule(rules, "ㅎ 탈락", old, now, "ㅎ 받침이 모음 앞에서 탈락하거나 약해집니다.");
             } else if ({"ㄱ":"ㅋ", "ㄷ":"ㅌ", "ㅈ":"ㅊ"}[b.cho]) {
-                // ㅎ+ㄱ/ㄷ/ㅈ → 거센소리: 좋고→조코, 많다→만타 (12항 2)
                 const old = pronPartsToString(parts);
                 b.cho = {"ㄱ":"ㅋ", "ㄷ":"ㅌ", "ㅈ":"ㅊ"}[b.cho];
-                a.jong = jongRem;
+                a.jong = a.jong === "ㅎ" ? "" : (a.jong === "ㄶ" ? "ㄴ" : "ㄹ");
                 const now = pronPartsToString(parts);
                 if (old !== now) pronAddRule(rules, "ㅎ 축약", old, now, "ㅎ 받침과 뒤 자음이 만나 거센소리로 축약됩니다.");
-            } else if (b.cho === "ㅅ") {
-                // ㅎ+ㅅ → ㅆ: 좋습니다→조씀니다 (12항 3)
-                const old = pronPartsToString(parts);
-                b.cho = "ㅆ";
-                a.jong = jongRem;
-                const now = pronPartsToString(parts);
-                if (old !== now) pronAddRule(rules, "ㅎ 축약", old, now, "ㅎ 받침 뒤 ㅅ은 [ㅆ]으로 발음됩니다.");
-            }
-        }
-        // ② 앞 받침 ㄱ·ㄷ·ㅂ·ㅈ + 뒤 초성 ㅎ → 격음화: 먹히다→머키다 (12항 4)
-        if (b.cho === "ㅎ") {
-            const asp = {"ㄱ":"ㅋ", "ㄷ":"ㅌ", "ㅂ":"ㅍ", "ㅈ":"ㅊ"}[a.jong];
-            if (asp) {
-                const old = pronPartsToString(parts);
-                b.cho = asp;
-                a.jong = "";
-                const now = pronPartsToString(parts);
-                if (old !== now) pronAddRule(rules, "격음화", old, now, "받침 ㄱ·ㄷ·ㅂ·ㅈ 뒤의 ㅎ가 만나 거센소리로 발음됩니다.");
             }
         }
     }
@@ -7837,7 +7815,7 @@ function pronApplyPalatalization(parts, rules) {
 function pronApplyLiaison(parts, rules) {
     for (let i = 0; i < parts.length - 1; i++) {
         const a = parts[i], b = parts[i + 1];
-        if (a.raw || b.raw || !a.jong || b.cho !== "ㅇ" || a.jong === "ㅇ") continue;
+        if (a.raw || b.raw || !a.jong || b.cho !== "ㅇ") continue;
         const old = pronPartsToString(parts);
         if (PRON_CLUSTER_SPLIT[a.jong]) {
             const [remain, move] = PRON_CLUSTER_SPLIT[a.jong];
@@ -7871,23 +7849,12 @@ function pronApplyNasalization(parts, rules) {
         const a = parts[i], b = parts[i + 1];
         if (a.raw || b.raw || !a.jong) continue;
         if ((b.cho === "ㄴ" || b.cho === "ㅁ") && ["ㄱ", "ㄷ", "ㅂ"].includes(a.jong)) {
-            // ㄱ·ㄷ·ㅂ + ㄴ·ㅁ → 비음화: 국물→궁물 (표준발음법 18항)
             const old = pronPartsToString(parts);
             if (a.jong === "ㄱ") a.jong = "ㅇ";
             else if (a.jong === "ㄷ") a.jong = "ㄴ";
             else if (a.jong === "ㅂ") a.jong = "ㅁ";
             const now = pronPartsToString(parts);
             if (old !== now) pronAddRule(rules, "비음화", old, now, "받침 ㄱ·ㄷ·ㅂ이 ㄴ·ㅁ 앞에서 각각 ㅇ·ㄴ·ㅁ으로 바뀝니다.");
-        } else if (["ㄱ", "ㄷ", "ㅂ"].includes(a.jong) && b.cho === "ㄹ") {
-            // ㄱ·ㄷ·ㅂ + ㄹ → ㄹ비음화: ㄹ→ㄴ, 앞 받침도 비음화 (20항)
-            // 예) 국립→궁닙, 협력→혐녁, 독립→동닙
-            const old = pronPartsToString(parts);
-            b.cho = "ㄴ";
-            if (a.jong === "ㄱ") a.jong = "ㅇ";
-            else if (a.jong === "ㄷ") a.jong = "ㄴ";
-            else if (a.jong === "ㅂ") a.jong = "ㅁ";
-            const now = pronPartsToString(parts);
-            if (old !== now) pronAddRule(rules, "ㄹ 비음화", old, now, "받침 ㄱ·ㄷ·ㅂ 뒤의 ㄹ은 [ㄴ]으로 발음되고, 앞 받침도 비음화됩니다.");
         }
     }
 }
@@ -7913,18 +7880,10 @@ function pronApplyTensification(parts, rules) {
         const a = parts[i], b = parts[i + 1];
         if (a.raw || b.raw || !a.jong) continue;
         if (["ㄱ", "ㄷ", "ㅂ"].includes(a.jong) && PRON_TENSE_MAP[b.cho]) {
-            // ㄱ·ㄷ·ㅂ 받침 뒤 평음 → 된소리 (표준발음법 23항)
             const old = pronPartsToString(parts);
             b.cho = PRON_TENSE_MAP[b.cho];
             const now = pronPartsToString(parts);
             if (old !== now) pronAddRule(rules, "된소리되기", old, now, "받침 ㄱ·ㄷ·ㅂ 뒤의 평음 ㄱ·ㄷ·ㅂ·ㅅ·ㅈ이 된소리로 발음됩니다.");
-        } else if (a.jong === "ㄹ" && ["ㄷ", "ㅅ", "ㅈ"].includes(b.cho)) {
-            // ㄹ 받침 뒤 ㄷ·ㅅ·ㅈ → 된소리 (26항, 한자어)
-            // 예) 발달→발딸, 말살→말쌀, 열정→열쩡, 물질→물찔
-            const old = pronPartsToString(parts);
-            b.cho = PRON_TENSE_MAP[b.cho];
-            const now = pronPartsToString(parts);
-            if (old !== now) pronAddRule(rules, "된소리되기", old, now, "ㄹ 받침 뒤의 ㄷ·ㅅ·ㅈ은 된소리로 발음됩니다.");
         }
     }
 }
