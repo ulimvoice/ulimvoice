@@ -7095,6 +7095,7 @@ let pronWhisperPollingTimer = null;
 let pronWhisperPollingCount = 0;
 const PRON_ETRI_GAS_URL = typeof GET_API_URL !== "undefined" ? GET_API_URL : "";
 const ULIM_LOCAL_WHISPER_MODEL = "Xenova/whisper-tiny";
+window.ULIM_LOCAL_WHISPER_MODEL = ULIM_LOCAL_WHISPER_MODEL;
 const PRON_ETRI_DAILY_LIMIT = 10;
 
 function pronIsHangulSyllable(ch) {
@@ -7268,9 +7269,15 @@ function pronBuildFreeAnalysisComment(score) {
 }
 function pronGetRuleSummaryForVoice(source) {
     const result = source ? pronConvertText(source) : null;
-    const rules = result && result.rules ? result.rules : [];
-    if (!rules.length) return "자동 감지된 주요 표준발음 규칙이 없습니다.";
-    return rules.slice(0, 8).map(r => `- ${r.rule}: ${r.from} → ${r.to}`).join("\n");
+    const rules = result && Array.isArray(result.rules) ? result.rules : [];
+    const validRules = rules.filter(r => r && (r.title || r.rule) && (r.before || r.from) && (r.after || r.to));
+    if (!validRules.length) return "자동 감지된 주요 표준발음 규칙이 없습니다.";
+    return validRules.slice(0, 8).map(r => {
+        const title = r.title || r.rule || "표준발음 규칙";
+        const before = r.before || r.from || "";
+        const after = r.after || r.to || "";
+        return `- ${title}: ${before} → ${after}`;
+    }).join("\n");
 }
 
 function pronSetRecordingUi(isRecording, labelText) {
@@ -7553,9 +7560,15 @@ function pronCleanPastedText(text) {
     return String(text || "")
         .replace(/[“”]/g, '"')
         .replace(/[‘’]/g, "'")
-        .replace(/[\t ]+/g, " ")
+        .replace(/[	 ]+/g, " ")
         .replace(/\n{3,}/g, "\n\n")
         .replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z0-9\s.,!?~…'"()\[\]{}:;·\-]/g, "")
+        .trim();
+}
+function pronCleanExtractedText(text) {
+    return pronCleanPastedText(text)
+        .replace(/[​-‍﻿]/g, "")
+        .replace(/\s+/g, " ")
         .trim();
 }
 function pronNormalizeCompareText(str) {
