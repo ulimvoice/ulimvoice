@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>울림앱 설치</title>
+
+<script type="text/javascript" nonce="4e43dd58430642fc95e0c27bba8" src="//local.adguard.org?ts=1780304371467&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000e65c7209a1604b07668bfd93%26fn%3Dinstall.html%26cd%3Dattachment%26ts%3D494529%26p%3Dfs%26cid%3D1%26sig%3Dd98da278534a48cc03d76b4aa2177b153d57d651e36a5c0cdef5cbe796bf4784%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="manifest" href="./manifest-index.json" />
+<meta name="theme-color" content="#2ecc71" />
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="울림앱" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<link rel="apple-touch-icon" href="./icons/icon-192.png" />
+
+<style>
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: linear-gradient(180deg, #2ecc71 0%, #159947 100%);
+    color: #111827;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: max(22px, env(safe-area-inset-top)) 18px max(22px, env(safe-area-inset-bottom));
+}
+.card {
+    width: 100%;
+    max-width: 430px;
+    background: #ffffff;
+    border-radius: 28px;
+    padding: 28px 22px 24px;
+    box-shadow: 0 22px 60px rgba(0,0,0,.25);
+    text-align: center;
+}
+.logo {
+    width: 96px;
+    height: 96px;
+    margin: 0 auto 18px;
+    border-radius: 24px;
+    background: #2ecc71;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    box-shadow: 0 8px 22px rgba(46, 204, 113, .35);
+}
+.logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+h1 {
+    margin: 0 0 10px;
+    font-size: 24px;
+    line-height: 1.25;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+}
+.desc {
+    margin: 0 0 18px;
+    color: #4b5563;
+    font-size: 15px;
+    line-height: 1.6;
+    word-break: keep-all;
+}
+.btn {
+    width: 100%;
+    border: 0;
+    border-radius: 16px;
+    padding: 16px 18px;
+    font-size: 17px;
+    font-weight: 900;
+    cursor: pointer;
+    background: #2ecc71;
+    color: #fff;
+    margin-top: 10px;
+    box-shadow: 0 5px 0 rgba(0,0,0,.18);
+}
+.btn:active {
+    transform: translateY(2px);
+    box-shadow: 0 3px 0 rgba(0,0,0,.18);
+}
+.btn.secondary {
+    background: #111827;
+}
+.btn.light {
+    background: #f3f4f6;
+    color: #111827;
+    box-shadow: none;
+}
+.btn-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+}
+.guide {
+    display: none;
+    margin-top: 18px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    padding: 16px;
+    text-align: left;
+    color: #374151;
+    font-size: 14px;
+    line-height: 1.65;
+    word-break: keep-all;
+}
+.guide.show { display: block; }
+.guide strong { color: #111827; }
+.notice {
+    margin-top: 14px;
+    color: #6b7280;
+    font-size: 12px;
+    line-height: 1.5;
+}
+.badge {
+    display: inline-block;
+    margin-bottom: 10px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #f0fdf4;
+    color: #166534;
+    border: 1px solid #dcfce7;
+    font-size: 12px;
+    font-weight: 900;
+}
+.hidden { display: none !important; }
+</style>
+</head>
+
+<body>
+<main class="card">
+    <div class="logo">
+        <img src="./icons/icon-192.png" alt="울림앱 아이콘" onerror="this.src='./appdata/logo.png';" />
+    </div>
+
+    <div id="deviceBadge" class="badge">기기 확인 중</div>
+    <h1>울림앱을 설치하시겠습니까?</h1>
+    <p class="desc">
+        홈 화면에 울림앱을 추가하면<br />
+        출석, 공지, 연습실 예약을 더 빠르게 사용할 수 있습니다.
+    </p>
+
+    <button type="button" id="installBtn" class="btn hidden">울림앱 설치하기</button>
+    <button type="button" id="openAppBtn" class="btn secondary">울림앱 바로 열기</button>
+
+    <div id="androidBrowserBtns" class="btn-row hidden">
+        <button type="button" class="btn light" onclick="openInAndroidChrome()">Chrome으로 열기</button>
+        <button type="button" class="btn light" onclick="openInSamsungBrowser()">삼성 인터넷</button>
+    </div>
+
+    <div id="androidGuide" class="guide">
+        <strong>안드로이드 설치 방법</strong><br />
+        1. <strong>울림앱 설치하기</strong> 버튼을 누르세요.<br />
+        2. 설치창이 뜨면 <strong>설치</strong>를 누르세요.<br />
+        3. 홈 화면에 울림앱 아이콘이 생성됩니다.<br /><br />
+        설치 버튼이 안 뜨면 브라우저 메뉴에서 <strong>앱 설치</strong> 또는 <strong>홈 화면에 추가</strong>를 눌러주세요.
+    </div>
+
+    <div id="iosSafariGuide" class="guide">
+        <strong>아이폰 Safari 설치 방법</strong><br />
+        1. Safari 하단의 <strong>공유 버튼</strong>을 누르세요.<br />
+        2. <strong>홈 화면에 추가</strong>를 선택하세요.<br />
+        3. 오른쪽 위 <strong>추가</strong>를 누르세요.<br />
+        4. 홈 화면에 울림앱 아이콘이 생성됩니다.
+    </div>
+
+    <div id="iosChromeGuide" class="guide">
+        <strong>아이폰 Chrome 설치 방법</strong><br />
+        1. 주소창 옆 또는 하단의 <strong>공유 버튼</strong>을 누르세요.<br />
+        2. <strong>홈 화면에 추가</strong>를 선택하세요.<br />
+        3. <strong>추가</strong>를 누르세요.<br /><br />
+        아이폰에서는 자동 설치 팝업 호출이 제한됩니다. 가장 안정적인 방식은 Safari에서 홈 화면에 추가하는 것입니다.
+    </div>
+
+    <div id="installedGuide" class="guide">
+        <strong>이미 앱 모드로 실행 중입니다.</strong><br />
+        현재 울림앱이 홈 화면 앱 형태로 열려 있습니다.
+    </div>
+
+    <p class="notice">
+        QR코드는 이 페이지 주소<br />
+        <strong>https://ulimvoice.github.io/ulimvoice/install.html</strong><br />
+        로 만들면 됩니다.
+    </p>
+</main>
+
+<script>
+let deferredPrompt = null;
+
+const APP_URL = "./index.html";
+const INSTALL_URL = "https://ulimvoice.github.io/ulimvoice/install.html";
+
+const installBtn = document.getElementById("installBtn");
+const openAppBtn = document.getElementById("openAppBtn");
+const androidBrowserBtns = document.getElementById("androidBrowserBtns");
+const androidGuide = document.getElementById("androidGuide");
+const iosSafariGuide = document.getElementById("iosSafariGuide");
+const iosChromeGuide = document.getElementById("iosChromeGuide");
+const installedGuide = document.getElementById("installedGuide");
+const deviceBadge = document.getElementById("deviceBadge");
+
+const ua = navigator.userAgent || "";
+const isAndroid = /Android/i.test(ua);
+const isIOS = /iPhone|iPad|iPod/i.test(ua);
+const isCriOS = /CriOS/i.test(ua);
+const isFxiOS = /FxiOS/i.test(ua);
+const isSamsung = /SamsungBrowser/i.test(ua);
+const isChromeAndroid = isAndroid && /Chrome/i.test(ua) && !isSamsung;
+const isSafariIOS = isIOS && /Safari/i.test(ua) && !isCriOS && !isFxiOS;
+const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+
+function show(el) { el.classList.add("show"); }
+function reveal(el) { el.classList.remove("hidden"); }
+function hide(el) { el.classList.add("hidden"); }
+
+function setInitialGuide() {
+    if (isStandalone) {
+        deviceBadge.textContent = "설치 완료 상태";
+        show(installedGuide);
+        hide(installBtn);
+        return;
+    }
+
+    if (isAndroid) {
+        deviceBadge.textContent = isSamsung ? "안드로이드 · 삼성 인터넷" : (isChromeAndroid ? "안드로이드 · Chrome" : "안드로이드");
+        show(androidGuide);
+        reveal(androidBrowserBtns);
+        return;
+    }
+
+    if (isIOS && isCriOS) {
+        deviceBadge.textContent = "아이폰 · Chrome";
+        show(iosChromeGuide);
+        return;
+    }
+
+    if (isIOS) {
+        deviceBadge.textContent = isSafariIOS ? "아이폰 · Safari" : "아이폰";
+        show(iosSafariGuide);
+        return;
+    }
+
+    deviceBadge.textContent = "PC 또는 기타 브라우저";
+    show(androidGuide);
+}
+
+window.addEventListener("beforeinstallprompt", function(event) {
+    event.preventDefault();
+    deferredPrompt = event;
+    reveal(installBtn);
+});
+
+installBtn.addEventListener("click", async function() {
+    if (!deferredPrompt) {
+        alert("현재 브라우저에서는 자동 설치창을 열 수 없습니다. 브라우저 메뉴에서 '앱 설치' 또는 '홈 화면에 추가'를 눌러주세요.");
+        return;
+    }
+
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    hide(installBtn);
+});
+
+openAppBtn.addEventListener("click", function() {
+    location.href = APP_URL;
+});
+
+window.addEventListener("appinstalled", function() {
+    hide(installBtn);
+    alert("울림앱 설치가 완료되었습니다.");
+});
+
+function openInAndroidChrome() {
+    const noScheme = INSTALL_URL.replace(/^https?:\/\//, "");
+    location.href = "intent://" + noScheme + "#Intent;scheme=https;package=com.android.chrome;end";
+}
+
+function openInSamsungBrowser() {
+    const noScheme = INSTALL_URL.replace(/^https?:\/\//, "");
+    location.href = "intent://" + noScheme + "#Intent;scheme=https;package=com.sec.android.app.sbrowser;end";
+}
+
+setInitialGuide();
+
+if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function() {
+        navigator.serviceWorker.register("./service-worker.js").catch(function(err) {
+            console.warn("service-worker 등록 실패:", err);
+        });
+    });
+}
+</script>
+</body>
+</html>
