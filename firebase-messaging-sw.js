@@ -9,9 +9,14 @@ self.addEventListener('push', (event) => {
     payload = {};
   }
 
-  const data = payload.data || payload || {};
+  const data =
+    (payload.data) ||
+    (payload.message && payload.message.data) ||
+    payload ||
+    {};
 
   const title = data.title || '📢 연습실 예약 신청';
+
   const body =
     data.body ||
     `${data.studentName || '학생'} 학생이 ${data.room || ''} ${data.startTime || ''}~${data.endTime || ''}에 연습실 예약을 신청했습니다.`;
