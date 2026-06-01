@@ -13,34 +13,53 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-messaging.onBackgroundMessage((payload) => {
+function showUlimNotification(payload) {
   const notification = payload.notification || {};
   const data = payload.data || {};
 
-  const title = notification.title || data.title || '울림 연습실 예약 알림';
-  const body = notification.body || data.body || '새 연습실 예약이 접수되었습니다.';
+  const title =
+    notification.title ||
+    data.title ||
+    '📢 연습실 예약 신청';
 
-  self.registration.showNotification(title, {
+  const body =
+    notification.body ||
+    data.body ||
+    `${data.studentName || '학생'} 학생이 ${data.room || ''} ${data.startTime || ''}~${data.endTime || ''}에 연습실 예약을 신청했습니다.`;
+
+  return self.registration.showNotification(title, {
     body,
-    icon: './appdata/logo.png',
-    badge: './appdata/logo.png',
+    icon: '/ulimvoice/appdata/logo.png',
+    badge: '/ulimvoice/appdata/logo.png',
     data: {
-      url: data.url || './',
+      url: data.url || 'https://ulimvoice.github.io/ulimvoice/',
       reservationId: data.reservationId || '',
+      studentName: data.studentName || '',
       date: data.date || '',
-      room: data.room || ''
+      room: data.room || '',
+      startTime: data.startTime || '',
+      endTime: data.endTime || ''
     }
   });
+}
+
+messaging.onBackgroundMessage((payload) => {
+  return showUlimNotification(payload);
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = (event.notification.data && event.notification.data.url) || './';
+
+  const url =
+    event.notification.data?.url ||
+    'https://ulimvoice.github.io/ulimvoice/';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
-        if ('focus' in client) return client.focus();
+        if (client.url.includes('/ulimvoice/') && 'focus' in client) {
+          return client.focus();
+        }
       }
       if (clients.openWindow) return clients.openWindow(url);
       return null;
