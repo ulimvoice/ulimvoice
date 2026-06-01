@@ -1,47 +1,5 @@
-/* 울림연기학원 관리자 PWA 푸시 알림용 Service Worker */
-importScripts('https://www.gstatic.com/firebasejs/11.8.1/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/11.8.1/firebase-messaging-compat.js');
+/* 울림연기학원 PWA 푸시 알림용 Service Worker - 순수 Web Push 방식 */
 
-firebase.initializeApp({
-  apiKey: "AIzaSyAW-sqtUQ_mJ6ZS_aV8pTOAKvHTSX-FXUM",
-  authDomain: "ulim-7b09a.firebaseapp.com",
-  projectId: "ulim-7b09a",
-  storageBucket: "ulim-7b09a.firebasestorage.app",
-  messagingSenderId: "364788231295",
-  appId: "1:364788231295:web:b43fb49527bb6af1c6634a"
-});
-
-const messaging = firebase.messaging();
-
-function showUlimNotification(payload) {
-  const notification = payload.notification || {};
-  const data = payload.data || {};
-
-  const title =
-    notification.title ||
-    data.title ||
-    '📢 연습실 예약 신청';
-
-  const body =
-    notification.body ||
-    data.body ||
-    `${data.studentName || '학생'} 학생이 ${data.room || ''} ${data.startTime || ''}~${data.endTime || ''}에 연습실 예약을 신청했습니다.`;
-
-  return self.registration.showNotification(title, {
-    body,
-    icon: '/ulimvoice/appdata/logo.png',
-    badge: '/ulimvoice/appdata/logo.png',
-    data: {
-      url: data.url || 'https://ulimvoice.github.io/ulimvoice/',
-      reservationId: data.reservationId || '',
-      studentName: data.studentName || '',
-      date: data.date || '',
-      room: data.room || '',
-      startTime: data.startTime || '',
-      endTime: data.endTime || ''
-    }
-  });
-}
 self.addEventListener('push', (event) => {
   let payload = {};
 
@@ -51,10 +9,30 @@ self.addEventListener('push', (event) => {
     payload = {};
   }
 
-  event.waitUntil(showUlimNotification(payload));
-});
-messaging.onBackgroundMessage((payload) => {
-  return showUlimNotification(payload);
+  const data = payload.data || payload || {};
+
+  const title = data.title || '📢 연습실 예약 신청';
+  const body =
+    data.body ||
+    `${data.studentName || '학생'} 학생이 ${data.room || ''} ${data.startTime || ''}~${data.endTime || ''}에 연습실 예약을 신청했습니다.`;
+
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon: '/ulimvoice/appdata/logo.png',
+      badge: '/ulimvoice/appdata/logo.png',
+      tag: data.reservationId || 'ulim-room-reservation',
+      data: {
+        url: data.url || 'https://ulimvoice.github.io/ulimvoice/',
+        reservationId: data.reservationId || '',
+        studentName: data.studentName || '',
+        date: data.date || '',
+        room: data.room || '',
+        startTime: data.startTime || '',
+        endTime: data.endTime || ''
+      }
+    })
+  );
 });
 
 self.addEventListener('notificationclick', (event) => {
@@ -71,8 +49,7 @@ self.addEventListener('notificationclick', (event) => {
           return client.focus();
         }
       }
-      if (clients.openWindow) return clients.openWindow(url);
-      return null;
+      return clients.openWindow(url);
     })
   );
 });
