@@ -2654,6 +2654,102 @@ function getVocalRecords() {
     return records ? new Map(JSON.parse(records)) : new Map();
 }
 
+
+// [2-1] 서버 기반 100일 발성훈련 문장 관리
+// - 학생번호/이름+전화번호 기준으로 이전에 완료한 문장을 서버에서 제외합니다.
+// - 100일 주기마다 서버가 새로운 랜덤 100문장을 생성해 내려줍니다.
+function getTrainingStudentIdentity_() {
+    return {
+        studentNo: (typeof studentNo !== 'undefined' ? studentNo : '') || localStorage.getItem('studentNo') || '',
+        studentName: (typeof studentName !== 'undefined' ? studentName : '') || localStorage.getItem('studentName') || '게스트',
+        phoneLast4: (typeof phoneLast4 !== 'undefined' ? phoneLast4 : '') || localStorage.getItem('phoneLast4') || '',
+        deviceKey: (typeof pronGetDeviceKey === 'function' ? pronGetDeviceKey() : (localStorage.getItem('pronEtriDeviceKey') || ''))
+    };
+}
+function extractJamoText(s) {
+    const CHO=["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
+    const JUNG=["ㅏ","ㅐ","ㅑ","ㅒ","ㅓ","ㅔ","ㅕ","ㅖ","ㅗ","ㅘ","ㅙ","ㅚ","ㅛ","ㅜ","ㅝ","ㅞ","ㅟ","ㅠ","ㅡ","ㅢ","ㅣ"];
+    const JONG=["","ㄱ","ㄲ","ㄳ","ㄴ","ㄵ","ㄶ","ㄷ","ㄹ","ㄺ","ㄻ","ㄼ","ㄽ","ㄾ","ㄿ","ㅀ","ㅁ","ㅂ","ㅄ","ㅅ","ㅆ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
+    return Array.from(String(s || '')).map(ch => {
+        const code = ch.charCodeAt(0);
+        if (code < 0xAC00 || code > 0xD7A3) return ch;
+        const n = code - 0xAC00;
+        const cho = Math.floor(n / 588);
+        const jung = Math.floor((n % 588) / 28);
+        const jong = n % 28;
+        return CHO[cho] + JUNG[jung] + (JONG[jong] || '');
+    }).join(' ');
+}
+function buildTrainingObjectFromSentence_(item) {
+    const text = String((item && item.text) || '').trim();
+    let converted = text;
+    let rules = [];
+    try {
+        if (typeof pronConvertText === 'function') {
+            const result = pronConvertText(text);
+            converted = result.converted || text;
+            rules = result.rules || [];
+        }
+    } catch (e) {
+        console.warn('표준발음 변환 실패, 원문으로 대체:', e);
+    }
+    return {
+        id: String((item && item.id) || ('LOCAL_' + Date.now())),
+        cycleKey: item && item.cycleKey ? String(item.cycleKey) : '',
+        text: text,
+        pron: converted,
+        jamo: extractJamoText(text),
+        vowels: extractVowels(text),
+        audio: (item && item.audio) || '',
+        rules: rules
+    };
+}
+async function fetchServerTrainingSentence_() {
+    if (!GET_API_URL || !GET_API_URL.includes('script.google.com/macros/s/')) {
+        throw new Error('학생부 GAS 주소가 설정되지 않았습니다.');
+    }
+    if (typeof pronJsonpRequest !== 'function') {
+        throw new Error('GAS JSONP 모듈이 아직 준비되지 않았습니다.');
+    }
+    const ident = getTrainingStudentIdentity_();
+    const data = await pronJsonpRequest({
+        action: 'getVocalTrainingSentence',
+        studentNo: ident.studentNo,
+        studentName: ident.studentName,
+        phoneLast4: ident.phoneLast4,
+        deviceKey: ident.deviceKey,
+        _: Date.now()
+    }, 12000);
+    if (!data || !data.ok) throw new Error(data && data.message ? data.message : '서버 문장 조회 실패');
+    return data;
+}
+async function recordServerTrainingSentenceComplete_() {
+    if (!currentTrainObj || !GET_API_URL || !GET_API_URL.includes('script.google.com/macros/s/')) return;
+    const ident = getTrainingStudentIdentity_();
+    const payload = {
+        action: 'recordVocalTrainingSentenceComplete',
+        studentNo: ident.studentNo,
+        studentName: ident.studentName,
+        phoneLast4: ident.phoneLast4,
+        deviceKey: ident.deviceKey,
+        sentenceId: currentTrainObj.id,
+        cycleKey: currentTrainObj.cycleKey || '',
+        text: currentTrainObj.text || '',
+        standardPronunciation: currentTrainObj.pron || '',
+        completedAt: new Date().toISOString()
+    };
+    try {
+        await fetch(GET_API_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+        });
+    } catch (err) {
+        console.warn('서버 문장 완료 기록 실패:', err);
+    }
+}
+
 // [3] 문장 저장 및 연습 완료 기록 (✅ 연습 완료 버튼 클릭 시)
 async function completeTraining() {
     const btnComplete = document.getElementById('btnComplete');
@@ -2703,6 +2799,7 @@ async function completeTraining() {
     localStorage.setItem('vocalRecords', JSON.stringify(Array.from(records.entries())));
 
     await sendToGoogleSheet(currentTrainObj.id, truncatedText, "연습 완료 체크");
+    await recordServerTrainingSentenceComplete_();
 
     let uploadBlob = lastRecordedBlob;
     let uploadMimeType = lastRecordedBlob.type || 'audio/webm';
@@ -2758,29 +2855,40 @@ async function completeTraining() {
 
 
 
-function trainNew(){
+async function trainNew(){
     if(typeof vocalData !== 'undefined') trainDataList = vocalData;
     
     // 새 문장 뽑을 때 달력 숨기기
-    document.getElementById('calendarDisplayArea').style.display = 'none'; 
-    
-    const savedIds = getSavedVocalIds();
-    
-    const availableData = trainDataList.filter(item => !savedIds.has(item.id));
+    document.getElementById('calendarDisplayArea').style.display = 'none';
 
-    if (availableData.length === 0) {
-        if (trainDataList.length > 0) {
-            return alert("모든 문장(" + trainDataList.length + "개)을 연습했습니다! [F12] 개발자 도구 > Application > Local Storage 에서 'savedVocalIds'를 삭제해야 초기화됩니다.");
+    try {
+        showLoading('오늘의 발성훈련 문장을 불러오는 중입니다...');
+        const serverItem = await fetchServerTrainingSentence_();
+        hideLoading();
+
+        if (serverItem.status === 'exhausted') {
+            return alert(serverItem.message || '이번 100일 훈련 문장을 모두 완료했습니다. 다음 100일 주기에서 새 문장이 제공됩니다.');
         }
-        return alert("문장 데이터(appdata/vocalization/data.js)를 찾을 수 없습니다.");
+
+        currentTrainObj = buildTrainingObjectFromSentence_(serverItem);
+    } catch (serverErr) {
+        hideLoading();
+        console.warn('서버 100일 문장 조회 실패, 로컬 문장으로 대체:', serverErr);
+        const savedIds = getSavedVocalIds();
+        const availableData = trainDataList.filter(item => !savedIds.has(item.id));
+
+        if (availableData.length === 0) {
+            if (trainDataList.length > 0) {
+                return alert('모든 로컬 문장(' + trainDataList.length + '개)을 연습했습니다. 서버 문장 조회도 실패했습니다. 관리자에게 GAS 배포 상태를 확인해주세요.');
+            }
+            return alert('문장 데이터(appdata/vocalization/data.js)를 찾을 수 없습니다.');
+        }
+        currentTrainObj = buildTrainingObjectFromSentence_(pick(availableData));
     }
-    
-    currentTrainObj = pick(availableData); // 제외된 문장 중에서 랜덤으로 뽑기
+
     step=1;
-    // 새 문장 뽑으면 버튼 활성화 및 UI 렌더링 시작
-    document.getElementById("btn_prev").disabled = true; // 이전 버튼 비활성화 (STEP 1)
-    document.getElementById("btn_next").disabled = false; // 다음 버튼 활성화
-    
+    document.getElementById("btn_prev").disabled = true;
+    document.getElementById("btn_next").disabled = false;
     document.getElementById("train_origin").textContent = currentTrainObj.text; 
     document.getElementById("recordBox").style.display = 'none';
     const proAudio = document.getElementById("proAudio");
@@ -2788,7 +2896,9 @@ function trainNew(){
     proAudio.onloadedmetadata = function() {
         document.getElementById("proTime").textContent = proAudio.duration.toFixed(1) + "s";
     };
-    lastRecordedBlob = null; // 새 문장 뽑을 때 녹음 초기화
+    lastRecordedBlob = null;
+    recognitionResult = '';
+    window.trainingFinalAiResult = null;
     renderTrain();
 }
 
@@ -2830,7 +2940,7 @@ function renderTrain(){
 
     let showText = "";
     if (step <= 2) { showText = extractVowels(currentTrainObj.text); }
-    else if (step <= 6) { showText = currentTrainObj.pron; } 
+    else if (step <= 6) { showText = currentTrainObj.pron || currentTrainObj.text; } 
 
     ind.textContent="STEP "+step;
     box.innerHTML=
@@ -3308,6 +3418,32 @@ async function runTrainingFinalAiAnalysis_(audioBlob, options = {}) {
     }
     if (!currentTrainObj) throw new Error('연습 문장이 없습니다.');
     const requestId = buildTrainingFinalRequestId_();
+
+    // 서버 고급분석이 일시적으로 연결되지 않아도 분석이 완전히 실패하지 않도록,
+    // 먼저 기기 안에서 AI 인식결과를 만들어 GAS에 함께 보냅니다.
+    let localRecognized = String(recognitionResult || '').trim();
+    if (!localRecognized && window.UlimLocalWhisper && typeof window.UlimLocalWhisper.transcribe === 'function') {
+        const sttEl = document.getElementById('sttResult');
+        if (sttEl) sttEl.textContent = 'AI가 분석중입니다.';
+        const localResult = await window.UlimLocalWhisper.transcribe(audioBlob, {
+            language: 'ko',
+            task: 'transcribe',
+            model: ULIM_LOCAL_WHISPER_MODEL,
+            onStatus: msg => {
+                const el = document.getElementById('sttResult');
+                if (el && msg) el.textContent = 'AI가 분석중입니다.';
+            }
+        });
+        localRecognized = String(localResult.text || '').trim();
+        recognitionResult = localRecognized;
+    }
+
+    const scriptText = String(currentTrainObj.text || '');
+    const cleanTarget = scriptText.replace(/[^가-힣]/g, '');
+    const cleanHeard = localRecognized.replace(/[^가-힣]/g, '');
+    const localMatchScore = cleanTarget && cleanHeard ? Math.round(getSimilarity(cleanTarget, cleanHeard) * 100) : 0;
+    const localScore5 = (1 + (localMatchScore / 100) * 4).toFixed(1);
+
     const audio = await pronBlobToEtriAudioBase64(audioBlob);
     const sizeMb = pronBase64ToByteSize(audio.base64) / 1024 / 1024;
     if (sizeMb > 8) throw new Error(`녹음 파일이 너무 큽니다. (${sizeMb.toFixed(1)}MB) 60초 이내로 다시 녹음해주세요.`);
@@ -3321,7 +3457,10 @@ async function runTrainingFinalAiAnalysis_(audioBlob, options = {}) {
         studentName: (typeof studentName !== 'undefined' ? studentName : '') || '',
         phoneLast4: (typeof phoneLast4 !== 'undefined' ? phoneLast4 : '') || '',
         instructor: (typeof instructorName !== 'undefined' ? instructorName : '') || '',
-        script: currentTrainObj.text || '',
+        script: scriptText,
+        recognized: localRecognized,
+        matchScore: localMatchScore,
+        score5: localScore5,
         standardPronunciation: currentTrainObj.pron || '',
         audio: audio.base64,
         audioMimeType: audio.mimeType,
@@ -7603,7 +7742,7 @@ function pronAttachPronouncedSuffix(baseOut, suffix) {
     if (!suffix || baseLen <= 0 || parts.length <= baseLen) return baseOut + suffix;
     const a = parts[baseLen - 1];
     const b = parts[baseLen];
-    if (!a || !b || a.raw || b.raw || !a.jong || b.cho !== "ㅇ") return baseOut + suffix;
+    if (!a || !b || a.raw || b.raw || !a.jong || b.cho !== "ㅇ" || a.jong === "ㅇ") return baseOut + suffix;
     if (PRON_CLUSTER_SPLIT[a.jong]) {
         const [remain, move] = PRON_CLUSTER_SPLIT[a.jong];
         if (PRON_CHO_INDEX[move] !== undefined) {
@@ -7644,18 +7783,40 @@ function pronApplyHieutRules(parts, rules) {
     for (let i = 0; i < parts.length - 1; i++) {
         const a = parts[i], b = parts[i + 1];
         if (a.raw || b.raw || !a.jong) continue;
+        // ① ㅎ 계열 받침(ㅎ, ㄶ, ㅀ) 처리
         if (a.jong === "ㅎ" || a.jong === "ㄶ" || a.jong === "ㅀ") {
+            const jongRem = a.jong === "ㅎ" ? "" : (a.jong === "ㄶ" ? "ㄴ" : "ㄹ");
             if (b.cho === "ㅇ") {
+                // 모음 앞 ㅎ 탈락: 낳아→나아, 않아→아나 (표준발음법 12항 1)
                 const old = pronPartsToString(parts);
-                a.jong = a.jong === "ㅎ" ? "" : (a.jong === "ㄶ" ? "ㄴ" : "ㄹ");
+                a.jong = jongRem;
                 const now = pronPartsToString(parts);
-                if (old !== now) pronAddRule(rules, "ㅎ 탈락", old, now, "ㅎ 받침이 모음 앞에서 탈락하거나 약해집니다.");
+                if (old !== now) pronAddRule(rules, "ㅎ 탈락", old, now, "ㅎ 받침이 모음 앞에서 탈락합니다.");
             } else if ({"ㄱ":"ㅋ", "ㄷ":"ㅌ", "ㅈ":"ㅊ"}[b.cho]) {
+                // ㅎ+ㄱ/ㄷ/ㅈ → 거센소리: 좋고→조코, 많다→만타 (12항 2)
                 const old = pronPartsToString(parts);
                 b.cho = {"ㄱ":"ㅋ", "ㄷ":"ㅌ", "ㅈ":"ㅊ"}[b.cho];
-                a.jong = a.jong === "ㅎ" ? "" : (a.jong === "ㄶ" ? "ㄴ" : "ㄹ");
+                a.jong = jongRem;
                 const now = pronPartsToString(parts);
                 if (old !== now) pronAddRule(rules, "ㅎ 축약", old, now, "ㅎ 받침과 뒤 자음이 만나 거센소리로 축약됩니다.");
+            } else if (b.cho === "ㅅ") {
+                // ㅎ+ㅅ → ㅆ: 좋습니다→조씀니다 (12항 3)
+                const old = pronPartsToString(parts);
+                b.cho = "ㅆ";
+                a.jong = jongRem;
+                const now = pronPartsToString(parts);
+                if (old !== now) pronAddRule(rules, "ㅎ 축약", old, now, "ㅎ 받침 뒤 ㅅ은 [ㅆ]으로 발음됩니다.");
+            }
+        }
+        // ② 앞 받침 ㄱ·ㄷ·ㅂ·ㅈ + 뒤 초성 ㅎ → 격음화: 먹히다→머키다 (12항 4)
+        if (b.cho === "ㅎ") {
+            const asp = {"ㄱ":"ㅋ", "ㄷ":"ㅌ", "ㅂ":"ㅍ", "ㅈ":"ㅊ"}[a.jong];
+            if (asp) {
+                const old = pronPartsToString(parts);
+                b.cho = asp;
+                a.jong = "";
+                const now = pronPartsToString(parts);
+                if (old !== now) pronAddRule(rules, "격음화", old, now, "받침 ㄱ·ㄷ·ㅂ·ㅈ 뒤의 ㅎ가 만나 거센소리로 발음됩니다.");
             }
         }
     }
@@ -7676,7 +7837,7 @@ function pronApplyPalatalization(parts, rules) {
 function pronApplyLiaison(parts, rules) {
     for (let i = 0; i < parts.length - 1; i++) {
         const a = parts[i], b = parts[i + 1];
-        if (a.raw || b.raw || !a.jong || b.cho !== "ㅇ") continue;
+        if (a.raw || b.raw || !a.jong || b.cho !== "ㅇ" || a.jong === "ㅇ") continue;
         const old = pronPartsToString(parts);
         if (PRON_CLUSTER_SPLIT[a.jong]) {
             const [remain, move] = PRON_CLUSTER_SPLIT[a.jong];
@@ -7710,12 +7871,23 @@ function pronApplyNasalization(parts, rules) {
         const a = parts[i], b = parts[i + 1];
         if (a.raw || b.raw || !a.jong) continue;
         if ((b.cho === "ㄴ" || b.cho === "ㅁ") && ["ㄱ", "ㄷ", "ㅂ"].includes(a.jong)) {
+            // ㄱ·ㄷ·ㅂ + ㄴ·ㅁ → 비음화: 국물→궁물 (표준발음법 18항)
             const old = pronPartsToString(parts);
             if (a.jong === "ㄱ") a.jong = "ㅇ";
             else if (a.jong === "ㄷ") a.jong = "ㄴ";
             else if (a.jong === "ㅂ") a.jong = "ㅁ";
             const now = pronPartsToString(parts);
             if (old !== now) pronAddRule(rules, "비음화", old, now, "받침 ㄱ·ㄷ·ㅂ이 ㄴ·ㅁ 앞에서 각각 ㅇ·ㄴ·ㅁ으로 바뀝니다.");
+        } else if (["ㄱ", "ㄷ", "ㅂ"].includes(a.jong) && b.cho === "ㄹ") {
+            // ㄱ·ㄷ·ㅂ + ㄹ → ㄹ비음화: ㄹ→ㄴ, 앞 받침도 비음화 (20항)
+            // 예) 국립→궁닙, 협력→혐녁, 독립→동닙
+            const old = pronPartsToString(parts);
+            b.cho = "ㄴ";
+            if (a.jong === "ㄱ") a.jong = "ㅇ";
+            else if (a.jong === "ㄷ") a.jong = "ㄴ";
+            else if (a.jong === "ㅂ") a.jong = "ㅁ";
+            const now = pronPartsToString(parts);
+            if (old !== now) pronAddRule(rules, "ㄹ 비음화", old, now, "받침 ㄱ·ㄷ·ㅂ 뒤의 ㄹ은 [ㄴ]으로 발음되고, 앞 받침도 비음화됩니다.");
         }
     }
 }
@@ -7741,10 +7913,18 @@ function pronApplyTensification(parts, rules) {
         const a = parts[i], b = parts[i + 1];
         if (a.raw || b.raw || !a.jong) continue;
         if (["ㄱ", "ㄷ", "ㅂ"].includes(a.jong) && PRON_TENSE_MAP[b.cho]) {
+            // ㄱ·ㄷ·ㅂ 받침 뒤 평음 → 된소리 (표준발음법 23항)
             const old = pronPartsToString(parts);
             b.cho = PRON_TENSE_MAP[b.cho];
             const now = pronPartsToString(parts);
             if (old !== now) pronAddRule(rules, "된소리되기", old, now, "받침 ㄱ·ㄷ·ㅂ 뒤의 평음 ㄱ·ㄷ·ㅂ·ㅅ·ㅈ이 된소리로 발음됩니다.");
+        } else if (a.jong === "ㄹ" && ["ㄷ", "ㅅ", "ㅈ"].includes(b.cho)) {
+            // ㄹ 받침 뒤 ㄷ·ㅅ·ㅈ → 된소리 (26항, 한자어)
+            // 예) 발달→발딸, 말살→말쌀, 열정→열쩡, 물질→물찔
+            const old = pronPartsToString(parts);
+            b.cho = PRON_TENSE_MAP[b.cho];
+            const now = pronPartsToString(parts);
+            if (old !== now) pronAddRule(rules, "된소리되기", old, now, "ㄹ 받침 뒤의 ㄷ·ㅅ·ㅈ은 된소리로 발음됩니다.");
         }
     }
 }
