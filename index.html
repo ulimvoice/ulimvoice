@@ -787,8 +787,11 @@ body.admin-mode .admin-only-tab { display:block !important; }
 .admin-status-badge.attendance-ok { background:#dcfce7; color:#166534; }
 .admin-status-badge.attendance-no { background:#fee2e2; color:#991b1b; }
 .admin-eval-textarea {
+ .admin-eval-textarea {
     width:100%;
-    min-width:520px;
+    max-width:100%;
+    min-width:0;
+    box-sizing:border-box;
     min-height:320px;
     border:1px solid #d1d5db;
     border-radius:10px;
@@ -806,7 +809,12 @@ body.admin-mode .admin-only-tab { display:block !important; }
     display: grid;
     grid-template-columns: 1fr;
     gap: 8px;
-    min-width: 520px;
+   .daily-eval-parts {
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    box-sizing:border-box;
+}
 }
 .daily-eval-part-label {
     font-size: 12px;
