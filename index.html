@@ -1196,47 +1196,6 @@ body.admin-mode .admin-only-tab { display:block !important; }
 }
 
 
-.pron-ocr-card {
-    display: none;
-    margin-top: 10px;
-    padding: 12px;
-    border: 1px solid #e5e7eb;
-    border-radius: 16px;
-    background: #f8fafc;
-}
-.pron-ocr-preview {
-    display: none;
-    width: 100%;
-    max-height: 260px;
-    object-fit: contain;
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    margin-top: 10px;
-}
-.pron-ocr-progress {
-    width: 100%;
-    height: 10px;
-    border-radius: 999px;
-    background: #e5e7eb;
-    overflow: hidden;
-    margin-top: 10px;
-    display: none;
-}
-.pron-ocr-progress-fill {
-    width: 0%;
-    height: 100%;
-    background: #16a34a;
-    transition: width .2s;
-}
-.pron-ocr-tips {
-    margin-top: 10px;
-    font-size: 12px;
-    color: #64748b;
-    line-height: 1.55;
-    word-break: keep-all;
-}
-
 .pron-small-note {
     font-size: 12px;
     color: #6b7280;
@@ -1513,20 +1472,10 @@ body.admin-mode .admin-only-tab { display:block !important; }
         <div class="pron-actions">
           <button type="button" onclick="pronConvertInput()">표준발음으로 변환</button>
           <button type="button" class="pron-blue" onclick="pronPasteFromCurrentTraining()">현재 발성문장 가져오기</button>
-          <button type="button" class="pron-orange" onclick="pronOpenCameraOcr()">사진/이미지에서 텍스트 추출</button>
+          <button type="button" class="pron-blue" onclick="pronPasteFromClipboard()">클립보드 붙여넣기</button>
           <button type="button" class="pron-gray" onclick="pronClearAll()">초기화</button>
         </div>
-        <input type="file" id="pronOcrInput" accept="image/*" style="display:none" onchange="pronExtractFromImage(event)">
-        <div id="pronOcrCard" class="pron-ocr-card">
-          <b style="color:#166534;">📷 OCR 처리 상태</b>
-          <div id="pronOcrStatus" class="pron-small-note">이미지를 선택하면 글자를 추출합니다.</div>
-          <div id="pronOcrProgress" class="pron-ocr-progress"><div id="pronOcrProgressFill" class="pron-ocr-progress-fill"></div></div>
-          <img id="pronOcrPreview" class="pron-ocr-preview" alt="OCR 이미지 미리보기">
-          <div class="pron-ocr-tips">
-            정확도를 높이려면 종이를 밝게 찍고, 문장이 화면 중앙에 오게 한 뒤, 기울어지지 않게 촬영해주세요.<br>
-            아이폰 사진이 HEIC 형식이면 인식이 실패할 수 있습니다. 이 경우 스크린샷이나 JPG/PNG 이미지로 다시 시도해주세요.
-          </div>
-        </div>
+        <div id="pronPasteStatus" class="pron-small-note">사진/카메라 OCR 기능은 제거했습니다. 필요한 문장은 직접 입력하거나 복사한 텍스트를 붙여넣어 사용하세요.</div>
 
         <div id="pronResultCard" class="pron-result-card">
           <div class="pron-result-head">변환 결과</div>
@@ -6731,7 +6680,7 @@ async function cancelRoomReservation(id) {
 /* ===========================
    🎙️ 한국어 표준발음 자동치환 기능
    - 직접 입력
-   - 선택형 OCR: Tesseract.js 온라인 로드
+   - 직접 입력/클립보드 붙여넣기
    - 간단 STT/녹음 체크: 브라우저 지원 시 작동
    =========================== */
 const PRON_CHO = ["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
@@ -7200,12 +7149,12 @@ function pronToggleRuleBox() {
 function pronClearAll() {
     pronStopVoiceCheck(false);
     pronSetRecordingUi(false, "⚪ 녹음 대기");
-    const ids = ["pronInputText", "pronOriginalOutput", "pronConvertedOutput", "pronWarningOutput", "pronOcrStatus", "pronVoiceStatus"];
+    const ids = ["pronInputText", "pronOriginalOutput", "pronConvertedOutput", "pronWarningOutput", "pronPasteStatus", "pronVoiceStatus"];
     ids.forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
         if (el.tagName === "TEXTAREA" || el.tagName === "INPUT") el.value = "";
-        else el.textContent = id === "pronVoiceStatus" ? "대기 중입니다." : "";
+        else el.textContent = id === "pronVoiceStatus" ? "대기 중입니다." : (id === "pronPasteStatus" ? "사진/카메라 OCR 기능은 제거했습니다. 필요한 문장은 직접 입력하거나 복사한 텍스트를 붙여넣어 사용하세요." : "");
     });
     const result = document.getElementById("pronResultCard");
     if (result) result.style.display = "none";
@@ -7232,179 +7181,44 @@ function pronPasteFromCurrentTraining() {
     input.value = text;
     pronConvertInput();
 }
-function pronOpenCameraOcr() {
-    const input = document.getElementById("pronOcrInput");
-    const card = document.getElementById("pronOcrCard");
-    const status = document.getElementById("pronOcrStatus");
-    const progress = document.getElementById("pronOcrProgress");
-    const fill = document.getElementById("pronOcrProgressFill");
-    if (card) card.style.display = "block";
-    if (status) status.textContent = "카메라로 촬영하거나 저장된 이미지를 선택해주세요.";
-    if (progress) progress.style.display = "none";
-    if (fill) fill.style.width = "0%";
-    if (input) input.click();
-}
-function pronSetOcrStatus(message, percent) {
-    const card = document.getElementById("pronOcrCard");
-    const status = document.getElementById("pronOcrStatus");
-    const progress = document.getElementById("pronOcrProgress");
-    const fill = document.getElementById("pronOcrProgressFill");
-    if (card) card.style.display = "block";
+
+function pronSetPasteStatus(message) {
+    const status = document.getElementById("pronPasteStatus");
     if (status) status.textContent = message || "";
-    if (typeof percent === "number") {
-        if (progress) progress.style.display = "block";
-        if (fill) fill.style.width = Math.max(0, Math.min(100, percent)) + "%";
-    }
 }
-function pronLoadExternalScript(src) {
-    return new Promise((resolve, reject) => {
-        const existing = document.querySelector(`script[src="${src}"]`);
-        if (existing) {
-            if (window.Tesseract) resolve();
-            else existing.addEventListener("load", resolve, { once: true });
-            return;
-        }
-        const script = document.createElement("script");
-        script.src = src;
-        script.async = true;
-        script.onload = resolve;
-        script.onerror = () => reject(new Error("OCR 라이브러리 로드 실패: " + src));
-        document.head.appendChild(script);
-    });
-}
-async function pronEnsureTesseract() {
-    if (window.Tesseract && window.Tesseract.recognize) return;
-    const urls = [
-        "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js",
-        "https://unpkg.com/tesseract.js@5/dist/tesseract.min.js"
-    ];
-    let lastErr = null;
-    for (const url of urls) {
-        try {
-            pronSetOcrStatus("OCR 모듈을 불러오는 중입니다. 처음 실행 시 시간이 걸릴 수 있습니다.", 5);
-            await pronLoadExternalScript(url);
-            if (window.Tesseract && window.Tesseract.recognize) return;
-        } catch (err) {
-            lastErr = err;
-        }
-    }
-    throw lastErr || new Error("OCR 모듈을 불러오지 못했습니다. 인터넷 연결 또는 브라우저 보안 설정을 확인해주세요.");
-}
-function pronReadImageFile(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-            const img = new Image();
-            img.onload = () => resolve(img);
-            img.onerror = () => reject(new Error("이미지를 읽을 수 없습니다. HEIC 사진이면 JPG/PNG 또는 스크린샷으로 다시 시도해주세요."));
-            img.src = reader.result;
-        };
-        reader.onerror = () => reject(new Error("이미지 파일을 읽지 못했습니다."));
-        reader.readAsDataURL(file);
-    });
-}
-async function pronPreprocessImageForOcr(file) {
-    const img = await pronReadImageFile(file);
-    const maxSide = 1800;
-    const scale = Math.min(1, maxSide / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height));
-    const width = Math.max(1, Math.round((img.naturalWidth || img.width) * scale));
-    const height = Math.max(1, Math.round((img.naturalHeight || img.height) * scale));
-
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, width, height);
-    ctx.drawImage(img, 0, 0, width, height);
-
-    const imageData = ctx.getImageData(0, 0, width, height);
-    const data = imageData.data;
-    let sum = 0;
-    for (let i = 0; i < data.length; i += 4) {
-        const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-        sum += gray;
-    }
-    const avg = sum / (data.length / 4);
-    const contrast = avg < 125 ? 1.45 : 1.25;
-    const brightness = avg < 120 ? 24 : 8;
-    for (let i = 0; i < data.length; i += 4) {
-        let gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-        gray = (gray - 128) * contrast + 128 + brightness;
-        gray = Math.max(0, Math.min(255, gray));
-        // 너무 흐린 글자를 살리기 위해 완전 이진화 대신 회색 대비 보정만 적용
-        data[i] = data[i + 1] = data[i + 2] = gray;
-        data[i + 3] = 255;
-    }
-    ctx.putImageData(imageData, 0, 0);
-
-    const preview = document.getElementById("pronOcrPreview");
-    if (preview) {
-        preview.src = canvas.toDataURL("image/jpeg", 0.92);
-        preview.style.display = "block";
-    }
-    return canvas;
-}
-function pronCleanOcrText(text) {
-    return String(text || "")
-        .replace(/[|]/g, "ㅣ")
-        .replace(/[“”]/g, '"')
-        .replace(/[‘’]/g, "'")
-        .replace(/[\t ]+/g, " ")
-        .replace(/\n{3,}/g, "\n\n")
-        .replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z0-9\s.,!?~…'"()\[\]{}:;·\-]/g, "")
-        .trim();
-}
-async function pronExtractFromImage(event) {
-    const file = event && event.target && event.target.files ? event.target.files[0] : null;
-    if (!file) return;
-
-    const maxBytes = 12 * 1024 * 1024;
-    if (file.size > maxBytes) {
-        pronSetOcrStatus("이미지 용량이 너무 큽니다. 화면을 캡처하거나 더 작은 이미지로 다시 시도해주세요.", 0);
-        if (event && event.target) event.target.value = "";
-        return;
-    }
+async function pronPasteFromClipboard() {
+    const input = document.getElementById("pronInputText");
+    if (!input) return;
 
     try {
-        pronSetOcrStatus("이미지를 보정하는 중입니다. 사진이 클수록 시간이 걸릴 수 있습니다.", 10);
-        const canvas = await pronPreprocessImageForOcr(file);
-
-        await pronEnsureTesseract();
-        pronSetOcrStatus("한글 OCR을 시작합니다. 첫 실행 시 언어 데이터를 내려받습니다.", 20);
-
-        const result = await window.Tesseract.recognize(canvas, "kor+eng", {
-            langPath: "https://tessdata.projectnaptha.com/4.0.0",
-            logger: m => {
-                if (!m || !m.status) return;
-                const pct = typeof m.progress === "number" ? Math.round(m.progress * 100) : null;
-                const translated = {
-                    "loading tesseract core": "OCR 엔진 준비",
-                    "initializing tesseract": "OCR 초기화",
-                    "loading language traineddata": "한글 언어 데이터 로드",
-                    "initializing api": "인식 API 준비",
-                    "recognizing text": "글자 인식"
-                }[m.status] || m.status;
-                pronSetOcrStatus(`OCR 처리 중: ${translated}${pct !== null ? " " + pct + "%" : ""}`, pct !== null ? Math.max(20, pct) : undefined);
-            }
-        });
-
-        const rawText = result && result.data && result.data.text ? result.data.text : "";
-        const text = pronCleanOcrText(rawText);
-        if (!text || text.replace(/\s/g, "").length < 2) {
-            throw new Error("추출된 텍스트가 거의 없습니다. 글자가 더 크게 보이도록 가까이 찍거나 밝은 곳에서 다시 촬영해주세요.");
+        if (!navigator.clipboard || !navigator.clipboard.readText) {
+            throw new Error("이 브라우저에서는 자동 클립보드 읽기를 지원하지 않습니다.");
         }
-
-        const input = document.getElementById("pronInputText");
-        if (input) input.value = text;
-        pronSetOcrStatus("텍스트 추출 완료. OCR 오타가 있으면 입력창에서 수정한 뒤 변환하세요.", 100);
+        const text = await navigator.clipboard.readText();
+        const cleaned = pronCleanPastedText(text);
+        if (!cleaned) {
+            throw new Error("클립보드에 붙여넣을 텍스트가 없습니다.");
+        }
+        input.value = cleaned;
+        pronSetPasteStatus("클립보드 텍스트를 입력창에 붙여넣었습니다. 표준발음 변환을 실행합니다.");
         pronConvertInput();
     } catch (err) {
-        console.error(err);
-        pronSetOcrStatus("OCR 사용 실패: " + (err.message || "사진 인식에 실패했습니다. 직접 입력을 사용해주세요."), 0);
-    } finally {
-        if (event && event.target) event.target.value = "";
+        pronSetPasteStatus("자동 붙여넣기가 차단되었습니다. 입력창을 길게 눌러 직접 붙여넣어 주세요.");
+        input.focus();
+        alert("자동 붙여넣기가 차단되면 입력창을 길게 눌러 직접 붙여넣으면 됩니다.");
     }
+}
+function pronCleanPastedText(text) {
+    return String(text || "")
+        .replace(/[“”]/g, '"')
+        .replace(/[‘’]/g, "'")
+        .replace(/[	 ]+/g, " ")
+        .replace(/
+{3,}/g, "
+
+")
+        .replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z0-9\s.,!?~…'"()\[\]{}:;·\-]/g, "")
+        .trim();
 }
 function pronNormalizeCompareText(str) {
     return String(str || "").replace(/\s+/g, "").replace(/[^가-힣a-zA-Z0-9]/g, "").toLowerCase();
