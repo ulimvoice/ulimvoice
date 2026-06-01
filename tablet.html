@@ -756,8 +756,8 @@
     // 1초를 넘기거나, 다음 학생 입력이 이미 시작된 뒤 도착한 예전 응답은 화면에 표시하지 않습니다.
     let statusRequestSeq = 0;
     let statusResetTimer = null;
-    const FAST_RESULT_LIMIT_MS = 1000;
-    const STATUS_RESET_DELAY_MS = 1800;
+    const FAST_RESULT_LIMIT_MS = 2000;
+    const STATUS_RESET_DELAY_MS = 2400;
 
     function pad2(n) {
       return String(n).padStart(2, "0");
