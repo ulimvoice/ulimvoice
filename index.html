@@ -2768,12 +2768,99 @@ function hideLoading() {
     if (el) el.style.display = "none";
 }
 
+/* ===========================
+   🔄 PWA 업데이트 확인 설정
+   - 하루 1회만 업데이트 확인
+   - 새 버전 발견 시 확인창 표시
+   - 확인 시 캐시 우회 새로고침
+   =========================== */
+const ULIM_APP_VERSION = "2026.06.01.001";
+const ULIM_UPDATE_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const ULIM_UPDATE_LAST_CHECK_KEY = "ulimUpdateLastCheckAt";
+let ulimUpdatePromptShown = false;
+
+function buildUlimCacheBustUrl() {
+    const url = new URL(window.location.href);
+    url.searchParams.set("v", String(Date.now()));
+    return url.toString();
+}
+
+function showUlimUpdatePrompt(message) {
+    if (ulimUpdatePromptShown) return;
+    ulimUpdatePromptShown = true;
+
+    const ok = window.confirm(message || "울림 앱의 새 버전이 있습니다. 지금 업데이트하시겠습니까?");
+    if (ok) {
+        window.location.href = buildUlimCacheBustUrl();
+    }
+}
+
+async function checkUlimIndexVersion() {
+    try {
+        const url = new URL(window.location.href);
+        url.searchParams.set("updateCheck", String(Date.now()));
+
+        const response = await fetch(url.toString(), {
+            cache: "no-store"
+        });
+
+        if (!response.ok) return;
+
+        const html = await response.text();
+        const match = html.match(/const\s+ULIM_APP_VERSION\s*=\s*["']([^"']+)["']/);
+        const remoteVersion = match ? match[1] : "";
+
+        if (remoteVersion && remoteVersion !== ULIM_APP_VERSION) {
+            showUlimUpdatePrompt("울림 앱의 새 버전이 있습니다. 지금 업데이트하시겠습니까?");
+        }
+    } catch (err) {
+        console.log("[PWA] index 업데이트 확인 실패:", err);
+    }
+}
+
+function shouldCheckUlimUpdateToday() {
+    const last = Number(localStorage.getItem(ULIM_UPDATE_LAST_CHECK_KEY) || "0");
+    return !last || Date.now() - last > ULIM_UPDATE_CHECK_INTERVAL_MS;
+}
+
+async function checkUlimUpdateOnceDaily(force = false) {
+    if (!("serviceWorker" in navigator)) return;
+
+    if (!force && !shouldCheckUlimUpdateToday()) return;
+    localStorage.setItem(ULIM_UPDATE_LAST_CHECK_KEY, String(Date.now()));
+
+    await checkUlimIndexVersion();
+
+    try {
+        const registration = await navigator.serviceWorker.register("/ulimvoice/firebase-messaging-sw.js");
+        console.log("Service Worker Registered");
+
+        if (registration.waiting) {
+            showUlimUpdatePrompt("울림 앱 업데이트가 준비되었습니다. 지금 적용하시겠습니까?");
+            return;
+        }
+
+        registration.addEventListener("updatefound", function () {
+            const newWorker = registration.installing;
+            if (!newWorker) return;
+
+            newWorker.addEventListener("statechange", function () {
+                if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+                    showUlimUpdatePrompt("울림 앱 업데이트가 준비되었습니다. 지금 적용하시겠습니까?");
+                }
+            });
+        });
+
+        await registration.update();
+    } catch (err) {
+        console.error("SW registration/update failed:", err);
+    }
+}
+
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load", function () {
-    navigator.serviceWorker.register("/ulimvoice/service-worker.js")
-      .then(() => console.log("Service Worker Registered"))
-      .catch(err => console.error("SW registration failed:", err));
-  });
+    window.addEventListener("load", function () {
+        checkUlimUpdateOnceDaily(false);
+    });
 }
 </script>
 <script>
