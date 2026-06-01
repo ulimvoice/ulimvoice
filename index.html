@@ -5,7 +5,7 @@
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780168357468&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000007a1c720baab62a17f2f25723%26fn%3Dindex_%25EC%2588%2598%25EC%25A0%2595%25EB%25B3%25B8_FCM_%25EA%25B4%2580%25EB%25A6%25AC%25EC%259E%2590%25ED%2591%25B8%25EC%258B%259C%25EB%2593%25B1%25EB%25A1%259D.html%26cd%3Dattachment%26ts%3D494491%26p%3Dfs%26cid%3D1%26sig%3D3d604c683dadbc9b535d6addd718103e427477c4107087e41cf77b99d88aa1fe%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780064251945&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_0000000028fc720b889e15242db7b5f6%26fn%3Dindex_%25EC%2588%2598%25EC%25A0%2595%25EB%25B3%25B8_v66_%25EC%2597%25B0%25EC%258A%25B5%25EC%258B%25A4%25EC%2598%2588%25EC%2595%25BD%25EC%2595%258C%25EB%25A6%25BC%25ED%2586%25A1.html%26cd%3Dattachment%26ts%3D494462%26p%3Dfs%26cid%3D1%26sig%3D3116ab7ef04ff73f3b002ec2ed32f902400aa3723c16d9c7af051072ae42e71c%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780046248858&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000ed207209bcc180195b5718ae%26fn%3Dindex_notice_class_from_attendance_teacher_from_students.html%26cd%3Dattachment%26ts%3D494460%26p%3Dfs%26cid%3D1%26sig%3D5b62499cd1645e1e77a6f1cf1b62823cfcbe4706132c5d314e85bd4fa4679511%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
+<script src="appdata/etude/data.js"></script>
 <script src="appdata/vocalization/data.js"></script>
 <script src="appdata/past_questions/data.js"></script>
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -787,18 +787,16 @@ body.admin-mode .admin-only-tab { display:block !important; }
 .admin-status-badge.attendance-ok { background:#dcfce7; color:#166534; }
 .admin-status-badge.attendance-no { background:#fee2e2; color:#991b1b; }
 .admin-eval-textarea {
- .admin-eval-textarea {
-    width:100%;
-    max-width:100%;
-    min-width:0;
-    box-sizing:border-box;
-    min-height:320px;
-    border:1px solid #d1d5db;
-    border-radius:10px;
-    padding:10px;
-    resize:vertical;
-    font-size:14px;
-    box-sizing:border-box;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 320px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    padding: 10px;
+    resize: vertical;
+    font-size: 14px;
+    box-sizing: border-box;
 }
 
 
@@ -809,14 +807,13 @@ body.admin-mode .admin-only-tab { display:block !important; }
     display: grid;
     grid-template-columns: 1fr;
     gap: 8px;
-   .daily-eval-parts {
-    width:100%;
-    max-width:100%;
-    min-width:0;
-    box-sizing:border-box;
-}
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
 }
 .daily-eval-part-label {
+
     font-size: 12px;
     font-weight: 900;
     color: #166534;
@@ -2840,22 +2837,58 @@ function escapeNoticeHtml(value) {
         .replace(/'/g, "&#039;");
 }
 
-async function loadNoticesFromSheet() {
-    const url = `${GET_API_URL}?action=getNotices&_=${Date.now()}`;
+let cachedNotices = null;
+let cachedNoticesAt = 0;
+let noticePreloadPromise = null;
+const NOTICE_CACHE_MS = 60 * 1000;
 
-    const response = await fetch(url);
+async function loadNoticesFromSheet(forceRefresh = false) {
+    const now = Date.now();
 
-    if (!response.ok) {
-        throw new Error(`공지사항 불러오기 실패: ${response.status}`);
+    if (
+        !forceRefresh &&
+        cachedNotices &&
+        now - cachedNoticesAt < NOTICE_CACHE_MS
+    ) {
+        return cachedNotices;
     }
 
-    const data = await response.json();
-
-    if (!data || data.status !== "success") {
-        throw new Error((data && data.message) || "공지사항 응답 오류");
+    if (!forceRefresh && noticePreloadPromise) {
+        return noticePreloadPromise;
     }
 
-    return Array.isArray(data.notices) ? data.notices : [];
+    noticePreloadPromise = (async () => {
+        const requestTime = Date.now();
+        const url = `${GET_API_URL}?action=getNotices&_=${requestTime}`;
+
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`공지사항 불러오기 실패: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (!data || data.status !== "success") {
+            throw new Error((data && data.message) || "공지사항 응답 오류");
+        }
+
+        cachedNotices = Array.isArray(data.notices) ? data.notices : [];
+        cachedNoticesAt = Date.now();
+        return cachedNotices;
+    })();
+
+    try {
+        return await noticePreloadPromise;
+    } finally {
+        noticePreloadPromise = null;
+    }
+}
+
+function preloadNoticesFromSheet() {
+    loadNoticesFromSheet(false).catch(err => {
+        console.log("공지사항 사전 로딩 실패:", err);
+    });
 }
 
 function isNoticeTargetMatched(notice) {
@@ -3070,7 +3103,7 @@ function showMainContent(isAuthenticated) {
     });
 
     if (isAuthenticated) {
-        setTimeout(showNoticeIfNeeded, 400);
+        setTimeout(showNoticeIfNeeded, 0);
     }
 }
 function guestLogin() {
@@ -3140,6 +3173,7 @@ async function checkStudentName() {
 }
 
 window.onload = async function() {
+    preloadNoticesFromSheet();
     adminModeActive = false;
     document.body.classList.remove('admin-mode');
     setAdminTabVisibility();
