@@ -909,7 +909,7 @@
             (modeText === "하원" ? "이미 하원처리되었습니다." : "이미 등원처리되었습니다.");
 
           setStatus(duplicateMessage, "", "warning");
-          resetStatusSoon();
+          resetStatusSoon(5000);
           return;
         }
 
