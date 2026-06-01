@@ -9,7 +9,7 @@
 <link rel="dns-prefetch" href="https://script.googleusercontent.com">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>울림연기학원 등하원 체크 2026.06.01.004</title>
+  <title>울림연기학원 등하원 체크 2026.06.01.005</title>
   <style>
     :root {
       --green: #16a34a;
@@ -752,8 +752,8 @@
     let tabletPreloadLoading = false;
 
     // v94 실사용 안정형:
-    // 1초 안에 현재 입력 건의 응답이 도착한 경우에만 학생명/반명/강의실을 표시합니다.
-    // 1초를 넘기거나, 다음 학생 입력이 이미 시작된 뒤 도착한 예전 응답은 화면에 표시하지 않습니다.
+    // 현재 입력 건의 응답이 도착하면 학생명/반명/강의실/중복 여부를 표시합니다.
+    // 다음 학생 입력이 이미 시작된 뒤 도착한 예전 응답만 화면에 표시하지 않습니다.
     let statusRequestSeq = 0;
     let statusResetTimer = null;
     const FAST_RESULT_LIMIT_MS = 2000;
@@ -850,8 +850,8 @@
       // v94 실사용 안정형:
       // 1) 버튼을 누르면 즉시 입력칸을 비우고 인사말을 표시합니다.
       // 2) 다음 학생 입력은 막지 않습니다.
-      // 3) 현재 입력 건의 응답이 1초 안에 도착했을 때만 학생명/반명/강의실을 표시합니다.
-      // 4) 1초를 넘기거나, 다음 학생 입력 후 도착한 이전 응답은 화면에 표시하지 않습니다.
+      // 3) 응답이 도착하면 학생명/반명/강의실 또는 중복 여부를 표시합니다.
+      // 4) 다음 학생 입력 후 도착한 이전 응답만 화면에 표시하지 않습니다.
       const attendanceNo = extra.attendanceNo || pin;
       if (!attendanceNo) {
         showModal("출결번호를 입력해주세요.", "", "warning");
@@ -870,7 +870,11 @@
         clearPin();
       }
 
-      showInstantGreeting(mode);
+      setStatus(
+        mode === "out" ? "하원 처리 중입니다." : "등원 처리 중입니다.",
+        "출석부와 강의실을 확인하고 있습니다.",
+        "success"
+      );
 
       if (tryHandleWithPreload(attendanceNo, mode, extra || {})) {
         return;
@@ -895,9 +899,9 @@
         const res = await fetch(apiUrl(params), { method: "GET", cache: "no-store" });
         const data = await res.json();
 
-        // 1초 초과 또는 다음 학생 입력 후 도착한 예전 응답은 화면에 표시하지 않습니다.
-        // 단, 서버 기록 자체는 이미 정상 요청되었으므로 화면만 무시합니다.
-        if (!isCurrentFastResult(seq, startedAt)) {
+        // 다음 학생 입력 후 도착한 예전 응답만 화면에 표시하지 않습니다.
+        // 조회 시간이 2초를 넘어도 현재 입력 건이면 강의실/중복 안내를 표시합니다.
+        if (seq !== statusRequestSeq) {
           return;
         }
 
@@ -1409,7 +1413,7 @@ function hidePwaForever() {
  * - 새 버전 발견 시 확인창 표시
  * - 확인 시 캐시 우회 주소로 새로고침
  ****************************************************/
-const TABLET_APP_VERSION = "2026.06.01.001";
+const TABLET_APP_VERSION = "2026.06.01.005";
 const TABLET_VERSION_CHECK_KEY = "ULIM_TABLET_VERSION_CHECK_DATE";
 const TABLET_VERSION_SKIP_KEY = "ULIM_TABLET_VERSION_SKIP_DATE";
 const TABLET_SAVED_VERSION_KEY = "ULIM_TABLET_APP_VERSION";
