@@ -1,5 +1,21 @@
 /* 울림연기학원 PWA 푸시 알림용 Service Worker - 순수 Web Push 방식 */
 
+self.addEventListener('install', (event) => {
+  // 새 Service Worker가 설치되면 대기 상태를 줄입니다.
+  // 실제 화면 새로고침은 index.html의 확인창에서 처리합니다.
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener('push', (event) => {
   let payload = {};
 
@@ -44,7 +60,7 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
   const url =
-    event.notification.data?.url ||
+    (event.notification.data && event.notification.data.url) ||
     'https://ulimvoice.github.io/ulimvoice/';
 
   event.waitUntil(
