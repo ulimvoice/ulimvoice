@@ -1426,7 +1426,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
 
         <div class="result-box" id="resultBox">
             <div class="result-section" id="aiSection" style="display:none;">
-                <span class="section-title">🤖 AI 발음 체크</span>
+                <span class="section-title">🤖 AI 분석결과</span>
                 <div class="stt-result-box">
                     <div id="sttResult" class="stt-text">...</div>
                     <span id="accBadge" class="accuracy-badge acc-wait">분석 대기중</span>
@@ -2074,6 +2074,7 @@ if (localStorage.getItem('instructorFolderId') === 'ERROR_ID_NOT_FOUND') {
 let studentName = localStorage.getItem('studentName') || '';
 let instructorName = localStorage.getItem('instructorName') || '기본';
 let phoneLast4 = localStorage.getItem('phoneLast4') || '';
+let studentNo = localStorage.getItem('studentNo') || '';
 
 // 'let' 키워드를 사용하여 변수를 선언해야 합니다.
 let instructorFolderId = localStorage.getItem('instructorFolderId');
@@ -2150,6 +2151,8 @@ async function promptAndAuthenticate() {
         localStorage.setItem('studentName', studentName);
         localStorage.setItem('instructorName', instructorName);
         localStorage.setItem('phoneLast4', phoneLast4);
+        studentNo = 'GUEST';
+        localStorage.setItem('studentNo', studentNo);
         return;
     }
     // GAS 인증 API 호출 (GET_API_URL 사용)
@@ -2165,6 +2168,7 @@ async function promptAndAuthenticate() {
             studentName = result.name;
             instructorName = result.instructor;
             phoneLast4 = result.phoneLast4;
+            studentNo = result.studentNo || result.attendanceNo || result.no || '';
             instructorFolderId = result.instructorFolderId;
 
                 // ID 유효성 검사 및 저장 로직 (이전에 추가된 디버깅 코드 유지)
@@ -2179,6 +2183,7 @@ async function promptAndAuthenticate() {
             localStorage.setItem('studentName', studentName);
             localStorage.setItem('instructorName', instructorName);
             localStorage.setItem('phoneLast4', phoneLast4);
+            localStorage.setItem('studentNo', studentNo || '');
             alert(`인증 성공: ${studentName}님 (${instructorName} 강사)`);
         window.location.reload();
 
@@ -2236,6 +2241,8 @@ async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeT
     // GAS로 전송할 페이로드 구성
     const payload = {
         name: studentName,
+        studentNo: studentNo || '',
+        phoneLast4: phoneLast4 || '',
         vocalId: vocalId,
         sentence: sentenceText,
         action: action, 
@@ -2248,7 +2255,7 @@ async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeT
         mediaKind: extraMeta.mediaKind || (String(mimeType || '').indexOf('video/') === 0 ? 'video' : 'audio'),
         analysisText: extraMeta.analysisText || '',
         originalSentence: extraMeta.originalSentence || sentenceText,
-        localVoiceAIText: extraMeta.localVoiceAIText || '',
+        localWhisperText: extraMeta.localWhisperText || '',
         preferredExtension: getExtensionFromMime_(mimeType, 'webm')
     };
 
@@ -2274,6 +2281,8 @@ async function sendToGoogleSheet(vocalId, sentenceText, action) {
     
     const payload = {
         name: studentName,
+        studentNo: studentNo || '',
+        phoneLast4: phoneLast4 || '',
         vocalId: vocalId,
         sentence: sentenceText,
         action: action, 
@@ -2642,16 +2651,15 @@ function getVocalRecords() {
 async function completeTraining() {
     const btnComplete = document.getElementById('btnComplete');
 
-    if (step !== 7 || !currentTrainObj) {
-        return alert("STEP 7에서 녹음을 완료해야 연습완료가 가능합니다.");
+    if (step !== 6 || !currentTrainObj) {
+        return alert("최종녹음 및 AI 분석 단계에서 녹음을 완료해야 연습완료가 가능합니다.");
     }
 
     if (!lastRecordedBlob) {
-        return alert("녹음 파일이 없습니다. STEP 7에서 녹음 후 다시 눌러주세요.");
+        return alert("녹음 파일이 없습니다. 최종녹음 및 AI 분석 단계에서 녹음 후 다시 눌러주세요.");
     }
 
-    // 로딩 UI 표시
-    showLoading("녹음 파일 업로드 중...");
+    showLoading("연습 결과를 정리하는 중입니다...");
 
     const today = new Date().toISOString().slice(0, 10);
     const savedIds = getSavedVocalIds();
@@ -2663,28 +2671,38 @@ async function completeTraining() {
         return alert("오늘은 이미 연습을 완료했습니다!");
     }
 
-    // 로컬 기록 저장
+    let analysisText = "";
+    try {
+        if (!window.trainingFinalAiResult || window.trainingFinalAiResult.requestSentence !== currentTrainObj.text) {
+            showLoading("AI가 분석중입니다.");
+            await runTrainingFinalAiAnalysis_(lastRecordedBlob, { force: false });
+        }
+        analysisText = buildTrainingAiAnalysisText_(recognitionResult);
+    } catch (analysisErr) {
+        hideLoading();
+        return alert("AI 분석이 완료되지 않았습니다. 다시 녹음하거나 잠시 후 시도해주세요.\n" + (analysisErr.message || analysisErr));
+    }
+
+    // 로컬 기록 저장은 서버 AI 분석 성공 후에만 진행합니다.
     savedIds.add(currentTrainObj.id);
     localStorage.setItem('savedVocalIds', JSON.stringify(Array.from(savedIds)));
 
     records.set(today, {
         id: currentTrainObj.id,
         text: truncatedText,
-        completed: true
+        completed: true,
+        aiComment: (window.trainingFinalAiResult && window.trainingFinalAiResult.comment) || ''
     });
     localStorage.setItem('vocalRecords', JSON.stringify(Array.from(records.entries())));
 
-    // 시트 메타데이터 저장
     await sendToGoogleSheet(currentTrainObj.id, truncatedText, "연습 완료 체크");
 
     let uploadBlob = lastRecordedBlob;
     let uploadMimeType = lastRecordedBlob.type || 'audio/webm';
     let uploadAction = "녹음 파일 업로드 및 링크 기록";
-    let analysisText = "";
 
     try {
-        showLoading("AI가 분석중입니다. 결과 영상을 제작 중입니다...");
-        analysisText = await ensureTrainingLocalVoiceAIAnalysis_();
+        showLoading("결과 영상을 제작 중입니다...");
         const videoBlob = await createTrainingResultVideoBlob_(lastRecordedBlob, currentTrainObj.text, analysisText);
         if (videoBlob && videoBlob.size > 0) {
             uploadBlob = videoBlob;
@@ -2693,11 +2711,9 @@ async function completeTraining() {
         }
     } catch (videoErr) {
         console.warn("결과 영상 제작 실패, 녹음 파일로 대체 업로드:", videoErr);
-        analysisText = analysisText || buildTrainingAiAnalysisText_(recognitionResult);
         alert("이 브라우저에서 결과 영상 제작이 실패해 녹음 파일로 대체 업로드합니다.\n" + (videoErr.message || videoErr));
     }
 
-    // Blob → Base64
     const base64Data = await blobToBase64(uploadBlob).catch(err => {
         hideLoading();
         console.error("Base64 Encoding Error:", err);
@@ -2706,7 +2722,6 @@ async function completeTraining() {
     });
     if (!base64Data) return;
 
-    // 업로드 + 시트 링크 기록
     await uploadAudioToDriveAndLog(
         currentTrainObj.id,
         truncatedText,
@@ -2717,14 +2732,13 @@ async function completeTraining() {
             mediaKind: uploadMimeType.indexOf('video/') === 0 ? 'video' : 'audio',
             analysisText: analysisText,
             originalSentence: currentTrainObj.text,
-            localVoiceAIText: recognitionResult || ''
+            localWhisperText: recognitionResult || ''
         }
     );
 
     hideLoading();
-    alert("연습 완료!매일매일 꾸준히 화이팅!");
+    alert("연습 완료! 매일매일 꾸준히 화이팅!");
 
-    // UI 업데이트
     const calendarArea = document.getElementById('calendarDisplayArea');
     if (calendarArea.style.display === 'none') {
         toggleCalendar();
@@ -2779,7 +2793,7 @@ function trainPrev(){
     } 
 }
 function trainNext(){ 
-    if(step<7) {
+    if(step<6) {
         step++; 
         renderTrain();
     }
@@ -2794,8 +2808,8 @@ function renderTrain(){
     const btnPrev = document.getElementById("btn_prev");
     const btnNext = document.getElementById("btn_next");
 
-    const T=["","STEP1 모음을 호흡으로","STEP2 모음을 소리로","STEP3 자음과 함께 호흡으로 읽기","STEP4 자음과 함께 소리내어 읽기","STEP5 자연스럽게 호흡으로 읽기", "STEP6 발음 AI 체크","STEP7 최종 녹음"];
-    const D=["","모음 입모양 신경쓰며 호흡으로 한글자씩 읽기","모음 입모양 신경쓰며 소리내어 한글자씩 읽기","자음과 함께 입모양을 신경쓰며 한글자씩 호흡으로 읽기","자음과 함께 입모양을 신경쓰며 한글자씩 소리내어 읽기","자연스럽게 한문장을 한 호흡으로 소리내어 읽기","AI가 발음 정확도를 평가합니다.","최종 결과물을 녹음하고 들어보세요."];
+    const T=["","STEP1 모음을 호흡으로","STEP2 모음을 소리로","STEP3 자음과 함께 호흡으로 읽기","STEP4 자음과 함께 소리내어 읽기","STEP5 자연스럽게 호흡으로 읽기", "STEP6 최종녹음 및 AI 분석"];
+    const D=["","모음 입모양 신경쓰며 호흡으로 한글자씩 읽기","모음 입모양 신경쓰며 소리내어 한글자씩 읽기","자음과 함께 입모양을 신경쓰며 한글자씩 호흡으로 읽기","자음과 함께 입모양을 신경쓰며 한글자씩 소리내어 읽기","자연스럽게 한문장을 한 호흡으로 소리내어 읽기","최종 녹음 후 AI가 발음과 문장 전달력을 분석합니다."];
 
     if (!currentTrainObj) {
         step = 0;
@@ -2809,7 +2823,7 @@ function renderTrain(){
 
     let showText = "";
     if (step <= 2) { showText = extractVowels(currentTrainObj.text); }
-    else if (step <= 7) { showText = currentTrainObj.pron; } 
+    else if (step <= 6) { showText = currentTrainObj.pron; } 
 
     ind.textContent="STEP "+step;
     box.innerHTML=
@@ -2826,20 +2840,13 @@ function renderTrain(){
     const aiSection = document.getElementById("aiSection");
     const recSection = document.getElementById("recSection");
     
-    btnComplete.style.display = (step === 7) ? 'flex' : 'none';
+    btnComplete.style.display = (step === 6) ? 'flex' : 'none';
 
     if(step === 6) {
         recBox.style.display = 'block';
-        micBtn.textContent = '🗣️';
-        recStatus.textContent = "버튼을 눌러 AI 체크 시작";
-        aiSection.style.display = 'block';
-        recSection.style.display = 'none';
-        document.getElementById("resultBox").style.display = 'none';
-    } else if (step === 7) {
-        recBox.style.display = 'block';
         micBtn.textContent = '🎤';
-        recStatus.textContent = "버튼을 눌러 녹음 시작";
-        aiSection.style.display = 'none';
+        recStatus.textContent = "버튼을 눌러 최종녹음 및 AI 분석 시작";
+        aiSection.style.display = 'block';
         recSection.style.display = 'block';
         document.getElementById("resultBox").style.display = 'none';
     } else {
@@ -2974,19 +2981,18 @@ function displayDayRecord(dateKey, isCompleted) {
 
 // AI 체크 또는 녹음 실행을 분기하는 함수
 async function handleAction() {
-    if(step === 6) { startRecognition(); }
-    else if (step === 7) { toggleRecord(); }
+    if(step === 6) { toggleRecord(); }
 }
 function startRecognition() {
     if(window.location.protocol === 'file:') return alert("서버 환경(http/https)에서만 마이크 사용이 가능합니다.");
     if(!isRecording) {
-        startTrainingLocalVoiceAICheck();
+        startTrainingLocalWhisperCheck();
     } else {
-        stopTrainingLocalVoiceAICheck();
+        stopTrainingLocalWhisperCheck();
     }
 }
 
-async function startTrainingLocalVoiceAICheck() {
+async function startTrainingLocalWhisperCheck() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const options = pickSupportedAudioRecorderOptions_();
@@ -3009,7 +3015,7 @@ async function startTrainingLocalVoiceAICheck() {
             stream.getTracks().forEach(track => track.stop());
             document.getElementById('sttResult').textContent = "AI가 분석중입니다. 첫 실행은 시간이 걸릴 수 있습니다.";
             try {
-                await runLocalVoiceAIForTraining(audioBlob, {
+                await runLocalWhisperForTraining(audioBlob, {
                     targetText: currentTrainObj ? currentTrainObj.text : '',
                     onStatus: msg => {
                         const el = document.getElementById('sttResult');
@@ -3034,15 +3040,15 @@ async function startTrainingLocalVoiceAICheck() {
     }
 }
 
-function stopTrainingLocalVoiceAICheck() {
+function stopTrainingLocalWhisperCheck() {
     try { if(mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop(); } catch(e) {}
 }
 
-async function runLocalVoiceAIForTraining(audioBlob, options = {}) {
-    if (!window.UlimLocalVoiceAI || typeof window.UlimLocalVoiceAI.transcribe !== "function") {
+async function runLocalWhisperForTraining(audioBlob, options = {}) {
+    if (!window.UlimLocalWhisper || typeof window.UlimLocalWhisper.transcribe !== "function") {
         throw new Error("AI 분석 모듈이 아직 준비되지 않았습니다. 인터넷 연결 상태에서 한 번 새로고침 후 다시 시도해주세요.");
     }
-    const result = await window.UlimLocalVoiceAI.transcribe(audioBlob, {
+    const result = await window.UlimLocalWhisper.transcribe(audioBlob, {
         language: "ko",
         task: "transcribe",
         model: ULIM_LOCAL_WHISPER_MODEL,
@@ -3064,12 +3070,11 @@ async function runLocalVoiceAIForTraining(audioBlob, options = {}) {
 function resetBtn() {
     const btn = document.getElementById('micBtn');
     btn.classList.remove('recording');
-    if(step === 6) {
-        btn.textContent = '🗣️';
-        document.getElementById('recStatus').textContent = "버튼을 눌러 AI 체크 시작";
+    btn.textContent = '🎤';
+    if (step === 6) {
+        document.getElementById('recStatus').textContent = "버튼을 눌러 최종녹음 및 AI 분석 시작";
     } else {
-        btn.textContent = '🎤';
-        document.getElementById('recStatus').textContent = "버튼을 눌러 녹음 시작";
+        document.getElementById('recStatus').textContent = "버튼을 눌러 시작";
     }
 }
 
@@ -3117,32 +3122,31 @@ function getExtensionFromMime_(mimeType, fallback = 'webm') {
 function buildTrainingAiAnalysisText_(transcript) {
     const source = currentTrainObj ? String(currentTrainObj.text || '') : '';
     const pron = currentTrainObj ? String(currentTrainObj.pron || '') : '';
+    const result = window.trainingFinalAiResult || {};
+    const heard = String(result.recognized || transcript || '').trim();
     const cleanTarget = source.replace(/[^가-힣]/g, '');
-    const cleanHeard = String(transcript || '').replace(/[^가-힣]/g, '');
+    const cleanHeard = heard.replace(/[^가-힣]/g, '');
     const similarity = cleanTarget && cleanHeard ? Math.round(getSimilarity(cleanTarget, cleanHeard) * 100) : 0;
-    let level = '재녹음 권장';
-    if (similarity >= 85) level = '매우 좋음';
-    else if (similarity >= 70) level = '양호';
-    else if (similarity >= 45) level = '부분 점검 필요';
+    const rawScore = Number(result.score);
+    const scoreText = Number.isFinite(rawScore) ? rawScore.toFixed(1) + ' / 5' : (result.scoreText || '-');
+    const comment = String(result.comment || '').trim() || 'AI코멘트가 아직 생성되지 않았습니다.';
     return `AI 분석결과
-- AI 인식결과: ${transcript || '인식 실패'}
-- 원문 일치도: ${similarity}%
-- 평가: ${level}
-- 표준발음 참고: ${pron || '표준발음 데이터 없음'}`;
+- AI 인식결과: ${heard || '인식 실패'}
+- 문장 일치도: ${similarity}%
+- 발음평가 점수: ${scoreText}
+- 표준발음 참고: ${pron || '표준발음 데이터 없음'}
+- AI코멘트: ${comment}`;
 }
 
-async function ensureTrainingLocalVoiceAIAnalysis_() {
+async function ensureTrainingLocalWhisperAnalysis_() {
     if (!lastRecordedBlob) throw new Error('녹음 파일이 없습니다.');
-    if (!recognitionResult) {
-        const status = document.getElementById('recStatus');
-        if (status) status.textContent = 'AI가 분석중입니다.';
-        await runLocalVoiceAIForTraining(lastRecordedBlob, {
-            targetText: currentTrainObj ? currentTrainObj.text : '',
-            onStatus: msg => { if (status && msg) status.textContent = msg; }
-        });
+    if (!window.trainingFinalAiResult || window.trainingFinalAiResult.requestSentence !== (currentTrainObj ? currentTrainObj.text : '')) {
+        await runTrainingFinalAiAnalysis_(lastRecordedBlob, { force: false });
     }
     return buildTrainingAiAnalysisText_(recognitionResult);
 }
+
+
 
 function wrapCanvasText_(ctx, text, maxWidth) {
     const lines = [];
@@ -3235,16 +3239,122 @@ async function createTrainingResultVideoBlob_(audioBlob, originalText, analysisT
     return resultPromise;
 }
 
+
+let trainingFinalAiPollingTimer = null;
+let trainingFinalAiPollingCount = 0;
+
+function buildTrainingFinalRequestId_() {
+    return "TRAIN_AI_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
+}
+function getTrainingFinalUserKey_() {
+    const no = (typeof studentNo !== 'undefined' && studentNo) ? studentNo : (localStorage.getItem('studentNo') || '');
+    const name = (typeof studentName !== 'undefined' && studentName) ? studentName : (localStorage.getItem('studentName') || '게스트');
+    const phone = (typeof phoneLast4 !== 'undefined' && phoneLast4) ? phoneLast4 : (localStorage.getItem('phoneLast4') || '0000');
+    if (no && no !== 'GUEST') return 'NO_' + String(no).replace(/[^0-9A-Za-z가-힣_-]/g, '_');
+    if (name && name !== '게스트' && phone && phone !== '0000') return (name + '_' + phone).replace(/[^0-9A-Za-z가-힣_-]/g, '_');
+    return pronGetDeviceKey ? pronGetDeviceKey() : ('DEV_' + Date.now());
+}
+async function runTrainingFinalAiAnalysis_(audioBlob, options = {}) {
+    if (!audioBlob) throw new Error('녹음 파일이 없습니다.');
+    if (!GET_API_URL || !GET_API_URL.includes('script.google.com/macros/s/')) {
+        throw new Error('학생부 GAS 주소가 설정되지 않았습니다.');
+    }
+    if (!currentTrainObj) throw new Error('연습 문장이 없습니다.');
+    const requestId = buildTrainingFinalRequestId_();
+    const audio = await pronBlobToEtriAudioBase64(audioBlob);
+    const sizeMb = pronBase64ToByteSize(audio.base64) / 1024 / 1024;
+    if (sizeMb > 8) throw new Error(`녹음 파일이 너무 큽니다. (${sizeMb.toFixed(1)}MB) 60초 이내로 다시 녹음해주세요.`);
+
+    const payload = {
+        action: 'trainingFinalAnalysis',
+        requestId,
+        userKey: getTrainingFinalUserKey_(),
+        dateKey: pronTodayKey ? pronTodayKey() : new Date().toISOString().slice(0,10).replace(/-/g,''),
+        studentNo: (typeof studentNo !== 'undefined' ? studentNo : '') || localStorage.getItem('studentNo') || '',
+        studentName: (typeof studentName !== 'undefined' ? studentName : '') || '',
+        phoneLast4: (typeof phoneLast4 !== 'undefined' ? phoneLast4 : '') || '',
+        instructor: (typeof instructorName !== 'undefined' ? instructorName : '') || '',
+        script: currentTrainObj.text || '',
+        standardPronunciation: currentTrainObj.pron || '',
+        audio: audio.base64,
+        audioMimeType: audio.mimeType,
+        sampleRate: audio.sampleRate,
+        clientTime: new Date().toISOString()
+    };
+    await fetch(GET_API_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+    });
+    return await pollTrainingFinalAiResult_(requestId);
+}
+function pollTrainingFinalAiResult_(requestId) {
+    if (trainingFinalAiPollingTimer) clearTimeout(trainingFinalAiPollingTimer);
+    trainingFinalAiPollingCount = 0;
+    return new Promise((resolve, reject) => {
+        const poll = async () => {
+            trainingFinalAiPollingCount += 1;
+            try {
+                const data = await pronJsonpRequest({ action: 'getTrainingFinalAnalysisResult', requestId, _: Date.now() }, 12000);
+                if (!data || data.status === 'pending' || data.status === 'not_found') {
+                    if (trainingFinalAiPollingCount > 24) return reject(new Error('AI 분석 결과 대기 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.'));
+                    const st = document.getElementById('recStatus');
+                    if (st) st.textContent = 'AI가 분석중입니다.';
+                    trainingFinalAiPollingTimer = setTimeout(poll, 2500);
+                    return;
+                }
+                if (data.status === 'limit') return reject(new Error(data.message || '오늘 최종 AI 분석은 이미 사용했습니다.'));
+                if (!data.ok || data.status === 'error') return reject(new Error(data.message || 'AI 분석 처리 중 오류가 발생했습니다.'));
+                renderTrainingFinalAiResult_(data);
+                resolve(data);
+            } catch (err) {
+                if (trainingFinalAiPollingCount > 24) return reject(err);
+                trainingFinalAiPollingTimer = setTimeout(poll, 2500);
+            }
+        };
+        trainingFinalAiPollingTimer = setTimeout(poll, 1800);
+    });
+}
+function renderTrainingFinalAiResult_(data) {
+    const recognized = String(data.recognized || '').trim();
+    const rawScore = Number(data.score);
+    const scoreText = Number.isFinite(rawScore) ? rawScore.toFixed(1) + ' / 5' : '-';
+    const comment = String(data.comment || '').trim() || '분석 결과를 기준으로 다시 녹음하며 비교해보세요.';
+    recognitionResult = recognized;
+    window.trainingFinalAiResult = Object.assign({}, data, {
+        recognized,
+        score: Number.isFinite(rawScore) ? rawScore : data.score,
+        scoreText,
+        comment,
+        requestSentence: currentTrainObj ? currentTrainObj.text : ''
+    });
+    const targetClean = currentTrainObj ? currentTrainObj.text.replace(/[^가-힣]/g, '') : '';
+    const heardClean = recognized.replace(/[^가-힣]/g, '');
+    const similarity = targetClean && heardClean ? Math.round(getSimilarity(targetClean, heardClean) * 100) : 0;
+    const stt = document.getElementById('sttResult');
+    if (stt) {
+        stt.textContent = `AI 인식결과: ${recognized || '인식 실패'}\n문장 일치도: ${similarity}%\n발음평가 점수: ${scoreText}\n\nAI코멘트:\n${comment}`;
+    }
+    const badge = document.getElementById('accBadge');
+    if (badge) {
+        if (Number.isFinite(rawScore) && rawScore >= 4.3) { badge.className = 'accuracy-badge acc-good'; badge.textContent = '매우 좋음'; }
+        else if (Number.isFinite(rawScore) && rawScore >= 3.5) { badge.className = 'accuracy-badge acc-soso'; badge.textContent = '양호'; }
+        else { badge.className = 'accuracy-badge acc-bad'; badge.textContent = '점검 필요'; }
+    }
+}
+
 async function toggleRecord() {
     if(window.location.protocol === 'file:') return alert("서버 환경(http/https)에서만 마이크 사용 및 파일 공유가 가능합니다.");
     if (!isRecording) {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            
             const options = pickSupportedAudioRecorderOptions_();
             mediaRecorder = new MediaRecorder(stream, options);
 
             audioChunks = [];
+            recognitionResult = '';
+            window.trainingFinalAiResult = null;
             mediaRecorder.start();
             startTime = Date.now();
             isRecording = true;
@@ -3253,9 +3363,13 @@ async function toggleRecord() {
             btn.classList.add('recording');
             document.getElementById('recStatus').textContent = "녹음 중...";
             document.getElementById('resultBox').style.display='none'; 
-            mediaRecorder.addEventListener("dataavailable", e => audioChunks.push(e.data));
-            mediaRecorder.addEventListener("stop", () => {
-                const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+            const sttEl = document.getElementById('sttResult');
+            const badge = document.getElementById('accBadge');
+            if (sttEl) sttEl.textContent = '녹음 중입니다.';
+            if (badge) { badge.className = 'accuracy-badge acc-wait'; badge.textContent = '녹음중'; }
+            mediaRecorder.addEventListener("dataavailable", e => { if (e.data && e.data.size) audioChunks.push(e.data); });
+            mediaRecorder.addEventListener("stop", async () => {
+                const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || options.mimeType || 'audio/webm' });
                 lastRecordedBlob = audioBlob; 
                 const audioUrl = URL.createObjectURL(audioBlob);
                 const audio = document.getElementById('myAudio');
@@ -3264,18 +3378,18 @@ async function toggleRecord() {
                 document.getElementById('myTime').textContent = duration.toFixed(1) + "s";
                 document.getElementById('resultBox').style.display='block'; 
                 stream.getTracks().forEach(track => track.stop());
-                runLocalVoiceAIForTraining(audioBlob, {
-                    targetText: currentTrainObj ? currentTrainObj.text : '',
-                    onStatus: msg => {
-                        const el = document.getElementById('recStatus');
-                        if (el && msg) el.textContent = msg;
-                    }
-                }).then(() => {
+                try {
+                    document.getElementById('recStatus').textContent = 'AI가 분석중입니다.';
+                    await runTrainingFinalAiAnalysis_(audioBlob, { force: false });
                     document.getElementById('recStatus').textContent = '녹음 완료 / AI 분석 완료';
-                }).catch(err => {
-                    console.warn('Local analysis failed:', err);
-                    document.getElementById('recStatus').textContent = '녹음 완료 / AI 분석 실패';
-                });
+                } catch (err) {
+                    console.warn('Final training analysis failed:', err);
+                    document.getElementById('recStatus').textContent = 'AI 분석 실패';
+                    const el = document.getElementById('sttResult');
+                    if (el) el.textContent = String(err.message || err);
+                    const b = document.getElementById('accBadge');
+                    if (b) { b.className = 'accuracy-badge acc-bad'; b.textContent = '분석 실패'; }
+                }
             });
         } catch (e) { alert("마이크 권한 필요"); }
     } else {
@@ -3909,6 +4023,8 @@ function guestLogin() {
     localStorage.setItem('studentName', studentName);
     localStorage.setItem('instructorName', instructorName);
     localStorage.setItem('phoneLast4', phoneLast4);
+    studentNo = 'GUEST';
+    localStorage.setItem('studentNo', studentNo);
     updateFilenameConstants();
     showMainContent(false);
 }
@@ -3935,10 +4051,12 @@ async function authenticate(name, phone) {
             studentName = result.name;
             instructorName = result.instructor;
             phoneLast4 = result.phoneLast4;
+            studentNo = result.studentNo || result.attendanceNo || result.no || '';
             instructorFolderId = result.instructorFolderId;
             localStorage.setItem('studentName', studentName);
             localStorage.setItem('instructorName', instructorName);
             localStorage.setItem('phoneLast4', phoneLast4);
+            localStorage.setItem('studentNo', studentNo || '');
             localStorage.setItem('instructorFolderId', instructorFolderId && instructorFolderId.trim() !== "" ? instructorFolderId : 'ERROR_ID_NOT_FOUND');
             alert(`인증 성공: ${studentName}님 (${instructorName} 강사)`);
             updateFilenameConstants();
@@ -7119,8 +7237,8 @@ let pronAudioStats = null;
 let pronRecordedBlob = null;
 let pronEtriPollingTimer = null;
 let pronEtriPollingCount = 0;
-let pronVoiceAIPollingTimer = null;
-let pronVoiceAIPollingCount = 0;
+let pronWhisperPollingTimer = null;
+let pronWhisperPollingCount = 0;
 const PRON_ETRI_GAS_URL = typeof GET_API_URL !== "undefined" ? GET_API_URL : "";
 const ULIM_LOCAL_WHISPER_MODEL = "Xenova/whisper-tiny";
 window.ULIM_LOCAL_WHISPER_MODEL = ULIM_LOCAL_WHISPER_MODEL;
@@ -7438,7 +7556,7 @@ function pronAttachPronouncedSuffix(baseOut, suffix) {
     if (!suffix || baseLen <= 0 || parts.length <= baseLen) return baseOut + suffix;
     const a = parts[baseLen - 1];
     const b = parts[baseLen];
-    if (!a || !b || a.raw || b.raw || !a.jong || a.jong === "ㅇ" || b.cho !== "ㅇ") return baseOut + suffix;
+    if (!a || !b || a.raw || b.raw || !a.jong || b.cho !== "ㅇ") return baseOut + suffix;
     if (PRON_CLUSTER_SPLIT[a.jong]) {
         const [remain, move] = PRON_CLUSTER_SPLIT[a.jong];
         if (PRON_CHO_INDEX[move] !== undefined) {
@@ -7511,7 +7629,7 @@ function pronApplyPalatalization(parts, rules) {
 function pronApplyLiaison(parts, rules) {
     for (let i = 0; i < parts.length - 1; i++) {
         const a = parts[i], b = parts[i + 1];
-        if (a.raw || b.raw || !a.jong || a.jong === "ㅇ" || b.cho !== "ㅇ") continue;
+        if (a.raw || b.raw || !a.jong || b.cho !== "ㅇ") continue;
         const old = pronPartsToString(parts);
         if (PRON_CLUSTER_SPLIT[a.jong]) {
             const [remain, move] = PRON_CLUSTER_SPLIT[a.jong];
@@ -7799,12 +7917,7 @@ function pronUpdateVoiceScore() {
     const status = document.getElementById("pronVoiceStatus");
     const converted = source ? pronConvertText(source).converted : "";
     const n = pronGetAnalysisNumbers();
-    const comments = pronBuildFreeAnalysisComment(score);
-    const ruleSummary = pronGetRuleSummaryForVoice(source);
     const sttLine = pronLastSttText || "인식 대기/실패";
-    const sttNotice = pronLastSttText
-        ? ""
-        : "\n※ 인식 결과가 없습니다. 녹음 길이·속도·음량·무음 비율만 확인됩니다.";
 
     pronShowGeneralAnalysisUi();
     if (status) {
@@ -7814,14 +7927,7 @@ function pronUpdateVoiceScore() {
 읽기 속도: ${n.durationSec ? n.syllablesPerSec.toFixed(1) + "음절/s" : "-"}
 평균 음량: ${n.avgRms ? pronPercent(n.avgRms * 260) : "-"}
 무음 비율: ${n.durationSec ? pronPercent(n.silenceRatio * 100) : "-"}
-
-표준발음 참고: ${converted ? `[${converted}]` : "먼저 문장을 입력하세요."}
-
-코멘트:
-${comments.length ? comments.map(c => "- " + c).join("\n") : "- 분석할 녹음 정보가 부족합니다."}
-
-표준발음 점검 대상:
-${ruleSummary}${sttNotice}`;
+표준발음 참고: ${converted ? `[${converted}]` : "먼저 문장을 입력하세요."}`;
     }
 }
 
@@ -7836,31 +7942,31 @@ function pronRunGeneralAnalysis() {
         return;
     }
     pronShowGeneralAnalysisUi();
-    pronRunVoiceAITranscription();
+    pronRunWhisperTranscription();
 }
 
-function pronBuildVoiceAIRequestId() {
+function pronBuildWhisperRequestId() {
     return "WSP_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
 }
 
-async function pronRunVoiceAITranscription() {
+async function pronRunWhisperTranscription() {
     const source = document.getElementById("pronInputText")?.value.trim() || "";
     const status = document.getElementById("pronVoiceStatus");
     if (!source) {
         if (status) status.textContent = "먼저 읽을 문장을 입력해주세요.";
-        return;
+        return "";
     }
     if (!pronRecordedBlob) {
         if (status) status.textContent = "녹음 파일이 아직 준비되지 않았습니다. 잠시 후 다시 눌러주세요.";
-        return;
+        return "";
     }
     try {
-        if (!window.UlimLocalVoiceAI || typeof window.UlimLocalVoiceAI.transcribe !== "function") {
+        if (!window.UlimLocalWhisper || typeof window.UlimLocalWhisper.transcribe !== "function") {
             throw new Error("AI 분석 모듈이 아직 준비되지 않았습니다. 인터넷 연결 상태에서 한 번 새로고침 후 다시 시도해주세요.");
         }
         pronShowGeneralAnalysisUi();
         if (status) status.textContent = "AI가 분석중입니다.";
-        const result = await window.UlimLocalVoiceAI.transcribe(pronRecordedBlob, {
+        const result = await window.UlimLocalWhisper.transcribe(pronRecordedBlob, {
             language: "ko",
             task: "transcribe",
             model: ULIM_LOCAL_WHISPER_MODEL,
@@ -7869,26 +7975,29 @@ async function pronRunVoiceAITranscription() {
                 if (el) el.textContent = "AI가 분석중입니다.";
             }
         });
-        pronRenderVoiceAIResult({ ok: true, status: "success", text: result.text || "", local: true, model: result.model || ULIM_LOCAL_WHISPER_MODEL });
+        const text = pronCleanExtractedText(result.text || "");
+        pronRenderWhisperResult({ ok: true, status: "success", text, local: true, model: result.model || ULIM_LOCAL_WHISPER_MODEL });
+        return text;
     } catch (err) {
         console.error(err);
-        if (status) status.textContent = "일반분석 실패: " + String(err.message || err).replace(/VoiceAI/gi, "AI").replace(/ETRI/gi, "AI");
+        if (status) status.textContent = "일반분석 실패: " + String(err.message || err).replace(/Whisper/gi, "AI").replace(/ETRI/gi, "AI");
         pronUpdateVoiceScore();
+        return "";
     }
 }
 
-function pronPollVoiceAIResult(requestId) {
+function pronPollWhisperResult(requestId) {
     // 로컬 분석 방식에서는 서버 결과 조회를 사용하지 않습니다.
     return;
 }
 
-function pronRenderVoiceAIResult(data) {
+function pronRenderWhisperResult(data) {
     const text = pronCleanExtractedText(data.text || data.transcript || data.whisper?.text || "");
     pronLastSttText = text;
     const status = document.getElementById("pronVoiceStatus");
     pronShowGeneralAnalysisUi();
     if (status) status.textContent = text
-        ? `인식결과: ${text}\nAI가 분석중입니다.`
+        ? `인식결과: ${text}\n분석 결과를 계산하는 중입니다.`
         : "인식된 문장이 없습니다.";
     pronUpdateVoiceScore();
 }
@@ -8056,16 +8165,16 @@ function pronJsonpRequest(params, timeoutMs = 12000) {
 }
 async function pronRefreshEtriUsage() {
     try {
-        pronSetAdvancedStatus("AI가 분석중입니다.");
+        pronSetAdvancedStatus("고급분석 잔여횟수를 확인하는 중입니다.");
         const data = await pronJsonpRequest({ action: "getEtriPronunciationUsage", userKey: pronGetEtriUserKey(), dateKey: pronTodayKey(), _: Date.now() }, 10000);
         if (!data || !data.ok) throw new Error(data && data.message ? data.message : "잔여횟수 확인 실패");
         pronSetLocalEtriUsed(data.used || 0);
         pronUpdateEtriUsageBadge(data.used || 0, data.remaining);
-        pronSetAdvancedStatus("고급분석 준비가 완료되었습니다.", "success");
+        pronSetAdvancedStatus(`오늘 고급분석 사용량: ${data.used || 0}/${PRON_ETRI_DAILY_LIMIT}회\n잔여횟수: ${data.remaining}회`, "success");
     } catch (err) {
         const localUsed = pronGetLocalEtriUsed();
         pronUpdateEtriUsageBadge(localUsed, PRON_ETRI_DAILY_LIMIT - localUsed);
-        pronSetAdvancedStatus("고급분석 상태 확인에 실패했습니다. GAS 배포 주소와 권한을 확인해주세요.\n" + String(err.message || err).replace(/ETRI/gi, "AI").replace(/VoiceAI/gi, "AI"), "error");
+        pronSetAdvancedStatus("잔여횟수 서버 확인에 실패했습니다. GAS 배포 주소와 권한을 확인해주세요.\n" + (err.message || err), "error");
     }
 }
 async function pronRunEtriAdvancedAnalysis() {
@@ -8078,40 +8187,43 @@ async function pronRunEtriAdvancedAnalysis() {
         alert("먼저 녹음을 완료해주세요. 녹음이 끝난 뒤 고급분석을 실행할 수 있습니다.");
         return;
     }
-    if (!PRON_ETRI_GAS_URL || !PRON_ETRI_GAS_URL.includes("script.google.com/macros/s/")) {
-        pronSetAdvancedStatus("고급분석용 GAS 주소가 설정되지 않았습니다. 앱 설정을 확인해주세요.", "error");
+    if (!GET_API_URL || !GET_API_URL.includes("script.google.com/macros/s/")) {
+        pronSetAdvancedStatus("고급분석용 GAS 주소가 설정되지 않았습니다.", "error");
         return;
     }
-    const localUsed = pronGetLocalEtriUsed();
-    if (localUsed >= PRON_ETRI_DAILY_LIMIT) {
-        pronUpdateEtriUsageBadge(localUsed, 0);
-        pronSetAdvancedStatus("오늘 이 기기/학생 기준 고급분석 10회를 모두 사용했습니다. 내일 다시 이용해주세요.", "error");
-        return;
-    }
-    const requestId = pronBuildRequestId();
     try {
         pronSetAdvancedStatus("AI가 조금 더 정확하게 분석중입니다.");
-        const audio = await pronBlobToEtriAudioBase64(pronRecordedBlob);
-        const sizeMb = pronBase64ToByteSize(audio.base64) / 1024 / 1024;
-        if (sizeMb > 8) {
-            pronSetAdvancedStatus(`녹음 파일이 너무 큽니다. (${sizeMb.toFixed(1)}MB) 60초 이내 짧은 문장으로 다시 녹음해주세요.`, "error");
-            return;
+        if (!pronLastSttText) {
+            await pronRunWhisperTranscription();
         }
+        const recognized = pronLastSttText || "";
+        const n = pronGetAnalysisNumbers();
+        const converted = source ? pronConvertText(source).converted : "";
+        const ruleSummary = pronGetRuleSummaryForVoice(source);
+        const target = pronNormalizeCompareText(source);
+        const heard = pronNormalizeCompareText(recognized);
+        const matchScore = target && heard ? Math.max(0, Math.round((1 - pronLevenshtein(target, heard) / Math.max(target.length, heard.length, 1)) * 100)) : 0;
+        const score5 = Math.max(1, Math.min(5, 1 + (matchScore / 100) * 4));
+        const requestId = pronBuildRequestId();
         const payload = {
-            action: "etriPronunciation",
+            action: "geminiPronunciationComment",
             requestId,
-            userKey: pronGetEtriUserKey(),
-            dateKey: pronTodayKey(),
-            studentName: (typeof studentName !== "undefined" ? studentName : "") || "",
+            studentNo: (typeof studentNo !== "undefined" ? studentNo : "") || localStorage.getItem('studentNo') || '',
+            studentName: (typeof studentName !== "undefined" ? studentName : "") || '',
+            phoneLast4: (typeof phoneLast4 !== "undefined" ? phoneLast4 : "") || '',
             script: source,
-            language_code: "korean",
-            audio: audio.base64,
-            audioMimeType: audio.mimeType,
-            sampleRate: audio.sampleRate,
+            recognized,
+            standardPronunciation: converted,
+            matchScore,
+            score5: score5.toFixed(1),
+            durationSec: n.durationSec ? n.durationSec.toFixed(1) : '',
+            syllablesPerSec: n.syllablesPerSec ? n.syllablesPerSec.toFixed(1) : '',
+            avgVolume: n.avgRms ? pronPercent(n.avgRms * 260) : '',
+            silenceRatio: n.durationSec ? pronPercent(n.silenceRatio * 100) : '',
+            ruleSummary,
             clientTime: new Date().toISOString()
         };
-        pronSetAdvancedStatus("AI가 조금 더 정확하게 분석중입니다.");
-        await fetch(PRON_ETRI_GAS_URL, {
+        await fetch(GET_API_URL, {
             method: "POST",
             mode: "no-cors",
             headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -8132,7 +8244,7 @@ function pronPollEtriResult(requestId) {
     const poll = async () => {
         pronEtriPollingCount += 1;
         try {
-            const data = await pronJsonpRequest({ action: "getEtriPronunciationResult", requestId, _: Date.now() }, 10000);
+            const data = await pronJsonpRequest({ action: "getGeminiPronunciationCommentResult", requestId, _: Date.now() }, 10000);
             if (!data || data.status === "pending" || data.status === "not_found") {
                 if (pronEtriPollingCount > 20) {
                     pronSetAdvancedStatus("고급분석 결과 대기 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.", "error");
@@ -8142,20 +8254,14 @@ function pronPollEtriResult(requestId) {
                 pronEtriPollingTimer = setTimeout(poll, 2500);
                 return;
             }
-            if (data.status === "limit") {
-                pronSetLocalEtriUsed(data.used || PRON_ETRI_DAILY_LIMIT);
-                pronUpdateEtriUsageBadge(data.used || PRON_ETRI_DAILY_LIMIT, data.remaining || 0);
-                pronSetAdvancedStatus(data.message || "오늘 고급분석 사용 한도를 초과했습니다.", "error");
-                return;
-            }
             if (!data.ok || data.status === "error") {
-                pronSetAdvancedStatus((data.message || "AI 고급분석 처리 중 오류가 발생했습니다.").replace(/ETRI/gi, "AI").replace(/VoiceAI/gi, "AI"), "error");
+                pronSetAdvancedStatus(data.message || "AI 고급분석 처리 중 오류가 발생했습니다.", "error");
                 return;
             }
             pronRenderEtriResult(data);
         } catch (err) {
             if (pronEtriPollingCount > 20) {
-                pronSetAdvancedStatus("고급분석 결과 조회 실패: " + String(err.message || err).replace(/ETRI/gi, "AI").replace(/VoiceAI/gi, "AI"), "error");
+                pronSetAdvancedStatus("고급분석 결과 조회 실패: " + String(err.message || err), "error");
                 return;
             }
             pronEtriPollingTimer = setTimeout(poll, 2500);
@@ -8164,23 +8270,14 @@ function pronPollEtriResult(requestId) {
     pronEtriPollingTimer = setTimeout(poll, 2500);
 }
 function pronRenderEtriResult(data) {
-    const recognized = data.recognized || data.etri?.recognized || "인식 결과 없음";
-    const rawScore = data.score || data.etri?.score || "-";
+    const recognized = data.recognized || pronLastSttText || "인식 결과 없음";
+    const rawScore = data.score5 || data.score || "-";
     const nScore = Number(rawScore);
     const scoreText = Number.isFinite(nScore) ? nScore.toFixed(1) : String(rawScore || "-");
     const source = document.getElementById("pronInputText")?.value || "";
     const converted = source ? pronConvertText(source).converted : "";
-    const used = Number(data.used || 0);
-    if (Number.isFinite(used)) pronSetLocalEtriUsed(used);
-
-    let gradeComment = "";
-    if (Number.isFinite(nScore)) {
-        if (nScore >= 4.5) gradeComment = "매우 안정적인 발음입니다. 현재의 명료도를 유지하면서 표현의 강약과 문장 흐름을 더 섬세하게 다듬어보세요.";
-        else if (nScore >= 3.5) gradeComment = "전반적으로 양호합니다. 받침과 연결 발음이 흐려지는 구간만 골라서 반복하면 더 선명해집니다.";
-        else if (nScore >= 2.5) gradeComment = "보통 수준입니다. 속도를 조금 낮추고 한 문장씩 정확히 끊어 읽어보세요.";
-        else gradeComment = "발음 명료도 개선이 필요합니다. 짧은 문장부터 천천히 읽고, 끝 음절과 받침을 분명하게 정리해보세요.";
-    }
     const ruleSummary = pronGetRuleSummaryForVoice(source);
+    const comment = String(data.comment || '').trim() || '분석 결과를 기준으로 다시 녹음하며 비교해보세요.';
     pronSetAdvancedStatus(`AI 고급분석 완료
 
 발음평가 점수: ${scoreText} / 5
@@ -8190,11 +8287,13 @@ AI 인식결과: ${recognized}
 ${converted ? "[" + converted + "]" : "먼저 문장을 입력하세요."}
 
 AI코멘트:
-- ${gradeComment || "분석 결과를 기준으로 다시 녹음하며 비교해보세요."}
+- ${comment}
 
 표준발음 점검 대상:
 ${ruleSummary}`, "success");
 }
+
+
 
 async function pronStartVoiceCheck() {
     const status = document.getElementById("pronVoiceStatus");
@@ -8373,12 +8472,12 @@ const token = await getToken(messaging, {
 // - 첫 실행 시 모델 다운로드가 필요하며, 이후 브라우저 캐시에 재사용됩니다.
 // ================================================================
 const ULIM_WHISPER_CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.6/dist/transformers.min.js';
-let ulimVoiceAIPipelinePromise = null;
-let ulimVoiceAILibPromise = null;
+let ulimWhisperPipelinePromise = null;
+let ulimWhisperLibPromise = null;
 
-async function importUlimVoiceAILib_() {
-  if (!ulimVoiceAILibPromise) {
-    ulimVoiceAILibPromise = import(ULIM_WHISPER_CDN).then(mod => {
+async function importUlimWhisperLib_() {
+  if (!ulimWhisperLibPromise) {
+    ulimWhisperLibPromise = import(ULIM_WHISPER_CDN).then(mod => {
       try {
         if (mod.env) {
           mod.env.allowLocalModels = false;
@@ -8393,14 +8492,14 @@ async function importUlimVoiceAILib_() {
       return mod;
     });
   }
-  return ulimVoiceAILibPromise;
+  return ulimWhisperLibPromise;
 }
 
-async function getUlimVoiceAIPipeline_(model, onStatus) {
-  if (!ulimVoiceAIPipelinePromise) {
-    ulimVoiceAIPipelinePromise = (async () => {
-      onStatus && onStatus('AI가 분석중입니다.');
-      const { pipeline } = await importUlimVoiceAILib_();
+async function getUlimWhisperPipeline_(model, onStatus) {
+  if (!ulimWhisperPipelinePromise) {
+    ulimWhisperPipelinePromise = (async () => {
+      onStatus && onStatus('AI 분석 모듈을 불러오는 중입니다.');
+      const { pipeline } = await importUlimWhisperLib_();
       const modelId = model || window.ULIM_LOCAL_WHISPER_MODEL || 'Xenova/whisper-tiny';
       onStatus && onStatus('AI가 분석중입니다.');
       try {
@@ -8413,7 +8512,7 @@ async function getUlimVoiceAIPipeline_(model, onStatus) {
       return await pipeline('automatic-speech-recognition', modelId);
     })();
   }
-  return ulimVoiceAIPipelinePromise;
+  return ulimWhisperPipelinePromise;
 }
 
 async function blobToMonoFloat32_(blob, targetRate = 16000) {
@@ -8446,14 +8545,14 @@ async function blobToMonoFloat32_(blob, targetRate = 16000) {
   return out;
 }
 
-window.UlimLocalVoiceAI = {
+window.UlimLocalWhisper = {
   async transcribe(blob, options = {}) {
     const onStatus = typeof options.onStatus === 'function' ? options.onStatus : null;
     const model = options.model || window.ULIM_LOCAL_WHISPER_MODEL || 'Xenova/whisper-tiny';
-    const pipe = await getUlimVoiceAIPipeline_(model, onStatus);
+    const pipe = await getUlimWhisperPipeline_(model, onStatus);
     onStatus && onStatus('AI가 분석중입니다.');
     const audio = await blobToMonoFloat32_(blob, 16000);
-    onStatus && onStatus('AI가 분석중입니다.');
+    onStatus && onStatus('AI가 분석중입니다. 기기 성능에 따라 시간이 걸릴 수 있습니다.');
     const result = await pipe(audio, {
       language: options.language || 'ko',
       task: options.task || 'transcribe',
