@@ -1100,6 +1100,57 @@ body.admin-mode .admin-only-tab { display:block !important; }
     transition: width .12s linear;
 }
 
+.pron-analysis-mode-card {
+    margin-top: 14px;
+    padding: 16px;
+    border-radius: 18px;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+}
+.pron-mode-title {
+    font-size: 16px;
+    font-weight: 900;
+    color: #111827;
+    margin-bottom: 6px;
+}
+.pron-mode-desc {
+    font-size: 13px;
+    color: #64748b;
+    line-height: 1.55;
+    margin-bottom: 10px;
+}
+.pron-advanced-status {
+    margin-top: 10px;
+    padding: 12px;
+    border-radius: 14px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    white-space: pre-wrap;
+    font-size: 13px;
+    line-height: 1.55;
+    color: #374151;
+}
+.pron-advanced-status.error {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #991b1b;
+}
+.pron-advanced-status.success {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #166534;
+}
+.pron-usage-badge {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #eef2ff;
+    color: #3730a3;
+    font-size: 12px;
+    font-weight: 900;
+}
+
 .pron-record-panel {
     margin-top: 14px;
     padding: 18px;
@@ -1494,16 +1545,16 @@ body.admin-mode .admin-only-tab { display:block !important; }
         </div>
 
         <div class="pron-voice-card">
-          <h3 style="margin:0 0 8px; color:#166534;">🎧 녹음 / 간단 STT 체크</h3>
+          <h3 style="margin:0 0 8px; color:#166534;">🎧 녹음 / 일반분석 · Whisper STT</h3>
           <div class="pron-small-note">
-            비용이 발생하지 않는 브라우저 내장 기능만 사용합니다. 녹음 후 STT 지원 환경에서는 인식 문장 비교를 하고, STT가 안 되는 환경에서도 녹음 길이·읽기 속도·음량·무음 비율을 무료로 분석합니다.
+            녹음 길이·읽기 속도·음량·무음 비율은 브라우저에서 즉시 분석하고, 문장 인식은 학생부 GAS를 통해 OpenAI Whisper 방식으로 처리합니다. API Key는 앱 코드에 노출되지 않고 GAS 스크립트 속성에 보관됩니다.
           </div>
           <div id="pronRecordPanel" class="pron-record-panel">
             <button type="button" id="pronRecordBtn" class="pron-record-btn" onclick="pronStartVoiceCheck()" aria-label="녹음 시작">🎤</button>
             <div class="pron-record-info">
               <div id="pronRecordState" class="pron-record-state">⚪ 녹음 대기</div>
               <div id="pronRecordTimer" class="pron-record-timer">00:00</div>
-              <div class="pron-record-hint">마이크 버튼을 누르면 녹음이 시작됩니다. 녹음 중에는 버튼이 검은색으로 바뀌고 붉은 파동이 표시됩니다.</div>
+              <div class="pron-record-hint">마이크 버튼을 누르면 녹음이 시작됩니다. 녹음 중지 후 Whisper 전사가 자동으로 실행됩니다.</div>
             </div>
           </div>
           <div class="pron-actions" style="margin-top:12px;">
@@ -1519,6 +1570,21 @@ body.admin-mode .admin-only-tab { display:block !important; }
             <div class="pron-analysis-chip"><span class="pron-analysis-label">무음 비율</span><span id="pronMetricSilence" class="pron-analysis-value">-</span></div>
           </div>
           <audio id="pronRecordedAudio" class="pron-audio" controls></audio>
+
+          <div class="pron-analysis-mode-card">
+            <div class="pron-mode-title">분석 모드</div>
+            <div class="pron-mode-desc">
+              <b>일반분석</b>은 GAS를 통해 Whisper STT를 호출해 문장 인식률을 계산합니다.<br>
+              <b>고급분석</b>은 GAS를 통해 ETRI 한국어 발음평가 API를 호출하며, 학생/기기 기준 하루 10회로 제한합니다.
+            </div>
+            <span id="pronEtriUsageBadge" class="pron-usage-badge">고급분석 잔여횟수: 확인 전</span>
+            <div class="pron-actions" style="margin-top:12px;">
+              <button type="button" class="pron-blue" onclick="pronUpdateVoiceScore()">일반분석 결과 다시 보기</button>
+              <button type="button" class="pron-orange" onclick="pronRunEtriAdvancedAnalysis()">고급분석 실행</button>
+              <button type="button" class="pron-gray" onclick="pronRefreshEtriUsage()">잔여횟수 확인</button>
+            </div>
+            <div id="pronAdvancedStatus" class="pron-advanced-status">고급분석은 녹음 완료 후 실행할 수 있습니다.</div>
+          </div>
         </div>
       </div>
     </div>
@@ -6680,7 +6746,7 @@ async function cancelRoomReservation(id) {
 /* ===========================
    🎙️ 한국어 표준발음 자동치환 기능
    - 직접 입력
-   - 직접 입력/클립보드 붙여넣기
+   - 선택형 OCR: Tesseract.js 온라인 로드
    - 간단 STT/녹음 체크: 브라우저 지원 시 작동
    =========================== */
 const PRON_CHO = ["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
@@ -6757,6 +6823,14 @@ let pronAudioAnalyser = null;
 let pronAudioDataArray = null;
 let pronAudioAnalysisRaf = null;
 let pronAudioStats = null;
+let pronRecordedBlob = null;
+let pronEtriPollingTimer = null;
+let pronEtriPollingCount = 0;
+let pronWhisperPollingTimer = null;
+let pronWhisperPollingCount = 0;
+const PRON_ETRI_GAS_URL = typeof GET_API_URL !== "undefined" ? GET_API_URL : "";
+const PRON_WHISPER_GAS_URL = PRON_ETRI_GAS_URL;
+const PRON_ETRI_DAILY_LIMIT = 10;
 
 function pronIsHangulSyllable(ch) {
     const code = ch.charCodeAt(0);
@@ -6922,9 +6996,9 @@ function pronBuildFreeAnalysisComment(score) {
         else if (n.peak > 0.92) comments.push("순간 음량이 매우 큽니다. 일부 구간에서 소리가 찢기거나 과입력될 수 있습니다.");
         else comments.push("마이크 입력 음량은 대체로 사용 가능합니다.");
     }
-    if (score >= 85) comments.push("STT 기준 문장 일치도는 높습니다. 다음 단계로 표준발음 규칙 적용 여부를 확인하세요.");
-    else if (score >= 60) comments.push("STT 기준 문장 일치도는 보통입니다. 누락된 단어와 받침 발음을 다시 점검하세요.");
-    else if (score > 0) comments.push("STT 기준 문장 일치도가 낮습니다. 발음, 속도, 마이크 입력 상태를 함께 확인하세요.");
+    if (score >= 85) comments.push("Whisper STT 기준 문장 일치도는 높습니다. 다음 단계로 표준발음 규칙 적용 여부를 확인하세요.");
+    else if (score >= 60) comments.push("Whisper STT 기준 문장 일치도는 보통입니다. 누락된 단어와 받침 발음을 다시 점검하세요.");
+    else if (score > 0) comments.push("Whisper STT 기준 문장 일치도가 낮습니다. 발음, 속도, 마이크 입력 상태를 함께 확인하세요.");
     return comments;
 }
 function pronGetRuleSummaryForVoice(source) {
@@ -7166,6 +7240,8 @@ function pronClearAll() {
     if (audio) { audio.removeAttribute("src"); audio.style.display = "none"; }
     pronLastRules = [];
     pronLastSttText = "";
+    pronRecordedBlob = null;
+    pronSetAdvancedStatus("고급분석은 녹음 완료 후 실행할 수 있습니다.");
 }
 function pronPasteFromCurrentTraining() {
     const input = document.getElementById("pronInputText");
@@ -7213,10 +7289,7 @@ function pronCleanPastedText(text) {
         .replace(/[“”]/g, '"')
         .replace(/[‘’]/g, "'")
         .replace(/[	 ]+/g, " ")
-        .replace(/
-{3,}/g, "
-
-")
+        .replace(/\n{3,}/g, "\n\n")
         .replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z0-9\s.,!?~…'"()\[\]{}:;·\-]/g, "")
         .trim();
 }
@@ -7260,7 +7333,7 @@ function pronUpdateVoiceScore() {
         : "\n※ 현재 브라우저에서 STT가 실패했거나 지원되지 않았습니다. 그래도 녹음 길이·속도·음량·무음 비율은 무료로 확인할 수 있습니다.";
 
     if (status) {
-        status.textContent = `STT 인식 결과: ${sttLine}
+        status.textContent = `Whisper STT 인식 결과: ${sttLine}
 문장 일치도: ${score}%
 녹음 길이: ${n.durationSec ? n.durationSec.toFixed(1) + "초" : "-"}
 읽기 속도: ${n.durationSec ? n.syllablesPerSec.toFixed(1) + "음절/s" : "-"}
@@ -7276,6 +7349,422 @@ ${comments.length ? comments.map(c => "- " + c).join("\n") : "- 분석할 녹음
 ${ruleSummary}${sttNotice}`;
     }
 }
+
+
+function pronBuildWhisperRequestId() {
+    return "WSP_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+}
+
+async function pronRunWhisperTranscription() {
+    const source = document.getElementById("pronInputText")?.value.trim() || "";
+    const status = document.getElementById("pronVoiceStatus");
+    if (!source) {
+        if (status) status.textContent = "먼저 읽을 문장을 입력해주세요.";
+        return;
+    }
+    if (!pronRecordedBlob) {
+        if (status) status.textContent = "녹음 파일이 아직 준비되지 않았습니다. 잠시 후 다시 눌러주세요.";
+        return;
+    }
+    if (!PRON_WHISPER_GAS_URL || !PRON_WHISPER_GAS_URL.includes("script.google.com/macros/s/")) {
+        if (status) status.textContent = "Whisper STT용 GAS 주소가 설정되지 않았습니다. GET_API_URL 값을 확인해주세요.";
+        return;
+    }
+
+    const requestId = pronBuildWhisperRequestId();
+    try {
+        if (status) status.textContent = "녹음 파일을 Whisper 전송용 오디오로 변환하는 중입니다.";
+        const audio = await pronBlobToEtriAudioBase64(pronRecordedBlob);
+        const sizeMb = pronBase64ToByteSize(audio.base64) / 1024 / 1024;
+        if (sizeMb > 18) {
+            if (status) status.textContent = `녹음 파일이 너무 큽니다. (${sizeMb.toFixed(1)}MB) 60초 이내 짧은 문장으로 다시 녹음해주세요.`;
+            return;
+        }
+        const payload = {
+            action: "whisperTranscribe",
+            requestId,
+            userKey: pronGetEtriUserKey(),
+            dateKey: pronTodayKey(),
+            studentName: (typeof studentName !== "undefined" ? studentName : "") || "",
+            phoneLast4: (typeof phoneLast4 !== "undefined" ? phoneLast4 : "") || "",
+            script: source,
+            language: "ko",
+            audio: audio.base64,
+            audioMimeType: audio.mimeType,
+            sampleRate: audio.sampleRate,
+            clientTime: new Date().toISOString()
+        };
+        if (status) status.textContent = `Whisper STT 요청을 전송하는 중입니다.
+요청 ID: ${requestId}`;
+        await fetch(PRON_WHISPER_GAS_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(payload)
+        });
+        pronPollWhisperResult(requestId);
+    } catch (err) {
+        console.error(err);
+        if (status) status.textContent = "Whisper STT 요청 실패: " + (err.message || err);
+    }
+}
+
+function pronPollWhisperResult(requestId) {
+    if (pronWhisperPollingTimer) {
+        clearTimeout(pronWhisperPollingTimer);
+        pronWhisperPollingTimer = null;
+    }
+    pronWhisperPollingCount = 0;
+    const status = document.getElementById("pronVoiceStatus");
+    const poll = async () => {
+        pronWhisperPollingCount += 1;
+        try {
+            const data = await pronJsonpRequest({ action: "getWhisperTranscriptionResult", requestId, _: Date.now() }, 10000);
+            if (!data || data.status === "pending" || data.status === "not_found") {
+                if (pronWhisperPollingCount > 24) {
+                    if (status) status.textContent = "Whisper STT 결과 대기 시간이 초과되었습니다. 녹음이 너무 길거나 GAS/OpenAI 설정에 문제가 있을 수 있습니다.";
+                    pronUpdateVoiceScore();
+                    return;
+                }
+                if (status) status.textContent = `Whisper STT 처리 중입니다. (${pronWhisperPollingCount}/24)
+요청 ID: ${requestId}`;
+                pronWhisperPollingTimer = setTimeout(poll, 2500);
+                return;
+            }
+            if (!data.ok || data.status === "error") {
+                if (status) status.textContent = data.message || "Whisper STT 처리 중 오류가 발생했습니다.";
+                pronUpdateVoiceScore();
+                return;
+            }
+            pronRenderWhisperResult(data);
+        } catch (err) {
+            if (pronWhisperPollingCount > 24) {
+                if (status) status.textContent = "Whisper STT 결과 조회 실패: " + (err.message || err);
+                pronUpdateVoiceScore();
+                return;
+            }
+            pronWhisperPollingTimer = setTimeout(poll, 2500);
+        }
+    };
+    pronWhisperPollingTimer = setTimeout(poll, 1500);
+}
+
+function pronRenderWhisperResult(data) {
+    const text = pronCleanExtractedText(data.text || data.transcript || data.whisper?.text || "");
+    pronLastSttText = text;
+    const status = document.getElementById("pronVoiceStatus");
+    if (status) status.textContent = text
+        ? `Whisper STT 완료: ${text}\n일반분석 결과를 계산하는 중입니다.`
+        : "Whisper STT는 완료되었지만 인식된 문장이 없습니다.";
+    pronUpdateVoiceScore();
+}
+
+function pronGetDeviceKey() {
+    let key = localStorage.getItem("pronEtriDeviceKey");
+    if (!key) {
+        key = "DEV_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
+        localStorage.setItem("pronEtriDeviceKey", key);
+    }
+    return key;
+}
+function pronGetEtriUserKey() {
+    const name = (typeof studentName !== "undefined" && studentName) ? studentName : (localStorage.getItem("studentName") || "게스트");
+    const phone = (typeof phoneLast4 !== "undefined" && phoneLast4) ? phoneLast4 : (localStorage.getItem("phoneLast4") || "0000");
+    if (name && name !== "게스트" && phone && phone !== "0000") {
+        return `${name}_${phone}`.replace(/[^0-9A-Za-z가-힣_\-]/g, "_");
+    }
+    return pronGetDeviceKey();
+}
+function pronTodayKey() {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}${mm}${dd}`;
+}
+function pronGetLocalEtriUsed() {
+    const key = `pronEtriUsed_${pronTodayKey()}_${pronGetEtriUserKey()}`;
+    return Number(localStorage.getItem(key) || "0") || 0;
+}
+function pronSetLocalEtriUsed(used) {
+    const key = `pronEtriUsed_${pronTodayKey()}_${pronGetEtriUserKey()}`;
+    localStorage.setItem(key, String(Math.max(0, Number(used) || 0)));
+}
+function pronSetAdvancedStatus(message, type) {
+    const el = document.getElementById("pronAdvancedStatus");
+    if (!el) return;
+    el.classList.remove("error", "success");
+    if (type) el.classList.add(type);
+    el.textContent = message || "";
+}
+function pronUpdateEtriUsageBadge(used, remaining) {
+    const badge = document.getElementById("pronEtriUsageBadge");
+    if (!badge) return;
+    const safeUsed = Math.max(0, Number(used) || 0);
+    const safeRemain = Math.max(0, Number.isFinite(Number(remaining)) ? Number(remaining) : PRON_ETRI_DAILY_LIMIT - safeUsed);
+    badge.textContent = `고급분석 잔여횟수: ${safeRemain}/${PRON_ETRI_DAILY_LIMIT}회`;
+}
+function pronBuildRequestId() {
+    return "PRON_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
+}
+function pronArrayBufferToBase64(buffer) {
+    let binary = "";
+    const bytes = new Uint8Array(buffer);
+    const chunkSize = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+        binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+    }
+    return btoa(binary);
+}
+function pronBase64ToByteSize(base64) {
+    return Math.ceil((String(base64 || "").length * 3) / 4);
+}
+function pronResampleLinear(input, inputRate, outputRate) {
+    if (!inputRate || inputRate === outputRate) return input;
+    const ratio = inputRate / outputRate;
+    const outputLength = Math.max(1, Math.round(input.length / ratio));
+    const output = new Float32Array(outputLength);
+    for (let i = 0; i < outputLength; i++) {
+        const pos = i * ratio;
+        const left = Math.floor(pos);
+        const right = Math.min(input.length - 1, left + 1);
+        const frac = pos - left;
+        output[i] = input[left] * (1 - frac) + input[right] * frac;
+    }
+    return output;
+}
+function pronEncodeWav(samples, sampleRate) {
+    const bytesPerSample = 2;
+    const blockAlign = bytesPerSample;
+    const buffer = new ArrayBuffer(44 + samples.length * bytesPerSample);
+    const view = new DataView(buffer);
+    function writeString(offset, str) {
+        for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+    }
+    writeString(0, "RIFF");
+    view.setUint32(4, 36 + samples.length * bytesPerSample, true);
+    writeString(8, "WAVE");
+    writeString(12, "fmt ");
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * blockAlign, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, 16, true);
+    writeString(36, "data");
+    view.setUint32(40, samples.length * bytesPerSample, true);
+    let offset = 44;
+    for (let i = 0; i < samples.length; i++, offset += 2) {
+        const s = Math.max(-1, Math.min(1, samples[i]));
+        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+    }
+    return buffer;
+}
+async function pronBlobToEtriAudioBase64(blob) {
+    const rawBuffer = await blob.arrayBuffer();
+    try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) throw new Error("AudioContext 미지원");
+        const ctx = new AudioContextClass();
+        const decoded = await ctx.decodeAudioData(rawBuffer.slice(0));
+        const length = decoded.length;
+        const mono = new Float32Array(length);
+        for (let ch = 0; ch < decoded.numberOfChannels; ch++) {
+            const data = decoded.getChannelData(ch);
+            for (let i = 0; i < length; i++) mono[i] += data[i] / decoded.numberOfChannels;
+        }
+        const targetRate = 16000;
+        const resampled = pronResampleLinear(mono, decoded.sampleRate, targetRate);
+        const wavBuffer = pronEncodeWav(resampled, targetRate);
+        try { await ctx.close(); } catch (e) {}
+        return { base64: pronArrayBufferToBase64(wavBuffer), mimeType: "audio/wav", sampleRate: targetRate };
+    } catch (err) {
+        console.warn("WAV 변환 실패, 원본 오디오로 전송", err);
+        return { base64: pronArrayBufferToBase64(rawBuffer), mimeType: blob.type || "audio/webm", sampleRate: "original" };
+    }
+}
+function pronJsonpRequest(params, timeoutMs = 12000) {
+    return new Promise((resolve, reject) => {
+        if (!PRON_ETRI_GAS_URL) return reject(new Error("GAS URL이 설정되지 않았습니다."));
+        const callbackName = "pronEtriCb_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2);
+        const query = new URLSearchParams(params || {});
+        query.set("callback", callbackName);
+        const script = document.createElement("script");
+        let done = false;
+        const timer = setTimeout(() => {
+            if (done) return;
+            done = true;
+            cleanup();
+            reject(new Error("GAS 응답 시간 초과"));
+        }, timeoutMs);
+        function cleanup() {
+            clearTimeout(timer);
+            try { delete window[callbackName]; } catch (e) { window[callbackName] = undefined; }
+            if (script.parentNode) script.parentNode.removeChild(script);
+        }
+        window[callbackName] = data => {
+            if (done) return;
+            done = true;
+            cleanup();
+            resolve(data);
+        };
+        script.onerror = () => {
+            if (done) return;
+            done = true;
+            cleanup();
+            reject(new Error("GAS JSONP 호출 실패"));
+        };
+        script.src = PRON_ETRI_GAS_URL + "?" + query.toString();
+        document.head.appendChild(script);
+    });
+}
+async function pronRefreshEtriUsage() {
+    try {
+        pronSetAdvancedStatus("고급분석 잔여횟수를 확인하는 중입니다.");
+        const data = await pronJsonpRequest({ action: "getEtriPronunciationUsage", userKey: pronGetEtriUserKey(), dateKey: pronTodayKey(), _: Date.now() }, 10000);
+        if (!data || !data.ok) throw new Error(data && data.message ? data.message : "잔여횟수 확인 실패");
+        pronSetLocalEtriUsed(data.used || 0);
+        pronUpdateEtriUsageBadge(data.used || 0, data.remaining);
+        pronSetAdvancedStatus(`오늘 고급분석 사용량: ${data.used || 0}/${PRON_ETRI_DAILY_LIMIT}회\n잔여횟수: ${data.remaining}회`, "success");
+    } catch (err) {
+        const localUsed = pronGetLocalEtriUsed();
+        pronUpdateEtriUsageBadge(localUsed, PRON_ETRI_DAILY_LIMIT - localUsed);
+        pronSetAdvancedStatus("잔여횟수 서버 확인에 실패했습니다. GAS 배포 주소와 권한을 확인해주세요.\n" + (err.message || err), "error");
+    }
+}
+async function pronRunEtriAdvancedAnalysis() {
+    const source = document.getElementById("pronInputText")?.value.trim() || "";
+    if (!source) {
+        alert("먼저 읽을 문장을 입력해주세요.");
+        return;
+    }
+    if (!pronRecordedBlob) {
+        alert("먼저 녹음을 완료해주세요. 녹음이 끝난 뒤 고급분석을 실행할 수 있습니다.");
+        return;
+    }
+    if (!PRON_ETRI_GAS_URL || !PRON_ETRI_GAS_URL.includes("script.google.com/macros/s/")) {
+        pronSetAdvancedStatus("ETRI 연동용 GAS 주소가 설정되지 않았습니다. PRON_ETRI_GAS_URL 값을 확인해주세요.", "error");
+        return;
+    }
+    const localUsed = pronGetLocalEtriUsed();
+    if (localUsed >= PRON_ETRI_DAILY_LIMIT) {
+        pronUpdateEtriUsageBadge(localUsed, 0);
+        pronSetAdvancedStatus("오늘 이 기기/학생 기준 고급분석 10회를 모두 사용했습니다. 내일 다시 이용해주세요.", "error");
+        return;
+    }
+    const requestId = pronBuildRequestId();
+    try {
+        pronSetAdvancedStatus("녹음 파일을 ETRI 전송용 WAV로 변환하는 중입니다.");
+        const audio = await pronBlobToEtriAudioBase64(pronRecordedBlob);
+        const sizeMb = pronBase64ToByteSize(audio.base64) / 1024 / 1024;
+        if (sizeMb > 8) {
+            pronSetAdvancedStatus(`녹음 파일이 너무 큽니다. (${sizeMb.toFixed(1)}MB) 60초 이내 짧은 문장으로 다시 녹음해주세요.`, "error");
+            return;
+        }
+        const payload = {
+            action: "etriPronunciation",
+            requestId,
+            userKey: pronGetEtriUserKey(),
+            dateKey: pronTodayKey(),
+            studentName: (typeof studentName !== "undefined" ? studentName : "") || "",
+            script: source,
+            language_code: "korean",
+            audio: audio.base64,
+            audioMimeType: audio.mimeType,
+            sampleRate: audio.sampleRate,
+            clientTime: new Date().toISOString()
+        };
+        pronSetAdvancedStatus(`고급분석 요청을 전송하는 중입니다.\n요청 ID: ${requestId}\n예상 잔여횟수: ${PRON_ETRI_DAILY_LIMIT - localUsed - 1}/${PRON_ETRI_DAILY_LIMIT}회`);
+        await fetch(PRON_ETRI_GAS_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(payload)
+        });
+        pronPollEtriResult(requestId);
+    } catch (err) {
+        console.error(err);
+        pronSetAdvancedStatus("고급분석 요청 실패: " + (err.message || err), "error");
+    }
+}
+function pronPollEtriResult(requestId) {
+    if (pronEtriPollingTimer) {
+        clearTimeout(pronEtriPollingTimer);
+        pronEtriPollingTimer = null;
+    }
+    pronEtriPollingCount = 0;
+    const poll = async () => {
+        pronEtriPollingCount += 1;
+        try {
+            const data = await pronJsonpRequest({ action: "getEtriPronunciationResult", requestId, _: Date.now() }, 10000);
+            if (!data || data.status === "pending" || data.status === "not_found") {
+                if (pronEtriPollingCount > 20) {
+                    pronSetAdvancedStatus("고급분석 결과 대기 시간이 초과되었습니다. 잠시 후 잔여횟수 확인 또는 다시 시도해주세요.", "error");
+                    return;
+                }
+                pronSetAdvancedStatus(`고급분석 진행 중입니다. (${pronEtriPollingCount}/20)\n요청 ID: ${requestId}`);
+                pronEtriPollingTimer = setTimeout(poll, 2500);
+                return;
+            }
+            if (data.status === "limit") {
+                pronSetLocalEtriUsed(data.used || PRON_ETRI_DAILY_LIMIT);
+                pronUpdateEtriUsageBadge(data.used || PRON_ETRI_DAILY_LIMIT, data.remaining || 0);
+                pronSetAdvancedStatus(data.message || "오늘 고급분석 사용 한도를 초과했습니다.", "error");
+                return;
+            }
+            if (!data.ok || data.status === "error") {
+                pronSetAdvancedStatus(data.message || "ETRI 고급분석 처리 중 오류가 발생했습니다.", "error");
+                return;
+            }
+            pronRenderEtriResult(data);
+        } catch (err) {
+            if (pronEtriPollingCount > 20) {
+                pronSetAdvancedStatus("고급분석 결과 조회 실패: " + (err.message || err), "error");
+                return;
+            }
+            pronEtriPollingTimer = setTimeout(poll, 2500);
+        }
+    };
+    pronEtriPollingTimer = setTimeout(poll, 2500);
+}
+function pronRenderEtriResult(data) {
+    const recognized = data.recognized || data.etri?.recognized || "인식 결과 없음";
+    const score = data.score || data.etri?.score || "-";
+    const source = document.getElementById("pronInputText")?.value || "";
+    const converted = source ? pronConvertText(source).converted : "";
+    const used = Number(data.used || 0);
+    const remaining = Number.isFinite(Number(data.remaining)) ? Number(data.remaining) : Math.max(0, PRON_ETRI_DAILY_LIMIT - used);
+    pronSetLocalEtriUsed(used);
+    pronUpdateEtriUsageBadge(used, remaining);
+
+    let gradeComment = "";
+    const nScore = Number(score);
+    if (Number.isFinite(nScore)) {
+        if (nScore >= 4.5) gradeComment = "매우 안정적인 발음입니다. 표준발음 규칙을 유지하면서 표현력 위주로 지도해도 좋습니다.";
+        else if (nScore >= 3.5) gradeComment = "전반적으로 양호합니다. 받침, 비음화, 된소리 구간을 부분적으로 점검하면 좋습니다.";
+        else if (nScore >= 2.5) gradeComment = "보통 수준입니다. 문장을 더 천천히 읽고 표준발음 점검 단어를 다시 연습해보세요.";
+        else gradeComment = "발음 명료도 개선이 필요합니다. 속도를 낮추고 한 문장씩 분리해 반복 연습하는 것이 좋습니다.";
+    }
+    const ruleSummary = pronGetRuleSummaryForVoice(source);
+    pronSetAdvancedStatus(`ETRI 고급분석 완료
+
+발음평가 점수: ${score} / 5
+ETRI 인식 결과: ${recognized}
+
+표준발음 참고:
+${converted ? "[" + converted + "]" : "먼저 문장을 입력하세요."}
+
+수업용 코멘트:
+- ${gradeComment || "점수 결과를 바탕으로 강사가 최종 확인해주세요."}
+
+표준발음 점검 대상:
+${ruleSummary}
+
+오늘 사용량: ${used}/${PRON_ETRI_DAILY_LIMIT}회
+잔여횟수: ${remaining}회`, "success");
+}
+
 async function pronStartVoiceCheck() {
     const status = document.getElementById("pronVoiceStatus");
     const source = document.getElementById("pronInputText")?.value.trim() || "";
@@ -7290,92 +7779,53 @@ async function pronStartVoiceCheck() {
 
     pronStopVoiceCheck(false);
     pronLastSttText = "";
+    pronRecordedBlob = null;
     pronResetFreeAnalysis();
     if (status) status.textContent = "마이크 권한을 확인하는 중입니다.";
 
-    let recordingStarted = false;
-
-    // 녹음
     try {
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder) {
-            pronVoiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            pronStartFreeAudioAnalysis(pronVoiceStream);
-            pronAudioChunks = [];
-            pronMediaRecorder = new MediaRecorder(pronVoiceStream);
-            pronMediaRecorder.ondataavailable = e => { if (e.data && e.data.size) pronAudioChunks.push(e.data); };
-            pronMediaRecorder.onstop = () => {
-                const audio = document.getElementById("pronRecordedAudio");
-                if (audio && pronAudioChunks.length) {
-                    const blob = new Blob(pronAudioChunks, { type: "audio/webm" });
-                    audio.src = URL.createObjectURL(blob);
-                    audio.style.display = "block";
-                }
-                if (pronVoiceStream) {
-                    pronVoiceStream.getTracks().forEach(t => t.stop());
-                    pronVoiceStream = null;
-                }
-            };
-            pronMediaRecorder.start();
-            recordingStarted = true;
-            pronSetRecordingUi(true);
-            if (status) status.textContent = "🔴 녹음 중입니다. 문장을 읽은 뒤 마이크 버튼 또는 '녹음 중지 / 분석 보기'를 눌러주세요.";
-        } else {
+        if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder)) {
             if (status) status.textContent = "이 브라우저는 녹음 기능을 지원하지 않습니다. 크롬 또는 삼성 인터넷에서 다시 시도해주세요.";
+            return;
         }
+        pronVoiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        pronStartFreeAudioAnalysis(pronVoiceStream);
+        pronAudioChunks = [];
+
+        let options = {};
+        if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+            options.mimeType = "audio/webm;codecs=opus";
+        } else if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported("audio/mp4")) {
+            options.mimeType = "audio/mp4";
+        }
+
+        pronMediaRecorder = new MediaRecorder(pronVoiceStream, options);
+        pronMediaRecorder.ondataavailable = e => { if (e.data && e.data.size) pronAudioChunks.push(e.data); };
+        pronMediaRecorder.onstop = () => {
+            let blobType = pronMediaRecorder && pronMediaRecorder.mimeType ? pronMediaRecorder.mimeType : (pronAudioChunks[0] ? pronAudioChunks[0].type : "audio/webm");
+            const audio = document.getElementById("pronRecordedAudio");
+            if (audio && pronAudioChunks.length) {
+                const blob = new Blob(pronAudioChunks, { type: blobType || "audio/webm" });
+                pronRecordedBlob = blob;
+                audio.src = URL.createObjectURL(blob);
+                audio.style.display = "block";
+            }
+            if (pronVoiceStream) {
+                pronVoiceStream.getTracks().forEach(t => t.stop());
+                pronVoiceStream = null;
+            }
+        };
+        pronMediaRecorder.start();
+        pronSetRecordingUi(true);
+        if (status) status.textContent = "🔴 녹음 중입니다. 문장을 읽은 뒤 마이크 버튼 또는 '녹음 중지 / 분석 보기'를 눌러주세요.";
     } catch (err) {
         console.warn("녹음 시작 실패", err);
         pronSetRecordingUi(false, "⚠️ 녹음 권한 필요");
         if (status) status.textContent = "마이크 권한이 거부되었거나 녹음을 시작할 수 없습니다. 브라우저 권한을 확인해주세요.";
-        return;
-    }
-
-    // STT
-    try {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SpeechRecognition) {
-            if (status) status.textContent = recordingStarted
-                ? "🔴 녹음 중입니다. 다만 이 브라우저는 STT 음성인식을 지원하지 않습니다. 녹음 파일 확인만 가능합니다."
-                : "이 브라우저는 STT 음성인식을 지원하지 않습니다. 크롬/삼성 인터넷에서 다시 시도해보세요.";
-            return;
-        }
-        pronRecognition = new SpeechRecognition();
-        pronRecognition.lang = "ko-KR";
-        pronRecognition.continuous = true;
-        pronRecognition.interimResults = true;
-        pronRecognition.onresult = event => {
-            let finalText = "";
-            let interimText = "";
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-                const txt = event.results[i][0].transcript;
-                if (event.results[i].isFinal) finalText += txt;
-                else interimText += txt;
-            }
-            pronLastSttText = (pronLastSttText + " " + finalText).trim() || interimText.trim();
-            if (status) status.textContent = `🔴 녹음/STT 진행 중입니다.
-인식 중: ${(pronLastSttText || interimText || "...").trim()}`;
-        };
-        pronRecognition.onerror = e => {
-            if (status) status.textContent = "녹음은 유지 중입니다. STT 오류: " + (e.error || "음성인식 실패");
-        };
-        pronRecognition.onend = () => {
-            if (!pronIsRecordingNow) pronUpdateVoiceScore();
-        };
-        pronRecognition.start();
-        if (status) status.textContent = "🔴 녹음/STT 진행 중입니다. 문장을 읽은 뒤 마이크 버튼 또는 중지 버튼을 눌러주세요.";
-    } catch (err) {
-        console.error(err);
-        if (status) status.textContent = "녹음은 유지 중입니다. STT 시작 실패: " + (err.message || "브라우저 지원 상태를 확인해주세요.");
     }
 }
 function pronStopVoiceCheck(showResult = true) {
     const wasRecording = pronIsRecordingNow;
-    try {
-        if (pronRecognition) {
-            pronRecognition.onend = showResult ? pronRecognition.onend : null;
-            pronRecognition.stop();
-        }
-    } catch (e) {}
-    pronRecognition = null;
     try {
         if (pronMediaRecorder && pronMediaRecorder.state !== "inactive") pronMediaRecorder.stop();
     } catch (e) {}
@@ -7386,7 +7836,14 @@ function pronStopVoiceCheck(showResult = true) {
         pronVoiceStream = null;
     }
     if (wasRecording || showResult) pronSetRecordingUi(false, showResult ? "✅ 녹음 완료" : "⚪ 녹음 대기");
-    if (showResult) setTimeout(pronUpdateVoiceScore, 500);
+    if (showResult) {
+        const status = document.getElementById("pronVoiceStatus");
+        if (status) status.textContent = "녹음이 완료되었습니다. Whisper STT 요청을 준비하는 중입니다.";
+        setTimeout(() => {
+            if (pronRecordedBlob) pronRunWhisperTranscription();
+            else pronUpdateVoiceScore();
+        }, 900);
+    }
 }
 
 
@@ -7482,6 +7939,6 @@ const token = await getToken(messaging, {
     alert("푸시 알림 등록 오류: " + err.message);
   }
 };
-
 </script>
-
+</body>
+</html>
