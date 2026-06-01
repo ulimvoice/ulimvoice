@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<script type="text/javascript" nonce="ebb75f7527214b23a2fbdbaabc6" src="//local.adguard.org?ts=1780078652705&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_0000000084447206bd8ff8c291bc35dd%26fn%3Dtablet_%25EC%2588%2598%25EC%25A0%2595%25EB%25B3%25B8_v90_%25EB%258F%2599%25EC%259D%25BC%25EB%25B2%2588%25ED%2598%25B8%25ED%2595%2599%25EC%2583%259D%25EB%25AA%2585%25EB%25A7%258C%25ED%2591%259C%25EC%258B%259C.html%26cd%3Dattachment%26ts%3D494467%26p%3Dfs%26cid%3D1%26sig%3Daea47a9375516a734a2abe0769893248584e06cbe8e938b466195be8242a7544%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="manifest" href="./manifest-tablet.json">
+<link rel="manifest" href="./manifest-tablet.json">
 <meta name="theme-color" content="#16a34a">
 <link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://script.googleusercontent.com">
@@ -9,7 +9,7 @@
 <link rel="dns-prefetch" href="https://script.googleusercontent.com">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>울림연기학원 등하원 체크 v91</title>
+  <title>울림연기학원 등하원 체크 v92</title>
   <style>
     :root {
       --green: #16a34a;
@@ -1401,5 +1401,122 @@ function hidePwaForever() {
   closeModal();
 }
 </script>
+
+<script>
+/****************************************************
+ * 태블릿 PWA 업데이트 확인
+ * - 하루 1회만 최신 HTML 버전 확인
+ * - 새 버전 발견 시 확인창 표시
+ * - 확인 시 캐시 우회 주소로 새로고침
+ ****************************************************/
+const TABLET_APP_VERSION = "2026.06.01.001";
+const TABLET_VERSION_CHECK_KEY = "ULIM_TABLET_VERSION_CHECK_DATE";
+const TABLET_VERSION_SKIP_KEY = "ULIM_TABLET_VERSION_SKIP_DATE";
+const TABLET_SAVED_VERSION_KEY = "ULIM_TABLET_APP_VERSION";
+const TABLET_UPDATE_QUERY_KEY = "tabletUpdate";
+
+function getTodayKey() {
+  const now = new Date();
+  return [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0")
+  ].join("-");
+}
+
+function getTabletBaseUrl() {
+  return location.origin + location.pathname;
+}
+
+async function checkTabletAppUpdateOncePerDay() {
+  try {
+    const today = getTodayKey();
+
+    // 오늘 이미 확인했으면 다시 묻지 않습니다.
+    if (localStorage.getItem(TABLET_VERSION_CHECK_KEY) === today) {
+      return;
+    }
+
+    localStorage.setItem(TABLET_VERSION_CHECK_KEY, today);
+
+    const remoteUrl = getTabletBaseUrl() + "?_versionCheck=" + Date.now();
+    const response = await fetch(remoteUrl, {
+      method: "GET",
+      cache: "no-store"
+    });
+
+    if (!response.ok) return;
+
+    const html = await response.text();
+    const match = html.match(/const\s+TABLET_APP_VERSION\s*=\s*["']([^"']+)["']/);
+    const remoteVersion = match ? String(match[1]).trim() : "";
+
+    if (!remoteVersion) {
+      return;
+    }
+
+    const savedVersion = localStorage.getItem(TABLET_SAVED_VERSION_KEY) || TABLET_APP_VERSION;
+    localStorage.setItem(TABLET_SAVED_VERSION_KEY, savedVersion);
+
+    if (remoteVersion !== TABLET_APP_VERSION && remoteVersion !== savedVersion) {
+      showTabletUpdateModal(remoteVersion);
+    }
+  } catch (err) {
+    console.log("[Tablet Update] 업데이트 확인 실패:", err);
+  }
+}
+
+function showTabletUpdateModal(remoteVersion) {
+  showCustomModal(
+    "업데이트 안내",
+    "태블릿 앱 새 버전이 있습니다.\n지금 업데이트하시겠습니까?",
+    `
+      <div class="modal-actions">
+        <button class="modal-btn" onclick="applyTabletAppUpdate('${remoteVersion}')">업데이트</button>
+        <button class="modal-btn gray" onclick="skipTabletAppUpdateToday('${remoteVersion}')">나중에</button>
+      </div>
+    `,
+    "success"
+  );
+}
+
+function skipTabletAppUpdateToday(remoteVersion) {
+  localStorage.setItem(TABLET_VERSION_SKIP_KEY, getTodayKey());
+  closeModal();
+}
+
+async function applyTabletAppUpdate(remoteVersion) {
+  try {
+    closeModal();
+
+    localStorage.setItem(TABLET_SAVED_VERSION_KEY, remoteVersion || TABLET_APP_VERSION);
+
+    if ("serviceWorker" in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map(reg => {
+        try {
+          return reg.update();
+        } catch (e) {
+          return Promise.resolve();
+        }
+      }));
+    }
+  } catch (err) {
+    console.log("[Tablet Update] Service Worker 업데이트 확인 실패:", err);
+  } finally {
+    const updateUrl = getTabletBaseUrl() +
+      "?v=" + encodeURIComponent(remoteVersion || TABLET_APP_VERSION) +
+      "&" + TABLET_UPDATE_QUERY_KEY + "=" + Date.now();
+
+    location.replace(updateUrl);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  // 화면 초기 렌더링과 출결 준비를 방해하지 않도록 살짝 늦게 확인합니다.
+  setTimeout(checkTabletAppUpdateOncePerDay, 2500);
+});
+</script>
+
 </body>
 </html>
