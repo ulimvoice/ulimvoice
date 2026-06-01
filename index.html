@@ -1419,9 +1419,16 @@ body.admin-mode .admin-only-tab { display:block !important; }
             <audio id="proAudio" controls src=""></audio>
         </div>
 
-        <div style="text-align:center; margin: 30px 0;">
-            <button id="micBtn" class="mic-btn" onclick="handleAction()">🎤</button>
-            <p id="recStatus" style="font-size:14px; color:#555; margin-top:10px; font-weight:bold;">버튼을 눌러 시작</p>
+        <div style="display:flex; gap:14px; align-items:center; justify-content:center; margin:30px 0; flex-wrap:wrap;">
+            <div style="text-align:center; min-width:150px;">
+                <button id="micBtn" class="mic-btn" onclick="handleAction()">🎤</button>
+                <p style="font-size:13px; color:#555; margin-top:10px; font-weight:bold;">녹음 / 재녹음</p>
+            </div>
+            <div style="text-align:center; min-width:180px;">
+                <button id="trainingAiAnalyzeBtn" onclick="runTrainingFinalAiAnalysisFromButton()" style="width:92px; height:92px; border-radius:24px; border:none; background:#7c3aed; color:#fff; font-size:32px; font-weight:900; cursor:pointer; box-shadow:0 6px 18px rgba(124,58,237,.35);">AI</button>
+                <p style="font-size:13px; color:#555; margin-top:10px; font-weight:bold;">AI 분석</p>
+            </div>
+            <p id="recStatus" style="width:100%; text-align:center; font-size:14px; color:#555; margin-top:4px; font-weight:bold;">녹음 대기</p>
         </div>
 
         <div class="result-box" id="resultBox">
@@ -2674,13 +2681,13 @@ async function completeTraining() {
     let analysisText = "";
     try {
         if (!window.trainingFinalAiResult || window.trainingFinalAiResult.requestSentence !== currentTrainObj.text) {
-            showLoading("AI가 분석중입니다.");
-            await runTrainingFinalAiAnalysis_(lastRecordedBlob, { force: false });
+            hideLoading();
+            return alert("AI 분석을 먼저 완료한 뒤 연습완료를 눌러주세요.");
         }
         analysisText = buildTrainingAiAnalysisText_(recognitionResult);
     } catch (analysisErr) {
         hideLoading();
-        return alert("AI 분석이 완료되지 않았습니다. 다시 녹음하거나 잠시 후 시도해주세요.\n" + (analysisErr.message || analysisErr));
+        return alert("AI 분석 결과를 정리하지 못했습니다. 다시 분석 후 시도해주세요.\n" + (analysisErr.message || analysisErr));
     }
 
     // 로컬 기록 저장은 서버 AI 분석 성공 후에만 진행합니다.
@@ -3072,9 +3079,9 @@ function resetBtn() {
     btn.classList.remove('recording');
     btn.textContent = '🎤';
     if (step === 6) {
-        document.getElementById('recStatus').textContent = "버튼을 눌러 최종녹음 및 AI 분석 시작";
+        document.getElementById('recStatus').textContent = "녹음 대기";
     } else {
-        document.getElementById('recStatus').textContent = "버튼을 눌러 시작";
+        document.getElementById('recStatus').textContent = "녹음 대기";
     }
 }
 
@@ -3254,6 +3261,46 @@ function getTrainingFinalUserKey_() {
     if (name && name !== '게스트' && phone && phone !== '0000') return (name + '_' + phone).replace(/[^0-9A-Za-z가-힣_-]/g, '_');
     return pronGetDeviceKey ? pronGetDeviceKey() : ('DEV_' + Date.now());
 }
+async function runTrainingFinalAiAnalysisFromButton() {
+    if (step !== 6 || !currentTrainObj) {
+        return alert('최종녹음 및 AI 분석 단계에서 사용할 수 있습니다.');
+    }
+    if (!lastRecordedBlob) {
+        return alert('먼저 녹음을 완료해주세요.');
+    }
+    if (window.trainingFinalAiResult && window.trainingFinalAiResult.requestSentence === currentTrainObj.text) {
+        return alert('이미 마지막 녹음본의 AI 분석이 완료되었습니다. 다시 분석하려면 재녹음 후 실행해주세요.');
+    }
+    const ok = confirm('AI분석을 시작하면 오늘연습이 완료됩니다. 진행하시겠습니까?');
+    if (!ok) return;
+    const btn = document.getElementById('trainingAiAnalyzeBtn');
+    const prevText = btn ? btn.textContent : '';
+    try {
+        if (btn) { btn.disabled = true; btn.textContent = '…'; btn.style.opacity = '.65'; }
+        document.getElementById('resultBox').style.display = 'block';
+        const aiSection = document.getElementById('aiSection');
+        const recSection = document.getElementById('recSection');
+        if (aiSection) aiSection.style.display = 'block';
+        if (recSection) recSection.style.display = 'block';
+        const sttEl = document.getElementById('sttResult');
+        const badge = document.getElementById('accBadge');
+        if (sttEl) sttEl.textContent = 'AI가 분석중입니다.';
+        if (badge) { badge.className = 'accuracy-badge acc-wait'; badge.textContent = '분석중'; }
+        document.getElementById('recStatus').textContent = 'AI가 분석중입니다.';
+        await runTrainingFinalAiAnalysis_(lastRecordedBlob, { force: true });
+        document.getElementById('recStatus').textContent = 'AI 분석 완료. 연습완료 버튼을 눌러 결과를 업로드할 수 있습니다.';
+    } catch (err) {
+        console.warn('Final training analysis failed:', err);
+        document.getElementById('recStatus').textContent = 'AI 분석 실패';
+        const el = document.getElementById('sttResult');
+        if (el) el.textContent = String(err.message || err);
+        const b = document.getElementById('accBadge');
+        if (b) { b.className = 'accuracy-badge acc-bad'; b.textContent = '분석 실패'; }
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = prevText || 'AI'; btn.style.opacity = '1'; }
+    }
+}
+
 async function runTrainingFinalAiAnalysis_(audioBlob, options = {}) {
     if (!audioBlob) throw new Error('녹음 파일이 없습니다.');
     if (!GET_API_URL || !GET_API_URL.includes('script.google.com/macros/s/')) {
@@ -3376,20 +3423,19 @@ async function toggleRecord() {
                 audio.src = audioUrl;
                 const duration = (Date.now() - startTime) / 1000;
                 document.getElementById('myTime').textContent = duration.toFixed(1) + "s";
-                document.getElementById('resultBox').style.display='block'; 
+                document.getElementById('resultBox').style.display='block';
+                const recSection = document.getElementById('recSection');
+                if (recSection) recSection.style.display = 'block';
+                const aiSection = document.getElementById('aiSection');
+                if (aiSection) aiSection.style.display = 'block';
                 stream.getTracks().forEach(track => track.stop());
-                try {
-                    document.getElementById('recStatus').textContent = 'AI가 분석중입니다.';
-                    await runTrainingFinalAiAnalysis_(audioBlob, { force: false });
-                    document.getElementById('recStatus').textContent = '녹음 완료 / AI 분석 완료';
-                } catch (err) {
-                    console.warn('Final training analysis failed:', err);
-                    document.getElementById('recStatus').textContent = 'AI 분석 실패';
-                    const el = document.getElementById('sttResult');
-                    if (el) el.textContent = String(err.message || err);
-                    const b = document.getElementById('accBadge');
-                    if (b) { b.className = 'accuracy-badge acc-bad'; b.textContent = '분석 실패'; }
-                }
+                window.trainingFinalAiResult = null;
+                recognitionResult = '';
+                document.getElementById('recStatus').textContent = '녹음 완료. 마지막 녹음본으로 AI 분석을 실행할 수 있습니다.';
+                const el = document.getElementById('sttResult');
+                if (el) el.textContent = '녹음이 완료되었습니다. AI 분석 버튼을 누르면 오늘 연습 분석이 진행됩니다.';
+                const b = document.getElementById('accBadge');
+                if (b) { b.className = 'accuracy-badge acc-wait'; b.textContent = '분석 대기'; }
             });
         } catch (e) { alert("마이크 권한 필요"); }
     } else {
@@ -7383,7 +7429,7 @@ function pronGetAnalysisNumbers() {
 function pronShowGeneralAnalysisUi() {
     ["pronVoiceStatus", "pronScoreMeterWrap", "pronVolumeMeterWrap", "pronFreeAnalysisBox"].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.style.display = id === "pronFreeAnalysisBox" ? "grid" : "block";
+        if (el) el.style.display = "none";
     });
 }
 function pronHideGeneralAnalysisUi() {
@@ -7391,6 +7437,7 @@ function pronHideGeneralAnalysisUi() {
         const el = document.getElementById(id);
         if (el) el.style.display = "none";
     });
+    pronSetAdvancedStatus('', '');
 }
 function pronRenderFreeAnalysis(finalMode = false) {
     if (!pronAudioStats && !finalMode) return;
@@ -7914,21 +7961,20 @@ function pronUpdateVoiceScore() {
     if (meter) meter.style.width = `${score}%`;
     pronRenderFreeAnalysis(true);
 
-    const status = document.getElementById("pronVoiceStatus");
     const converted = source ? pronConvertText(source).converted : "";
     const n = pronGetAnalysisNumbers();
     const sttLine = pronLastSttText || "인식 대기/실패";
 
     pronShowGeneralAnalysisUi();
-    if (status) {
-        status.textContent = `인식결과: ${sttLine}
+    pronSetAdvancedStatus(`일반분석 완료
+
+인식결과: ${sttLine}
 문장 일치도: ${score}%
 녹음 길이: ${n.durationSec ? n.durationSec.toFixed(1) + "초" : "-"}
 읽기 속도: ${n.durationSec ? n.syllablesPerSec.toFixed(1) + "음절/s" : "-"}
 평균 음량: ${n.avgRms ? pronPercent(n.avgRms * 260) : "-"}
 무음 비율: ${n.durationSec ? pronPercent(n.silenceRatio * 100) : "-"}
-표준발음 참고: ${converted ? `[${converted}]` : "먼저 문장을 입력하세요."}`;
-    }
+표준발음 참고: ${converted ? `[${converted}]` : "먼저 문장을 입력하세요."}`, "success");
 }
 
 function pronRunGeneralAnalysis() {
@@ -7951,13 +7997,12 @@ function pronBuildWhisperRequestId() {
 
 async function pronRunWhisperTranscription() {
     const source = document.getElementById("pronInputText")?.value.trim() || "";
-    const status = document.getElementById("pronVoiceStatus");
     if (!source) {
-        if (status) status.textContent = "먼저 읽을 문장을 입력해주세요.";
+        pronSetAdvancedStatus("먼저 읽을 문장을 입력해주세요.", "error");
         return "";
     }
     if (!pronRecordedBlob) {
-        if (status) status.textContent = "녹음 파일이 아직 준비되지 않았습니다. 잠시 후 다시 눌러주세요.";
+        pronSetAdvancedStatus("녹음 파일이 아직 준비되지 않았습니다. 잠시 후 다시 눌러주세요.", "error");
         return "";
     }
     try {
@@ -7965,23 +8010,19 @@ async function pronRunWhisperTranscription() {
             throw new Error("AI 분석 모듈이 아직 준비되지 않았습니다. 인터넷 연결 상태에서 한 번 새로고침 후 다시 시도해주세요.");
         }
         pronShowGeneralAnalysisUi();
-        if (status) status.textContent = "AI가 분석중입니다.";
+        pronSetAdvancedStatus("AI가 분석중입니다.");
         const result = await window.UlimLocalWhisper.transcribe(pronRecordedBlob, {
             language: "ko",
             task: "transcribe",
             model: ULIM_LOCAL_WHISPER_MODEL,
-            onStatus: () => {
-                const el = document.getElementById("pronVoiceStatus");
-                if (el) el.textContent = "AI가 분석중입니다.";
-            }
+            onStatus: () => pronSetAdvancedStatus("AI가 분석중입니다.")
         });
         const text = pronCleanExtractedText(result.text || "");
         pronRenderWhisperResult({ ok: true, status: "success", text, local: true, model: result.model || ULIM_LOCAL_WHISPER_MODEL });
         return text;
     } catch (err) {
         console.error(err);
-        if (status) status.textContent = "일반분석 실패: " + String(err.message || err).replace(/Whisper/gi, "AI").replace(/ETRI/gi, "AI");
-        pronUpdateVoiceScore();
+        pronSetAdvancedStatus("일반분석 실패: " + String(err.message || err).replace(/Whisper/gi, "AI").replace(/ETRI/gi, "AI"), "error");
         return "";
     }
 }
@@ -7994,11 +8035,11 @@ function pronPollWhisperResult(requestId) {
 function pronRenderWhisperResult(data) {
     const text = pronCleanExtractedText(data.text || data.transcript || data.whisper?.text || "");
     pronLastSttText = text;
-    const status = document.getElementById("pronVoiceStatus");
     pronShowGeneralAnalysisUi();
-    if (status) status.textContent = text
-        ? `인식결과: ${text}\n분석 결과를 계산하는 중입니다.`
-        : "인식된 문장이 없습니다.";
+    if (!text) {
+        pronSetAdvancedStatus("인식된 문장이 없습니다.", "error");
+        return;
+    }
     pronUpdateVoiceScore();
 }
 
