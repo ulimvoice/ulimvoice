@@ -2642,6 +2642,11 @@ function extractVowels(s){
 const defaultVocalData = [{ id: 1, text: "데이터 로딩중...", pron: "...", audio: "" }];
 let trainDataList = (typeof vocalData !== 'undefined') ? vocalData : defaultVocalData;
 
+// 발성훈련 문장 조회 속도 개선용 클라이언트 캐시
+// 같은 학생/기기에서 짧은 시간 안에 발성훈련탭을 다시 열면 GAS 재조회 없이 즉시 표시합니다.
+const VOCAL_TRAINING_CLIENT_CACHE_TTL_MS = 10 * 60 * 1000;
+const VOCAL_TRAINING_CLIENT_CACHE_PREFIX = 'ulim_vocal_training_sentence_cache_v2_';
+
 // [1] 저장된 문장 ID를 로컬 스토리지에서 불러옴
 function getSavedVocalIds() {
     const ids = localStorage.getItem('savedVocalIds');
@@ -2665,6 +2670,59 @@ function getTrainingStudentIdentity_() {
         phoneLast4: (typeof phoneLast4 !== 'undefined' ? phoneLast4 : '') || localStorage.getItem('phoneLast4') || '',
         deviceKey: (typeof pronGetDeviceKey === 'function' ? pronGetDeviceKey() : (localStorage.getItem('pronEtriDeviceKey') || ''))
     };
+}
+function getTrainingStudentIdentityCacheKey_() {
+    const ident = getTrainingStudentIdentity_();
+    return [ident.studentNo || '', ident.studentName || '', ident.phoneLast4 || '', ident.deviceKey || ''].join('|');
+}
+function encodeVocalTrainingCacheKey_(value) {
+    try {
+        return btoa(unescape(encodeURIComponent(String(value || '')))).replace(/[^A-Za-z0-9_-]/g, '');
+    } catch (e) {
+        return String(value || '').replace(/[^0-9A-Za-z가-힣_-]/g, '_');
+    }
+}
+function getVocalTrainingClientCacheKey_() {
+    return VOCAL_TRAINING_CLIENT_CACHE_PREFIX + encodeVocalTrainingCacheKey_(getTrainingStudentIdentityCacheKey_());
+}
+function readVocalTrainingClientCache_() {
+    try {
+        const key = getVocalTrainingClientCacheKey_();
+        const raw = sessionStorage.getItem(key) || localStorage.getItem(key);
+        if (!raw) return null;
+        const cached = JSON.parse(raw);
+        if (!cached || !cached.savedAt || !cached.data) return null;
+        if (Date.now() - Number(cached.savedAt) > VOCAL_TRAINING_CLIENT_CACHE_TTL_MS) {
+            sessionStorage.removeItem(key);
+            localStorage.removeItem(key);
+            return null;
+        }
+        const cachedId = String(cached.data.id || '');
+        if (cachedId && getSavedVocalIds().has(cachedId)) {
+            sessionStorage.removeItem(key);
+            localStorage.removeItem(key);
+            return null;
+        }
+        return cached.data;
+    } catch (e) {
+        return null;
+    }
+}
+function saveVocalTrainingClientCache_(data) {
+    try {
+        if (!data || data.status !== 'success' || !data.id || !data.text) return;
+        const key = getVocalTrainingClientCacheKey_();
+        const value = JSON.stringify({ savedAt: Date.now(), data });
+        sessionStorage.setItem(key, value);
+        localStorage.setItem(key, value);
+    } catch (e) {}
+}
+function clearVocalTrainingClientCache_() {
+    try {
+        const key = getVocalTrainingClientCacheKey_();
+        sessionStorage.removeItem(key);
+        localStorage.removeItem(key);
+    } catch (e) {}
 }
 function extractJamoText(s) {
     const CHO=["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
@@ -2704,7 +2762,14 @@ function buildTrainingObjectFromSentence_(item) {
         rules: rules
     };
 }
-async function fetchServerTrainingSentence_() {
+async function fetchServerTrainingSentence_(options) {
+    options = options || {};
+
+    if (!options.forceRefresh) {
+        const cached = readVocalTrainingClientCache_();
+        if (cached) return cached;
+    }
+
     if (!GET_API_URL || !GET_API_URL.includes('script.google.com/macros/s/')) {
         throw new Error('학생부 GAS 주소가 설정되지 않았습니다.');
     }
@@ -2719,12 +2784,14 @@ async function fetchServerTrainingSentence_() {
         phoneLast4: ident.phoneLast4,
         deviceKey: ident.deviceKey,
         _: Date.now()
-    }, 12000);
+    }, 8000);
     if (!data || !data.ok) throw new Error(data && data.message ? data.message : '서버 문장 조회 실패');
+    saveVocalTrainingClientCache_(data);
     return data;
 }
 async function recordServerTrainingSentenceComplete_() {
     if (!currentTrainObj || !GET_API_URL || !GET_API_URL.includes('script.google.com/macros/s/')) return;
+    clearVocalTrainingClientCache_();
     const ident = getTrainingStudentIdentity_();
     const payload = {
         action: 'recordVocalTrainingSentenceComplete',
@@ -7400,11 +7467,18 @@ const PRON_EXCEPTION_WORDS = {
     "옆집": { out:"엽찝", rule:"받침 대표음+된소리되기", desc:"ㅍ 받침이 [ㅂ]으로 정리된 뒤 뒤의 ㅈ이 된소리로 납니다." },
     "희망": { out:"히망", rule:"ㅢ 발음", desc:"자음을 첫소리로 가진 음절의 ㅢ는 [ㅣ]로 납니다." },
     "민주주의": { out:"민주주의", rule:"주의", desc:"조사 '의'는 [의] 또는 [에]가 허용되는 경우가 있어 자동 단정하지 않습니다." },
-    "나의": { out:"나의/나에", rule:"허용 발음", desc:"조사 '의'는 [의]와 [에]가 모두 허용됩니다." },
-    "우리의": { out:"우리의/우리에", rule:"허용 발음", desc:"조사 '의'는 [의]와 [에]가 모두 허용됩니다." },
+    "나의": { out:"나에", rule:"조사 의 허용 발음", desc:"수업용 자연 발음에서는 조사 '의'를 [에]로 읽을 수 있습니다." },
+    "우리의": { out:"우리에", rule:"조사 의 허용 발음", desc:"수업용 자연 발음에서는 조사 '의'를 [에]로 읽을 수 있습니다." },
     "감기": { out:"감기", rule:"주의 단어", desc:"의미와 품사에 따라 발음 판단이 달라질 수 있어 자동 변환하지 않습니다." },
     "신고": { out:"신고", rule:"주의 단어", desc:"의미에 따라 발음이 달라질 수 있어 자동 변환하지 않습니다." }
 };
+// 조사 '의'를 수업용 자연 발음 [에]로 바꾸되, 단어 내부의 '의'는 보호합니다.
+const PRON_PARTICLE_UI_EXCLUDE_WORDS = new Set([
+    "의", "의의", "주의", "민주주의", "자유주의", "사회주의", "개인주의",
+    "회의", "강의", "문의", "정의", "동의", "합의", "항의", "건의", "토의", "협의", "논의", "상의",
+    "의미", "의자", "의사", "의식", "의견", "의도", "의무", "의료", "의문", "의상", "의뢰", "의지", "의혹", "의회",
+    "예의", "호의", "성의", "악의", "선의", "임의", "자의", "타의", "고의", "우의", "사의", "문의"
+]);
 let pronLastRules = [];
 let pronMediaRecorder = null;
 let pronAudioChunks = [];
@@ -7779,6 +7853,29 @@ function pronTryDictionaryWithSuffix(word, rules) {
     }
     return null;
 }
+function pronTryParticleUiToE(word, rules) {
+    word = String(word || '');
+    if (word.length < 2 || !word.endsWith('의')) return null;
+    if (PRON_PARTICLE_UI_EXCLUDE_WORDS.has(word)) return null;
+
+    const parts = pronWordToParts(word);
+    const last = parts[parts.length - 1];
+    if (!last || last.raw || last.cho !== 'ㅇ' || last.jung !== 'ㅢ' || last.jong) return null;
+
+    const base = word.slice(0, -1);
+    if (!/[가-힣]$/.test(base)) return null;
+
+    // 조사 '의'의 허용 발음 [에]를 우선 적용한 뒤, 앞말 받침과 자연스럽게 연음합니다.
+    // 예: 집의 -> 집에 -> 지베, 빛의 -> 빛에 -> 비체
+    const subRules = [];
+    const candidate = base + '에';
+    const converted = pronApplyGeneralRulesToWord(candidate, subRules);
+    if (!converted || converted === word) return null;
+
+    pronAddRule(rules, '조사 의 허용 발음', word, converted, "조사 '의'는 [의]와 [에]가 모두 허용되며, 수업용 표기에서는 자연 발음 [에]를 우선 적용합니다.");
+    subRules.forEach(r => rules.push(r));
+    return converted;
+}
 function pronApplyHieutRules(parts, rules) {
     for (let i = 0; i < parts.length - 1; i++) {
         const a = parts[i], b = parts[i + 1];
@@ -7907,6 +8004,9 @@ function pronApplyGeneralRulesToWord(word, rules) {
     if (!/[가-힣]/.test(word)) return word;
     const dict = pronTryDictionaryWithSuffix(word, rules);
     if (dict !== null) return dict;
+    if (typeof PRON_PARTICLE_UI_EXCLUDE_WORDS !== 'undefined' && PRON_PARTICLE_UI_EXCLUDE_WORDS.has(word)) return word;
+    const particleUi = pronTryParticleUiToE(word, rules);
+    if (particleUi !== null) return particleUi;
     const ui = pronApplyUiVowelRule(word, rules);
     if (ui !== null) word = ui;
     let parts = pronWordToParts(word);
@@ -7974,7 +8074,7 @@ function pronRenderRules() {
         { title:"구개음화", desc:"ㄷ·ㅌ 받침 뒤에 이 계열 모음이 이어지면 ㅈ·ㅊ 계열로 발음됩니다. 예: 굳이→구지, 같이→가치." },
         { title:"ㅎ 탈락/축약", desc:"ㅎ 받침은 모음 앞에서 탈락하거나 ㄱ·ㄷ·ㅈ과 만나 ㅋ·ㅌ·ㅊ으로 축약됩니다. 예: 좋아→조아, 놓고→노코." },
         { title:"ㄴ첨가/사이시옷", desc:"일부 합성어·파생어에서는 ㄴ이 첨가됩니다. 예: 꽃잎→꼰닙, 깻잎→깬닙, 솜이불→솜니불." },
-        { title:"ㅢ 발음", desc:"자음을 첫소리로 가진 음절의 ㅢ는 [ㅣ]로 나며, 조사 '의'는 [의]/[에]가 모두 허용되는 경우가 있습니다." },
+        { title:"ㅢ 발음", desc:"자음을 첫소리로 가진 음절의 ㅢ는 [ㅣ]로 나며, 조사 '의'는 [의]/[에]가 모두 허용됩니다. 발성훈련 수업용 표기는 자연 발음 [에]를 우선 적용합니다." },
         { title:"주의", desc:"문맥·품사에 따라 달라지는 단어는 자동 단정하지 않습니다. 예: 신고, 감기." }
     ];
     const appliedHtml = pronLastRules.length

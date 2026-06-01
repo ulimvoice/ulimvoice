@@ -1,4 +1,4 @@
-const CACHE_NAME = "ulimvoice-cache-v49-vocal-ai-created-100day";
+const CACHE_NAME = "ulimvoice-cache-v50-vocal-speed-pron-ui";
 
 // GitHub Pages 프로젝트 경로에서는 상대경로가 가장 안전합니다.
 // service-worker.js가 /ulimvoice/service-worker.js에 있다면 ./ 는 /ulimvoice/ 기준입니다.
