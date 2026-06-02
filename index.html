@@ -2097,7 +2097,7 @@ console.log("Loaded instructorFolderId:", instructorFolderId);
 const GET_API_URL = 'https://script.google.com/macros/s/AKfycbx7wQFuw6MqqOijmvuwpeiCWOk3xU3hr41xoKbRltQHLb1kLbr_1RD5Zzy3iuWcrhUD0A/exec'; 
 
 // 연습일지 GAS URL (데이터 전송 및 드라이브 업로드)
-const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxgIXZv73FmnG-r-JoWnBGcfjrzJZV3I6Zp5xmJbSheUrJ9pWc165UOxAn4HUD5hMpc9g/exec';
+const GOOGLE_APP_SCRIPT_URL = GET_API_URL; // 발성훈련 업로드도 학생부 GAS로 통합
 
 
 // =========================================================================================
@@ -2222,55 +2222,87 @@ function updateFilenameConstants() {
 // =========================================================================================
 
 // Blob 데이터를 Base64 문자열로 변환하는 함수
+// GAS 안정성을 위해 raw 30MB 이하만 전송합니다. DataURL 접두사는 제거해 순수 Base64만 보냅니다.
 function blobToBase64(blob) {
     return new Promise((resolve, reject) => {
+        if (!blob || typeof blob.size !== 'number') {
+            reject(new Error("업로드할 파일 데이터가 없습니다."));
+            return;
+        }
+
+        const MAX_UPLOAD_BYTES = 30 * 1024 * 1024;
+        if (blob.size > MAX_UPLOAD_BYTES) {
+            reject(new Error("파일이 너무 큽니다. 30MB 이하로 녹음/영상을 줄여주세요."));
+            return;
+        }
+
         const reader = new FileReader();
-        reader.readAsDataURL(blob);
         reader.onloadend = () => {
-            const base64String = reader.result.split(',')[1];
-            // GAS는 약 50MB 제한 (Base64 인코딩 후 크기)
-            if (base64String.length * 0.75 > 45 * 1024 * 1024) { 
-                reject(new Error("File size is too large for GAS limit."));
+            const result = String(reader.result || '');
+            const commaIndex = result.indexOf(',');
+            const base64String = commaIndex >= 0 ? result.slice(commaIndex + 1) : result;
+
+            if (!base64String) {
+                reject(new Error("파일 Base64 변환 결과가 비어 있습니다."));
+                return;
             }
+
+            if (!/^[A-Za-z0-9+/=\r\n]+$/.test(base64String)) {
+                reject(new Error("파일 Base64 변환값이 올바르지 않습니다."));
+                return;
+            }
+
+            const estimatedBytes = Math.floor((base64String.replace(/\s/g, '').length * 3) / 4);
+            if (estimatedBytes > MAX_UPLOAD_BYTES) {
+                reject(new Error("파일이 너무 큽니다. 30MB 이하로 녹음/영상을 줄여주세요."));
+                return;
+            }
+
             resolve(base64String);
         };
-        reader.onerror = reject;
+        reader.onerror = () => reject(new Error("파일을 읽는 중 오류가 발생했습니다."));
+        reader.readAsDataURL(blob);
     });
 }
 
-// 녹음 파일을 드라이브에 업로드하고 시트에 링크를 기록하는 함수
+// 녹음 파일/결과영상을 드라이브에 업로드하고 시트에 링크를 기록하는 함수
 async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeType, action, extraMeta = {}) {
     if (!GOOGLE_APP_SCRIPT_URL || GOOGLE_APP_SCRIPT_URL.includes('YOUR_DEPLOYED_GAS_URL_HERE')) {
         console.warn("Google Apps Script URL이 설정되지 않아 데이터 전송을 건너뜁니다.");
         return;
     }
-    
-    // GAS로 전송할 페이로드 구성
+
+    const safeMimeType = String(mimeType || 'audio/webm').split(';')[0].trim() || 'audio/webm';
+    const safeMediaKind = extraMeta.mediaKind || (safeMimeType.indexOf('video/') === 0 ? 'video' : 'audio');
+
     const payload = {
+        action: 'uploadVocalTrainingMedia',
+        uploadAction: action,
         name: studentName,
+        studentName: studentName,
         studentNo: studentNo || '',
         phoneLast4: phoneLast4 || '',
         vocalId: vocalId,
+        sentenceId: vocalId,
         sentence: sentenceText,
-        action: action, 
-        audioData: base64Data, 
-        mimeType: mimeType,
-        // ⭐ GAS가 폴더 및 파일명 생성을 위해 사용할 데이터 ⭐
-        fileNameBase: currentFilenameBase, 
-        instructor: instructorName,       
-		instructorFolderId: instructorFolderId,
-        mediaKind: extraMeta.mediaKind || (String(mimeType || '').indexOf('video/') === 0 ? 'video' : 'audio'),
+        audioData: base64Data,
+        mimeType: safeMimeType,
+        fileSize: extraMeta.fileSize || 0,
+        fileNameBase: currentFilenameBase,
+        instructor: instructorName,
+        instructorFolderId: instructorFolderId,
+        mediaKind: safeMediaKind,
         analysisText: extraMeta.analysisText || '',
         originalSentence: extraMeta.originalSentence || sentenceText,
         localWhisperText: extraMeta.localWhisperText || '',
-        preferredExtension: getExtensionFromMime_(mimeType, 'webm')
+        preferredExtension: getExtensionFromMime_(safeMimeType, 'webm')
     };
 
     try {
         await fetch(GOOGLE_APP_SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors', 
-            headers: { 'Content-Type': 'application/json' },
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify(payload)
         });
         console.log('Drive upload and Sheet logging attempted.');
@@ -2287,25 +2319,31 @@ async function sendToGoogleSheet(vocalId, sentenceText, action) {
     }
     
     const payload = {
+        action: 'uploadVocalTrainingMeta',
+        uploadAction: action,
         name: studentName,
+        studentName: studentName,
         studentNo: studentNo || '',
         phoneLast4: phoneLast4 || '',
         vocalId: vocalId,
+        sentenceId: vocalId,
         sentence: sentenceText,
-        action: action, 
-        // 오디오 데이터는 포함하지 않음
+        fileNameBase: currentFilenameBase,
+        instructor: instructorName,
+        instructorFolderId: instructorFolderId,
+        mediaKind: 'meta'
     };
 
     try {
         await fetch(GOOGLE_APP_SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors', 
-            headers: { 'Content-Type': 'application/json' },
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify(payload)
         });
-        console.log('Google Sheet submission attempted.');
+        console.log('Sheet metadata logging attempted.');
     } catch (error) {
-        console.error('Google Sheet submission failed:', error);
+        console.error('Sheet metadata logging failed:', error);
     }
 }
 
@@ -2901,6 +2939,7 @@ async function completeTraining() {
         uploadAction,
         {
             mediaKind: uploadMimeType.indexOf('video/') === 0 ? 'video' : 'audio',
+            fileSize: uploadBlob.size || 0,
             analysisText: analysisText,
             originalSentence: currentTrainObj.text,
             localWhisperText: recognitionResult || ''
@@ -3689,7 +3728,12 @@ async function shareVocalResult() {
         originalText.substring(0, 30) + "...", 
         base64Data, 
         mimeType,
-        "녹음 파일 업로드 및 링크 기록"
+        "녹음 파일 업로드 및 링크 기록",
+        {
+            mediaKind: String(mimeType || '').indexOf('video/') === 0 ? 'video' : 'audio',
+            fileSize: lastRecordedBlob.size || 0,
+            originalSentence: originalText
+        }
     ); 
 
     alert("녹음 파일 업로드 및 시트 기록을 시도했습니다. 드라이브 폴더와 시트(F열)를 확인하세요.");
