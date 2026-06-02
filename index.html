@@ -2917,24 +2917,15 @@ async function completeTraining() {
         return alert("AI 분석 결과를 정리하지 못했습니다. 다시 분석 후 시도해주세요.\n" + (analysisErr.message || analysisErr));
     }
 
+    // 안정형 업로드:
+    // GitHub Pages → GAS POST는 큰 영상 Base64가 중간에 잘릴 수 있어,
+    // 연습완료에서는 최종 녹음 원본(audio/webm)만 업로드합니다.
+    // AI 분석 결과와 문장, 학생 정보는 발성훈련연습일지에 함께 기록됩니다.
     let uploadBlob = lastRecordedBlob;
     let uploadMimeType = lastRecordedBlob.type || 'audio/webm';
     let uploadAction = "녹음 파일 업로드 및 링크 기록";
 
-    try {
-        showLoading("결과 영상을 제작 중입니다...");
-        const videoBlob = await createTrainingResultVideoBlob_(lastRecordedBlob, currentTrainObj.text, analysisText);
-        if (videoBlob && videoBlob.size > 0) {
-            uploadBlob = videoBlob;
-            uploadMimeType = videoBlob.type || 'video/webm';
-            uploadAction = "녹음 결과 영상 업로드 및 링크 기록";
-        }
-    } catch (videoErr) {
-        console.warn("결과 영상 제작 실패, 녹음 파일로 대체 업로드:", videoErr);
-        alert("이 브라우저에서 결과 영상 제작이 실패해 녹음 파일로 대체 업로드합니다.\n" + (videoErr.message || videoErr));
-    }
-
-    showLoading("결과 파일을 변환하는 중입니다...");
+    showLoading("녹음 파일을 변환하는 중입니다...");
     const base64Data = await blobToBase64(uploadBlob).catch(err => {
         hideLoading();
         console.error("Base64 Encoding Error:", err);
@@ -2945,7 +2936,7 @@ async function completeTraining() {
 
     let uploadResult = null;
     try {
-        showLoading("결과 파일을 업로드하고 실제 생성 여부를 확인하는 중입니다...");
+        showLoading("녹음 파일을 업로드하고 실제 생성 여부를 확인하는 중입니다...");
         uploadResult = await uploadAudioToDriveAndLog(
             currentTrainObj.id,
             truncatedText,
@@ -2963,7 +2954,7 @@ async function completeTraining() {
     } catch (uploadErr) {
         hideLoading();
         console.error('업로드 확인 실패:', uploadErr);
-        return alert("결과 파일 업로드가 확인되지 않았습니다.\n\n" + (uploadErr.message || uploadErr) + "\n\n관리자 시트의 [관리자] G열 강사폴더ID와 GAS 배포 상태를 확인해주세요.");
+        return alert("녹음 파일 업로드가 확인되지 않았습니다.\n\n" + (uploadErr.message || uploadErr) + "\n\n관리자 시트의 [관리자] G열 강사폴더ID, 웹앱 새 버전 배포 상태, index.html 최신 반영 여부를 확인해주세요.");
     }
 
     // 서버 업로드 성공이 확인된 뒤에만 로컬 완료 기록과 100일 진행 기록을 저장합니다.
