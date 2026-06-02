@@ -2074,21 +2074,15 @@ function showLoginOverlay() {
 }
 
 
-// 강사 ID가 ERROR로 저장되어 있으면 아예 지워버림
-if (localStorage.getItem('instructorFolderId') === 'ERROR_ID_NOT_FOUND') {
-    localStorage.removeItem('instructorFolderId');
-}
+// 강사 Drive 폴더ID는 학생 브라우저에 저장하지 않습니다.
+// 연습완료 업로드 시 GAS가 담당강사명을 기준으로
+// 학생부(관리자용) [관리자] 시트 G열(강사폴더ID)을 조회합니다.
+localStorage.removeItem('instructorFolderId');
 let studentName = localStorage.getItem('studentName') || '';
 let instructorName = localStorage.getItem('instructorName') || '기본';
 let phoneLast4 = localStorage.getItem('phoneLast4') || '';
 let studentNo = localStorage.getItem('studentNo') || '';
-
-// 'let' 키워드를 사용하여 변수를 선언해야 합니다.
-let instructorFolderId = localStorage.getItem('instructorFolderId');
-if (!instructorFolderId || instructorFolderId === 'ERROR_ID_NOT_FOUND') {
-    instructorFolderId = '';
-}
-console.log("Loaded instructorFolderId:", instructorFolderId);
+let instructorFolderId = '';
 // =========================================================================================
 // ⭐ 1. GAS URL 정의 (제공해주신 배포 주소로 설정 완료) ⭐
 // =========================================================================================
@@ -2176,16 +2170,10 @@ async function promptAndAuthenticate() {
             instructorName = result.instructor;
             phoneLast4 = result.phoneLast4;
             studentNo = result.studentNo || result.attendanceNo || result.no || '';
-            instructorFolderId = result.instructorFolderId;
+            // 강사 폴더ID는 더 이상 프론트에서 저장하지 않습니다.
+            instructorFolderId = '';
+            localStorage.removeItem('instructorFolderId');
 
-                // ID 유효성 검사 및 저장 로직 (이전에 추가된 디버깅 코드 유지)
-            if (instructorFolderId && instructorFolderId.trim() !== "") {
-    localStorage.setItem('instructorFolderId', instructorFolderId);
-} else {
-    localStorage.setItem('instructorFolderId', 'ERROR_ID_NOT_FOUND');
-}
-
-            
                 // ✅ 정상적인 성공 처리
             localStorage.setItem('studentName', studentName);
             localStorage.setItem('instructorName', instructorName);
@@ -2268,18 +2256,57 @@ function blobToBase64(blob) {
     });
 }
 
-// 녹음 파일/결과영상을 드라이브에 업로드하고 로그시트에 링크를 기록하는 함수
+// 녹음 파일/결과영상을 드라이브에 업로드하고 연습일지에 링크를 기록하는 함수
+// 중요: POST는 no-cors로 보내므로 응답을 직접 읽을 수 없습니다.
+// 대신 requestId를 함께 보내고, 이후 JSONP로 GAS의 업로드 결과를 조회합니다.
+function createVocalUploadRequestId_() {
+    const rand = Math.random().toString(36).slice(2, 10);
+    return 'VOCAL_' + Date.now() + '_' + rand;
+}
+
+async function waitForVocalTrainingUploadResult_(requestId, timeoutMs = 60000) {
+    if (!requestId) throw new Error('업로드 요청ID가 없습니다.');
+    const started = Date.now();
+    let lastMessage = '';
+
+    while (Date.now() - started < timeoutMs) {
+        try {
+            const result = await pronJsonpRequest({
+                action: 'getVocalTrainingUploadResult',
+                requestId: requestId,
+                _: Date.now()
+            }, 10000);
+
+            if (result && result.status && result.status !== 'pending') {
+                if (result.ok && result.status === 'success' && result.fileId) {
+                    return result;
+                }
+                throw new Error((result && result.message) || '업로드 실패');
+            }
+            lastMessage = (result && result.message) || '';
+        } catch (err) {
+            // pending 조회 중 일시적 실패는 잠깐 더 기다립니다.
+            lastMessage = err && err.message ? err.message : String(err);
+        }
+        await new Promise(resolve => setTimeout(resolve, 2500));
+    }
+
+    throw new Error('업로드 결과 확인 시간이 초과되었습니다. ' + (lastMessage || 'GAS 실행기록과 발성훈련연습일지 시트를 확인해주세요.'));
+}
+
 async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeType, action, extraMeta = {}) {
     if (!GOOGLE_APP_SCRIPT_URL || !GOOGLE_APP_SCRIPT_URL.includes('script.google.com/macros/s/')) {
-        console.warn("Google Apps Script URL이 설정되지 않아 데이터 전송을 건너뜁니다.");
-        return;
+        throw new Error("Google Apps Script URL이 설정되지 않았습니다.");
     }
 
     const safeMimeType = String(mimeType || 'audio/webm').split(';')[0].trim() || 'audio/webm';
     const safeMediaKind = extraMeta.mediaKind || (safeMimeType.indexOf('video/') === 0 ? 'video' : 'audio');
+    const requestId = createVocalUploadRequestId_();
 
     const payload = {
         action: 'uploadVocalTrainingMedia',
+        requestId: requestId,
+        uploadRequestId: requestId,
         uploadAction: action,
         name: studentName,
         studentName: studentName,
@@ -2293,7 +2320,6 @@ async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeT
         fileSize: extraMeta.fileSize || 0,
         fileNameBase: currentFilenameBase,
         instructor: instructorName,
-        instructorFolderId: instructorFolderId,
         mediaKind: safeMediaKind,
         analysisText: extraMeta.analysisText || '',
         originalSentence: extraMeta.originalSentence || sentenceText,
@@ -2302,28 +2328,30 @@ async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeT
         clientTime: new Date().toISOString()
     };
 
-    try {
-        await fetch(GOOGLE_APP_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify(payload)
-        });
-        console.log('Drive upload and separated log sheet logging attempted.');
-    } catch (error) {
-        console.error('Drive upload failed:', error);
-    }
+    await fetch(GOOGLE_APP_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+    });
+
+    console.log('Drive upload request sent:', requestId);
+    return await waitForVocalTrainingUploadResult_(requestId, 90000);
 }
 
-// 파일 업로드 없이 메타데이터만 전송하는 함수 (연습 완료 버튼 용)
+// 파일 업로드 없이 메타데이터만 전송하는 함수입니다.
+// 현재 연습완료 흐름은 실제 파일 업로드 성공 후 서버가 발성훈련연습일지에 직접 기록합니다.
 async function sendToGoogleSheet(vocalId, sentenceText, action) {
     if (!GOOGLE_APP_SCRIPT_URL || !GOOGLE_APP_SCRIPT_URL.includes('script.google.com/macros/s/')) {
         console.warn("Google Apps Script URL이 설정되지 않아 데이터 전송을 건너뜁니다.");
         return;
     }
 
+    const requestId = createVocalUploadRequestId_();
     const payload = {
         action: 'uploadVocalTrainingMeta',
+        requestId: requestId,
+        uploadRequestId: requestId,
         uploadAction: action || '연습 완료 체크',
         name: studentName,
         studentName: studentName,
@@ -2334,7 +2362,6 @@ async function sendToGoogleSheet(vocalId, sentenceText, action) {
         sentence: sentenceText,
         fileNameBase: currentFilenameBase,
         instructor: instructorName,
-        instructorFolderId: instructorFolderId,
         mediaKind: 'meta',
         clientTime: new Date().toISOString()
     };
@@ -2346,7 +2373,7 @@ async function sendToGoogleSheet(vocalId, sentenceText, action) {
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify(payload)
         });
-        console.log('Vocal training meta logging attempted.');
+        console.log('Vocal training meta logging attempted:', requestId);
     } catch (error) {
         console.error('Google Sheet meta logging failed:', error);
     }
@@ -2871,44 +2898,24 @@ async function completeTraining() {
         return alert("녹음 파일이 없습니다. 최종녹음 및 AI 분석 단계에서 녹음 후 다시 눌러주세요.");
     }
 
-    showLoading("연습 결과를 정리하는 중입니다...");
-
     const today = new Date().toISOString().slice(0, 10);
     const savedIds = getSavedVocalIds();
     const records = getVocalRecords();
     const truncatedText = currentTrainObj.text.substring(0, 30) + "...";
 
     if (records.has(today)) {
-        hideLoading();
         return alert("오늘은 이미 연습을 완료했습니다!");
     }
 
     let analysisText = "";
     try {
         if (!window.trainingFinalAiResult || window.trainingFinalAiResult.requestSentence !== currentTrainObj.text) {
-            hideLoading();
             return alert("AI 분석을 먼저 완료한 뒤 연습완료를 눌러주세요.");
         }
         analysisText = buildTrainingAiAnalysisText_(recognitionResult);
     } catch (analysisErr) {
-        hideLoading();
         return alert("AI 분석 결과를 정리하지 못했습니다. 다시 분석 후 시도해주세요.\n" + (analysisErr.message || analysisErr));
     }
-
-    // 로컬 기록 저장은 서버 AI 분석 성공 후에만 진행합니다.
-    savedIds.add(currentTrainObj.id);
-    localStorage.setItem('savedVocalIds', JSON.stringify(Array.from(savedIds)));
-
-    records.set(today, {
-        id: currentTrainObj.id,
-        text: truncatedText,
-        completed: true,
-        aiComment: (window.trainingFinalAiResult && window.trainingFinalAiResult.comment) || ''
-    });
-    localStorage.setItem('vocalRecords', JSON.stringify(Array.from(records.entries())));
-
-    await sendToGoogleSheet(currentTrainObj.id, truncatedText, "연습 완료 체크");
-    await recordServerTrainingSentenceComplete_();
 
     let uploadBlob = lastRecordedBlob;
     let uploadMimeType = lastRecordedBlob.type || 'audio/webm';
@@ -2927,6 +2934,7 @@ async function completeTraining() {
         alert("이 브라우저에서 결과 영상 제작이 실패해 녹음 파일로 대체 업로드합니다.\n" + (videoErr.message || videoErr));
     }
 
+    showLoading("결과 파일을 변환하는 중입니다...");
     const base64Data = await blobToBase64(uploadBlob).catch(err => {
         hideLoading();
         console.error("Base64 Encoding Error:", err);
@@ -2935,22 +2943,46 @@ async function completeTraining() {
     });
     if (!base64Data) return;
 
-    await uploadAudioToDriveAndLog(
-        currentTrainObj.id,
-        truncatedText,
-        base64Data,
-        uploadMimeType,
-        uploadAction,
-        {
-            mediaKind: uploadMimeType.indexOf('video/') === 0 ? 'video' : 'audio',
-            analysisText: analysisText,
-            originalSentence: currentTrainObj.text,
-            localWhisperText: recognitionResult || ''
-        }
-    );
+    let uploadResult = null;
+    try {
+        showLoading("결과 파일을 업로드하고 실제 생성 여부를 확인하는 중입니다...");
+        uploadResult = await uploadAudioToDriveAndLog(
+            currentTrainObj.id,
+            truncatedText,
+            base64Data,
+            uploadMimeType,
+            uploadAction,
+            {
+                mediaKind: uploadMimeType.indexOf('video/') === 0 ? 'video' : 'audio',
+                fileSize: uploadBlob.size || 0,
+                analysisText: analysisText,
+                originalSentence: currentTrainObj.text,
+                localWhisperText: recognitionResult || ''
+            }
+        );
+    } catch (uploadErr) {
+        hideLoading();
+        console.error('업로드 확인 실패:', uploadErr);
+        return alert("결과 파일 업로드가 확인되지 않았습니다.\n\n" + (uploadErr.message || uploadErr) + "\n\n관리자 시트의 [관리자] G열 강사폴더ID와 GAS 배포 상태를 확인해주세요.");
+    }
+
+    // 서버 업로드 성공이 확인된 뒤에만 로컬 완료 기록과 100일 진행 기록을 저장합니다.
+    savedIds.add(currentTrainObj.id);
+    localStorage.setItem('savedVocalIds', JSON.stringify(Array.from(savedIds)));
+
+    records.set(today, {
+        id: currentTrainObj.id,
+        text: truncatedText,
+        completed: true,
+        aiComment: (window.trainingFinalAiResult && window.trainingFinalAiResult.comment) || '',
+        fileUrl: uploadResult && uploadResult.fileUrl ? uploadResult.fileUrl : ''
+    });
+    localStorage.setItem('vocalRecords', JSON.stringify(Array.from(records.entries())));
+
+    await recordServerTrainingSentenceComplete_();
 
     hideLoading();
-    alert("연습 완료! 매일매일 꾸준히 화이팅!");
+    alert("업로드 확인 완료! 연습 기록이 저장되었습니다.");
 
     const calendarArea = document.getElementById('calendarDisplayArea');
     if (calendarArea.style.display === 'none') {
