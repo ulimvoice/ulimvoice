@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script type="text/javascript" nonce="5878564e64bc424ab28cf8dfbd2" src="//local.adguard.org?ts=1780568952131&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000edd872068fa49c9cc057c381%26fn%3D%25EC%259A%25B8%25EB%25A6%25BC%25EC%2595%25B1_index_5_13%25EC%25B0%25A8%25EC%25A0%2584%25EC%25B2%25B4%25ED%2586%25B5%25ED%2595%25A9%25EB%25B3%25B8_%25ED%2595%2599%25EC%2583%259D%25EB%25B9%2584%25EB%25B2%2588%25EB%25B3%2580%25EA%25B2%25BD%25EB%25B3%25B4%25EC%25A0%2595.html%26cd%3Dattachment%26ts%3D494603%26p%3Dfs%26cid%3D1%26sig%3Dce612ab8ef92591ec5df31826b14f834b7afa62dd7216a7ac36a8bc1c597ae59%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
+<script type="text/javascript" nonce="5878564e64bc424ab28cf8dfbd2" src="//local.adguard.org?ts=1780568952131&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_0000000051347206be6eed4c5721251f%26fn%3D%25EC%259A%25B8%25EB%25A6%25BC%25EC%2595%25B1_index_5_15%25EC%25B0%25A8%25EC%25A0%2584%25EC%25B2%25B4%25ED%2586%25B5%25ED%2595%25A9%25EB%25B3%25B8_%25EB%25B9%2584%25EB%25B0%2580%25EB%25B2%2588%25ED%2598%25B8%25EC%25B0%25BE%25EA%25B8%25B0%25EC%25B2%25AB%25ED%2599%2594%25EB%25A9%25B4.html%26cd%3Dattachment%26ts%3D494603%26p%3Dfs%26cid%3D1%26sig%3Dfe8fc6f4a7bfcac76aad7ce4df5ae0cf2182a40757e0c15c9cd01f312ccecaa9%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://script.googleusercontent.com">
 <link rel="dns-prefetch" href="//script.google.com">
 <link rel="dns-prefetch" href="//script.googleusercontent.com">
@@ -1474,6 +1474,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
                 <input type="password" id="phoneLast4Input" placeholder="초기 비밀번호는 전화번호 뒤 4자리" autocomplete="current-password" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px;">
             </div>
             <button onclick="authenticateStudentFromInputs()" style="width: 100%; padding: 14px; background: #2ecc71; color: white; border: none; border-radius: 8px; font-size: 17px; font-weight: bold; cursor: pointer; transition: background 0.2s;">로그인</button>
+            <button onclick="findStudentPasswordByPrompt()" style="width: 100%; padding: 12px; background: #f97316; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 10px;">비밀번호 찾기 / 초기화</button>
             <button onclick="guestLogin()" style="width: 100%; padding: 14px; background: #aaa; color: white; border: none; border-radius: 8px; font-size: 17px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: background 0.2s;">게스트 로그인 (상황극 탭만 사용)</button>
             <button onclick="openAdminPage()" style="width: 100%; padding: 14px; background: #111827; color: white; border: none; border-radius: 8px; font-size: 17px; font-weight: bold; cursor: pointer; margin-top: 10px;">강사 페이지</button>
         </div>
@@ -12210,6 +12211,253 @@ async function changeStudentPasswordByPrompt(force = false, knownCurrentPassword
         return false;
     }
 }
+</script>
+
+
+<style>
+/* =========================================================
+   5-14 학생 계정 버튼 UI
+   ========================================================= */
+.ulim-student-account-bar {
+    position: fixed;
+    top: 12px;
+    right: 18px;
+    z-index: 9998;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    background: rgba(255,255,255,.94);
+    border: 1px solid #d9eadf;
+    border-radius: 999px;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, .10);
+    backdrop-filter: blur(6px);
+    font-size: 12px;
+}
+.ulim-student-account-name {
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #166534;
+    font-weight: 800;
+    padding: 0 6px;
+}
+.ulim-student-account-btn {
+    border: 0;
+    border-radius: 999px;
+    padding: 7px 10px;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    color: #fff;
+    background: #22c55e;
+    transition: transform .12s ease, opacity .12s ease;
+}
+.ulim-student-account-btn:hover {
+    transform: translateY(-1px);
+    opacity: .92;
+}
+.ulim-student-account-btn.gray {
+    background: #64748b;
+}
+.ulim-student-account-btn.blue {
+    background: #2563eb;
+}
+.ulim-student-account-btn.orange {
+    background: #f97316;
+}
+.ulim-student-account-btn.dark {
+    background: #111827;
+}
+@media (max-width: 720px) {
+    .ulim-student-account-bar {
+        top: auto;
+        bottom: 12px;
+        right: 10px;
+        left: 10px;
+        justify-content: center;
+        flex-wrap: wrap;
+        border-radius: 18px;
+    }
+    .ulim-student-account-name {
+        max-width: 100%;
+        flex-basis: 100%;
+        text-align: center;
+    }
+}
+</style>
+
+<script>
+/* =========================================================
+   5-14 학생 계정 버튼 UI + 비밀번호 찾기
+   - 우측 상단: 학생 로그인/로그아웃/비밀번호 찾기/비밀번호 변경
+   - 비밀번호 찾기는 현재 비밀번호를 보여주지 않고, 등록된 전화번호 뒤4자리 확인 후 초기비밀번호로 재설정
+   ========================================================= */
+
+function ulimIsStudentLoggedIn_() {
+    const token = (typeof getStudentSessionToken_ === 'function')
+        ? getStudentSessionToken_()
+        : (typeof studentSessionToken !== 'undefined' ? studentSessionToken : localStorage.getItem('studentSessionToken'));
+    const name = (typeof studentName !== 'undefined' && studentName) ? studentName : localStorage.getItem('studentName');
+    return !!token && !!name && name !== '게스트';
+}
+
+function renderStudentAccountBar_() {
+    let bar = document.getElementById('ulimStudentAccountBar');
+    if (!bar) {
+        bar = document.createElement('div');
+        bar.id = 'ulimStudentAccountBar';
+        bar.className = 'ulim-student-account-bar';
+        document.body.appendChild(bar);
+    }
+
+    const loggedIn = ulimIsStudentLoggedIn_();
+    const name = (typeof studentName !== 'undefined' && studentName)
+        ? studentName
+        : (localStorage.getItem('studentName') || '');
+
+    if (loggedIn) {
+        bar.innerHTML = `
+            <span class="ulim-student-account-name">👤 ${escapeHtml_(name)}님</span>
+            <button type="button" class="ulim-student-account-btn blue" onclick="changeStudentPasswordByPrompt()">비밀번호 변경</button>
+            <button type="button" class="ulim-student-account-btn gray" onclick="studentSecureLogout()">로그아웃</button>
+        `;
+    } else {
+        bar.innerHTML = `
+            <button type="button" class="ulim-student-account-btn" onclick="showStudentLoginPanel()">학생 로그인</button>
+        `;
+    }
+}
+
+function escapeHtml_(value) {
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function showStudentLoginPanel() {
+    const overlay = document.getElementById('loginOverlay');
+    const wrapper = document.querySelector('.wrapper');
+    if (overlay) overlay.style.display = 'flex';
+    if (wrapper) wrapper.style.display = 'none';
+
+    const nameInput = document.getElementById('studentNameInput');
+    const pwInput = document.getElementById('phoneLast4Input');
+    if (nameInput) nameInput.focus();
+    if (pwInput) pwInput.value = '';
+}
+
+function studentSecureLogout() {
+    if (!confirm('학생 로그아웃할까요?')) return;
+
+    if (typeof clearStudentSecureSession_ === 'function') {
+        clearStudentSecureSession_();
+    } else {
+        studentSessionToken = '';
+        localStorage.removeItem('studentSessionToken');
+        localStorage.removeItem('studentMustChangePassword');
+        localStorage.removeItem('phoneLast4');
+        localStorage.removeItem('studentNo');
+    }
+
+    studentName = '';
+    instructorName = '';
+    localStorage.removeItem('studentName');
+    localStorage.removeItem('instructorName');
+    localStorage.removeItem('savedVocalIds');
+    localStorage.removeItem('vocalRecords');
+
+    renderStudentAccountBar_();
+    showStudentLoginPanel();
+}
+
+async function findStudentPasswordByPrompt() {
+    const name = prompt('학생 이름을 입력해주세요.');
+    if (!name) return false;
+
+    const phoneLast4 = prompt('등록된 학생 전화번호 뒤 4자리를 입력해주세요.');
+    if (!phoneLast4) return false;
+
+    const cleanPhone4 = String(phoneLast4 || '').replace(/[^0-9]/g, '').slice(-4);
+    if (cleanPhone4.length !== 4) {
+        alert('전화번호 뒤 4자리를 정확히 입력해주세요.');
+        return false;
+    }
+
+    if (!confirm('확인되면 비밀번호가 전화번호 뒤 4자리로 재설정됩니다.\n계속할까요?')) {
+        return false;
+    }
+
+    try {
+        showLoading('비밀번호 재설정 중...');
+
+        const query = new URLSearchParams();
+        query.set('action', 'resetStudentPassword');
+        query.set('studentName', name.trim());
+        query.set('phoneLast4', cleanPhone4);
+        query.set('_', Date.now());
+
+        const response = await fetch(`${GET_API_URL}?${query.toString()}`);
+        hideLoading();
+
+        if (!response.ok) throw new Error('서버 응답이 원활하지 않습니다. 잠시 후 다시 시도해주세요.');
+        const result = await response.json();
+
+        if (result && result.status === 'success') {
+            alert('비밀번호가 초기 비밀번호로 재설정되었습니다.\n초기 비밀번호: 등록된 전화번호 뒤 4자리\n\n로그인 후 새 비밀번호로 변경해주세요.');
+            showStudentLoginPanel();
+
+            const nameInput = document.getElementById('studentNameInput');
+            const pwInput = document.getElementById('phoneLast4Input');
+            if (nameInput) nameInput.value = name.trim();
+            if (pwInput) pwInput.value = cleanPhone4;
+            return true;
+        }
+
+        alert((result && result.message) || '비밀번호를 재설정하지 못했습니다.');
+        return false;
+    } catch (err) {
+        hideLoading();
+        alert(err.message || '비밀번호 찾기 처리 중 문제가 발생했습니다.');
+        return false;
+    }
+}
+
+// 기존 로그인/비밀번호 변경 성공 후 버튼 상태 갱신
+const __ulimV514OriginalSetStudentSecureSession = window.setStudentSecureSession_;
+if (typeof __ulimV514OriginalSetStudentSecureSession === 'function') {
+    window.setStudentSecureSession_ = function(result) {
+        __ulimV514OriginalSetStudentSecureSession(result);
+        setTimeout(renderStudentAccountBar_, 0);
+    };
+}
+
+const __ulimV514OriginalShowMainContent = window.showMainContent;
+if (typeof __ulimV514OriginalShowMainContent === 'function') {
+    window.showMainContent = function() {
+        const ret = __ulimV514OriginalShowMainContent.apply(this, arguments);
+        setTimeout(renderStudentAccountBar_, 0);
+        return ret;
+    };
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+    setTimeout(renderStudentAccountBar_, 300);
+});
+</script>
+
+
+<script>
+/* =========================================================
+   5-15 비밀번호 찾기 위치 조정
+   - 우측 상단 미로그인 버튼: 학생 로그인만 표시
+   - 첫 로그인 화면: 비밀번호 찾기 / 초기화 버튼 표시
+   ========================================================= */
+window.__ulimPasswordFindMovedToLoginScreen = true;
 </script>
 
 </body>
