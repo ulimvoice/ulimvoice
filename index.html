@@ -13472,5 +13472,373 @@ window.__ulimRimiAnalyzingAssetVersion = "5-27";
 window.__ulimRimiAnalyzingInsideButtonVersion = "5-28";
 </script>
 
+
+<script>
+/* =========================================================
+   5-29 리미 분석중 중복등록/무한분석 방지 패치
+   - 분석 실행 중 재클릭 방지
+   - 학생 세션토큰을 분석/완료확인 API에 전달
+   - 캐시 삭제 후에도 DEV 키가 아니라 서버에서 학생UID/출결번호 기준으로 처리 가능하게 보정
+   - limit / timeout / error 시 분석중 UI 확실히 해제
+   - 리미 GIF는 보라색 AI 버튼 안에만 표시
+   ========================================================= */
+window.__ulimTrainingAiDuplicateFixVersion = "5-29";
+window.trainingFinalAiInProgress = false;
+window.trainingFinalAiActiveRequestId = '';
+
+function trainingAiTimeout_(ms, message) {
+    return new Promise((_, reject) => {
+        setTimeout(() => reject(new Error(message || '리미 분석 시간이 오래 걸리고 있습니다. 잠시 후 다시 시도해주세요.')), ms);
+    });
+}
+
+function isTrainingAiLimitError_(err) {
+    const msg = String((err && err.message) || err || '');
+    return /오늘\s*최종\s*AI\s*분석은\s*이미\s*사용|이미\s*사용|limit|연습을\s*완료/i.test(msg);
+}
+
+function renderTrainingFinalAiLimitState_(message) {
+    setTrainingAiLoadingState_(false);
+
+    const resultBox = document.getElementById('resultBox');
+    const aiSection = document.getElementById('aiSection');
+    const recSection = document.getElementById('recSection');
+    if (resultBox) resultBox.style.display = 'block';
+    if (aiSection) aiSection.style.display = 'block';
+    if (recSection) recSection.style.display = 'block';
+
+    const sttEl = document.getElementById('sttResult');
+    const badge = document.getElementById('accBadge');
+    const recStatus = document.getElementById('recStatus');
+
+    const safeMessage = message || '오늘 리미 분석은 이미 사용했습니다. 내일 다시 이용해주세요.';
+    if (sttEl) sttEl.textContent = safeMessage;
+    if (badge) {
+        badge.className = 'accuracy-badge acc-wait';
+        badge.textContent = '사용완료';
+    }
+    if (recStatus) recStatus.textContent = safeMessage;
+}
+
+function resetTrainingFinalAiRequestState_() {
+    window.__ulimTrainingAiDuplicateFixVersion = "5-29";
+window.trainingFinalAiInProgress = false;
+    window.trainingFinalAiActiveRequestId = '';
+    if (trainingFinalAiPollingTimer) {
+        clearTimeout(trainingFinalAiPollingTimer);
+        trainingFinalAiPollingTimer = null;
+    }
+    setTrainingAiLoadingState_(false);
+}
+
+function setTrainingAiLoadingState_(isLoading) {
+    const btn = document.getElementById('trainingAiAnalyzeBtn');
+    const btnLabel = document.getElementById('trainingAiAnalyzeBtnLabel');
+    const titleText = document.getElementById('aiSectionTitleText');
+    const loadingVisual = document.getElementById('aiLoadingVisual');
+    const sttEl = document.getElementById('sttResult');
+    const badge = document.getElementById('accBadge');
+
+    // 5-29: 아래쪽 초록 분석중 박스는 쓰지 않고, 보라색 AI 버튼 안에만 GIF를 표시합니다.
+    if (loadingVisual) {
+        loadingVisual.classList.remove('show');
+        loadingVisual.style.display = 'none';
+    }
+
+    if (btn) {
+        btn.disabled = !!isLoading;
+        btn.dataset.loading = isLoading ? '1' : '0';
+        btn.style.opacity = isLoading ? '.9' : '1';
+        btn.style.transform = isLoading ? 'scale(0.98)' : 'scale(1)';
+
+        if (isLoading) {
+            btn.classList.add('training-ai-loading');
+            btn.innerHTML = '<img class="training-ai-loading-img" src="assets/rimi_analyzing.gif" alt="리미 분석중">';
+        } else {
+            btn.classList.remove('training-ai-loading');
+            btn.textContent = 'AI';
+        }
+    }
+
+    if (btnLabel) btnLabel.textContent = isLoading ? '분석중..' : 'AI 분석';
+    if (titleText) titleText.textContent = isLoading ? '분석중..' : 'AI 분석결과';
+    if (sttEl) sttEl.classList.remove('hidden-during-loading');
+    if (badge) badge.classList.remove('hidden-during-loading');
+}
+
+function buildTrainingFinalRequestId_() {
+    if (window.trainingFinalAiActiveRequestId) return window.trainingFinalAiActiveRequestId;
+    const ident = (typeof getTrainingStudentIdentity_ === 'function') ? getTrainingStudentIdentity_() : {};
+    const namePart = String(ident.studentName || studentName || 'guest').replace(/[^0-9A-Za-z가-힣_-]/g, '_').slice(0, 18);
+    return "TRAIN_AI_" + namePart + "_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
+}
+
+function getTrainingFinalUserKey_() {
+    // 보안패치 이후 브라우저에는 전화뒤4자리/학생UID를 저장하지 않습니다.
+    // 따라서 서버가 studentSessionToken으로 학생을 식별하게 하고,
+    // 클라이언트 userKey는 보조값으로만 사용합니다.
+    const no = (typeof studentNo !== 'undefined' && studentNo) ? studentNo : (localStorage.getItem('studentNo') || '');
+    const name = (typeof studentName !== 'undefined' && studentName) ? studentName : (localStorage.getItem('studentName') || '게스트');
+    const token = (typeof getStudentSessionToken_ === 'function') ? getStudentSessionToken_() : (localStorage.getItem('studentSessionToken') || '');
+
+    if (no && no !== 'GUEST') return 'NO_' + String(no).replace(/[^0-9A-Za-z가-힣_-]/g, '_');
+    if (token) return 'SESSION_LOGIN';
+    if (name && name !== '게스트') return ('NAME_' + name).replace(/[^0-9A-Za-z가-힣_-]/g, '_');
+    return pronGetDeviceKey ? pronGetDeviceKey() : ('DEV_' + Date.now());
+}
+
+async function checkVocalTrainingTodayCompletedFromServer_(options = {}) {
+    const today = new Date().toISOString().slice(0, 10);
+    const records = getVocalRecords ? getVocalRecords() : new Map();
+
+    if (records && records.has && records.has(today)) {
+        return { completed: true, source: 'local', message: '오늘은 연습을 완료했습니다.' };
+    }
+
+    if (!GET_API_URL || !GET_API_URL.includes('script.google.com/macros/s/')) {
+        return { completed: false, source: 'no_api' };
+    }
+
+    const ident = getTrainingStudentIdentity_ ? getTrainingStudentIdentity_() : {};
+    try {
+        const data = await pronJsonpRequest({
+            action: 'checkVocalTrainingTodayComplete',
+            studentSessionToken: (typeof getStudentSessionToken_ === 'function') ? getStudentSessionToken_() : '',
+            studentNo: ident.studentNo || studentNo || '',
+            studentName: ident.studentName || studentName || '',
+            phoneLast4: ident.phoneLast4 || phoneLast4 || '',
+            date: today,
+            _: Date.now()
+        }, options.timeoutMs || 10000);
+
+        if (data && data.completed) {
+            return {
+                completed: true,
+                source: 'server',
+                data,
+                message: data.message || '오늘은 연습을 완료했습니다.'
+            };
+        }
+
+        return { completed: false, source: 'server', data };
+    } catch (err) {
+        console.warn('[오늘 발성훈련 완료 여부 확인 실패]', err);
+        if (options.strict) throw err;
+        return { completed: false, source: 'check_failed', error: err };
+    }
+}
+
+async function runTrainingFinalAiAnalysis_(audioBlob, options = {}) {
+    if (!audioBlob) throw new Error('녹음 파일이 없습니다.');
+    if (!GET_API_URL || !GET_API_URL.includes('script.google.com/macros/s/')) {
+        throw new Error('서비스 연결이 준비되지 않았습니다. 잠시 후 다시 시도해주세요.');
+    }
+    if (!currentTrainObj) throw new Error('연습 문장이 없습니다.');
+
+    const requestId = window.trainingFinalAiActiveRequestId || buildTrainingFinalRequestId_();
+    window.trainingFinalAiActiveRequestId = requestId;
+
+    let localRecognized = String(recognitionResult || '').trim();
+    if (!localRecognized && window.UlimLocalWhisper && typeof window.UlimLocalWhisper.transcribe === 'function') {
+        const sttEl = document.getElementById('sttResult');
+        if (sttEl) sttEl.textContent = '리미가 분석중입니다.';
+        const localResult = await Promise.race([
+            window.UlimLocalWhisper.transcribe(audioBlob, {
+                language: 'ko',
+                task: 'transcribe',
+                model: ULIM_LOCAL_WHISPER_MODEL,
+                onStatus: msg => {
+                    const el = document.getElementById('sttResult');
+                    if (el && msg) el.textContent = '리미가 분석중입니다.';
+                }
+            }),
+            trainingAiTimeout_(25000, '로컬 음성 인식이 지연되어 기본 분석으로 전환합니다.')
+        ]);
+        localRecognized = String(localResult.text || '').trim();
+        recognitionResult = localRecognized;
+    }
+
+    const scriptText = String(currentTrainObj.text || '');
+    const cleanTarget = scriptText.replace(/[^가-힣]/g, '');
+    const cleanHeard = localRecognized.replace(/[^가-힣]/g, '');
+    const localMatchScore = cleanTarget && cleanHeard ? Math.round(getSimilarity(cleanTarget, cleanHeard) * 100) : 0;
+    const localScore5 = (1 + (localMatchScore / 100) * 4).toFixed(1);
+
+    const audio = await pronBlobToEtriAudioBase64(audioBlob);
+    const sizeMb = pronBase64ToByteSize(audio.base64) / 1024 / 1024;
+    if (sizeMb > 8) throw new Error(`녹음 파일이 너무 큽니다. (${sizeMb.toFixed(1)}MB) 60초 이내로 다시 녹음해주세요.`);
+
+    const payload = {
+        action: 'trainingFinalAnalysis',
+        requestId,
+        studentSessionToken: (typeof getStudentSessionToken_ === 'function') ? getStudentSessionToken_() : '',
+        userKey: getTrainingFinalUserKey_(),
+        dateKey: pronTodayKey ? pronTodayKey() : new Date().toISOString().slice(0,10).replace(/-/g,''),
+        studentNo: (typeof studentNo !== 'undefined' ? studentNo : '') || localStorage.getItem('studentNo') || '',
+        studentName: (typeof studentName !== 'undefined' ? studentName : '') || localStorage.getItem('studentName') || '',
+        phoneLast4: (typeof phoneLast4 !== 'undefined' ? phoneLast4 : '') || localStorage.getItem('phoneLast4') || '',
+        instructor: (typeof instructorName !== 'undefined' ? instructorName : '') || localStorage.getItem('instructorName') || '',
+        script: scriptText,
+        recognized: localRecognized,
+        matchScore: localMatchScore,
+        score5: localScore5,
+        standardPronunciation: currentTrainObj.pron || '',
+        audio: audio.base64,
+        audioMimeType: audio.mimeType,
+        sampleRate: audio.sampleRate,
+        clientTime: new Date().toISOString()
+    };
+
+    await fetch(GET_API_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+    });
+
+    return await pollTrainingFinalAiResult_(requestId);
+}
+
+function pollTrainingFinalAiResult_(requestId) {
+    if (trainingFinalAiPollingTimer) clearTimeout(trainingFinalAiPollingTimer);
+    trainingFinalAiPollingCount = 0;
+
+    return new Promise((resolve, reject) => {
+        const poll = async () => {
+            trainingFinalAiPollingCount += 1;
+            try {
+                const data = await pronJsonpRequest({ action: 'getTrainingFinalAnalysisResult', requestId, _: Date.now() }, 12000);
+
+                if (!data || data.status === 'pending' || data.status === 'not_found') {
+                    if (trainingFinalAiPollingCount > 20) {
+                        return reject(new Error('리미 분석 결과 대기 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.'));
+                    }
+                    const st = document.getElementById('recStatus');
+                    if (st) st.textContent = '리미가 분석중입니다.';
+                    trainingFinalAiPollingTimer = setTimeout(poll, 2200);
+                    return;
+                }
+
+                if (data.status === 'limit') {
+                    return reject(new Error(data.message || '오늘 최종 AI 분석은 이미 사용했습니다.'));
+                }
+
+                if (!data.ok || data.status === 'error') {
+                    return reject(new Error(sanitizeTrainingFinalUserMessage_(data.message) || '리미 분석 처리 중 오류가 발생했습니다.'));
+                }
+
+                data.message = sanitizeTrainingFinalUserMessage_(data.message) || data.message;
+                renderTrainingFinalAiResult_(data);
+                resolve(data);
+            } catch (err) {
+                if (trainingFinalAiPollingCount > 20) return reject(err);
+                trainingFinalAiPollingTimer = setTimeout(poll, 2200);
+            }
+        };
+        trainingFinalAiPollingTimer = setTimeout(poll, 1200);
+    });
+}
+
+async function runTrainingFinalAiAnalysisFromButton() {
+    if (window.trainingFinalAiInProgress) {
+        return alert('리미가 이미 분석중입니다. 잠시만 기다려주세요.');
+    }
+
+    if (step !== 6 || !currentTrainObj) {
+        return alert('최종녹음 및 AI 분석 단계에서 사용할 수 있습니다.');
+    }
+    if (!lastRecordedBlob) {
+        return alert('먼저 녹음을 완료해주세요.');
+    }
+
+    const todayCheck = await checkVocalTrainingTodayCompletedFromServer_({ timeoutMs: 10000 });
+    if (todayCheck && todayCheck.completed) {
+        resetTrainingFinalAiRequestState_();
+        return alert('오늘은 연습을 완료했습니다.');
+    }
+
+    if (window.trainingFinalAiResult && window.trainingFinalAiResult.requestSentence === currentTrainObj.text) {
+        resetTrainingFinalAiRequestState_();
+        return alert('이미 마지막 녹음본의 AI 분석이 완료되었습니다. 다시 분석하려면 새로 녹음 후 실행해주세요.');
+    }
+
+    const ok = confirm('AI분석을 시작하면 오늘연습이 완료됩니다. 진행하시겠습니까?');
+    if (!ok) return;
+
+    window.trainingFinalAiInProgress = true;
+    window.trainingFinalAiActiveRequestId = buildTrainingFinalRequestId_();
+
+    const btn = document.getElementById('trainingAiAnalyzeBtn');
+
+    try {
+        setTrainingAiLoadingState_(true);
+
+        const resultBox = document.getElementById('resultBox');
+        if (resultBox) resultBox.style.display = 'block';
+
+        const aiSection = document.getElementById('aiSection');
+        const recSection = document.getElementById('recSection');
+        if (aiSection) aiSection.style.display = 'block';
+        if (recSection) recSection.style.display = 'block';
+
+        const sttEl = document.getElementById('sttResult');
+        const badge = document.getElementById('accBadge');
+        if (sttEl) sttEl.textContent = '리미가 분석중입니다.';
+        if (badge) { badge.className = 'accuracy-badge acc-wait'; badge.textContent = '분석중'; }
+
+        const recStatus = document.getElementById('recStatus');
+        if (recStatus) recStatus.textContent = '리미가 분석중입니다.';
+
+        await Promise.race([
+            runTrainingFinalAiAnalysis_(lastRecordedBlob, { force: true }),
+            trainingAiTimeout_(90000, '리미 분석 시간이 오래 걸리고 있습니다. 잠시 후 다시 시도해주세요.')
+        ]);
+
+        const recStatusDone = document.getElementById('recStatus');
+        if (recStatusDone) recStatusDone.textContent = '리미 분석 완료. 연습완료 버튼을 눌러 결과를 업로드할 수 있습니다.';
+        enableVocalTrainingCompleteButton_();
+    } catch (err) {
+        console.warn('Training final analysis failed:', err);
+
+        if (isTrainingAiLimitError_(err)) {
+            renderTrainingFinalAiLimitState_(err.message || '오늘 최종 AI 분석은 이미 사용했습니다.');
+            return;
+        }
+
+        const fallbackResult = await buildTrainingFinalFallbackResult_(lastRecordedBlob, err);
+        renderTrainingFinalAiResult_(fallbackResult);
+        enableVocalTrainingCompleteButton_();
+
+        const recStatusEl = document.getElementById('recStatus');
+        if (recStatusEl) {
+            recStatusEl.textContent = '리미의 간단분석! 연습완료 버튼을 눌러 결과를 업로드할 수 있습니다.';
+        }
+    } finally {
+        window.__ulimTrainingAiDuplicateFixVersion = "5-29";
+window.trainingFinalAiInProgress = false;
+        window.trainingFinalAiActiveRequestId = '';
+        setTrainingAiLoadingState_(false);
+        if (btn) {
+            btn.disabled = false;
+            btn.classList.remove('training-ai-loading');
+            btn.dataset.loading = '0';
+            btn.textContent = 'AI';
+            btn.style.opacity = '1';
+        }
+    }
+}
+
+/* 새 녹음 시작/완료 이후에도 혹시 남은 분석중 상태 제거 */
+window.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('click', (ev) => {
+        const target = ev.target;
+        if (!target) return;
+        if (target.id === 'micBtn' || target.closest && target.closest('#micBtn')) {
+            if (!window.trainingFinalAiInProgress) setTrainingAiLoadingState_(false);
+        }
+    }, true);
+});
+</script>
+
 </body>
 </html>
