@@ -5,7 +5,7 @@
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script src="appdata/etude/data.js"></script>
+<script type="text/javascript" nonce="5878564e64bc424ab28cf8dfbd2" src="//local.adguard.org?ts=1780550152151&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000acb472078306e39df0f30967%26fn%3D%25EC%259A%25B8%25EB%25A6%25BC%25EC%2595%25B1_index_2%25EC%25B0%25A8%25EC%25A0%2584%25EC%25B2%25B4%25ED%2586%25B5%25ED%2595%25A9%25EB%25B3%25B8_%25EA%25B0%2595%25EC%2582%25AC%25EC%25B6%259C%25EC%2584%259DOX%25EC%25A6%2589%25EC%258B%259C%25EB%25B0%2598%25EC%2598%2581.html%26cd%3Dattachment%26ts%3D494598%26p%3Dfs%26cid%3D1%26sig%3D2cf870035611143f54a50ec77e97f4ad67b0e9b4c6ed84250243e40c9a7dd012%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script src="appdata/etude/data.js"></script>
 <script src="appdata/vocalization/data.js"></script>
 <script src="appdata/past_questions/data.js"></script>
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -1319,6 +1319,13 @@ body.admin-mode .admin-only-tab { display:block !important; }
   .practice-log-card { padding: 12px; }
   .practice-log-title { font-size: 15px; }
 }
+
+
+/* ===========================
+   ✅ 강사 출석 O/X 즉시반영 추가 스타일
+   =========================== */
+.admin-status-badge.attendance-late { background:#fef3c7; color:#92400e; }
+.admin-status-badge.attendance-etc { background:#e0f2fe; color:#075985; }
 
 </style>
 </head>
@@ -10401,13 +10408,8 @@ async function adminSaveVocalPracticeComment(index) {
     }
 }
 
-<!--
-울림앱 index.html 2차 완성본 - 강사페이지 출석체크 O/X 즉시반영
 
-적용:
-- index.html 파일의 </script> 바로 위, 또는 기존 관리자 스크립트 하단에 아래 코드를 통째로 붙여넣으세요.
-- 기존 adminRenderAttendanceTable / adminSaveAttendance 함수가 있어도 아래 코드가 뒤에서 덮어씁니다.
--->
+
 
 /* =========================================================
    울림앱 2차 패치 - 강사페이지 출석체크 O/X → 출석부 즉시 반영
@@ -10683,6 +10685,7 @@ async function adminSaveAttendanceRecords_(records, silent = false) {
         throw e;
     }
 }
+
 
 </script>
 
