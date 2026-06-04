@@ -12047,7 +12047,7 @@ async function pronRunEtriAdvancedAnalysis() {
     const currentName = (typeof studentName !== "undefined" && studentName) ? studentName : (localStorage.getItem("studentName") || "게스트");
 
     if (currentName !== "게스트" && !token) {
-        pronSetAdvancedStatus("학생별 사용량 확인을 위해 다시 로그인해주세요.", "error");
+        pronSetAdvancedStatus("네트워크 오류! 다시 로그인해주세요!", "error");
         return;
     }
 
