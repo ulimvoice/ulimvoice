@@ -4,11 +4,16 @@
 <meta charset="UTF-8">
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://script.googleusercontent.com">
+<link rel="dns-prefetch" href="//script.google.com">
+<link rel="dns-prefetch" href="//script.googleusercontent.com">
+
 
 <script src="appdata/etude/data.js"></script>
 <script src="appdata/vocalization/data.js"></script>
 <script src="appdata/past_questions/data.js"></script>
-<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js" defer></script>
 <link rel="manifest" href="./manifest-index.json">
 
 <meta name="theme-color" content="#2ecc71">
@@ -1422,6 +1427,22 @@ body.admin-mode .admin-only-tab { display:block !important; }
     .classroom-usage-table { min-width:760px; font-size:11px; }
     .classroom-usage-table th,
     .classroom-usage-table td { padding:6px 4px; }
+}
+
+
+/* ===========================
+   ⚡ 5-4 속도개선: 렌더링 범위 최적화
+   =========================== */
+.tab-content {
+    contain: layout paint style;
+}
+.admin-table-wrap,
+.room-table-wrap,
+#adminClassroomUsageTableWrap,
+#adminVocalPracticeList,
+#roomTimeTable {
+    content-visibility: auto;
+    contain-intrinsic-size: 700px;
 }
 
 </style>
@@ -3124,7 +3145,7 @@ async function fetchServerTrainingSentence_(options) {
         phoneLast4: ident.phoneLast4,
         deviceKey: ident.deviceKey,
         _: Date.now()
-    }, 8000);
+    }, 16000);
     if (!data || !data.ok) throw new Error(data && data.message ? data.message : '서버 문장 조회 실패');
     saveVocalTrainingClientCache_(data);
     return data;
@@ -5186,51 +5207,198 @@ function toggleAdminClassList(id) {
     if (el) el.classList.toggle('open');
 }
 
-async function adminApi(action, params = {}) {
-    const query = new URLSearchParams();
-    query.set('action', action);
-    query.set('_', Date.now());
-    Object.keys(params).forEach(key => {
-        if (params[key] !== undefined && params[key] !== null) query.set(key, params[key]);
+const ULIM_ADMIN_API_CACHE_TTL = {
+    adminGetSession: 2 * 60 * 1000,
+    adminGetClassList: 10 * 60 * 1000,
+    adminGetStudents: 3 * 60 * 1000,
+    adminGetStudentsByClass: 3 * 60 * 1000,
+    adminGetAttendanceSnapshot: 25 * 1000,
+    adminGetDailyEvaluations: 25 * 1000,
+    adminGetDailyEvalTemplate: 10 * 60 * 1000,
+    adminGetVocalPracticeLogs: 25 * 1000,
+    adminGetClassroomUsage: 20 * 1000,
+    adminGetRoomReservations: 25 * 1000
+};
+
+const ULIM_ADMIN_WRITE_ACTIONS = new Set([
+    'adminSaveAttendance',
+    'adminSaveDailyEvaluations',
+    'adminSaveDailyEvalTemplate',
+    'adminSavePayment',
+    'adminSendNoticeMessages',
+    'adminSaveVocalPracticeComment',
+    'adminSaveClassroomUsage',
+    'adminReleaseClassroomUsage',
+    'adminSendRoomReservationMessage'
+]);
+
+window.__ulimAdminApiMemoryCache = window.__ulimAdminApiMemoryCache || {};
+window.__ulimAdminApiInflight = window.__ulimAdminApiInflight || {};
+
+function ulimStableStringify_(value) {
+    if (value === null || value === undefined) return '';
+    if (typeof value !== 'object') return String(value);
+    if (Array.isArray(value)) return '[' + value.map(ulimStableStringify_).join(',') + ']';
+    return '{' + Object.keys(value).sort().map(key => {
+        if (key === '_' || key === 'callback') return '';
+        if (key === 'adminToken') return 'adminToken=' + String(value[key] || '').slice(0, 12);
+        return key + ':' + ulimStableStringify_(value[key]);
+    }).filter(Boolean).join('|') + '}';
+}
+
+function ulimAdminApiCacheKey_(action, params) {
+    const adminKey = (adminInfo && (adminInfo.id || adminInfo.name || adminInfo.role)) || 'anon';
+    return 'ulim_admin_api_v54::' + action + '::' + adminKey + '::' + ulimStableStringify_(params || {});
+}
+
+function ulimReadAdminApiCache_(key, ttl) {
+    const now = Date.now();
+    const mem = window.__ulimAdminApiMemoryCache[key];
+    if (mem && now - Number(mem.savedAt || 0) < ttl) return mem.data;
+
+    try {
+        const raw = sessionStorage.getItem(key);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (parsed && now - Number(parsed.savedAt || 0) < ttl) {
+            window.__ulimAdminApiMemoryCache[key] = parsed;
+            return parsed.data;
+        }
+    } catch (ignore) {}
+
+    return null;
+}
+
+function ulimSaveAdminApiCache_(key, data) {
+    const item = { savedAt: Date.now(), data };
+    window.__ulimAdminApiMemoryCache[key] = item;
+    try { sessionStorage.setItem(key, JSON.stringify(item)); } catch (ignore) {}
+}
+
+function ulimClearAdminApiCacheByActions_(actions) {
+    const targets = Array.isArray(actions) ? actions : [actions];
+    Object.keys(window.__ulimAdminApiMemoryCache || {}).forEach(key => {
+        if (targets.some(action => key.indexOf('::' + action + '::') !== -1)) {
+            delete window.__ulimAdminApiMemoryCache[key];
+        }
     });
 
-    let response;
     try {
-        response = await fetch(`${GET_API_URL}?${query.toString()}`);
-    } catch (err) {
-        console.warn('[adminApi] network error:', action, err);
-        throw new Error('연결이 원활하지 않습니다. 잠시 후 다시 시도해주세요.');
-    }
-
-    if (!response.ok) {
-        console.warn('[adminApi] HTTP error:', action, response.status);
-        if (response.status === 404) {
-            throw new Error('요청을 처리하지 못했습니다. 페이지를 새로고침한 뒤 다시 시도해주세요.');
+        for (let i = sessionStorage.length - 1; i >= 0; i--) {
+            const key = sessionStorage.key(i);
+            if (!key || key.indexOf('ulim_admin_api_v54::') !== 0) continue;
+            if (targets.some(action => key.indexOf('::' + action + '::') !== -1)) {
+                sessionStorage.removeItem(key);
+            }
         }
-        throw new Error('서버 연결이 원활하지 않습니다. 잠시 후 다시 시도해주세요.');
-    }
-
-    let data = null;
-    try {
-        data = await response.json();
-    } catch (err) {
-        console.warn('[adminApi] JSON parse error:', action, err);
-        throw new Error('응답을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
-    }
-
-    if (!data || data.status !== 'success') {
-        const rawMessage = (data && data.message) || '';
-        console.warn('[adminApi] app error:', action, rawMessage, data);
-
-        if (/GAS|action|라우팅|스크립트|배포|API|JSONP|코드/i.test(rawMessage)) {
-            throw new Error('요청을 처리하지 못했습니다. 관리자에게 문의해주세요.');
-        }
-
-        throw new Error(rawMessage || '요청을 처리하지 못했습니다. 다시 시도해주세요.');
-    }
-
-    return data;
+    } catch (ignore) {}
 }
+
+function ulimInvalidateAfterWriteAction_(action) {
+    if (action === 'adminSaveAttendance') {
+        ulimClearAdminApiCacheByActions_(['adminGetAttendanceSnapshot', 'adminGetDailyEvaluations']);
+    } else if (action === 'adminSaveDailyEvaluations' || action === 'adminSaveDailyEvalTemplate') {
+        ulimClearAdminApiCacheByActions_(['adminGetDailyEvaluations', 'adminGetDailyEvalTemplate']);
+    } else if (action === 'adminSaveVocalPracticeComment') {
+        ulimClearAdminApiCacheByActions_(['adminGetVocalPracticeLogs']);
+    } else if (action === 'adminSaveClassroomUsage' || action === 'adminReleaseClassroomUsage') {
+        ulimClearAdminApiCacheByActions_(['adminGetClassroomUsage']);
+    } else if (action === 'adminSavePayment') {
+        ulimClearAdminApiCacheByActions_(['adminGetStudents', 'adminGetStudentsByClass']);
+    } else {
+        ulimClearAdminApiCacheByActions_([
+            'adminGetSession',
+            'adminGetClassList',
+            'adminGetStudents',
+            'adminGetStudentsByClass',
+            'adminGetAttendanceSnapshot',
+            'adminGetDailyEvaluations',
+            'adminGetVocalPracticeLogs',
+            'adminGetClassroomUsage',
+            'adminGetRoomReservations'
+        ]);
+    }
+}
+
+async function adminApi(action, params = {}) {
+    const ttl = ULIM_ADMIN_API_CACHE_TTL[action] || 0;
+    const allowCache = ttl > 0 && !params.forceRefresh && !params.noCache;
+    const cacheKey = allowCache ? ulimAdminApiCacheKey_(action, params) : '';
+
+    if (allowCache) {
+        const cached = ulimReadAdminApiCache_(cacheKey, ttl);
+        if (cached) return cached;
+
+        if (window.__ulimAdminApiInflight[cacheKey]) {
+            return window.__ulimAdminApiInflight[cacheKey];
+        }
+    }
+
+    const requestPromise = (async () => {
+        const query = new URLSearchParams();
+        query.set('action', action);
+        query.set('_', Date.now());
+        Object.keys(params).forEach(key => {
+            if (params[key] !== undefined && params[key] !== null) query.set(key, params[key]);
+        });
+
+        let response;
+        try {
+            response = await fetch(`${GET_API_URL}?${query.toString()}`);
+        } catch (err) {
+            console.warn('[adminApi] network error:', action, err);
+            throw new Error('연결이 원활하지 않습니다. 잠시 후 다시 시도해주세요.');
+        }
+
+        if (!response.ok) {
+            console.warn('[adminApi] HTTP error:', action, response.status);
+            if (response.status === 404) {
+                throw new Error('요청을 처리하지 못했습니다. 페이지를 새로고침한 뒤 다시 시도해주세요.');
+            }
+            throw new Error('서버 연결이 원활하지 않습니다. 잠시 후 다시 시도해주세요.');
+        }
+
+        let data = null;
+        try {
+            data = await response.json();
+        } catch (err) {
+            console.warn('[adminApi] JSON parse error:', action, err);
+            throw new Error('응답을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
+        }
+
+        if (!data || data.status !== 'success') {
+            const rawMessage = (data && data.message) || '';
+            console.warn('[adminApi] app error:', action, rawMessage, data);
+
+            if (/GAS|action|라우팅|스크립트|배포|API|JSONP|코드/i.test(rawMessage)) {
+                throw new Error('요청을 처리하지 못했습니다. 관리자에게 문의해주세요.');
+            }
+
+            throw new Error(rawMessage || '요청을 처리하지 못했습니다. 다시 시도해주세요.');
+        }
+
+        if (ULIM_ADMIN_WRITE_ACTIONS.has(action)) {
+            ulimInvalidateAfterWriteAction_(action);
+        } else if (allowCache) {
+            ulimSaveAdminApiCache_(cacheKey, data);
+        }
+
+        return data;
+    })();
+
+    if (allowCache) {
+        window.__ulimAdminApiInflight[cacheKey] = requestPromise;
+        try {
+            return await requestPromise;
+        } finally {
+            delete window.__ulimAdminApiInflight[cacheKey];
+        }
+    }
+
+    return requestPromise;
+}
+
+
 
 
 
@@ -5244,8 +5412,15 @@ async function adminPostNoCors(action, params = {}) {
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(payload)
     });
+
+    if (typeof ulimInvalidateAfterWriteAction_ === 'function') {
+        ulimInvalidateAfterWriteAction_(action);
+    }
+
     return { status: 'success', message: '저장 요청을 보냈습니다. 잠시 후 다시 불러오면 시트 반영 내용을 확인할 수 있습니다.' };
 }
+
+
 
 async function adminLogin() {
     const id = document.getElementById('adminIdInput').value.trim();
@@ -7326,9 +7501,26 @@ function hideRoomOverlay(id) {
 }
 
 function roomJsonp(params, options = {}) {
-    return new Promise((resolve, reject) => {
+    window.__roomJsonpInflight = window.__roomJsonpInflight || {};
+
+    const stableKey = (() => {
+        const copy = Object.assign({}, params || {});
+        delete copy.callback;
+        delete copy._;
+        return JSON.stringify(Object.keys(copy).sort().reduce((acc, key) => {
+            acc[key] = copy[key];
+            return acc;
+        }, {}));
+    })();
+
+    const canReuseInflight = options.cacheBust === false && stableKey;
+    if (canReuseInflight && window.__roomJsonpInflight[stableKey]) {
+        return window.__roomJsonpInflight[stableKey];
+    }
+
+    const promise = new Promise((resolve, reject) => {
         if (!isRoomApiReady()) {
-            reject(new Error("연습실 예약 GAS 주소가 설정되지 않았습니다."));
+            reject(new Error("예약 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요."));
             return;
         }
 
@@ -7343,7 +7535,7 @@ function roomJsonp(params, options = {}) {
         });
         query.append('callback', callbackName);
         if (options.cacheBust !== false) {
-            query.append('_', Date.now()); // 강제 새로고침일 때만 캐시 방지
+            query.append('_', Date.now());
         }
 
         const script = document.createElement('script');
@@ -7362,18 +7554,29 @@ function roomJsonp(params, options = {}) {
 
         script.onerror = function() {
             cleanup();
-            reject(new Error("GAS 연결 실패. 웹앱 배포 권한을 '모든 사용자'로 설정했는지 확인해주세요."));
+            reject(new Error("예약 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요."));
         };
 
         timer = setTimeout(() => {
             cleanup();
             reject(new Error("예약 정보를 불러오는 데 시간이 오래 걸리고 있습니다."));
-        }, 20000);
+        }, 16000);
 
         script.src = ROOM_API_URL + '?' + query.toString();
         document.body.appendChild(script);
     });
+
+    if (canReuseInflight) {
+        window.__roomJsonpInflight[stableKey] = promise;
+        promise.finally(() => {
+            delete window.__roomJsonpInflight[stableKey];
+        });
+    }
+
+    return promise;
 }
+
+
 
 function formatRoomDate(date) {
     const y = date.getFullYear();
