@@ -4172,64 +4172,82 @@ function getTrainingFinalUserKey_() {
     if (name && name !== '게스트' && phone && phone !== '0000') return (name + '_' + phone).replace(/[^0-9A-Za-z가-힣_-]/g, '_');
     return pronGetDeviceKey ? pronGetDeviceKey() : ('DEV_' + Date.now());
 }
+<!-- ========================================================
+  [STEP 2] runTrainingFinalAiAnalysisFromButton 함수 교체
+  기존 index.html에서 아래 함수를 찾아서 이 코드로 전체 교체하세요
+  (async function runTrainingFinalAiAnalysisFromButton() { ... })
+======================================================== -->
+
+<script>
 async function runTrainingFinalAiAnalysisFromButton() {
-    if (step !== 6 || !currentTrainObj) {
-        return alert('최종녹음 및 AI 분석 단계에서 사용할 수 있습니다.');
+  if (step !== 6 || !currentTrainObj) {
+    return alert('최종녹음 및 AI 분석 단계에서 사용할 수 있습니다.');
+  }
+  if (!lastRecordedBlob) {
+    return alert('먼저 녹음을 완료해주세요.');
+  }
+
+  const todayCheck = await checkVocalTrainingTodayCompletedFromServer_({ timeoutMs: 10000 });
+  if (todayCheck && todayCheck.completed) {
+    return alert('오늘은 연습을 완료했습니다.');
+  }
+
+  if (window.trainingFinalAiResult && window.trainingFinalAiResult.requestSentence === currentTrainObj.text) {
+    return alert('이미 마지막 녹음본의 AI 분석이 완료되었습니다. 다시 분석하려면 새로 녹음 후 실행해주세요.');
+  }
+
+  const ok = confirm('AI분석을 시작하면 오늘연습이 완료됩니다. 진행하시겠습니까?');
+  if (!ok) return;
+
+  const btn = document.getElementById('trainingAiAnalyzeBtn');
+  const prevText = btn ? btn.textContent : '';
+
+  // ★ 리미 오버레이 표시
+  showRimiOverlay('리미가 분석 중이에요...');
+
+  try {
+    if (btn) { btn.disabled = true; btn.textContent = '…'; btn.style.opacity = '.65'; }
+
+    document.getElementById('resultBox').style.display = 'block';
+    const aiSection  = document.getElementById('aiSection');
+    const recSection = document.getElementById('recSection');
+    if (aiSection)  aiSection.style.display  = 'block';
+    if (recSection) recSection.style.display = 'block';
+
+    const sttEl = document.getElementById('sttResult');
+    const badge = document.getElementById('accBadge');
+    if (sttEl) sttEl.textContent = '리미가 분석중입니다.';
+    if (badge) { badge.className = 'accuracy-badge acc-wait'; badge.textContent = '분석중'; }
+
+    document.getElementById('recStatus').textContent = '리미가 분석중입니다.';
+
+    await runTrainingFinalAiAnalysis_(lastRecordedBlob, { force: true });
+
+    // ★ 완료 표정
+    hideRimiOverlay('done');
+
+    document.getElementById('recStatus').textContent = 'AI 분석 완료. 연습완료 버튼을 눌러 결과를 업로드할 수 있습니다.';
+    enableVocalTrainingCompleteButton_();
+
+  } catch (err) {
+    console.warn('Gemini final training analysis failed. Local general analysis will be used:', err);
+
+    const fallbackResult = await buildTrainingFinalFallbackResult_(lastRecordedBlob, err);
+    renderTrainingFinalAiResult_(fallbackResult);
+    enableVocalTrainingCompleteButton_();
+
+    // ★ 일반분석 결과도 완료로 처리 (fallback은 성공으로)
+    hideRimiOverlay('done');
+
+    const recStatusEl = document.getElementById('recStatus');
+    if (recStatusEl) {
+      recStatusEl.textContent = '리미의 간단분석! 연습완료 버튼을 눌러 결과를 업로드할 수 있습니다.';
     }
-    if (!lastRecordedBlob) {
-        return alert('먼저 녹음을 완료해주세요.');
-    }
-
-    const todayCheck = await checkVocalTrainingTodayCompletedFromServer_({ timeoutMs: 10000 });
-    if (todayCheck && todayCheck.completed) {
-        return alert('오늘은 연습을 완료했습니다.');
-    }
-
-    if (window.trainingFinalAiResult && window.trainingFinalAiResult.requestSentence === currentTrainObj.text) {
-        return alert('이미 마지막 녹음본의 AI 분석이 완료되었습니다. 다시 분석하려면 새로 녹음 후 실행해주세요.');
-    }
-
-    const ok = confirm('AI분석을 시작하면 오늘연습이 완료됩니다. 진행하시겠습니까?');
-    if (!ok) return;
-
-    const btn = document.getElementById('trainingAiAnalyzeBtn');
-    const prevText = btn ? btn.textContent : '';
-
-    try {
-        if (btn) { btn.disabled = true; btn.textContent = '…'; btn.style.opacity = '.65'; }
-        document.getElementById('resultBox').style.display = 'block';
-
-        const aiSection = document.getElementById('aiSection');
-        const recSection = document.getElementById('recSection');
-        if (aiSection) aiSection.style.display = 'block';
-        if (recSection) recSection.style.display = 'block';
-
-        const sttEl = document.getElementById('sttResult');
-        const badge = document.getElementById('accBadge');
-        if (sttEl) sttEl.textContent = '리미가 분석중입니다.';
-        if (badge) { badge.className = 'accuracy-badge acc-wait'; badge.textContent = '분석중'; }
-
-        document.getElementById('recStatus').textContent = '리미가 분석중입니다.';
-
-        await runTrainingFinalAiAnalysis_(lastRecordedBlob, { force: true });
-
-        document.getElementById('recStatus').textContent = 'AI 분석 완료. 연습완료 버튼을 눌러 결과를 업로드할 수 있습니다.';
-        enableVocalTrainingCompleteButton_();
-    } catch (err) {
-        console.warn('Gemini final training analysis failed. Local general analysis will be used:', err);
-
-        const fallbackResult = await buildTrainingFinalFallbackResult_(lastRecordedBlob, err);
-        renderTrainingFinalAiResult_(fallbackResult);
-        enableVocalTrainingCompleteButton_();
-
-        const recStatusEl = document.getElementById('recStatus');
-        if (recStatusEl) {
-            recStatusEl.textContent = '리미의 간단분석! 연습완료 버튼을 눌러 결과를 업로드할 수 있습니다.';
-        }
-    } finally {
-        if (btn) { btn.disabled = false; btn.textContent = prevText || 'AI'; btn.style.opacity = '1'; }
-    }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = prevText || 'AI'; btn.style.opacity = '1'; }
+  }
 }
+
 
 
 
@@ -13344,6 +13362,351 @@ function adminRenderAttendanceTable() {
    - 첨부된 불필요 문구 제거 버전 index를 기준으로 반영
    ========================================================= */
 window.__ulimRimiPronunciationMentTextPatch = true;
+<style>
+#rimiOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  background: rgba(0,0,0,0.52);
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0;
+}
+.rimi-modal {
+  background: #fff;
+  border-radius: 28px;
+  padding: 32px 36px 28px;
+  text-align: center;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.28);
+  max-width: 280px;
+  width: 90%;
+}
+.rimi-bubble {
+  margin-top: 14px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #166534;
+  line-height: 1.5;
+  min-height: 44px;
+  word-break: keep-all;
+}
+.rimi-sub {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 600;
+}
+@keyframes rimiQFloat0 {
+  0%,100% { transform: translateY(0px) rotate(-5deg); opacity:.7; }
+  50%      { transform: translateY(-7px) rotate(5deg); opacity:1; }
+}
+@keyframes rimiQFloat1 {
+  0%,100% { transform: translateY(0px) rotate(3deg); opacity:.6; }
+  50%      { transform: translateY(-9px) rotate(-4deg); opacity:1; }
+}
+@keyframes rimiQFloat2 {
+  0%,100% { transform: translateY(0px) rotate(-2deg); opacity:.8; }
+  50%      { transform: translateY(-6px) rotate(6deg); opacity:1; }
+}
+@keyframes rimiBodyBob {
+  0%,100% { transform: translateY(0px) rotate(-2deg); }
+  25%      { transform: translateY(-5px) rotate(2deg); }
+  75%      { transform: translateY(3px) rotate(-3deg); }
+}
+@keyframes rimiHeadTilt {
+  0%,100% { transform: rotate(-10deg); }
+  50%      { transform: rotate(-16deg); }
+}
+@keyframes rimiPaperFlip {
+  0%,100% { transform: translate(108px,112px) rotate(-8deg); }
+  30%      { transform: translate(110px,109px) rotate(-18deg); }
+  60%      { transform: translate(106px,114px) rotate(2deg); }
+}
+@keyframes rimiStarPop {
+  0%   { transform: scale(0) rotate(-20deg); opacity:0; }
+  60%  { transform: scale(1.2) rotate(5deg); opacity:1; }
+  100% { transform: scale(1) rotate(0deg); opacity:1; }
+}
+.rimi-thinking #rimiBody    { animation: rimiBodyBob 1.2s ease-in-out infinite; transform-origin: 90px 180px; }
+.rimi-thinking #rimiHead    { animation: rimiHeadTilt 1.4s ease-in-out infinite; transform-origin: 90px 88px; }
+.rimi-thinking #rimiPaper   { animation: rimiPaperFlip 1.6s ease-in-out infinite; }
+.rimi-thinking #rimiQ0      { animation: rimiQFloat0 1.3s ease-in-out infinite; transform-origin: 60px 36px; }
+.rimi-thinking #rimiQ1      { animation: rimiQFloat1 1.1s ease-in-out .2s infinite; transform-origin: 90px 26px; }
+.rimi-thinking #rimiQ2      { animation: rimiQFloat2 1.5s ease-in-out .1s infinite; transform-origin: 120px 33px; }
+.rimi-done #rimiStars       { animation: rimiStarPop .5s cubic-bezier(.34,1.56,.64,1) forwards; }
+</style>
+
+<div id="rimiOverlay">
+  <div class="rimi-modal">
+    <svg id="rimiSvg" width="170" height="200" viewBox="0 0 180 220" style="overflow:visible;display:block;margin:0 auto;">
+
+      <!-- 그림자 -->
+      <ellipse cx="90" cy="208" rx="42" ry="10" fill="#000" opacity=".08"/>
+
+      <!-- 몸 -->
+      <g id="rimiBody">
+        <rect x="64" y="145" width="52" height="52" rx="16" fill="#4caf50"/>
+        <!-- 왼팔 -->
+        <rect x="36" y="150" width="14" height="38" rx="7" fill="#4caf50"/>
+        <circle cx="43" cy="190" r="9" fill="#81c784"/>
+        <!-- 오른팔 (종이 들기 포즈) -->
+        <rect x="130" y="145" width="14" height="34" rx="7" fill="#4caf50"/>
+        <circle cx="137" cy="181" r="9" fill="#81c784"/>
+      </g>
+
+      <!-- 종이 -->
+      <g id="rimiPaper" style="transform:translate(108px,112px) rotate(-8deg)">
+        <rect x="0" y="0" width="42" height="54" rx="5" fill="#fffde7" stroke="#f9a825" stroke-width="1.5"/>
+        <line x1="8"  y1="13" x2="34" y2="13" stroke="#f9a825" stroke-width="1.3" opacity=".8"/>
+        <line x1="8"  y1="21" x2="34" y2="21" stroke="#f9a825" stroke-width="1.3" opacity=".8"/>
+        <line x1="8"  y1="29" x2="30" y2="29" stroke="#f9a825" stroke-width="1.3" opacity=".7"/>
+        <line x1="8"  y1="37" x2="26" y2="37" stroke="#f9a825" stroke-width="1.3" opacity=".6"/>
+      </g>
+
+      <!-- 머리 -->
+      <g id="rimiHead">
+        <!-- 귀 -->
+        <circle cx="38"  cy="88" r="13" fill="#81c784"/>
+        <circle cx="142" cy="88" r="13" fill="#81c784"/>
+        <!-- 머리 원 -->
+        <circle cx="90" cy="88" r="54" fill="#a5d6a7"/>
+
+        <!-- 눈썹 (고민용) -->
+        <g id="rimiBrowL">
+          <path d="M64 76 Q73 71 82 76" fill="none" stroke="#2e7d32" stroke-width="2.5" stroke-linecap="round"/>
+        </g>
+
+        <!-- 눈 -->
+        <g id="rimiEyeL">
+          <ellipse cx="73" cy="85" rx="9" ry="9" fill="#fff"/>
+          <circle  cx="74" cy="86" r="5.5" fill="#2e7d32"/>
+          <circle  cx="74" cy="86" r="2.5" fill="#1b5e20"/>
+          <circle  cx="76" cy="83"  r="1.5" fill="#fff"/>
+        </g>
+        <g id="rimiEyeR">
+          <ellipse cx="107" cy="85" rx="9" ry="9" fill="#fff"/>
+          <circle  cx="108" cy="86" r="5.5" fill="#2e7d32"/>
+          <circle  cx="108" cy="86" r="2.5" fill="#1b5e20"/>
+          <circle  cx="110" cy="83"  r="1.5" fill="#fff"/>
+        </g>
+
+        <!-- 입 -->
+        <path id="rimiMouth" d="M78 107 Q90 115 102 107" fill="none" stroke="#2e7d32" stroke-width="2.5" stroke-linecap="round"/>
+
+        <!-- 볼 홍조 -->
+        <ellipse cx="60"  cy="104" rx="11" ry="6.5" fill="#ef9a9a" opacity=".45"/>
+        <ellipse cx="120" cy="104" rx="11" ry="6.5" fill="#ef9a9a" opacity=".45"/>
+
+        <!-- 물음표 (고민 상태) -->
+        <text id="rimiQ0" x="52"  y="40" font-size="22" fill="#f9a825" font-weight="700" font-family="sans-serif" opacity="0">?</text>
+        <text id="rimiQ1" x="86"  y="30" font-size="19" fill="#66bb6a" font-weight="700" font-family="sans-serif" opacity="0">?</text>
+        <text id="rimiQ2" x="115" y="38" font-size="21" fill="#42a5f5" font-weight="700" font-family="sans-serif" opacity="0">?</text>
+
+        <!-- 완료 별 -->
+        <g id="rimiStars" style="transform:scale(0);transform-origin:90px 88px;opacity:0">
+          <text x="42"  y="38" font-size="22" fill="#fdd835" font-family="sans-serif">★</text>
+          <text x="118" y="32" font-size="17" fill="#fdd835" font-family="sans-serif">★</text>
+          <text x="84"  y="22" font-size="15" fill="#a5d6a7" font-family="sans-serif">★</text>
+        </g>
+
+        <!-- 땀방울 (실패) -->
+        <g id="rimiSweat" opacity="0">
+          <ellipse cx="137" cy="58" rx="5" ry="8" fill="#90caf9"/>
+          <ellipse cx="50"  cy="65" rx="4" ry="6.5" fill="#90caf9"/>
+        </g>
+      </g><!-- /rimiHead -->
+
+    </svg>
+    <div class="rimi-bubble" id="rimiBubble">리미가 분석 중이에요...</div>
+    <div class="rimi-sub"    id="rimiSub">잠시만 기다려주세요</div>
+  </div>
+</div>
+
+<script>
+/* ==========================================
+   리미 오버레이 제어 함수들
+========================================== */
+
+// 고민 → 표정 세팅
+function _rimiSetThinkingFace() {
+  const svg = document.getElementById('rimiSvg');
+  if (!svg) return;
+
+  // 눈 찡그림
+  const eyeL = document.getElementById('rimiEyeL');
+  const eyeR = document.getElementById('rimiEyeR');
+  if (eyeL) eyeL.querySelector('ellipse').setAttribute('ry','5.5');
+  if (eyeR) eyeR.querySelector('ellipse').setAttribute('ry','9');
+
+  // 입 - 일자
+  const mouth = document.getElementById('rimiMouth');
+  if (mouth) mouth.setAttribute('d','M78 109 Q90 107 102 109');
+
+  // 물음표 표시
+  ['rimiQ0','rimiQ1','rimiQ2'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.setAttribute('opacity','1');
+  });
+  document.getElementById('rimiStars').style.opacity = '0';
+  document.getElementById('rimiSweat').setAttribute('opacity','0');
+}
+
+// 완료 표정
+function _rimiSetDoneFace() {
+  const eyeL = document.getElementById('rimiEyeL');
+  const eyeR = document.getElementById('rimiEyeR');
+  const mouth = document.getElementById('rimiMouth');
+  const brow  = document.getElementById('rimiBrowL');
+
+  if (eyeL) eyeL.querySelector('ellipse').setAttribute('ry','9');
+  if (eyeR) eyeR.querySelector('ellipse').setAttribute('ry','9');
+
+  // 눈 ^^ (호 모양으로 교체)
+  if (eyeL) {
+    eyeL.innerHTML = `<path d="M64 87 Q73 79 82 87" fill="none" stroke="#2e7d32" stroke-width="3" stroke-linecap="round"/>`;
+  }
+  if (eyeR) {
+    eyeR.innerHTML = `<path d="M98 87 Q107 79 116 87" fill="none" stroke="#2e7d32" stroke-width="3" stroke-linecap="round"/>`;
+  }
+  if (mouth) mouth.setAttribute('d','M76 106 Q90 120 104 106');
+  if (brow)  brow.setAttribute('opacity','0');
+
+  ['rimiQ0','rimiQ1','rimiQ2'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.setAttribute('opacity','0');
+  });
+
+  const stars = document.getElementById('rimiStars');
+  if (stars) {
+    stars.style.opacity = '1';
+    stars.style.animation = 'rimiStarPop .55s cubic-bezier(.34,1.56,.64,1) forwards';
+  }
+}
+
+// 실패 표정
+function _rimiSetFailFace() {
+  const eyeL = document.getElementById('rimiEyeL');
+  const eyeR = document.getElementById('rimiEyeR');
+  const mouth = document.getElementById('rimiMouth');
+  const brow  = document.getElementById('rimiBrowL');
+
+  if (eyeL) eyeL.innerHTML = `
+    <line x1="64" y1="78" x2="80" y2="94" stroke="#c62828" stroke-width="3" stroke-linecap="round"/>
+    <line x1="80" y1="78" x2="64" y2="94" stroke="#c62828" stroke-width="3" stroke-linecap="round"/>`;
+  if (eyeR) eyeR.innerHTML = `
+    <line x1="98"  y1="78" x2="114" y2="94" stroke="#c62828" stroke-width="3" stroke-linecap="round"/>
+    <line x1="114" y1="78" x2="98"  y2="94" stroke="#c62828" stroke-width="3" stroke-linecap="round"/>`;
+  if (mouth) mouth.setAttribute('d','M78 113 Q90 106 102 113');
+  if (brow)  brow.setAttribute('opacity','0');
+
+  ['rimiQ0','rimiQ1','rimiQ2'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.setAttribute('opacity','0');
+  });
+  const sweat = document.getElementById('rimiSweat');
+  if (sweat) sweat.setAttribute('opacity','1');
+}
+
+// SVG 표정 리셋
+function _rimiResetFace() {
+  const eyeL = document.getElementById('rimiEyeL');
+  const eyeR = document.getElementById('rimiEyeR');
+  const mouth = document.getElementById('rimiMouth');
+  const brow  = document.getElementById('rimiBrowL');
+  const stars = document.getElementById('rimiStars');
+  const sweat = document.getElementById('rimiSweat');
+
+  if (eyeL) eyeL.innerHTML = `
+    <ellipse cx="73" cy="85" rx="9" ry="9" fill="#fff"/>
+    <circle  cx="74" cy="86" r="5.5" fill="#2e7d32"/>
+    <circle  cx="74" cy="86" r="2.5" fill="#1b5e20"/>
+    <circle  cx="76" cy="83"  r="1.5" fill="#fff"/>`;
+  if (eyeR) eyeR.innerHTML = `
+    <ellipse cx="107" cy="85" rx="9" ry="9" fill="#fff"/>
+    <circle  cx="108" cy="86" r="5.5" fill="#2e7d32"/>
+    <circle  cx="108" cy="86" r="2.5" fill="#1b5e20"/>
+    <circle  cx="110" cy="83"  r="1.5" fill="#fff"/>`;
+  if (mouth) mouth.setAttribute('d','M78 107 Q90 115 102 107');
+  if (brow)  brow.setAttribute('opacity','1');
+  if (stars) { stars.style.opacity='0'; stars.style.animation='none'; stars.style.transform='scale(0)'; }
+  if (sweat) sweat.setAttribute('opacity','0');
+  ['rimiQ0','rimiQ1','rimiQ2'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.setAttribute('opacity','0');
+  });
+}
+
+const RIMI_MSGS = [
+  '리미가 열심히 분석 중이에요...',
+  '발음 패턴을 살펴보고 있어요...',
+  '표준발음과 비교하는 중이에요...',
+  '조금만 더 기다려주세요...',
+  '거의 다 됐어요, 조금만요!',
+];
+let _rimiMsgIdx = 0;
+let _rimiMsgTimer = null;
+
+function showRimiOverlay(msg) {
+  _rimiResetFace();
+  const overlay = document.getElementById('rimiOverlay');
+  const svg     = document.getElementById('rimiSvg');
+  const bubble  = document.getElementById('rimiBubble');
+  const sub     = document.getElementById('rimiSub');
+  if (!overlay) return;
+
+  overlay.style.display = 'flex';
+  if (svg) {
+    svg.classList.remove('rimi-thinking','rimi-done','rimi-fail');
+    void svg.offsetWidth;
+    svg.classList.add('rimi-thinking');
+  }
+  _rimiSetThinkingFace();
+
+  if (bubble) bubble.textContent = msg || RIMI_MSGS[0];
+  if (sub)    sub.textContent = '잠시만 기다려주세요';
+
+  // 메시지 순환
+  _rimiMsgIdx = 1;
+  _rimiMsgTimer = setInterval(() => {
+    if (bubble) bubble.textContent = RIMI_MSGS[_rimiMsgIdx % RIMI_MSGS.length];
+    _rimiMsgIdx++;
+  }, 2800);
+}
+
+function hideRimiOverlay(resultType) {
+  // resultType: 'done' | 'fail' | undefined(그냥 닫기)
+  if (_rimiMsgTimer) { clearInterval(_rimiMsgTimer); _rimiMsgTimer = null; }
+
+  const overlay = document.getElementById('rimiOverlay');
+  const svg     = document.getElementById('rimiSvg');
+  const bubble  = document.getElementById('rimiBubble');
+  const sub     = document.getElementById('rimiSub');
+  if (!overlay) return;
+
+  if (resultType === 'done' || resultType === 'fail') {
+    if (svg) {
+      svg.classList.remove('rimi-thinking','rimi-done','rimi-fail');
+      void svg.offsetWidth;
+      svg.classList.add('rimi-' + resultType);
+    }
+    if (resultType === 'done') {
+      _rimiSetDoneFace();
+      if (bubble) bubble.textContent = '분석 완료! 결과를 확인해보세요 ✓';
+      if (sub)    sub.textContent = '잘 하셨어요!';
+    } else {
+      _rimiSetFailFace();
+      if (bubble) bubble.textContent = '이런, 잠깐 문제가 생겼어요...';
+      if (sub)    sub.textContent = '다시 시도해 주세요';
+    }
+    // 1.4초 후 자동 닫기
+    setTimeout(() => {
+      overlay.style.display = 'none';
+      _rimiResetFace();
+    }, 1400);
+  } else {
+    overlay.style.display = 'none';
+    _rimiResetFace();
+  }
+}
 </script>
 
 </body>
