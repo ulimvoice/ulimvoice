@@ -1477,6 +1477,42 @@ body.admin-mode .admin-only-tab { display:block !important; }
 }
 </style>
 
+
+<style id="rimi-ai-button-loading-style">
+/* =========================================================
+   5-28 리미 분석중 GIF를 보라색 AI 버튼 안에 표시
+   - 기존 초록 분석중 박스 숨김
+   - 분석중일 때 보라색 버튼 내부에 rimi_analyzing.gif 표시
+   ========================================================= */
+#aiLoadingVisual {
+    display: none !important;
+}
+.training-ai-loading-img {
+    width: 76px;
+    height: 76px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+    border-radius: 18px;
+    pointer-events: none;
+}
+#trainingAiAnalyzeBtn.training-ai-loading {
+    padding: 0 !important;
+    overflow: hidden !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: #7c3aed !important;
+}
+@media (max-width: 640px) {
+    .training-ai-loading-img {
+        width: 68px;
+        height: 68px;
+        border-radius: 16px;
+    }
+}
+</style>
+
 </head>
 <body>
 
@@ -4207,17 +4243,33 @@ function setTrainingAiLoadingState_(isLoading) {
     const loadingVisual = document.getElementById('aiLoadingVisual');
     const sttEl = document.getElementById('sttResult');
     const badge = document.getElementById('accBadge');
+
+    // 5-28: 리미 GIF는 초록 박스가 아니라 보라색 AI 버튼 안에 표시합니다.
+    if (loadingVisual) {
+        loadingVisual.classList.remove('show');
+        loadingVisual.style.display = 'none';
+    }
+
     if (btn) {
         btn.disabled = !!isLoading;
-        btn.textContent = isLoading ? '…' : 'AI';
-        btn.style.opacity = isLoading ? '.78' : '1';
+        btn.style.opacity = isLoading ? '.9' : '1';
         btn.style.transform = isLoading ? 'scale(0.98)' : 'scale(1)';
+
+        if (isLoading) {
+            btn.classList.add('training-ai-loading');
+            btn.innerHTML = '<img class="training-ai-loading-img" src="assets/rimi_analyzing.gif" alt="리미 분석중">';
+        } else {
+            btn.classList.remove('training-ai-loading');
+            btn.textContent = 'AI';
+        }
     }
+
     if (btnLabel) btnLabel.textContent = isLoading ? '분석중..' : 'AI 분석';
     if (titleText) titleText.textContent = isLoading ? '분석중..' : 'AI 분석결과';
-    if (loadingVisual) loadingVisual.classList.toggle('show', !!isLoading);
-    if (sttEl) sttEl.classList.toggle('hidden-during-loading', !!isLoading);
-    if (badge) badge.classList.toggle('hidden-during-loading', !!isLoading);
+
+    // 결과 텍스트는 분석중에도 숨기지 않고, 기존처럼 "리미가 분석중입니다." 상태문구를 보여줍니다.
+    if (sttEl) sttEl.classList.remove('hidden-during-loading');
+    if (badge) badge.classList.remove('hidden-during-loading');
 }
 
 async function runTrainingFinalAiAnalysisFromButton() {
@@ -4277,7 +4329,7 @@ async function runTrainingFinalAiAnalysisFromButton() {
         }
     } finally {
         setTrainingAiLoadingState_(false);
-        if (btn) { btn.disabled = false; btn.textContent = prevText || 'AI'; btn.style.opacity = '1'; }
+        if (btn) { btn.disabled = false; btn.classList.remove('training-ai-loading'); btn.textContent = 'AI'; btn.style.opacity = '1'; }
     }
 }
 
@@ -13408,6 +13460,16 @@ window.__ulimRimiPronunciationMentTextPatch = true;
    - GitHub Pages에서는 index.html 옆 assets 폴더에 rimi_analyzing.gif 업로드
    ========================================================= */
 window.__ulimRimiAnalyzingAssetVersion = "5-27";
+</script>
+
+
+<script>
+/* =========================================================
+   5-28 리미 분석중 버튼 내부 표시 보정
+   - 보라색 AI 버튼 안에 assets/rimi_analyzing.gif 표시
+   - 하단 초록 분석중 박스는 숨김 처리
+   ========================================================= */
+window.__ulimRimiAnalyzingInsideButtonVersion = "5-28";
 </script>
 
 </body>
