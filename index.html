@@ -7257,7 +7257,7 @@ async function adminSavePayment() {
 // =========================================================================================
 // GitHub Pages에서는 Apps Script POST/fetch가 CORS/권한 문제처럼 보일 수 있으므로 JSONP GET 방식만 사용합니다.
 // 새 GAS 배포 주소로 바뀌면 아래 URL만 교체하세요.
-const ROOM_API_URL = 'https://script.google.com/macros/s/AKfycbxgLt5ngGxRQJ3WtEtIkmAyUlFQMnAc2y6SjEXnL1tQDUW8ZdRcLh628_inbHmqktNIvg/exec';
+const ROOM_API_URL = GET_API_URL; // 학생부 GAS로 통합: 연습실 예약도 같은 웹앱에서 처리
 
 const ROOM_LIST = [
     "4강의실",
@@ -7367,7 +7367,7 @@ function roomJsonp(params, options = {}) {
 
         timer = setTimeout(() => {
             cleanup();
-            reject(new Error("GAS 응답 시간 초과"));
+            reject(new Error("예약 정보를 불러오는 데 시간이 오래 걸리고 있습니다."));
         }, 20000);
 
         script.src = ROOM_API_URL + '?' + query.toString();
@@ -7673,8 +7673,8 @@ async function loadRoomReservations(force = false) {
         calendarEl.innerHTML = `
             <div style="grid-column:1/-1; background:#fde9e9; border:1px solid #ffb3b3; border-radius:12px; padding:16px; color:#b00020; line-height:1.6;">
                 예약 정보를 불러오지 못했습니다.<br>
-                GAS 배포 URL, 새 버전 배포, 웹앱 접근 권한, JSONP 지원 코드를 확인해주세요.<br>
-                <small>${e.message || e}</small>
+                잠시 후 다시 시도해주세요. 계속 반복되면 학원에 문의해주세요.<br>
+                <small>${e.message || ''}</small>
             </div>
         `;
     }
@@ -9046,7 +9046,7 @@ function pronJsonpRequest(params, timeoutMs = 12000) {
             if (done) return;
             done = true;
             cleanup();
-            reject(new Error("GAS 응답 시간 초과"));
+            reject(new Error("예약 정보를 불러오는 데 시간이 오래 걸리고 있습니다."));
         }, timeoutMs);
         function cleanup() {
             clearTimeout(timer);
