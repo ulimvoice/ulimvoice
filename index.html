@@ -5193,6 +5193,52 @@ async function adminApi(action, params = {}) {
     Object.keys(params).forEach(key => {
         if (params[key] !== undefined && params[key] !== null) query.set(key, params[key]);
     });
+
+    let response;
+    try {
+        response = await fetch(`${GET_API_URL}?${query.toString()}`);
+    } catch (err) {
+        console.warn('[adminApi] network error:', action, err);
+        throw new Error('연결이 원활하지 않습니다. 잠시 후 다시 시도해주세요.');
+    }
+
+    if (!response.ok) {
+        console.warn('[adminApi] HTTP error:', action, response.status);
+        if (response.status === 404) {
+            throw new Error('요청을 처리하지 못했습니다. 페이지를 새로고침한 뒤 다시 시도해주세요.');
+        }
+        throw new Error('서버 연결이 원활하지 않습니다. 잠시 후 다시 시도해주세요.');
+    }
+
+    let data = null;
+    try {
+        data = await response.json();
+    } catch (err) {
+        console.warn('[adminApi] JSON parse error:', action, err);
+        throw new Error('응답을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
+    }
+
+    if (!data || data.status !== 'success') {
+        const rawMessage = (data && data.message) || '';
+        console.warn('[adminApi] app error:', action, rawMessage, data);
+
+        if (/GAS|action|라우팅|스크립트|배포|API|JSONP|코드/i.test(rawMessage)) {
+            throw new Error('요청을 처리하지 못했습니다. 관리자에게 문의해주세요.');
+        }
+
+        throw new Error(rawMessage || '요청을 처리하지 못했습니다. 다시 시도해주세요.');
+    }
+
+    return data;
+}
+
+) {
+    const query = new URLSearchParams();
+    query.set('action', action);
+    query.set('_', Date.now());
+    Object.keys(params).forEach(key => {
+        if (params[key] !== undefined && params[key] !== null) query.set(key, params[key]);
+    });
     const response = await fetch(`${GET_API_URL}?${query.toString()}`);
     if (!response.ok) throw new Error(`관리자 API 오류: ${response.status}`);
     const data = await response.json();
@@ -10972,8 +11018,9 @@ async function adminQuickClassroomUsage(room, hour) {
 }
 
 async function adminSaveClassroomUsageFromForm(silentConfirm = false) {
-    if (!adminToken) return alert('관리자 로그인이 필요합니다.');
+    if (!adminToken) return alert('로그인이 필요합니다.');
     adminInitClassroomUsagePanel();
+
     const date = adminClassroomUsageDate_();
     const room = document.getElementById('adminClassroomUsageRoom')?.value || '';
     const startHour = Number(document.getElementById('adminClassroomUsageStart')?.value || 0);
@@ -10988,41 +11035,64 @@ async function adminSaveClassroomUsageFromForm(silentConfirm = false) {
 
     try {
         showLoading('강의실 사용 체크 중...');
-        const data = await adminApi('adminSaveClassroomUsage', {
+
+        // 쓰기 작업은 POST로 전송합니다.
+        // Apps Script의 일부 배포/브라우저 환경에서 긴 GET 요청이 404처럼 보이는 문제를 피하기 위한 방식입니다.
+        await adminPostNoCors('adminSaveClassroomUsage', {
             adminToken, date, room, startHour, endHour, className, memo
         });
+
+        await new Promise(resolve => setTimeout(resolve, 900));
+
+        const data = await adminApi('adminGetClassroomUsage', { adminToken, date });
         hideLoading();
+
         adminClassroomUsageRows = Array.isArray(data.records) ? data.records : [];
         adminRenderClassroomUsageTable();
+
         const summary = document.getElementById('adminClassroomUsageSummary');
-        if (summary) summary.textContent = data.message || '강의실 사용 체크 완료';
+        if (summary) summary.textContent = data.message || '강의실 사용 현황을 새로 불러왔습니다.';
     } catch (e) {
         hideLoading();
-        alert(e.message || '강의실 사용 체크에 실패했습니다.');
+        alert(e.message || '강의실 사용 체크에 실패했습니다. 잠시 후 다시 시도해주세요.');
     }
 }
 
+
+
 async function adminReleaseClassroomUsage(recordId) {
-    if (!adminToken) return alert('관리자 로그인이 필요합니다.');
-    if (!recordId) return alert('해제할 기록ID를 찾지 못했습니다.');
+    if (!adminToken) return alert('로그인이 필요합니다.');
+    if (!recordId) return alert('해제할 기록을 찾지 못했습니다.');
     if (!confirm('해당 강의실 사용 기록을 해제할까요?')) return;
+
+    const date = adminClassroomUsageDate_();
+
     try {
         showLoading('강의실 사용 해제 중...');
-        const data = await adminApi('adminReleaseClassroomUsage', {
+
+        await adminPostNoCors('adminReleaseClassroomUsage', {
             adminToken,
             recordId,
-            date: adminClassroomUsageDate_()
+            date
         });
+
+        await new Promise(resolve => setTimeout(resolve, 900));
+
+        const data = await adminApi('adminGetClassroomUsage', { adminToken, date });
         hideLoading();
+
         adminClassroomUsageRows = Array.isArray(data.records) ? data.records : [];
         adminRenderClassroomUsageTable();
+
         const summary = document.getElementById('adminClassroomUsageSummary');
-        if (summary) summary.textContent = data.message || '강의실 사용 해제 완료';
+        if (summary) summary.textContent = data.message || '강의실 사용 현황을 새로 불러왔습니다.';
     } catch (e) {
         hideLoading();
-        alert(e.message || '강의실 사용 해제에 실패했습니다.');
+        alert(e.message || '강의실 사용 해제에 실패했습니다. 잠시 후 다시 시도해주세요.');
     }
 }
+
+
 
 
 </script>
