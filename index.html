@@ -1446,6 +1446,17 @@ body.admin-mode .admin-only-tab { display:block !important; }
 }
 
 </style>
+
+
+
+<style id="rimi-aiicon-style">
+.rimi-ai-title{display:flex;align-items:center;gap:8px;}
+.rimi-aiicon{width:28px;height:28px;display:inline-block;object-fit:cover;border-radius:8px;image-rendering:pixelated;image-rendering:crisp-edges;box-shadow:0 2px 6px rgba(0,0,0,.12);flex:0 0 auto;}
+@media (max-width:640px){
+  .rimi-aiicon{width:24px;height:24px;border-radius:6px;}
+}
+</style>
+
 </head>
 <body>
 
@@ -1620,7 +1631,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
 
         <div class="result-box" id="resultBox">
             <div class="result-section" id="aiSection" style="display:none;">
-                <span class="section-title">🤖 AI 분석결과</span>
+                <span class="section-title rimi-ai-title"><img class="rimi-aiicon" src="data:image/png;base64,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" alt="리미"> AI 분석결과</span>
                 <div class="stt-result-box">
                     <div id="sttResult" class="stt-text">...</div>
                     <span id="accBadge" class="accuracy-badge acc-wait">분석 대기중</span>
@@ -13327,7 +13338,9 @@ function adminRenderAttendanceTable() {
 <script>
 /* =========================================================
    5-19 표준발음 분석 멘트 리미 명칭 정리
-   - 표준발음 간단분석/정밀진단 결과 문구를 리미 기준으로 정리
+   - 우리미 → 리미
+   - 일반분석 완료 → 리미의 간단분석!
+   - 리미 고급분석 완료 → 리미의 정밀진단 완료!
    - 첨부된 불필요 문구 제거 버전 index를 기준으로 반영
    ========================================================= */
 window.__ulimRimiPronunciationMentTextPatch = true;
