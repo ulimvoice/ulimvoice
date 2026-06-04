@@ -1830,6 +1830,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
         <div class="admin-btn-row">
           <button type="button" class="admin-btn blue" id="adminRefreshStudentsBtn" onclick="adminLoadStudents(true, true)">학생목록 새로고침</button>
           <button type="button" class="admin-btn orange admin-full-only" onclick="adminRefreshStudentEnrollmentStatuses()">재원상태 갱신</button>
+          <button type="button" class="admin-btn purple admin-full-only" onclick="registerRoomPushTokenManual()" style="background:#7c3aed;">푸시 알림 등록</button>
           <button type="button" class="admin-btn gray" onclick="adminLogout()">로그아웃</button>
         </div>
 
@@ -3196,7 +3197,20 @@ async function completeTraining() {
     const truncatedText = currentTrainObj.text.substring(0, 30) + "...";
 
     if (records.has(today)) {
-        return alert("오늘은 이미 연습을 완료했습니다!");
+        return alert("오늘은 연습을 완료했습니다.");
+    }
+
+    const todayCheck = await checkVocalTrainingTodayCompletedFromServer_({ timeoutMs: 10000 });
+    if (todayCheck && todayCheck.completed) {
+        records.set(today, {
+            id: currentTrainObj.id,
+            text: truncatedText,
+            completed: true,
+            aiComment: '',
+            fileUrl: ''
+        });
+        localStorage.setItem('vocalRecords', JSON.stringify(Array.from(records.entries())));
+        return alert("오늘은 연습을 완료했습니다.");
     }
 
     let analysisText = "";
@@ -3209,10 +3223,6 @@ async function completeTraining() {
         return alert("AI 분석 결과를 정리하지 못했습니다. 다시 분석 후 시도해주세요.\n" + (analysisErr.message || analysisErr));
     }
 
-    // 안정형 업로드:
-    // GitHub Pages → GAS POST는 큰 영상 Base64가 중간에 잘릴 수 있어,
-    // 연습완료에서는 최종 녹음 원본(audio/webm)만 업로드합니다.
-    // AI 분석 결과와 문장, 학생 정보는 발성훈련연습일지에 함께 기록됩니다.
     let uploadBlob = lastRecordedBlob;
     let uploadMimeType = lastRecordedBlob.type || 'audio/webm';
     let uploadAction = "녹음 파일 업로드 및 링크 기록";
@@ -3242,16 +3252,18 @@ async function completeTraining() {
                 originalSentence: currentTrainObj.text,
                 localWhisperText: recognitionResult || '',
                 aiSource: (window.trainingFinalAiResult && (window.trainingFinalAiResult.source || window.trainingFinalAiResult.status || window.trainingFinalAiResult.badge)) || '',
-                aiComment: (window.trainingFinalAiResult && (window.trainingFinalAiResult.comment || window.trainingFinalAiResult.analysisText)) || analysisText
+                aiComment: (window.trainingFinalAiResult && (window.trainingFinalAiResult.generalAnalysisText || window.trainingFinalAiResult.comment || window.trainingFinalAiResult.analysisText)) || analysisText
             }
         );
     } catch (uploadErr) {
         hideLoading();
         console.error('업로드 확인 실패:', uploadErr);
-        return alert("녹음 파일 업로드가 확인되지 않았습니다.\n\n" + (uploadErr.message || uploadErr) + "\n\n관리자 시트의 [관리자] G열 강사폴더ID, 웹앱 새 버전 배포 상태, index.html 최신 반영 여부를 확인해주세요.");
+        if (/오늘은 연습을 완료했습니다/.test(String(uploadErr && uploadErr.message || uploadErr || ''))) {
+            return alert("오늘은 연습을 완료했습니다.");
+        }
+        return alert("녹음 파일 업로드가 확인되지 않았습니다.\n\n" + (uploadErr.message || uploadErr) + "\n\n잠시 후 다시 시도해주세요.");
     }
 
-    // 서버 업로드 성공이 확인된 뒤에만 로컬 완료 기록과 100일 진행 기록을 저장합니다.
     savedIds.add(currentTrainObj.id);
     localStorage.setItem('savedVocalIds', JSON.stringify(Array.from(savedIds)));
 
@@ -3259,7 +3271,7 @@ async function completeTraining() {
         id: currentTrainObj.id,
         text: truncatedText,
         completed: true,
-        aiComment: (window.trainingFinalAiResult && window.trainingFinalAiResult.comment) || '',
+        aiComment: (window.trainingFinalAiResult && (window.trainingFinalAiResult.generalAnalysisText || window.trainingFinalAiResult.comment)) || '',
         fileUrl: uploadResult && uploadResult.fileUrl ? uploadResult.fileUrl : ''
     });
     localStorage.setItem('vocalRecords', JSON.stringify(Array.from(records.entries())));
@@ -3282,6 +3294,8 @@ async function completeTraining() {
 
     btnComplete.style.display = 'none';
 }
+
+
 
 
 
@@ -3697,10 +3711,144 @@ function getExtensionFromMime_(mimeType, fallback = 'webm') {
     return fallback;
 }
 
+/****************************************************
+ * 5-5 발성훈련 안정화: 로컬 일반분석 + 1일 1회 완료 제한
+ ****************************************************/
+async function analyzeTrainingAudioBlobLocal_(audioBlob) {
+    const fallbackDuration = getTrainingRecordedDurationSec_();
+    const base = {
+        durationSec: fallbackDuration || 0,
+        avgRms: 0,
+        silenceRatio: 0,
+        syllablesPerSec: 0
+    };
+
+    const scriptText = currentTrainObj ? String(currentTrainObj.text || '') : '';
+    const syllables = (typeof pronCountHangulSyllables === 'function')
+        ? pronCountHangulSyllables(scriptText)
+        : (scriptText.match(/[가-힣]/g) || []).length;
+
+    try {
+        if (!audioBlob) throw new Error('audioBlob 없음');
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) throw new Error('AudioContext 미지원');
+
+        const rawBuffer = await audioBlob.arrayBuffer();
+        const ctx = new AudioContextClass();
+        const decoded = await ctx.decodeAudioData(rawBuffer.slice(0));
+
+        const length = decoded.length || 0;
+        const channels = decoded.numberOfChannels || 1;
+        let sumSq = 0;
+        let peak = 0;
+        let silentSamples = 0;
+        let sampleCount = 0;
+        const silenceThreshold = 0.012;
+
+        for (let ch = 0; ch < channels; ch++) {
+            const data = decoded.getChannelData(ch);
+            const step = Math.max(1, Math.floor(data.length / 24000));
+            for (let i = 0; i < data.length; i += step) {
+                const v = Math.abs(data[i] || 0);
+                sumSq += v * v;
+                if (v > peak) peak = v;
+                if (v < silenceThreshold) silentSamples++;
+                sampleCount++;
+            }
+        }
+
+        try { await ctx.close(); } catch (ignore) {}
+
+        const durationSec = decoded.duration || fallbackDuration || 0;
+        const avgRms = sampleCount ? Math.sqrt(sumSq / sampleCount) : 0;
+        const silenceRatio = sampleCount ? silentSamples / sampleCount : 0;
+
+        return {
+            durationSec,
+            avgRms,
+            peak,
+            silenceRatio,
+            syllablesPerSec: durationSec ? syllables / durationSec : 0
+        };
+    } catch (err) {
+        console.warn('[발성훈련 로컬 음성수치 분석 실패]', err);
+        const durationSec = base.durationSec || 0;
+        return Object.assign(base, {
+            syllablesPerSec: durationSec ? syllables / durationSec : 0
+        });
+    }
+}
+
+function buildTrainingFinalGeneralAnalysisText_(recognized, similarity, metrics) {
+    const m = metrics || {};
+    const pron = currentTrainObj ? String(currentTrainObj.pron || '') : '';
+    const safeRecognized = String(recognized || '').trim() || '인식 결과 없음';
+    const durationSec = Number(m.durationSec || getTrainingRecordedDurationSec_() || 0);
+    const syllablesPerSec = Number(m.syllablesPerSec || 0);
+    const avgVolume = Math.max(0, Math.min(100, Math.round(Number(m.avgRms || 0) * 260)));
+    const silenceRatio = Math.max(0, Math.min(100, Math.round(Number(m.silenceRatio || 0) * 100)));
+    const sim = Math.max(0, Math.min(100, Math.round(Number(similarity || 0))));
+
+    return `일반분석 완료
+
+인식결과: ${safeRecognized}
+문장 일치도: ${sim}%
+녹음 길이: ${durationSec ? durationSec.toFixed(1) : '0.0'}초
+읽기 속도: ${Number.isFinite(syllablesPerSec) ? syllablesPerSec.toFixed(1) : '0.0'}음절/s
+평균 음량: ${avgVolume}%
+무음 비율: ${silenceRatio}%
+표준발음 참고: ${pron || '[문장을 입력하면 표준발음으로 변환합니다.]'}`;
+}
+
+async function checkVocalTrainingTodayCompletedFromServer_(options = {}) {
+    const today = new Date().toISOString().slice(0, 10);
+    const records = getVocalRecords ? getVocalRecords() : new Map();
+
+    if (records && records.has && records.has(today)) {
+        return { completed: true, source: 'local', message: '오늘은 연습을 완료했습니다.' };
+    }
+
+    if (!GET_API_URL || !GET_API_URL.includes('script.google.com/macros/s/')) {
+        return { completed: false, source: 'no_api' };
+    }
+
+    const ident = getTrainingStudentIdentity_ ? getTrainingStudentIdentity_() : {};
+    try {
+        const data = await pronJsonpRequest({
+            action: 'checkVocalTrainingTodayComplete',
+            studentNo: ident.studentNo || studentNo || '',
+            studentName: ident.studentName || studentName || '',
+            phoneLast4: ident.phoneLast4 || phoneLast4 || '',
+            date: today,
+            _: Date.now()
+        }, options.timeoutMs || 10000);
+
+        if (data && data.completed) {
+            return {
+                completed: true,
+                source: 'server',
+                data,
+                message: data.message || '오늘은 연습을 완료했습니다.'
+            };
+        }
+
+        return { completed: false, source: 'server', data };
+    } catch (err) {
+        console.warn('[오늘 발성훈련 완료 여부 확인 실패]', err);
+        if (options.strict) throw err;
+        return { completed: false, source: 'check_failed', error: err };
+    }
+}
+
 function buildTrainingAiAnalysisText_(transcript) {
     const source = currentTrainObj ? String(currentTrainObj.text || '') : '';
     const pron = currentTrainObj ? String(currentTrainObj.pron || '') : '';
     const result = window.trainingFinalAiResult || {};
+
+    if (result.generalAnalysisText || result.analysisSource === 'local_general') {
+        return String(result.generalAnalysisText || result.analysisText || result.comment || '').trim() || '일반분석 완료';
+    }
+
     const heard = String(result.recognized || transcript || '').trim();
     const cleanTarget = source.replace(/[^가-힣]/g, '');
     const cleanHeard = heard.replace(/[^가-힣]/g, '');
@@ -3708,6 +3856,7 @@ function buildTrainingAiAnalysisText_(transcript) {
     const rawScore = Number(result.score);
     const scoreText = Number.isFinite(rawScore) ? rawScore.toFixed(1) + ' / 5' : (result.scoreText || '-');
     const comment = String(result.comment || '').trim() || 'AI코멘트가 아직 생성되지 않았습니다.';
+
     return `AI 분석결과
 - AI 인식결과: ${heard || '인식 실패'}
 - 문장 일치도: ${similarity}%
@@ -3715,6 +3864,8 @@ function buildTrainingAiAnalysisText_(transcript) {
 - 표준발음 참고: ${pron || '표준발음 데이터 없음'}
 - AI코멘트: ${comment}`;
 }
+
+
 
 /**
  * Gemini 최종 AI 분석 실패 시 대체 결과를 만드는 안전 함수입니다.
@@ -3781,71 +3932,90 @@ async function buildTrainingFinalLocalAiFallbackResult_(audioBlob, originalError
 
     if (!recognized && audioBlob && window.UlimLocalWhisper && typeof window.UlimLocalWhisper.transcribe === 'function') {
         const sttEl = document.getElementById('sttResult');
-        if (sttEl) sttEl.textContent = 'Gemini 응답 지연으로 로컬 AI가 분석중입니다.';
-        const localResult = await window.UlimLocalWhisper.transcribe(audioBlob, {
-            language: 'ko',
-            task: 'transcribe',
-            model: ULIM_LOCAL_WHISPER_MODEL,
-            onStatus: function(msg) {
-                const el = document.getElementById('sttResult');
-                if (el && msg) el.textContent = 'Gemini 응답 지연으로 로컬 AI가 분석중입니다.';
-            }
-        });
-        recognized = String(localResult && localResult.text ? localResult.text : '').trim();
-        recognitionResult = recognized;
+        if (sttEl) sttEl.textContent = '일반분석을 준비하고 있습니다.';
+        try {
+            const localResult = await window.UlimLocalWhisper.transcribe(audioBlob, {
+                language: 'ko',
+                task: 'transcribe',
+                model: ULIM_LOCAL_WHISPER_MODEL,
+                onStatus: function(msg) {
+                    const el = document.getElementById('sttResult');
+                    if (el && msg) el.textContent = '일반분석을 준비하고 있습니다.';
+                }
+            });
+            recognized = String(localResult && localResult.text ? localResult.text : '').trim();
+            recognitionResult = recognized;
+        } catch (localErr) {
+            console.warn('[로컬 음성인식 실패 - 일반분석 수치만 표시]', localErr);
+        }
     }
-
-    if (!recognized) return null;
 
     const cleanTarget = scriptText.replace(/[^가-힣]/g, '');
     const cleanHeard = recognized.replace(/[^가-힣]/g, '');
     const similarity = cleanTarget && cleanHeard ? Math.round(getSimilarity(cleanTarget, cleanHeard) * 100) : 0;
-    const score = Number((1 + (Math.max(0, Math.min(100, similarity)) / 100) * 4).toFixed(1));
-    const durationSec = getTrainingRecordedDurationSec_();
+    const metrics = await analyzeTrainingAudioBlobLocal_(audioBlob);
+    const generalAnalysisText = buildTrainingFinalGeneralAnalysisText_(recognized, similarity, metrics);
     const errorMessage = originalError && originalError.message ? originalError.message : String(originalError || '');
-    const comment = buildTrainingFallbackComment_('Gemini AI 분석 서버 응답이 지연되어 로컬 AI 분석', scriptText, recognized, similarity, durationSec, errorMessage);
 
     return {
         ok: true,
         status: 'fallback',
         source: 'local_ai',
-        analysisSource: 'local_ai',
-        badge: '로컬 분석',
+        analysisSource: 'local_general',
+        badge: '일반분석',
         recognized: recognized,
-        score: score,
-        scoreText: score.toFixed(1) + ' / 5',
-        comment: comment,
-        message: 'Gemini AI 분석 지연으로 로컬 AI 분석 결과를 표시했습니다.',
+        score: '',
+        scoreText: '-',
+        comment: generalAnalysisText,
+        analysisText: generalAnalysisText,
+        generalAnalysisText: generalAnalysisText,
+        message: '일반분석 완료',
         originalError: errorMessage,
-        requestSentence: scriptText
+        requestSentence: scriptText,
+        metrics: metrics
     };
 }
+
+
 
 function buildTrainingFinalSafeFallbackResult_(originalError) {
     const scriptText = currentTrainObj ? String(currentTrainObj.text || '').trim() : '';
     const recognized = String(recognitionResult || '').trim();
-    const errorMessage = originalError && originalError.message ? originalError.message : String(originalError || '');
+    const cleanTarget = scriptText.replace(/[^가-힣]/g, '');
+    const cleanHeard = recognized.replace(/[^가-힣]/g, '');
+    const similarity = cleanTarget && cleanHeard ? Math.round(getSimilarity(cleanTarget, cleanHeard) * 100) : 0;
     const durationSec = getTrainingRecordedDurationSec_();
-    const comment = 'Gemini AI 분석과 로컬 AI 분석이 일시적으로 원활하지 않아 기본 코칭 멘트로 안내합니다. ' +
-        '녹음은 정상적으로 완료되었습니다. 문장을 읽을 때 첫 음절은 또렷하게 시작하고, 조사와 어미는 흐리지 않게 마무리해보세요. ' +
-        '호흡은 문장 중간에서 급하게 끊기지 않도록 의미 단위로 나누어 유지하는 것이 좋습니다. ' +
-        (durationSec > 0 ? '현재 녹음 시간은 약 ' + durationSec.toFixed(1) + '초입니다. ' : '') +
-        '연습완료를 누르면 녹음 기록을 저장할 수 있습니다.';
+    const metrics = {
+        durationSec: durationSec || 0,
+        avgRms: 0,
+        silenceRatio: 0,
+        syllablesPerSec: durationSec && scriptText
+            ? ((scriptText.match(/[가-힣]/g) || []).length / durationSec)
+            : 0
+    };
+    const generalAnalysisText = buildTrainingFinalGeneralAnalysisText_(recognized, similarity, metrics);
+    const errorMessage = originalError && originalError.message ? originalError.message : String(originalError || '');
+
     return {
         ok: true,
         status: 'fallback',
-        source: 'safe_comment',
-        analysisSource: 'safe_comment',
-        badge: '기본 코칭',
+        source: 'local_ai',
+        analysisSource: 'local_general',
+        badge: '일반분석',
         recognized: recognized,
         score: '',
         scoreText: '-',
-        comment: comment,
-        message: '기본 코칭 멘트를 표시했습니다.',
+        comment: generalAnalysisText,
+        analysisText: generalAnalysisText,
+        generalAnalysisText: generalAnalysisText,
+        message: '일반분석 완료',
         originalError: errorMessage,
-        requestSentence: scriptText
+        requestSentence: scriptText,
+        metrics: metrics
     };
 }
+
+
 
 async function buildTrainingFinalFallbackResult_(audioBlob, originalError) {
     try {
@@ -3992,47 +4162,59 @@ async function runTrainingFinalAiAnalysisFromButton() {
     if (!lastRecordedBlob) {
         return alert('먼저 녹음을 완료해주세요.');
     }
+
+    const todayCheck = await checkVocalTrainingTodayCompletedFromServer_({ timeoutMs: 10000 });
+    if (todayCheck && todayCheck.completed) {
+        return alert('오늘은 연습을 완료했습니다.');
+    }
+
     if (window.trainingFinalAiResult && window.trainingFinalAiResult.requestSentence === currentTrainObj.text) {
         return alert('이미 마지막 녹음본의 AI 분석이 완료되었습니다. 다시 분석하려면 새로 녹음 후 실행해주세요.');
     }
+
     const ok = confirm('AI분석을 시작하면 오늘연습이 완료됩니다. 진행하시겠습니까?');
     if (!ok) return;
+
     const btn = document.getElementById('trainingAiAnalyzeBtn');
     const prevText = btn ? btn.textContent : '';
+
     try {
         if (btn) { btn.disabled = true; btn.textContent = '…'; btn.style.opacity = '.65'; }
         document.getElementById('resultBox').style.display = 'block';
+
         const aiSection = document.getElementById('aiSection');
         const recSection = document.getElementById('recSection');
         if (aiSection) aiSection.style.display = 'block';
         if (recSection) recSection.style.display = 'block';
+
         const sttEl = document.getElementById('sttResult');
         const badge = document.getElementById('accBadge');
         if (sttEl) sttEl.textContent = 'AI가 분석중입니다.';
         if (badge) { badge.className = 'accuracy-badge acc-wait'; badge.textContent = '분석중'; }
+
         document.getElementById('recStatus').textContent = 'AI가 분석중입니다.';
 
-        // 1순위: Gemini/GAS AI 분석 결과
         await runTrainingFinalAiAnalysis_(lastRecordedBlob, { force: true });
+
         document.getElementById('recStatus').textContent = 'AI 분석 완료. 연습완료 버튼을 눌러 결과를 업로드할 수 있습니다.';
         enableVocalTrainingCompleteButton_();
     } catch (err) {
-        console.warn('Gemini final training analysis failed. Fallback will be used:', err);
+        console.warn('Gemini final training analysis failed. Local general analysis will be used:', err);
 
-        // 2순위: 로컬 AI 분석 결과, 3순위: 안전멘트
         const fallbackResult = await buildTrainingFinalFallbackResult_(lastRecordedBlob, err);
         renderTrainingFinalAiResult_(fallbackResult);
         enableVocalTrainingCompleteButton_();
 
-        const statusMessage = fallbackResult.source === 'local_ai'
-            ? 'Gemini AI 분석 지연으로 로컬 AI 분석 결과를 표시했습니다. 연습완료를 누르면 기록을 저장할 수 있습니다.'
-            : 'Gemini AI 분석 지연으로 기본 코칭 멘트를 표시했습니다. 연습완료를 누르면 기록을 저장할 수 있습니다.';
         const recStatusEl = document.getElementById('recStatus');
-        if (recStatusEl) recStatusEl.textContent = statusMessage;
+        if (recStatusEl) {
+            recStatusEl.textContent = '일반분석 완료. 연습완료 버튼을 눌러 결과를 업로드할 수 있습니다.';
+        }
     } finally {
         if (btn) { btn.disabled = false; btn.textContent = prevText || 'AI'; btn.style.opacity = '1'; }
     }
 }
+
+
 
 async function runTrainingFinalAiAnalysis_(audioBlob, options = {}) {
     if (!audioBlob) throw new Error('녹음 파일이 없습니다.');
@@ -4130,11 +4312,12 @@ function renderTrainingFinalAiResult_(data) {
     data = data || {};
     const recognized = String(data.recognized || '').trim();
     const rawScore = Number(data.score);
-    const isFallback = data.status === 'fallback' || data.source === 'local_ai' || data.source === 'safe_comment' || data.analysisSource === 'fallback';
+    const isFallback = data.status === 'fallback' || data.source === 'local_ai' || data.source === 'safe_comment' || data.analysisSource === 'fallback' || data.analysisSource === 'local_general';
     data.message = sanitizeTrainingFinalUserMessage_(data.message) || data.message;
     const scoreText = Number.isFinite(rawScore) ? rawScore.toFixed(1) + ' / 5' : (data.scoreText || '-');
     const comment = String(data.comment || '').trim() || '분석 결과를 기준으로 다시 녹음하며 비교해보세요.';
     recognitionResult = recognized;
+
     window.trainingFinalAiResult = Object.assign({}, data, {
         recognized,
         score: Number.isFinite(rawScore) ? rawScore : data.score,
@@ -4142,23 +4325,32 @@ function renderTrainingFinalAiResult_(data) {
         comment,
         requestSentence: currentTrainObj ? currentTrainObj.text : ''
     });
+
     const targetClean = currentTrainObj ? currentTrainObj.text.replace(/[^가-힣]/g, '') : '';
     const heardClean = recognized.replace(/[^가-힣]/g, '');
     const similarity = targetClean && heardClean ? Math.round(getSimilarity(targetClean, heardClean) * 100) : 0;
     const stt = document.getElementById('sttResult');
+
     if (stt) {
-        if (isFallback) {
-            const label = (data.source === 'local_ai' || data.analysisSource === 'fallback') ? '로컬 AI 분석결과' : '기본 코칭 결과';
-            stt.textContent = `${label}: ${recognized || '인식 결과 없음'}\n문장 일치도: ${similarity || 0}%\n발음평가 점수: ${scoreText}\n\n코멘트:\n${comment}`;
+        if (data.generalAnalysisText) {
+            stt.textContent = data.generalAnalysisText;
+        } else if (isFallback) {
+            stt.textContent = `일반분석 완료
+
+인식결과: ${recognized || '인식 결과 없음'}
+문장 일치도: ${similarity || 0}%
+발음평가 점수: ${scoreText}
+표준발음 참고: ${(currentTrainObj && currentTrainObj.pron) || '[문장을 입력하면 표준발음으로 변환합니다.]'}`;
         } else {
             stt.textContent = `AI 인식결과: ${recognized || '인식 실패'}\n문장 일치도: ${similarity}%\n발음평가 점수: ${scoreText}\n\nAI코멘트:\n${comment}`;
         }
     }
+
     const badge = document.getElementById('accBadge');
     if (badge) {
         if (isFallback) {
             badge.className = 'accuracy-badge acc-soso';
-            badge.textContent = data.badge || (data.source === 'local_ai' ? '로컬 분석' : '기본 코칭');
+            badge.textContent = data.badge || '일반분석';
         } else if (Number.isFinite(rawScore) && rawScore >= 4.3) {
             badge.className = 'accuracy-badge acc-good';
             badge.textContent = '매우 좋음';
@@ -4171,6 +4363,8 @@ function renderTrainingFinalAiResult_(data) {
         }
     }
 }
+
+
 
 async function toggleRecord() {
     if(window.location.protocol === 'file:') return alert("서버 환경(http/https)에서만 마이크 사용 및 파일 공유가 가능합니다.");
