@@ -13840,5 +13840,185 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
+
+<script>
+/* =========================================================
+   5-30 리미 정밀진단 30초 타임아웃 → 로컬 간단분석 전환
+   - 제미나이/서버 정밀진단이 30초 이상 걸리면 즉시 로컬 분석 표시
+   - 로컬 분석 생성도 지연되지 않도록 6초 안전 타임아웃 적용
+   - 분석중 GIF/버튼 상태는 로컬 분석 표시 후 반드시 해제
+   ========================================================= */
+window.__ulimTrainingAi30SecFallbackVersion = "5-30";
+const TRAINING_AI_ADVANCED_TIMEOUT_MS_5_30 = 30000;
+const TRAINING_AI_LOCAL_FALLBACK_TIMEOUT_MS_5_30 = 6000;
+
+function isTrainingAiAdvancedTimeout_5_30_(err) {
+    const msg = String((err && err.message) || err || '');
+    return /30초|정밀진단|시간이 오래|timeout|타임아웃|지연/i.test(msg);
+}
+
+function buildTrainingFinalFastLocalFallbackResult_5_30_(originalError) {
+    const scriptText = currentTrainObj ? String(currentTrainObj.text || '').trim() : '';
+    const pron = currentTrainObj ? String(currentTrainObj.pron || '').trim() : '';
+    const recognized = String(recognitionResult || '').trim();
+    const cleanTarget = scriptText.replace(/[^가-힣]/g, '');
+    const cleanHeard = recognized.replace(/[^가-힣]/g, '');
+    const similarity = cleanTarget && cleanHeard ? Math.round(getSimilarity(cleanTarget, cleanHeard) * 100) : 0;
+    const durationSec = getTrainingRecordedDurationSec_ ? getTrainingRecordedDurationSec_() : 0;
+    const syllableCount = (scriptText.match(/[가-힣]/g) || []).length;
+    const metrics = {
+        durationSec: durationSec || 0,
+        avgRms: 0,
+        silenceRatio: 0,
+        syllablesPerSec: durationSec ? syllableCount / durationSec : 0
+    };
+    const generalAnalysisText = buildTrainingFinalGeneralAnalysisText_(recognized, similarity, metrics);
+    const errorMessage = originalError && originalError.message ? originalError.message : String(originalError || '');
+
+    return {
+        ok: true,
+        status: 'fallback',
+        source: 'local_ai',
+        analysisSource: 'local_general',
+        badge: '일반분석',
+        recognized: recognized,
+        score: '',
+        scoreText: '-',
+        comment: generalAnalysisText,
+        analysisText: generalAnalysisText,
+        generalAnalysisText: generalAnalysisText,
+        message: '리미의 간단분석!',
+        originalError: errorMessage,
+        requestSentence: scriptText,
+        standardPronunciation: pron,
+        metrics: metrics
+    };
+}
+
+async function buildTrainingFinalFallbackResult_5_30_(audioBlob, originalError) {
+    try {
+        const localPromise = buildTrainingFinalFallbackResult_(audioBlob, originalError);
+        return await Promise.race([
+            localPromise,
+            trainingAiTimeout_(
+                TRAINING_AI_LOCAL_FALLBACK_TIMEOUT_MS_5_30,
+                '로컬 분석 준비가 지연되어 빠른 간단분석으로 전환합니다.'
+            )
+        ]);
+    } catch (localErr) {
+        console.warn('[5-30 로컬 분석 빠른 대체]', localErr);
+        return buildTrainingFinalFastLocalFallbackResult_5_30_(originalError || localErr);
+    }
+}
+
+async function runTrainingFinalAiAnalysisFromButton() {
+    if (window.trainingFinalAiInProgress) {
+        return alert('리미가 이미 분석중입니다. 잠시만 기다려주세요.');
+    }
+
+    if (step !== 6 || !currentTrainObj) {
+        return alert('최종녹음 및 AI 분석 단계에서 사용할 수 있습니다.');
+    }
+    if (!lastRecordedBlob) {
+        return alert('먼저 녹음을 완료해주세요.');
+    }
+
+    const todayCheck = await checkVocalTrainingTodayCompletedFromServer_({ timeoutMs: 10000 });
+    if (todayCheck && todayCheck.completed) {
+        resetTrainingFinalAiRequestState_();
+        return alert('오늘은 연습을 완료했습니다.');
+    }
+
+    if (window.trainingFinalAiResult && window.trainingFinalAiResult.requestSentence === currentTrainObj.text) {
+        resetTrainingFinalAiRequestState_();
+        return alert('이미 마지막 녹음본의 AI 분석이 완료되었습니다. 다시 분석하려면 새로 녹음 후 실행해주세요.');
+    }
+
+    const ok = confirm('AI분석을 시작하면 오늘연습이 완료됩니다. 진행하시겠습니까?');
+    if (!ok) return;
+
+    window.trainingFinalAiInProgress = true;
+    window.trainingFinalAiActiveRequestId = buildTrainingFinalRequestId_();
+
+    const btn = document.getElementById('trainingAiAnalyzeBtn');
+
+    try {
+        setTrainingAiLoadingState_(true);
+
+        const resultBox = document.getElementById('resultBox');
+        if (resultBox) resultBox.style.display = 'block';
+
+        const aiSection = document.getElementById('aiSection');
+        const recSection = document.getElementById('recSection');
+        if (aiSection) aiSection.style.display = 'block';
+        if (recSection) recSection.style.display = 'block';
+
+        const sttEl = document.getElementById('sttResult');
+        const badge = document.getElementById('accBadge');
+        if (sttEl) sttEl.textContent = '리미가 정밀진단을 진행중입니다. 30초 이상 지연되면 간단분석으로 자동 전환됩니다.';
+        if (badge) { badge.className = 'accuracy-badge acc-wait'; badge.textContent = '분석중'; }
+
+        const recStatus = document.getElementById('recStatus');
+        if (recStatus) recStatus.textContent = '리미가 정밀진단을 진행중입니다.';
+
+        await Promise.race([
+            runTrainingFinalAiAnalysis_(lastRecordedBlob, { force: true }),
+            trainingAiTimeout_(
+                TRAINING_AI_ADVANCED_TIMEOUT_MS_5_30,
+                '리미 정밀진단이 30초 이상 지연되어 간단분석으로 전환합니다.'
+            )
+        ]);
+
+        const recStatusDone = document.getElementById('recStatus');
+        if (recStatusDone) recStatusDone.textContent = '리미 정밀진단 완료. 연습완료 버튼을 눌러 결과를 업로드할 수 있습니다.';
+        enableVocalTrainingCompleteButton_();
+    } catch (err) {
+        console.warn('Training final advanced analysis failed or timed out:', err);
+
+        if (isTrainingAiLimitError_(err)) {
+            renderTrainingFinalAiLimitState_(err.message || '오늘 최종 AI 분석은 이미 사용했습니다.');
+            return;
+        }
+
+        const recStatusFallback = document.getElementById('recStatus');
+        if (recStatusFallback) {
+            recStatusFallback.textContent = isTrainingAiAdvancedTimeout_5_30_(err)
+                ? '리미 정밀진단이 지연되어 간단분석으로 전환합니다.'
+                : '리미 간단분석으로 전환합니다.';
+        }
+
+        const fallbackResult = await buildTrainingFinalFallbackResult_5_30_(lastRecordedBlob, err);
+        renderTrainingFinalAiResult_(fallbackResult);
+        enableVocalTrainingCompleteButton_();
+
+        const recStatusEl = document.getElementById('recStatus');
+        if (recStatusEl) {
+            recStatusEl.textContent = '리미의 간단분석! 연습완료 버튼을 눌러 결과를 업로드할 수 있습니다.';
+        }
+    } finally {
+        window.trainingFinalAiInProgress = false;
+        window.trainingFinalAiActiveRequestId = '';
+        setTrainingAiLoadingState_(false);
+        if (btn) {
+            btn.disabled = false;
+            btn.classList.remove('training-ai-loading');
+            btn.dataset.loading = '0';
+            btn.textContent = 'AI';
+            btn.style.opacity = '1';
+        }
+    }
+}
+</script>
+
+
+<script>
+/* =========================================================
+   5-31 안내
+   - 30초 후 로컬분석 전환은 5-30 index 로직 유지
+   - 로그인/조회 막힘은 5-31 GAS의 잠금 분리로 해결
+   ========================================================= */
+window.__ulimTrainingAiLockFixVersion = "5-31";
+</script>
+
 </body>
 </html>
