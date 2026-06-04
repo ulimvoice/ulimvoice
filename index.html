@@ -11962,5 +11962,166 @@ adminLoadInitialData = async function() {
 
 </script>
 
+
+<script>
+/* =========================================================
+   5-11 표준발음 고급분석 사용량 학생별 제한 패치
+   - 기존: 전화뒤4자리 또는 기기ID 기반으로 떨어질 수 있음
+   - 변경: studentSessionToken을 서버로 보내고, 서버에서 학생UID 기준으로 1일 제한 계산
+   ========================================================= */
+
+function pronGetStudentSessionTokenForUsage_() {
+    if (typeof getStudentSessionToken_ === 'function') return getStudentSessionToken_() || '';
+    if (typeof studentSessionToken !== 'undefined' && studentSessionToken) return studentSessionToken;
+    return localStorage.getItem('studentSessionToken') || '';
+}
+
+function pronGetEtriUserKey() {
+    const token = pronGetStudentSessionTokenForUsage_();
+    if (token) {
+        // 실제 학생UID는 서버에서만 계산합니다.
+        // 프론트 localStorage 캐시 분리용으로만 세션토큰 앞부분을 사용합니다.
+        return ('SESSION_' + token.slice(0, 18)).replace(/[^0-9A-Za-z_\-]/g, '_');
+    }
+
+    const name = (typeof studentName !== "undefined" && studentName) ? studentName : (localStorage.getItem("studentName") || "게스트");
+    if (name && name !== "게스트") {
+        return ('LOGIN_' + name).replace(/[^0-9A-Za-z가-힣_\-]/g, "_");
+    }
+
+    return pronGetDeviceKey();
+}
+
+async function pronRefreshEtriUsage() {
+    try {
+        const token = pronGetStudentSessionTokenForUsage_();
+        pronSetAdvancedStatus("고급분석 잔여횟수를 확인하는 중입니다.");
+
+        const data = await pronJsonpRequest({
+            action: "getEtriPronunciationUsage",
+            userKey: pronGetEtriUserKey(),
+            studentSessionToken: token,
+            dateKey: pronTodayKey(),
+            _: Date.now()
+        }, 10000);
+
+        if (!data || !data.ok) throw new Error(data && data.message ? data.message : "잔여횟수 확인 실패");
+
+        pronSetLocalEtriUsed(data.used || 0);
+        pronUpdateEtriUsageBadge(data.used || 0, data.remaining);
+        pronSetAdvancedStatus(`오늘 고급분석 사용량: ${data.used || 0}/${PRON_ETRI_DAILY_LIMIT}회\n잔여횟수: ${data.remaining}회`, "success");
+    } catch (err) {
+        const localUsed = pronGetLocalEtriUsed();
+        pronUpdateEtriUsageBadge(localUsed, PRON_ETRI_DAILY_LIMIT - localUsed);
+        pronSetAdvancedStatus("잔여횟수를 확인하지 못했습니다. 잠시 후 다시 시도해주세요.", "error");
+    }
+}
+
+async function pronRunEtriAdvancedAnalysis() {
+    const source = document.getElementById("pronInputText")?.value.trim() || "";
+    if (!source) {
+        alert("먼저 읽을 문장을 입력해주세요.");
+        return;
+    }
+    if (!pronRecordedBlob) {
+        alert("먼저 녹음을 완료해주세요. 녹음이 끝난 뒤 고급분석을 실행할 수 있습니다.");
+        return;
+    }
+    if (!GET_API_URL || !GET_API_URL.includes("script.google.com/macros/s/")) {
+        pronSetAdvancedStatus("고급분석 서비스를 준비 중입니다. 잠시 후 다시 시도해주세요.", "error");
+        return;
+    }
+
+    const token = pronGetStudentSessionTokenForUsage_();
+    const currentName = (typeof studentName !== "undefined" && studentName) ? studentName : (localStorage.getItem("studentName") || "게스트");
+
+    if (currentName !== "게스트" && !token) {
+        pronSetAdvancedStatus("학생별 사용량 확인을 위해 다시 로그인해주세요.", "error");
+        return;
+    }
+
+    try {
+        pronSetAdvancedStatus("우리미가 조금 더 정확하게 분석중입니다.");
+        if (!pronLastSttText) {
+            await pronRunWhisperTranscription();
+        }
+
+        const recognized = pronLastSttText || "";
+        const n = pronGetAnalysisNumbers();
+        const converted = source ? pronConvertText(source).converted : "";
+        const ruleSummary = pronGetRuleSummaryForVoice(source);
+        const target = pronNormalizeCompareText(source);
+        const heard = pronNormalizeCompareText(recognized);
+        const matchScore = target && heard ? Math.max(0, Math.round((1 - pronLevenshtein(target, heard) / Math.max(target.length, heard.length, 1)) * 100)) : 0;
+        const score5 = Math.max(1, Math.min(5, 1 + (matchScore / 100) * 4));
+        const requestId = pronBuildRequestId();
+
+        const payload = {
+            action: "geminiPronunciationComment",
+            requestId,
+            userKey: pronGetEtriUserKey(),
+            studentSessionToken: token,
+            studentNo: '',
+            studentName: currentName !== "게스트" ? currentName : '',
+            phoneLast4: '',
+            script: source,
+            recognized,
+            standardPronunciation: converted,
+            matchScore,
+            score5: score5.toFixed(1),
+            durationSec: n.durationSec ? n.durationSec.toFixed(1) : '',
+            syllablesPerSec: n.syllablesPerSec ? n.syllablesPerSec.toFixed(1) : '',
+            avgVolume: n.avgRms ? pronPercent(n.avgRms * 260) : '',
+            silenceRatio: n.durationSec ? pronPercent(n.silenceRatio * 100) : '',
+            ruleSummary,
+            dateKey: pronTodayKey(),
+            clientTime: new Date().toISOString()
+        };
+
+        await fetch(GET_API_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(payload)
+        });
+
+        pronPollEtriResult(requestId);
+    } catch (err) {
+        console.error(err);
+        pronSetAdvancedStatus("고급분석 요청 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.", "error");
+    }
+}
+
+function pronRenderEtriResult(data) {
+    const recognized = data.recognized || pronLastSttText || "인식 결과 없음";
+    const rawScore = data.score5 || data.score || "-";
+    const nScore = Number(rawScore);
+    const scoreText = Number.isFinite(nScore) ? nScore.toFixed(1) : String(rawScore || "-");
+    const source = document.getElementById("pronInputText")?.value || "";
+    const converted = source ? pronConvertText(source).converted : "";
+    const ruleSummary = pronGetRuleSummaryForVoice(source);
+    const comment = String(data.comment || '').trim() || '분석 결과를 기준으로 다시 녹음하며 비교해보세요.';
+
+    if (typeof data.used !== 'undefined') {
+        pronSetLocalEtriUsed(data.used || 0);
+        pronUpdateEtriUsageBadge(data.used || 0, data.remaining);
+    }
+
+    pronSetAdvancedStatus(`우리미 고급분석 완료
+
+발음평가 점수: ${scoreText} / 5
+우리미 인식결과: ${recognized}
+
+표준발음 참고:
+${converted ? "[" + converted + "]" : "먼저 문장을 입력하세요."}
+
+우리미 코멘트:
+- ${comment}
+
+표준발음 점검 대상:
+${ruleSummary}`, "success");
+}
+</script>
+
 </body>
 </html>
