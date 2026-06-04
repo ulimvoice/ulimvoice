@@ -1470,8 +1470,8 @@ body.admin-mode .admin-only-tab { display:block !important; }
                 <input type="text" id="studentNameInput" placeholder="이름을 입력하세요" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px;">
             </div>
             <div style="margin-bottom: 30px;">
-                <label for="phoneLast4Input" style="display: block; font-size: 14px; color: #555; margin-bottom: 5px; font-weight: bold;">🔑 암호 (전화번호 뒤 네 자리):</label>
-                <input type="password" id="phoneLast4Input" placeholder="전화번호 뒤 4자리" maxlength="4" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px;">
+                <label for="phoneLast4Input" style="display: block; font-size: 14px; color: #555; margin-bottom: 5px; font-weight: bold;">🔑 비밀번호</label>
+                <input type="password" id="phoneLast4Input" placeholder="초기 비밀번호는 전화번호 뒤 4자리" autocomplete="current-password" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px;">
             </div>
             <button onclick="authenticateStudentFromInputs()" style="width: 100%; padding: 14px; background: #2ecc71; color: white; border: none; border-radius: 8px; font-size: 17px; font-weight: bold; cursor: pointer; transition: background 0.2s;">로그인</button>
             <button onclick="guestLogin()" style="width: 100%; padding: 14px; background: #aaa; color: white; border: none; border-radius: 8px; font-size: 17px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: background 0.2s;">게스트 로그인 (상황극 탭만 사용)</button>
@@ -1831,6 +1831,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
           <button type="button" class="admin-btn blue" id="adminRefreshStudentsBtn" onclick="adminLoadStudents(true, true)">학생목록 새로고침</button>
           <button type="button" class="admin-btn orange admin-full-only" onclick="adminRefreshStudentEnrollmentStatuses()">재원상태 갱신</button>
           <button type="button" class="admin-btn purple admin-full-only" onclick="registerRoomPushTokenManual()" style="background:#7c3aed;">푸시 알림 등록</button>
+          <button type="button" class="admin-btn" onclick="changeAdminPasswordByPrompt()" style="background:#16a34a;">비밀번호 변경</button>
           <button type="button" class="admin-btn gray" onclick="adminLogout()">로그아웃</button>
         </div>
 
@@ -2355,6 +2356,8 @@ let studentName = localStorage.getItem('studentName') || '';
 let instructorName = localStorage.getItem('instructorName') || '기본';
 let phoneLast4 = localStorage.getItem('phoneLast4') || '';
 let studentNo = localStorage.getItem('studentNo') || '';
+let studentSessionToken = localStorage.getItem('studentSessionToken') || '';
+let studentMustChangePassword = localStorage.getItem('studentMustChangePassword') === 'Y';
 let instructorFolderId = '';
 // =========================================================================================
 // ⭐ 1. GAS URL 정의 (제공해주신 배포 주소로 설정 완료) ⭐
@@ -2434,7 +2437,7 @@ async function promptAndAuthenticate() {
     try {
         const response = await fetch(url);
         
-        if (!response.ok) throw new Error(`GAS 서버 응답 오류: ${response.status}`);
+        if (!response.ok) throw new Error(`서버 응답이 원활하지 않습니다. 잠시 후 다시 시도해주세요.`);
         
         const result = await response.json();
 
@@ -2564,12 +2567,12 @@ async function waitForVocalTrainingUploadResult_(requestId, timeoutMs = 60000) {
         await new Promise(resolve => setTimeout(resolve, 2500));
     }
 
-    throw new Error('업로드 결과 확인 시간이 초과되었습니다. ' + (lastMessage || 'GAS 실행기록과 발성훈련연습일지 시트를 확인해주세요.'));
+    throw new Error('업로드 결과 확인 시간이 초과되었습니다. ' + (lastMessage || '잠시 후 다시 시도해주세요. 문제가 반복되면 학원에 문의해주세요.'));
 }
 
 async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeType, action, extraMeta = {}) {
     if (!GOOGLE_APP_SCRIPT_URL || !GOOGLE_APP_SCRIPT_URL.includes('script.google.com/macros/s/')) {
-        throw new Error("Google Apps Script URL이 설정되지 않았습니다.");
+        throw new Error("서비스 연결이 준비되지 않았습니다. 잠시 후 다시 시도해주세요.");
     }
 
     const safeMimeType = String(mimeType || 'audio/webm').split(';')[0].trim() || 'audio/webm';
@@ -2600,7 +2603,8 @@ async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeT
         aiSource: extraMeta.aiSource || (window.trainingFinalAiResult && (window.trainingFinalAiResult.source || window.trainingFinalAiResult.status || window.trainingFinalAiResult.badge)) || '',
         aiComment: extraMeta.aiComment || (window.trainingFinalAiResult && (window.trainingFinalAiResult.comment || window.trainingFinalAiResult.analysisText)) || '',
         preferredExtension: getExtensionFromMime_(safeMimeType, 'webm'),
-        clientTime: new Date().toISOString()
+        clientTime: new Date().toISOString(),
+        studentSessionToken: extraMeta.studentSessionToken || (typeof getStudentSessionToken_ === 'function' ? getStudentSessionToken_() : '')
     };
 
     await fetch(GOOGLE_APP_SCRIPT_URL, {
@@ -3133,10 +3137,10 @@ async function fetchServerTrainingSentence_(options) {
     }
 
     if (!GET_API_URL || !GET_API_URL.includes('script.google.com/macros/s/')) {
-        throw new Error('학생부 GAS 주소가 설정되지 않았습니다.');
+        throw new Error('서비스 연결이 준비되지 않았습니다. 잠시 후 다시 시도해주세요.');
     }
     if (typeof pronJsonpRequest !== 'function') {
-        throw new Error('GAS JSONP 모듈이 아직 준비되지 않았습니다.');
+        throw new Error('서비스 연결을 준비 중입니다. 잠시 후 다시 시도해주세요.');
     }
     const ident = getTrainingStudentIdentity_();
     const data = await pronJsonpRequest({
@@ -3144,6 +3148,7 @@ async function fetchServerTrainingSentence_(options) {
         studentNo: ident.studentNo,
         studentName: ident.studentName,
         phoneLast4: ident.phoneLast4,
+        studentSessionToken: ident.studentSessionToken || '',
         deviceKey: ident.deviceKey,
         _: Date.now()
     }, 16000);
@@ -3160,6 +3165,7 @@ async function recordServerTrainingSentenceComplete_() {
         studentNo: ident.studentNo,
         studentName: ident.studentName,
         phoneLast4: ident.phoneLast4,
+        studentSessionToken: ident.studentSessionToken || '',
         deviceKey: ident.deviceKey,
         sentenceId: currentTrainObj.id,
         cycleKey: currentTrainObj.cycleKey || '',
@@ -3323,9 +3329,9 @@ async function trainNew(){
 
         if (availableData.length === 0) {
             if (trainDataList.length > 0) {
-                return alert('모든 로컬 문장(' + trainDataList.length + '개)을 연습했습니다. 서버 문장 조회도 실패했습니다. 관리자에게 GAS 배포 상태를 확인해주세요.');
+                return alert('모든 로컬 문장(' + trainDataList.length + '개)을 연습했습니다. 오늘 사용할 문장을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
             }
-            return alert('문장 데이터(appdata/vocalization/data.js)를 찾을 수 없습니다.');
+            return alert('문장 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
         }
         currentTrainObj = buildTrainingObjectFromSentence_(pick(availableData));
     }
@@ -4219,7 +4225,7 @@ async function runTrainingFinalAiAnalysisFromButton() {
 async function runTrainingFinalAiAnalysis_(audioBlob, options = {}) {
     if (!audioBlob) throw new Error('녹음 파일이 없습니다.');
     if (!GET_API_URL || !GET_API_URL.includes('script.google.com/macros/s/')) {
-        throw new Error('학생부 GAS 주소가 설정되지 않았습니다.');
+        throw new Error('서비스 연결이 준비되지 않았습니다. 잠시 후 다시 시도해주세요.');
     }
     if (!currentTrainObj) throw new Error('연습 문장이 없습니다.');
     const requestId = buildTrainingFinalRequestId_();
@@ -4461,7 +4467,7 @@ async function shareVocalResult() {
         "녹음 파일 업로드 및 링크 기록"
     ); 
 
-    alert("녹음 파일 업로드 및 시트 기록을 시도했습니다. 드라이브 폴더와 시트(F열)를 확인하세요.");
+    alert("녹음 파일 업로드 요청을 보냈습니다. 잠시 후 연습기록에서 확인해주세요.");
     
     // 3. (기존) 웹 공유 또는 다운로드 로직
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([], filename, {type: mimeType})] })) {
@@ -5066,7 +5072,7 @@ async function authenticate(name, phone) {
     try {
         const response = await fetch(url);
         hideLoading();
-        if (!response.ok) throw new Error(`GAS 서버 응답 오류: ${response.status}`);
+        if (!response.ok) throw new Error(`서버 응답이 원활하지 않습니다. 잠시 후 다시 시도해주세요.`);
         const result = await response.json();
         if (result.status === 'success') {
             studentName = result.name;
@@ -7988,7 +7994,8 @@ function refreshRoomReservationsInBackground(force = true) {
     roomJsonp({
         action: "getRoomReservations",
         year,
-        month
+        month,
+        studentSessionToken: studentSessionToken || localStorage.getItem("studentSessionToken") || ""
     }, { cacheBust: force }).then(data => {
         if (!data || data.status !== "success") return;
         applyRoomReservationData(data);
@@ -8015,12 +8022,12 @@ async function loadRoomReservations(force = false) {
     if (!isRoomApiReady()) {
         calendarEl.innerHTML = `
             <div style="grid-column:1/-1; background:#fff3cd; border:1px solid #ffeeba; border-radius:12px; padding:16px; color:#856404; line-height:1.6;">
-                <b>연습실 예약 GAS 주소가 아직 설정되지 않았습니다.</b><br>
-                index.html 안의 <code>ROOM_API_URL</code> 값을 새로 배포한 Apps Script 웹앱 주소로 교체해주세요.
+                <b>연습실 예약 서비스를 준비 중입니다.</b><br>
+                잠시 후 다시 시도해주세요. 문제가 반복되면 학원에 문의해주세요.
             </div>
         `;
         if (tableEl) tableEl.innerHTML = "";
-        if (titleEl) titleEl.textContent = "GAS 주소 설정 필요";
+        if (titleEl) titleEl.textContent = "예약 서비스 준비 중";
         return;
     }
 
@@ -8051,7 +8058,8 @@ async function loadRoomReservations(force = false) {
         const data = await roomJsonp({
             action: "getRoomReservations",
             year,
-            month
+            month,
+            studentSessionToken: studentSessionToken || localStorage.getItem("studentSessionToken") || ""
         }, { cacheBust: force });
 
         if (!data || data.status !== "success") {
@@ -8249,7 +8257,7 @@ async function reserveRoomSlot(date, room, hour) {
     }
 
     if (!isRoomApiReady()) {
-        alert("연습실 예약 GAS 주소가 아직 설정되지 않았습니다.");
+        alert("연습실 예약 서비스를 준비 중입니다.");
         return;
     }
 
@@ -8275,9 +8283,7 @@ async function reserveRoomSlot(date, room, hour) {
             room,
             startHour: hour,
             endHour: hour + 1,
-            studentName,
-            phoneLast4,
-            instructorName
+            studentSessionToken: studentSessionToken || localStorage.getItem("studentSessionToken") || ""
         });
 
         if (data && data.status === "success") {
@@ -8299,7 +8305,7 @@ async function reserveRoomSlot(date, room, hour) {
         console.error(e);
         alert(
             "예약 저장 중 오류가 발생했습니다.\n" +
-            (e.message || "GAS 배포 상태를 확인해주세요.")
+            (e.message || "잠시 후 다시 시도해주세요.")
         );
     } finally {
         hideRoomOverlay("roomReserveLoading");
@@ -8309,7 +8315,7 @@ async function reserveRoomSlot(date, room, hour) {
 
 async function cancelRoomReservation(id) {
     if (!isRoomApiReady()) {
-        alert("연습실 예약 GAS 주소가 아직 설정되지 않았습니다.");
+        alert("연습실 예약 서비스를 준비 중입니다.");
         return;
     }
 
@@ -8324,8 +8330,7 @@ async function cancelRoomReservation(id) {
         const data = await roomJsonp({
             action: "cancelRoom",
             id,
-            studentName,
-            phoneLast4
+            studentSessionToken: studentSessionToken || localStorage.getItem("studentSessionToken") || ""
         });
 
         if (data && data.status === "success") {
@@ -8349,7 +8354,7 @@ async function cancelRoomReservation(id) {
         console.error(e);
         alert(
             "예약 취소 중 오류가 발생했습니다.\n" +
-            (e.message || "GAS 배포 상태를 확인해주세요.")
+            (e.message || "잠시 후 다시 시도해주세요.")
         );
     } finally {
         hideRoomOverlay("roomCancelLoading");
@@ -9433,7 +9438,7 @@ async function pronBlobToEtriAudioBase64(blob) {
 }
 function pronJsonpRequest(params, timeoutMs = 12000) {
     return new Promise((resolve, reject) => {
-        if (!PRON_ETRI_GAS_URL) return reject(new Error("GAS URL이 설정되지 않았습니다."));
+        if (!PRON_ETRI_GAS_URL) return reject(new Error("서비스 연결이 준비되지 않았습니다. 잠시 후 다시 시도해주세요."));
         const callbackName = "pronEtriCb_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2);
         const query = new URLSearchParams(params || {});
         query.set("callback", callbackName);
@@ -9460,7 +9465,7 @@ function pronJsonpRequest(params, timeoutMs = 12000) {
             if (done) return;
             done = true;
             cleanup();
-            reject(new Error("GAS JSONP 호출 실패"));
+            reject(new Error("서비스 연결이 원활하지 않습니다."));
         };
         script.src = PRON_ETRI_GAS_URL + "?" + query.toString();
         document.head.appendChild(script);
@@ -11477,6 +11482,483 @@ async function adminReleaseClassroomUsage(recordId) {
 
 
 
+
+</script>
+
+
+<script>
+/* 5-7 사용자 노출 문구 안전필터: 개발자용 연결/설정 문구를 일반 안내문으로 변환 */
+(function () {
+  if (window.__ulimUserMessageSanitizerInstalled) return;
+  window.__ulimUserMessageSanitizerInstalled = true;
+
+  function sanitizeUlimUserMessage(message) {
+    const text = String(message == null ? '' : message);
+    const riskPattern = /(GAS|Apps Script|script\.google|JSONP|라우팅|배포|스크립트\s*속성|관리자\s*API|API_KEY|API_SECRET|KAKAO_PFID|SOLAPI_|ROOM_API_URL|GET_API_URL|GOOGLE_APP_SCRIPT_URL|코드\s*확인|setupAdminSheets)/i;
+
+    if (!riskPattern.test(text)) return text;
+
+    if (/예약/.test(text)) {
+      return '예약 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.';
+    }
+    if (/발성|녹음|분석|문장/.test(text)) {
+      return '분석 또는 기록 처리 중 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.';
+    }
+    if (/알림|문자|톡|발송/.test(text)) {
+      return '알림 발송 준비 중 문제가 발생했습니다. 관리자에게 문의해주세요.';
+    }
+    if (/로그인|인증/.test(text)) {
+      return '인증 정보를 확인하지 못했습니다. 다시 로그인해주세요.';
+    }
+
+    return '요청을 처리하지 못했습니다. 잠시 후 다시 시도해주세요.';
+  }
+
+  const nativeAlert = window.alert ? window.alert.bind(window) : null;
+  if (nativeAlert) {
+    window.alert = function (message) {
+      nativeAlert(sanitizeUlimUserMessage(message));
+    };
+  }
+
+  window.sanitizeUlimUserMessage = sanitizeUlimUserMessage;
+})();
+</script>
+
+
+<script>
+/* =========================================================
+   5-8 1차 보안패치
+   - 학생명 + 비밀번호 로그인
+   - 초기 비밀번호: 전화번호 뒤 4자리
+   - 학생 세션토큰 기반 요청
+   - 전화뒤4자리/학생UID는 브라우저에 저장하지 않음
+   ========================================================= */
+
+function getStudentSessionToken_() {
+    return studentSessionToken || localStorage.getItem('studentSessionToken') || '';
+}
+
+function clearStudentSecureSession_() {
+    studentSessionToken = '';
+    studentMustChangePassword = false;
+    phoneLast4 = '';
+    studentNo = '';
+    localStorage.removeItem('studentSessionToken');
+    localStorage.removeItem('studentMustChangePassword');
+    localStorage.removeItem('phoneLast4');
+    localStorage.removeItem('studentNo');
+    localStorage.removeItem('instructorFolderId');
+}
+
+function setStudentSecureSession_(result) {
+    studentName = result.name || result.studentName || '';
+    instructorName = result.instructor || '';
+    studentSessionToken = result.sessionToken || '';
+    studentMustChangePassword = !!result.mustChangePassword;
+
+    // 보안상 전화뒤4자리/내부 학생UID는 브라우저에 저장하지 않습니다.
+    phoneLast4 = '';
+    studentNo = '';
+
+    localStorage.setItem('studentName', studentName);
+    localStorage.setItem('instructorName', instructorName);
+    localStorage.setItem('studentSessionToken', studentSessionToken);
+    localStorage.setItem('studentMustChangePassword', studentMustChangePassword ? 'Y' : 'N');
+    localStorage.removeItem('phoneLast4');
+    localStorage.removeItem('studentNo');
+    localStorage.removeItem('instructorFolderId');
+
+    updateFilenameConstants();
+}
+
+async function authenticateStudentFromInputs() {
+    const nameInput = document.getElementById('studentNameInput');
+    const pwInput = document.getElementById('phoneLast4Input');
+    const name = nameInput ? nameInput.value.trim() : '';
+    const password = pwInput ? pwInput.value : '';
+
+    if (!name || !password) {
+        alert("학생 이름과 비밀번호를 입력해주세요.");
+        return;
+    }
+
+    await authenticate(name, password);
+}
+
+async function authenticate(name, password) {
+    showLoading("로그인 정보 확인 중...");
+
+    try {
+        const query = new URLSearchParams();
+        query.set('action', 'secureStudentLogin');
+        query.set('name', name);
+        query.set('password', password);
+        query.set('_', Date.now());
+
+        const response = await fetch(`${GET_API_URL}?${query.toString()}`);
+        hideLoading();
+
+        if (!response.ok) throw new Error('서버 응답이 원활하지 않습니다. 잠시 후 다시 시도해주세요.');
+
+        const result = await response.json();
+        if (result && result.status === 'success') {
+            setStudentSecureSession_(result);
+            alert(`${studentName}님 로그인되었습니다.`);
+
+            if (studentMustChangePassword) {
+                await changeStudentPasswordByPrompt(true, password);
+            }
+
+            showMainContent(true);
+        } else {
+            clearStudentSecureSession_();
+            alert((result && result.message) || "로그인에 실패했습니다.");
+        }
+    } catch (e) {
+        hideLoading();
+        clearStudentSecureSession_();
+        alert(e.message || "로그인 처리 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.");
+    }
+}
+
+async function changeStudentPasswordByPrompt(force = false, knownCurrentPassword = '') {
+    const token = getStudentSessionToken_();
+
+    if (!token) {
+        if (!force) alert("먼저 학생 로그인을 해주세요.");
+        return false;
+    }
+
+    const currentPassword = knownCurrentPassword || prompt("현재 비밀번호를 입력해주세요.");
+    if (!currentPassword) return false;
+
+    const newPassword = prompt("새 비밀번호를 입력해주세요.\n영문/숫자 조합 4자 이상을 권장합니다.");
+    if (!newPassword) return false;
+
+    if (String(newPassword).length < 4) {
+        alert("새 비밀번호는 4자 이상으로 설정해주세요.");
+        return false;
+    }
+
+    const newPassword2 = prompt("새 비밀번호를 한 번 더 입력해주세요.");
+    if (newPassword !== newPassword2) {
+        alert("새 비밀번호가 서로 다릅니다.");
+        return false;
+    }
+
+    try {
+        showLoading("비밀번호 변경 중...");
+
+        const query = new URLSearchParams();
+        query.set('action', 'changeStudentPassword');
+        query.set('studentSessionToken', token);
+        query.set('currentPassword', currentPassword);
+        query.set('newPassword', newPassword);
+        query.set('_', Date.now());
+
+        const response = await fetch(`${GET_API_URL}?${query.toString()}`);
+        hideLoading();
+
+        if (!response.ok) throw new Error('서버 응답이 원활하지 않습니다. 잠시 후 다시 시도해주세요.');
+        const result = await response.json();
+
+        if (result && result.status === 'success') {
+            studentMustChangePassword = false;
+            localStorage.setItem('studentMustChangePassword', 'N');
+            alert("비밀번호가 변경되었습니다.");
+            return true;
+        }
+
+        alert((result && result.message) || "비밀번호를 변경하지 못했습니다.");
+        return false;
+    } catch (err) {
+        hideLoading();
+        alert(err.message || "비밀번호 변경 중 문제가 발생했습니다.");
+        return false;
+    }
+}
+
+async function checkStudentName() {
+    const token = getStudentSessionToken_();
+    const isGuest = studentName === '게스트';
+
+    if (token && studentName && instructorName && instructorName !== '기본') {
+        try {
+            const query = new URLSearchParams();
+            query.set('action', 'getStudentSession');
+            query.set('studentSessionToken', token);
+            query.set('_', Date.now());
+
+            const response = await fetch(`${GET_API_URL}?${query.toString()}`);
+            if (response.ok) {
+                const result = await response.json();
+                if (result && result.status === 'success') {
+                    setStudentSecureSession_(result);
+                    showMainContent(true);
+                    return;
+                }
+            }
+        } catch (ignore) {}
+
+        clearStudentSecureSession_();
+    }
+
+    if (isGuest) {
+        updateFilenameConstants();
+        showMainContent(false);
+        return;
+    }
+
+    const overlay = document.getElementById('loginOverlay');
+    if (overlay) overlay.style.display = 'flex';
+    const wrapper = document.querySelector('.wrapper');
+    if (wrapper) wrapper.style.display = 'none';
+}
+
+function guestLogin() {
+    studentName = "게스트";
+    instructorName = "기본";
+    phoneLast4 = "";
+    studentNo = "GUEST";
+    studentSessionToken = "";
+    localStorage.setItem('studentName', studentName);
+    localStorage.setItem('instructorName', instructorName);
+    localStorage.removeItem('phoneLast4');
+    localStorage.setItem('studentNo', studentNo);
+    localStorage.removeItem('studentSessionToken');
+    localStorage.removeItem('studentMustChangePassword');
+    updateFilenameConstants();
+    showMainContent(false);
+}
+
+function getTrainingStudentIdentity_() {
+    return {
+        studentSessionToken: getStudentSessionToken_(),
+        studentNo: '',
+        studentName: (typeof studentName !== 'undefined' ? studentName : '') || localStorage.getItem('studentName') || '게스트',
+        phoneLast4: '',
+        deviceKey: (typeof pronGetDeviceKey === 'function' ? pronGetDeviceKey() : (localStorage.getItem('ulimDeviceKey') || ''))
+    };
+}
+
+function getVocalTrainingUserKey_() {
+    const token = getStudentSessionToken_();
+    if (token) return 'SESSION_' + token.slice(0, 16);
+    const name = (typeof studentName !== 'undefined' && studentName) ? studentName : (localStorage.getItem('studentName') || '게스트');
+    if (name && name !== '게스트') return ('NAME_' + name).replace(/[^0-9A-Za-z가-힣_-]/g, '_');
+    return pronGetDeviceKey ? pronGetDeviceKey() : ('DEV_' + Date.now());
+}
+
+const __ulimOriginalUploadAudioToDriveAndLog = window.uploadAudioToDriveAndLog || uploadAudioToDriveAndLog;
+uploadAudioToDriveAndLog = function(vocalId, sentenceText, base64Data, mimeType, action, extraMeta = {}) {
+    extraMeta = Object.assign({}, extraMeta || {}, {
+        studentSessionToken: getStudentSessionToken_()
+    });
+    return __ulimOriginalUploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeType, action, extraMeta);
+};
+
+const __ulimOriginalRoomJsonp = window.roomJsonp || roomJsonp;
+roomJsonp = function(params, options = {}) {
+    params = Object.assign({}, params || {});
+    if (
+        params.action === 'getRoomReservations' ||
+        params.action === 'reserveRoom' ||
+        params.action === 'cancelRoom'
+    ) {
+        params.studentSessionToken = getStudentSessionToken_();
+        delete params.phoneLast4;
+    }
+    return __ulimOriginalRoomJsonp(params, options);
+};
+
+function getRoomCacheKey(year, month) {
+    const sessionKey = getStudentSessionToken_() ? getStudentSessionToken_().slice(0, 12) : 'public';
+    return `${year}-${String(month).padStart(2, '0')}-${sessionKey}`;
+}
+
+function getRoomLocalStorageKey(cacheKey) {
+    return `ulimRoomReservationCache_secure_${cacheKey}`;
+}
+
+function loadStudentVocalPracticeLogsForMonth_(year, month, force = false) {
+    if (!studentName || studentName === '게스트' || !getStudentSessionToken_()) return;
+    const key = `${year}-${String(month + 1).padStart(2, '0')}`;
+    if (!force && studentVocalPracticeLoadedKey === key) return;
+
+    try {
+        const query = new URLSearchParams();
+        query.set('action', 'getStudentVocalPracticeLogs');
+        query.set('studentSessionToken', getStudentSessionToken_());
+        query.set('year', String(year));
+        query.set('month', String(month + 1));
+        query.set('_', Date.now());
+
+        fetch(`${GET_API_URL}?${query.toString()}`)
+            .then(response => {
+                if (!response.ok) throw new Error('연습일지 조회 실패');
+                return response.json();
+            })
+            .then(data => {
+                if (!data || data.status !== 'success') throw new Error((data && data.message) || '연습일지 응답 오류');
+                studentVocalPracticeLogMap = new Map();
+                (data.logs || []).forEach(log => {
+                    const dateKey = String(log.practiceDate || '').trim();
+                    if (!dateKey) return;
+                    if (!studentVocalPracticeLogMap.has(dateKey)) studentVocalPracticeLogMap.set(dateKey, []);
+                    studentVocalPracticeLogMap.get(dateKey).push(log);
+                });
+                studentVocalPracticeLoadedKey = key;
+                if (typeof renderCalendar === 'function') renderCalendar();
+            })
+            .catch(err => console.warn('학생 연습일지 서버 조회 실패:', err));
+    } catch (err) {
+        console.warn('학생 연습일지 서버 조회 실패:', err);
+    }
+}
+
+</script>
+
+
+<script>
+/* =========================================================
+   5-9 2차 보안패치
+   - 강사/관리자 계정 비밀번호 Hash + Salt 저장
+   - 로그인 실패 제한
+   - adminToken 세션버전 검증
+   - 강사/관리자 비밀번호 변경
+   ========================================================= */
+
+function setAdminSecureSession_(data) {
+    adminToken = data.adminToken || '';
+    adminInfo = data.admin || {};
+    localStorage.setItem('adminToken', adminToken);
+    localStorage.setItem('adminInfo', JSON.stringify(adminInfo));
+    localStorage.setItem('ulimLastMode', 'admin');
+}
+
+async function promptAdminPasswordChangeIfNeeded_(knownCurrentPassword = '') {
+    if (!adminInfo || !adminInfo.mustChangePassword) return true;
+
+    alert('초기 비밀번호 상태입니다. 보안을 위해 새 비밀번호로 변경해주세요.');
+    const ok = await changeAdminPasswordByPrompt(true, knownCurrentPassword);
+    return !!ok;
+}
+
+async function adminLogin() {
+    const id = document.getElementById('adminIdInput').value.trim();
+    const pw = document.getElementById('adminPwInput').value.trim();
+
+    if (!id || !pw) return alert('강사 ID와 비밀번호를 입력해주세요.');
+
+    try {
+        showLoading('로그인 정보 확인 중...');
+        const data = await adminApi('adminLogin', { adminId: id, adminPw: pw });
+        hideLoading();
+
+        setAdminSecureSession_(data);
+
+        adminModeActive = true;
+        adminEnableAllTabsForAdminMode();
+        setAdminTabVisibility();
+        applyAdminPermissions();
+
+        document.getElementById('adminLoginBox').style.display = 'none';
+        document.getElementById('adminDashboard').style.display = 'block';
+
+        const changedOk = await promptAdminPasswordChangeIfNeeded_(pw);
+        if (!changedOk && adminInfo && adminInfo.mustChangePassword) {
+            alert('비밀번호 변경 전에는 일부 기능 사용이 제한될 수 있습니다.');
+        }
+
+        await adminLoadInitialData();
+
+        try {
+            if (window.registerRoomPushTokenAfterAdminLogin) window.registerRoomPushTokenAfterAdminLogin();
+        } catch (pushErr) {
+            console.warn(pushErr);
+        }
+    } catch (e) {
+        hideLoading();
+        alert(e.message || '로그인 처리 중 문제가 발생했습니다.');
+    }
+}
+
+async function changeAdminPasswordByPrompt(force = false, knownCurrentPassword = '') {
+    if (!adminToken) {
+        alert('강사 로그인 후 이용해주세요.');
+        return false;
+    }
+
+    const currentPassword = knownCurrentPassword || prompt('현재 비밀번호를 입력해주세요.');
+    if (!currentPassword) return false;
+
+    const newPassword = prompt('새 비밀번호를 입력해주세요.\n영문/숫자/특수문자 조합 6자 이상을 권장합니다.');
+    if (!newPassword) return false;
+
+    if (String(newPassword).length < 6) {
+        alert('새 비밀번호는 6자 이상으로 설정해주세요.');
+        return false;
+    }
+
+    if (String(currentPassword) === String(newPassword)) {
+        alert('새 비밀번호는 현재 비밀번호와 다르게 설정해주세요.');
+        return false;
+    }
+
+    const newPassword2 = prompt('새 비밀번호를 한 번 더 입력해주세요.');
+    if (newPassword !== newPassword2) {
+        alert('새 비밀번호가 서로 다릅니다.');
+        return false;
+    }
+
+    try {
+        showLoading('비밀번호 변경 중...');
+
+        const data = await adminApi('changeAdminPassword', {
+            adminToken,
+            currentPassword,
+            newPassword,
+            noCache: 1
+        });
+
+        hideLoading();
+
+        if (data && data.status === 'success') {
+            if (data.adminToken) {
+                setAdminSecureSession_(data);
+            } else if (adminInfo) {
+                adminInfo.mustChangePassword = false;
+                localStorage.setItem('adminInfo', JSON.stringify(adminInfo));
+            }
+
+            alert('비밀번호가 변경되었습니다.');
+            return true;
+        }
+
+        alert((data && data.message) || '비밀번호를 변경하지 못했습니다.');
+        return false;
+    } catch (err) {
+        hideLoading();
+        alert(err.message || '비밀번호 변경 중 문제가 발생했습니다.');
+        return false;
+    }
+}
+
+// 기존 adminLoadInitialData가 세션을 확인할 때 보안세션의 mustChangePassword를 반영하도록 보조 처리
+const __ulimOriginalAdminLoadInitialData = window.adminLoadInitialData || adminLoadInitialData;
+adminLoadInitialData = async function() {
+    await __ulimOriginalAdminLoadInitialData();
+
+    try {
+        if (adminInfo && adminInfo.mustChangePassword) {
+            const warnEl = document.getElementById('adminWelcomeText');
+            if (warnEl) {
+                warnEl.textContent = (adminInfo.name || adminInfo.id || '강사') + ' / 비밀번호 변경 필요';
+            }
+        }
+    } catch (ignore) {}
+};
 
 </script>
 
