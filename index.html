@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script type="text/javascript" nonce="5878564e64bc424ab28cf8dfbd2" src="//local.adguard.org?ts=1780568952131&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_0000000080d07209800b539b603d4a87%26fn%3D%25EC%259A%25B8%25EB%25A6%25BC%25EC%2595%25B1_index_5_17%25EC%25B0%25A8%25EC%25A0%2584%25EC%25B2%25B4%25ED%2586%25B5%25ED%2595%25A9%25EB%25B3%25B8_%25EB%258B%25B4%25EB%258B%25B9%25EA%25B0%2595%25EC%2582%25AC%25ED%2595%25AD%25EB%25AA%25A9%25EC%25A0%259C%25EA%25B1%25B0.html%26cd%3Dattachment%26ts%3D494603%26p%3Dfs%26cid%3D1%26sig%3D550ce0b527d4b02f67bcc02883cc32d4d2ab869837bb08aa2152316962bbef04%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://script.googleusercontent.com">
 <link rel="dns-prefetch" href="//script.google.com">
 <link rel="dns-prefetch" href="//script.googleusercontent.com">
@@ -13124,6 +13124,204 @@ function adminRenderVocalPracticeLogs() {
 }
 
 // 5-17 이후에도 기존 데이터 안의 instructor 값은 내부 필터/권한/저장에 계속 사용합니다.
+</script>
+
+
+<style>
+/* =========================================================
+   5-18 출석체크 O/X 버튼 복구 및 색상 개선
+   ========================================================= */
+.admin-att-action-wrap {
+    display: flex;
+    gap: 7px;
+    align-items: center;
+    flex-wrap: wrap;
+    min-width: 210px;
+}
+.admin-att-mini {
+    border: none;
+    border-radius: 10px;
+    padding: 8px 12px;
+    min-width: 38px;
+    font-size: 14px;
+    line-height: 1;
+    font-weight: 950;
+    cursor: pointer;
+    color: #fff;
+    box-shadow: 0 3px 8px rgba(15, 23, 42, .12);
+    transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+}
+.admin-att-mini:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 14px rgba(15, 23, 42, .16);
+}
+.admin-att-mini.ok {
+    background: linear-gradient(135deg, #16a34a, #22c55e);
+}
+.admin-att-mini.no {
+    background: linear-gradient(135deg, #dc2626, #ef4444);
+}
+.admin-att-mini.selected {
+    outline: 3px solid rgba(34, 197, 94, .22);
+}
+.admin-att-mini.no.selected {
+    outline-color: rgba(239, 68, 68, .22);
+}
+.admin-att-status-select {
+    min-width: 96px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-weight: 800;
+    background: #fff;
+}
+.admin-att-save-state {
+    display: inline-block;
+    min-width: 48px;
+    font-size: 12px;
+    font-weight: 900;
+}
+@media (max-width: 700px) {
+    .admin-att-action-wrap {
+        width: 100%;
+        min-width: 0;
+        justify-content: flex-end;
+    }
+    .admin-att-mini {
+        padding: 9px 14px;
+        min-width: 44px;
+        font-size: 15px;
+    }
+    .admin-att-status-select {
+        flex: 1 1 120px;
+        min-width: 120px;
+        font-size: 15px;
+    }
+}
+</style>
+
+<script>
+/* =========================================================
+   5-18 출석체크 작동 복구
+   - 5-17에서 제거된 담당강사 컬럼은 유지하지 않음
+   - O/X onclick은 기존 즉시반영 함수 adminQuickSetAttendance로 연결
+   - adminSetAttendanceRowStatus / adminSyncAttendanceRowStatus 호환 함수도 추가
+   ========================================================= */
+
+function adminAttendanceButtonSelectedClass_(status, target) {
+    const normalized = adminNormalizeAttendanceStatusForUi_(status || '');
+    if (target === '출석' && normalized === '출석') return ' selected';
+    if (target === '결석' && normalized === '결석') return ' selected';
+    return '';
+}
+
+async function adminSetAttendanceRowStatus(idx, status) {
+    if (typeof adminQuickSetAttendance === 'function') {
+        return adminQuickSetAttendance(idx, status);
+    }
+
+    // 혹시 이전 즉시저장 함수가 없는 배포에서도 최소한 화면값은 바뀌게 하는 안전장치
+    const row = document.querySelector(`#adminAttendanceTableWrap tr[data-att-index="${idx}"]`);
+    if (!row) return;
+
+    const normalized = adminNormalizeAttendanceStatusForUi_(status || '');
+    const select = row.querySelector('select[data-field="status"]');
+    if (select) select.value = normalized;
+
+    const badge = row.querySelector('.admin-status-badge');
+    if (badge) {
+        badge.textContent = normalized;
+        badge.className = `admin-status-badge ${normalized === '출석' ? 'attendance-ok' : (normalized === '결석' ? 'attendance-no' : '')}`;
+    }
+
+    if (adminAttendanceRecords[idx]) {
+        adminAttendanceRecords[idx].status = normalized;
+        adminAttendanceRecords[idx].attendanceStatus = normalized;
+    }
+}
+
+async function adminSyncAttendanceRowStatus(idx, value) {
+    if (adminAttendanceRecords[idx]) {
+        const normalized = adminNormalizeAttendanceStatusForUi_(value || '');
+        adminAttendanceRecords[idx].status = normalized;
+        adminAttendanceRecords[idx].attendanceStatus = normalized;
+    }
+
+    if (typeof adminSaveAttendanceStatusChange === 'function') {
+        return adminSaveAttendanceStatusChange(idx);
+    }
+}
+
+function adminRenderAttendanceTable() {
+    const wrap = document.getElementById('adminAttendanceTableWrap');
+    if (!wrap) return;
+
+    if (!adminAttendanceRecords.length) {
+        wrap.innerHTML = `<div class="notice-empty">출석부 데이터를 불러오세요. 날짜와 반명을 선택한 뒤 [출석부 반영]을 누르면 됩니다.</div>`;
+        return;
+    }
+
+    const isFull = adminIsFullAdmin();
+    let html = `<table class="admin-table">
+        <thead>
+            <tr>
+                <th><input type="checkbox" id="adminAttendSelectAll" onchange="adminToggleAttendanceAll(this.checked)" checked></th>
+                <th>출석체크</th>
+                <th>현재상태</th>
+                <th>특이사항</th>
+                <th>학생명</th>
+                <th>반명/수업명</th>
+                <th>강의실</th>
+                ${isFull ? '<th>학생전화</th><th>학부모전화</th>' : ''}
+                <th>메모</th>
+            </tr>
+        </thead>
+        <tbody>`;
+
+    adminAttendanceRecords.forEach((r, idx) => {
+        const status = adminNormalizeAttendanceStatusForUi_(r.status || r.attendanceStatus || '');
+        const phoneCells = isFull
+            ? `<td>${ulimAdminEsc_(r.studentPhone || '')}</td><td>${ulimAdminEsc_(r.parentPhone || '')}</td>`
+            : '';
+        const specialCell = r.specialStatus
+            ? `<span class="admin-status-badge">${ulimAdminEsc_(r.specialStatus)}</span>`
+            : '-';
+        const badgeClass = status === '출석' ? 'attendance-ok' : (status === '결석' ? 'attendance-no' : '');
+
+        html += `<tr data-att-index="${idx}">
+            <td><input type="checkbox" class="admin-att-check" checked></td>
+            <td>
+                <div class="admin-att-action-wrap">
+                    <button type="button" class="admin-att-mini ok${adminAttendanceButtonSelectedClass_(status, '출석')}" onclick="adminSetAttendanceRowStatus(${idx}, '출석')" title="출석 처리">O</button>
+                    <button type="button" class="admin-att-mini no${adminAttendanceButtonSelectedClass_(status, '결석')}" onclick="adminSetAttendanceRowStatus(${idx}, '결석')" title="결석 처리">X</button>
+                    <select class="admin-att-status-select" data-field="status" onchange="adminSyncAttendanceRowStatus(${idx}, this.value)">
+                        ${typeof adminAttendanceStatusOptions_ === 'function'
+                            ? adminAttendanceStatusOptions_(status)
+                            : ['미체크','출석','결석','지각','휴원'].map(v => `<option value="${v}" ${status === v ? 'selected' : ''}>${v === '출석' ? 'O 출석' : (v === '결석' ? 'X 결석' : v)}</option>`).join('')}
+                    </select>
+                    <span id="admin-att-save-state-${idx}" class="admin-att-save-state"></span>
+                </div>
+            </td>
+            <td><span id="admin-att-badge-${idx}" class="admin-status-badge ${badgeClass}">${ulimAdminEsc_(status || '미체크')}</span></td>
+            <td>${specialCell}</td>
+            <td><b>${ulimAdminEsc_(r.studentName)}</b></td>
+            <td>${ulimAdminEsc_(r.className || '')}</td>
+            <td>${ulimAdminEsc_(r.classroom || r.roomName || r.room || '')}</td>
+            ${phoneCells}
+            <td><input class="admin-small-input" data-field="memo" value="${ulimAdminEsc_(r.memo || '')}" placeholder="메모"></td>
+        </tr>`;
+    });
+
+    html += `</tbody></table>
+        <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px; flex-wrap:wrap;">
+            <button type="button" class="admin-btn" onclick="adminSaveAttendanceFromTable(false)">선택 출석부 저장</button>
+            <button type="button" class="admin-btn gray" onclick="adminLoadAttendanceSnapshot(true)">출석부 다시 불러오기</button>
+        </div>`;
+
+    wrap.innerHTML = html;
+    if (typeof ulimAdminAfterRender_ === 'function') ulimAdminAfterRender_();
+}
 </script>
 
 </body>
