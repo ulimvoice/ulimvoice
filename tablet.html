@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<script type="text/javascript" nonce="5878564e64bc424ab28cf8dfbd2" src="//local.adguard.org?ts=1780651929127&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000b6e87206b5f4cad218d99fcb%26fn%3D%25EC%259A%25B8%25EB%25A6%25BC%25ED%2583%259C%25EB%25B8%2594%25EB%25A6%25BF_5_42%25EC%25B0%25A8_%25EC%2595%2588%25EC%25A0%2595%25ED%2598%2595%25EC%2586%258D%25EB%258F%2584%25EA%25B0%259C%25EC%2584%25A0_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D494625%26p%3Dfs%26cid%3D1%26sig%3Dd8aa654ebc060407774a9bf757eacc549564a460e82012c48887cb0458c6ab24%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="manifest" href="./manifest-tablet.json">
+<link rel="manifest" href="./manifest-tablet.json">
 <meta name="theme-color" content="#16a34a">
 <link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://script.googleusercontent.com">
@@ -9,7 +9,7 @@
 <link rel="dns-prefetch" href="https://script.googleusercontent.com">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>울림연기학원 등하원 체크 2026.06.05.042</title>
+  <title>울림연기학원 등하원 체크 2026.06.01.008</title>
   <style>
     :root {
       --green: #16a34a;
@@ -564,6 +564,7 @@
     width: 100%;
     aspect-ratio: 16 / 9;
   }
+}
 
       .ad-box img,
       .ad-box video {
@@ -758,7 +759,6 @@
     let tabletProcessingFallbackTimer = null;
     const FAST_RESULT_LIMIT_MS = 2000;
     const STATUS_RESET_DELAY_MS = 5000;
-    const TABLET_PROCESSING_FALLBACK_MS = 3000;
 
     function pad2(n) {
       return String(n).padStart(2, "0");
@@ -848,46 +848,25 @@
     }
 
     async function submitCheck(mode, extra = {}) {
-      // v042 안정형:
-      // 1) 버튼 연타 중복 요청을 busy로 차단합니다.
-      // 2) 사전 캐시(tabletPreload)가 있으면 학생/수업 선택을 먼저 처리해 체감속도를 줄입니다.
-      // 3) 3초 이상 응답이 지연되면 성공 단정 문구 대신 "기록 확인 중" 안내로 전환합니다.
-      // 4) 늦게 도착한 이전 응답은 다음 학생 화면에 덮어쓰지 않습니다.
+      // v008:
+      // 1) 버튼 클릭 후 "등원/하원 처리 중입니다." 문구는 최대 3초만 표시합니다.
+      // 2) 3초 안에 GAS 응답이 오면 기존처럼 결과/중복/선택창을 표시합니다.
+      // 3) 3초가 지나도 응답이 없으면 인사말을 2초 표시한 뒤 초기문구로 돌아갑니다.
+      // 4) 3초 이후 늦게 도착한 GAS 응답은 화면에 반영하지 않습니다.
       const attendanceNo = extra.attendanceNo || pin;
-      const hasExplicitSelection = !!(extra && (
-        extra.selectedRowNumber ||
-        extra.rowNumber ||
-        extra.selectedClassIndex !== undefined ||
-        extra.classIndex !== undefined
-      ));
-
       if (!attendanceNo) {
         showModal("출결번호를 입력해주세요.", "", "warning");
         resetStatusSoon();
         return;
       }
 
-      if (busy && !hasExplicitSelection) {
-        setStatus("처리 중입니다.", "잠시만 기다려주세요.", "warning");
-        resetStatusSoon(1800);
-        return;
-      }
-
-      // 사전 캐시가 있는 경우, 동일 번호 학생/수업 선택을 서버 왕복 전에 먼저 처리합니다.
-      // 실제 출결 저장은 기존 tabletCheck GAS 경로로 최종 전송합니다.
-      if (!hasExplicitSelection && tryHandleWithPreload(attendanceNo, mode, extra)) {
-        return;
-      }
-
       const seq = ++statusRequestSeq;
-      let requestFinished = false;
 
       lastMode = mode;
       lastAttendanceNo = attendanceNo;
-      setBusy(true);
 
       // 선택창에서 다시 호출된 경우가 아니라면, 입력값을 즉시 초기화합니다.
-      if (!hasExplicitSelection) {
+      if (!extra || (!extra.selectedRowNumber && extra.selectedClassIndex === undefined && extra.classIndex === undefined)) {
         clearPin();
       }
 
@@ -903,20 +882,20 @@
       }
 
       tabletProcessingFallbackTimer = setTimeout(() => {
-        if (seq !== statusRequestSeq || requestFinished) return;
+        if (seq !== statusRequestSeq) return;
 
-        const modeText = mode === "out" ? "하원" : "등원";
-        setStatus(
-          `${modeText} 요청을 보냈습니다.`,
-          "응답이 지연되어 기록 반영을 확인 중입니다.\n잠시 후 출석부에 자동 반영됩니다.",
-          "warning"
-        );
+        const title = mode === "out" ? "안녕히 가세요!" : "어서오세요!";
+        const message = mode === "out"
+          ? "오늘도 수고 많았습니다."
+          : "오늘도 즐거운 수업 되시길 바랍니다.";
+
+        setStatus(title, message, "success");
 
         // 3초 이후 늦게 도착하는 응답은 현재 화면에 반영하지 않도록 요청 번호를 무효화합니다.
         statusRequestSeq++;
-        setBusy(false);
-        resetStatusSoon(2500);
-      }, TABLET_PROCESSING_FALLBACK_MS);
+
+        resetStatusSoon(2000);
+      }, 3000);
 
       try {
         const params = {
@@ -931,15 +910,13 @@
         }
 
         Object.keys(extra || {}).forEach(key => {
-          if (key === "__allowWhileBusy") return;
           if (extra[key] !== undefined && extra[key] !== null) params[key] = extra[key];
         });
 
         const res = await fetch(apiUrl(params), { method: "GET", cache: "no-store" });
         const data = await res.json();
-        requestFinished = true;
 
-        // 3초 초과로 안내 처리된 뒤 도착한 응답 또는 다음 학생 입력 후 도착한 이전 응답은 무시합니다.
+        // 3초 초과로 인사말 처리된 뒤 도착한 응답 또는 다음 학생 입력 후 도착한 이전 응답은 무시합니다.
         if (seq !== statusRequestSeq) {
           return;
         }
@@ -962,13 +939,11 @@
         }
 
         if (data.status === "multiple") {
-          setBusy(false);
           showStudentChoice(data);
           return;
         }
 
         if (data.status === "multipleClasses") {
-          setBusy(false);
           showClassChoice(data);
           return;
         }
@@ -983,24 +958,23 @@
         renderSuccess(data);
 
       } catch (err) {
-        requestFinished = true;
         if (seq === statusRequestSeq) {
           if (tabletProcessingFallbackTimer) {
             clearTimeout(tabletProcessingFallbackTimer);
             tabletProcessingFallbackTimer = null;
           }
 
-          setStatus(
-            "연결이 지연되고 있습니다.",
-            "출결 기록 반영 여부를 확인 중입니다.\n반복 입력하지 말고 잠시 후 데스크에서 확인해주세요.",
-            "warning"
-          );
+          const title = mode === "out" ? "안녕히 가세요!" : "어서오세요!";
+          const message = mode === "out"
+            ? "오늘도 수고 많았습니다."
+            : "오늘도 즐거운 수업 되시길 바랍니다.";
 
+          setStatus(title, message, "success");
+
+          // 오류/지연도 실사용 흐름을 막지 않도록 2초 후 초기화합니다.
           statusRequestSeq++;
-          resetStatusSoon(3000);
+          resetStatusSoon(2000);
         }
-      } finally {
-        setBusy(false);
       }
     }
 
@@ -1150,12 +1124,7 @@
 
     function selectClass(cls) {
       closeModal();
-      submitCheck(lastMode, {
-        attendanceNo: lastAttendanceNo,
-        selectedRowNumber: selectedStudent && selectedStudent.rowNumber ? selectedStudent.rowNumber : undefined,
-        selectedStudentName: selectedStudent && selectedStudent.name ? selectedStudent.name : "",
-        selectedClassIndex: cls.index
-      });
+      submitCheck(lastMode, { attendanceNo: lastAttendanceNo, selectedClassIndex: cls.index });
     }
 
     function cancelChoiceModal() {
@@ -1354,7 +1323,6 @@
 
       lastMode = mode;
       lastAttendanceNo = attendanceNo;
-      clearPin();
 
       if (candidates.length > 1) {
         showStudentChoice({
@@ -1477,7 +1445,7 @@ function hidePwaForever() {
  * - 새 버전 발견 시 확인창 표시
  * - 확인 시 캐시 우회 주소로 새로고침
  ****************************************************/
-const TABLET_APP_VERSION = "2026.06.05.042";
+const TABLET_APP_VERSION = "2026.06.01.008";
 const TABLET_VERSION_CHECK_KEY = "ULIM_TABLET_VERSION_CHECK_DATE";
 const TABLET_VERSION_SKIP_KEY = "ULIM_TABLET_VERSION_SKIP_DATE";
 const TABLET_SAVED_VERSION_KEY = "ULIM_TABLET_APP_VERSION";
