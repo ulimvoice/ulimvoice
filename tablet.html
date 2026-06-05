@@ -682,7 +682,8 @@
  * - 보강: 안전 호출, 학생용 문구, 관리자/운영용 화면 문구 숨김
  ****************************************************/
 const API_URL = "https://script.google.com/macros/s/AKfycbx7wQFuw6MqqOijmvuwpeiCWOk3xU3hr41xoKbRltQHLb1kLbr_1RD5Zzy3iuWcrhUD0A/exec";
-const TABLET_APP_VERSION = "2026.06.06.043.3";
+const TABLET_APP_VERSION = "2026.06.06.043.5";
+const TABLET_DEBUG = false;
 
 const URL_PARAMS = new URLSearchParams(location.search);
 const KIOSK_KEY = URL_PARAMS.get("kioskKey") || localStorage.getItem("ULIM_TABLET_KIOSK_KEY") || "";
