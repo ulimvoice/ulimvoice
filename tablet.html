@@ -785,38 +785,40 @@ function tabletPublicErrorMessage_() {
   return "문제가 계속되면 데스크에 문의해주세요.";
 }
 
-async function tabletFetchJson(params, timeoutMs = 15000) {
-  const controller = (typeof AbortController !== "undefined") ? new AbortController() : null;
-  let timer = null;
+async function tabletFetchJson(params, timeoutMs = 0) {
+  // 43차-4 핵심 수정:
+  // AbortController로 fetch를 강제 중단하지 않습니다.
+  // Apps Script 첫 호출/캐시 생성은 15초 이상 걸릴 수 있는데,
+  // 기존 43차-3은 이 요청을 끊어버려 AbortError가 발생했습니다.
+  const startedAt = Date.now();
+  const hardTimeoutMs = Math.max(0, Number(timeoutMs) || 0);
 
-  if (controller) {
-    timer = setTimeout(function () {
-      try { controller.abort(); } catch (e) {}
-    }, Math.max(5000, Number(timeoutMs) || 15000));
-  }
-
-  try {
-    const res = await fetch(apiUrl(params), {
-      method: "GET",
-      cache: "no-store",
-      signal: controller ? controller.signal : undefined
-    });
-
+  const fetchPromise = fetch(apiUrl(params), {
+    method: "GET",
+    cache: "no-store"
+  }).then(async function (res) {
     const text = await res.text();
 
     if (!res.ok) {
-      console.warn("[Tablet API] HTTP 오류:", res.status, text ? text.slice(0, 200) : "");
+      if (TABLET_DEBUG) console.warn("[Tablet API] HTTP 오류:", res.status, text ? text.slice(0, 200) : "");
       throw new Error("잠시 연결이 지연되고 있습니다. 다시 시도해주세요.");
     }
 
     if (/^\s*</.test(text || "")) {
-      console.warn("[Tablet API] JSON 대신 HTML 응답:", text.slice(0, 200));
+      if (TABLET_DEBUG) console.warn("[Tablet API] JSON 대신 HTML 응답:", text.slice(0, 200));
       throw new Error("잠시 연결이 지연되고 있습니다. 다시 시도해주세요.");
     }
 
-    const data = JSON.parse(text);
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (parseErr) {
+      if (TABLET_DEBUG) console.warn("[Tablet API] JSON 파싱 실패:", text ? text.slice(0, 200) : "");
+      throw new Error("잠시 연결이 지연되고 있습니다. 다시 시도해주세요.");
+    }
+
     if (!data || typeof data !== "object") {
-      console.warn("[Tablet API] 응답 형식 오류:", data);
+      if (TABLET_DEBUG) console.warn("[Tablet API] 응답 형식 오류:", data);
       throw new Error("잠시 연결이 지연되고 있습니다. 다시 시도해주세요.");
     }
 
@@ -827,12 +829,31 @@ async function tabletFetchJson(params, timeoutMs = 15000) {
       data.popupMessage = tabletPublicMessage_(data.popupMessage, data.message || "잠시 연결이 지연되고 있습니다. 다시 시도해주세요.");
     }
 
+    if (TABLET_DEBUG) {
+      console.log("[Tablet API] 성공:", params && params.action, (Date.now() - startedAt) + "ms");
+    }
+
     return data;
+  });
+
+  // timeoutMs가 0이면 끝까지 기다립니다. 주로 초기 캐시/광고/웜업에 사용합니다.
+  if (!hardTimeoutMs) {
+    return fetchPromise;
+  }
+
+  // timeout을 쓰더라도 AbortController로 실제 요청을 끊지 않습니다.
+  // 화면은 복구하되, 서버 요청은 가능한 한 끝까지 진행되게 둡니다.
+  const timeoutPromise = new Promise(function (_, reject) {
+    setTimeout(function () {
+      reject(new Error("잠시 연결이 지연되고 있습니다. 다시 시도해주세요."));
+    }, hardTimeoutMs);
+  });
+
+  try {
+    return await Promise.race([fetchPromise, timeoutPromise]);
   } catch (err) {
-    console.warn("[Tablet API] 호출 실패:", err);
+    if (TABLET_DEBUG) console.warn("[Tablet API] 호출 지연/실패:", params && params.action, err);
     throw new Error(tabletPublicMessage_(err && err.message, "잠시 연결이 지연되고 있습니다. 다시 시도해주세요."));
-  } finally {
-    if (timer) clearTimeout(timer);
   }
 }
 
@@ -893,6 +914,8 @@ function startProcessingFallback(seq, mode) {
   tabletProcessingFallbackTimer = setTimeout(function () {
     if (seq !== statusRequestSeq) return;
     showInstantGreeting(mode);
+    // 네트워크가 늦어도 태블릿 버튼은 즉시 다시 사용할 수 있게 풉니다.
+    setBusy(false);
     statusRequestSeq++;
   }, 3000);
 }
@@ -929,7 +952,7 @@ function saveDailySnapshot(data) {
     localStorage.setItem(DAILY_SNAPSHOT_AT_KEY, String(tabletPreloadAt));
     localStorage.setItem(DAILY_SNAPSHOT_DATE_KEY, String(data.date || getTodayKey()));
   } catch (err) {
-    console.warn("[Tablet Cache] 저장 실패:", err);
+    if (TABLET_DEBUG) console.warn("[Tablet Cache] 저장 실패:", err);
   }
   return true;
 }
@@ -955,22 +978,28 @@ async function loadTabletPreload(force = false) {
   const localSnapshot = loadDailySnapshotFromLocal();
 
   if (!force && tabletPreload && now - tabletPreloadAt < 30 * 60 * 1000) return tabletPreload;
-  if (!force && localSnapshot) return localSnapshot;
+  if (!force && localSnapshot) {
+    // 화면은 로컬 캐시로 즉시 살리고, 서버 캐시는 뒤에서 조용히 갱신합니다.
+    refreshTabletDailySnapshotLocal(false, true);
+    return localSnapshot;
+  }
   if (tabletPreloadLoading) return tabletPreload || localSnapshot;
 
   tabletPreloadLoading = true;
   try {
-    const data = await tabletFetchJson({ action: "tabletGetDailySnapshot", force: force ? "1" : "0" }, 15000);
+    // 초기 캐시는 Abort/짧은 timeout 없이 기다립니다.
+    // 이 함수는 시작 시 백그라운드로 호출되므로 화면을 막지 않습니다.
+    const data = await tabletFetchJson({ action: "tabletGetDailySnapshot", force: force ? "1" : "0" }, 0);
     if (saveDailySnapshot(data)) return data;
   } catch (err) {
-    console.warn("[Tablet Cache] 일일자료 갱신 실패:", err);
+    if (TABLET_DEBUG) console.warn("[Tablet Cache] 일일자료 갱신 실패:", err);
   }
 
   try {
-    const legacyData = await tabletFetchJson({ action: "tabletPreload" }, 15000);
+    const legacyData = await tabletFetchJson({ action: "tabletPreload" }, 0);
     if (saveDailySnapshot(legacyData)) return legacyData;
   } catch (err) {
-    console.warn("[Tablet Cache] 보조자료 갱신 실패:", err);
+    if (TABLET_DEBUG) console.warn("[Tablet Cache] 보조자료 갱신 실패:", err);
   } finally {
     tabletPreloadLoading = false;
   }
@@ -978,12 +1007,13 @@ async function loadTabletPreload(force = false) {
   return tabletPreload || localSnapshot;
 }
 
-async function refreshTabletDailySnapshotLocal(forceServer = true) {
+async function refreshTabletDailySnapshotLocal(forceServer = true, silent = false) {
   try {
-    const data = await tabletFetchJson({ action: "tabletGetDailySnapshot", force: forceServer ? "1" : "0" }, 15000);
+    const data = await tabletFetchJson({ action: "tabletGetDailySnapshot", force: forceServer ? "1" : "0" }, 0);
     saveDailySnapshot(data);
     return data;
   } catch (err) {
+    if (!silent && TABLET_DEBUG) console.warn("[Tablet Cache] 새로고침 실패:", err);
     return loadDailySnapshotFromLocal();
   }
 }
@@ -1058,7 +1088,7 @@ async function enqueueAttendanceFromLocalSnapshot(attendanceNo, mode, student, c
   };
 
   try {
-    const data = await tabletFetchJson(params, 12000);
+    const data = await tabletFetchJson(params, 25000);
     if (seq !== statusRequestSeq) return;
     clearProcessingFallback();
 
@@ -1123,10 +1153,19 @@ async function submitCheck(mode, extra = {}) {
   startProcessingFallback(seq, mode);
 
   try {
-    if (!extra || (!extra.selectedRowNumber && extra.selectedClassIndex === undefined && extra.classIndex === undefined)) {
-      await loadTabletPreload(false);
-      const handled = await tryHandleWithPreload(attendanceNo, mode, extra, seq);
-      if (handled) return;
+    const isDirectFirstTry = !extra || (!extra.selectedRowNumber && extra.selectedClassIndex === undefined && extra.classIndex === undefined);
+
+    if (isDirectFirstTry) {
+      // 이미 받은 캐시가 있을 때만 즉시 로컬 처리합니다.
+      // 캐시가 아직 없으면 여기서 기다리지 않고 기존 API 처리로 바로 넘어갑니다.
+      const localSnapshot = tabletPreload || loadDailySnapshotFromLocal();
+      if (localSnapshot) {
+        const handled = await tryHandleWithPreload(attendanceNo, mode, extra, seq);
+        if (handled) return;
+      } else {
+        // 다음 학생부터 빨라지도록 백그라운드 캐시만 조용히 받아옵니다.
+        loadTabletPreload(false);
+      }
     }
 
     await submitCheckLegacy(mode, extra, seq);
@@ -1163,7 +1202,7 @@ async function submitCheckLegacy(mode, extra = {}, seqFromParent) {
       if (extra[key] !== undefined && extra[key] !== null) params[key] = extra[key];
     });
 
-    const data = await tabletFetchJson(params, 15000);
+    const data = await tabletFetchJson(params, 25000);
     if (seq !== statusRequestSeq) return;
     clearProcessingFallback();
 
@@ -1283,13 +1322,13 @@ function selectClassChoice(attendanceNo, studentRowNumber, studentName, classInd
 
 async function warmup() {
   try {
-    await tabletFetchJson({ action: "tabletWarmup" }, 8000);
+    await tabletFetchJson({ action: "tabletWarmup" }, 0);
   } catch (err) {}
 }
 
 async function loadAds() {
   try {
-    const data = await tabletFetchJson({ action: "tabletGetAds" }, 10000);
+    const data = await tabletFetchJson({ action: "tabletGetAds" }, 0);
     adSlides = data.slides && data.slides.length ? data.slides : defaultSlides();
   } catch (err) {
     adSlides = defaultSlides();
