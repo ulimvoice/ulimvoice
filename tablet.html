@@ -9,7 +9,7 @@
 <link rel="dns-prefetch" href="https://script.googleusercontent.com">
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>울림연기학원 등하원 체크 2026.06.06.043.8</title>
+<title>울림연기학원 등하원 체크 2026.06.06.043.9</title>
 <style>
   :root {
     --green: #16a34a;
@@ -97,6 +97,11 @@
   .choice-list { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; text-align: left; }
   .choice-btn { width: 100%; padding: 16px 18px; border-radius: 14px; background: #f8fafc; color: #111827; text-align: left; border: 1px solid #e5e7eb; font-size: 16px; line-height: 1.4; }
   .choice-btn b { color: #166534; }
+  .choice-select-wrap { margin-top: 22px; text-align: left; }
+  .choice-label { display: block; margin: 0 0 8px; color: #166534; font-size: 15px; font-weight: 900; }
+  .choice-select { width: 100%; min-height: 62px; padding: 0 18px; border-radius: 16px; border: 2px solid #bbf7d0; background: #f8fafc; color: #0f172a; font-size: 19px; font-weight: 900; outline: none; }
+  .choice-select:focus { border-color: #22c55e; box-shadow: 0 0 0 4px rgba(34,197,94,.14); }
+  .choice-help { margin-top: 10px; color: #64748b; font-size: 14px; line-height: 1.45; }
   @keyframes pop { from { transform: scale(.98); opacity: .6; } to { transform: scale(1); opacity: 1; } }
   @media (max-width: 1024px) {
     html, body { overflow-x: hidden; overflow-y: auto; }
@@ -164,7 +169,7 @@
  * - 구글시트 기록/알림톡은 백그라운드 대기열로 전송
  ****************************************************/
 const API_URL = "https://script.google.com/macros/s/AKfycbx7wQFuw6MqqOijmvuwpeiCWOk3xU3hr41xoKbRltQHLb1kLbr_1RD5Zzy3iuWcrhUD0A/exec";
-const TABLET_APP_VERSION = "2026.06.06.043.8";
+const TABLET_APP_VERSION = "2026.06.06.043.9";
 const TABLET_DEBUG = false;
 
 const URL_PARAMS = new URLSearchParams(location.search);
@@ -183,6 +188,8 @@ let busy = false;
 let lastMode = "in";
 let lastAttendanceNo = "";
 let selectedStudent = null;
+let tabletStudentChoiceCandidates = [];
+let tabletClassChoiceContext = null;
 let adSlides = [];
 let adIndex = 0;
 let adTimer = null;
@@ -616,39 +623,215 @@ async function submitCheckLegacy(mode, extra = {}, seqFromParent) {
   }
 }
 
+function getClassDisplayLabel(cls, idx) {
+  const className = cls && cls.className ? cls.className : "오늘 수업 확인 필요";
+  const roomName = cls && cls.roomName ? cls.roomName : "데스크문의";
+  const instructor = cls && cls.instructor ? cls.instructor : "";
+  const prefix = typeof idx === "number" ? `${idx + 1}. ` : "";
+  return `${prefix}${className} / ${roomName}${instructor ? " / " + instructor : ""}`;
+}
+
 function showStudentChoice(data) {
   const candidates = Array.isArray(data.candidates) ? data.candidates : [];
-  if (!candidates.length) { showModal("학생을 찾지 못했습니다.", "데스크에 문의해주세요.", "warning"); return; }
-  const buttons = candidates.map(function(student) {
-    const rowNumber = escapeAttr(student.rowNumber || student.studentRowNumber || "");
-    const name = escapeAttr(student.name || student.studentName || "학생");
-    return `<button class="choice-btn" onclick="selectStudentChoice('${rowNumber}', '${name}')"><b>${escapeHtml(student.name || student.studentName || "학생")}</b></button>`;
+  if (!candidates.length) {
+    showModal("학생을 찾지 못했습니다.", "데스크에 문의해주세요.", "warning");
+    return;
+  }
+
+  tabletStudentChoiceCandidates = candidates;
+  const options = candidates.map(function(student, idx) {
+    const name = student.name || student.studentName || "학생";
+    const classes = Array.isArray(student.classes) ? student.classes : [];
+    const classInfo = classes.length === 1
+      ? ` - ${classes[0].className || "수업 확인 필요"}`
+      : classes.length > 1
+        ? ` - 수업 ${classes.length}개`
+        : "";
+    return `<option value="${idx}">${escapeHtml(name + classInfo)}</option>`;
   }).join("");
-  showModal("학생을 선택해주세요.", "같은 출결번호를 사용하는 학생이 있습니다.", "success", `<div class="choice-list">${buttons}</div><div class="modal-actions"><button class="modal-btn gray" onclick="closeModal(); setDefaultStatus();">취소</button></div>`);
+
+  showModal(
+    "학생을 선택해주세요.",
+    "같은 출결번호를 사용하는 학생이 있습니다.",
+    "success",
+    `
+      <div class="choice-select-wrap">
+        <label class="choice-label" for="studentChoiceSelect">학생 선택</label>
+        <select id="studentChoiceSelect" class="choice-select">${options}</select>
+        <div class="choice-help">이름을 선택한 뒤 확인을 눌러주세요.</div>
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn" onclick="confirmStudentDropdownChoice()">확인</button>
+        <button class="modal-btn gray" onclick="closeModal(); setDefaultStatus();">취소</button>
+      </div>
+    `,
+    "select-modal"
+  );
 }
-function selectStudentChoice(rowNumber, name) {
+
+function confirmStudentDropdownChoice() {
+  const select = document.getElementById("studentChoiceSelect");
+  const idx = select ? Number(select.value) : 0;
+  const student = tabletStudentChoiceCandidates[idx];
+  if (!student) {
+    closeModal();
+    setDefaultStatus();
+    return;
+  }
+
+  selectedStudent = student;
   closeModal();
-  selectedStudent = { rowNumber: rowNumber, name: name };
-  submitCheck(lastMode, { attendanceNo: lastAttendanceNo, selectedRowNumber: rowNumber, selectedStudentName: name });
+
+  const attendanceNo = lastAttendanceNo;
+  const classes = Array.isArray(student.classes) ? student.classes : [];
+
+  if (classes.length > 1) {
+    showClassChoice({
+      status: "multipleClasses",
+      attendanceNo: attendanceNo,
+      studentName: student.name || student.studentName || "학생",
+      studentRowNumber: student.rowNumber || student.studentRowNumber || "",
+      student: student,
+      classes: classes
+    });
+    return;
+  }
+
+  const cls = classes.length === 1 ? classes[0] : {
+    index: 0,
+    className: student.className || "오늘 수업 확인 필요",
+    instructor: student.instructor || "",
+    roomName: "데스크문의"
+  };
+
+  clearProcessingFallback();
+  localImmediateProcess(attendanceNo, lastMode, student, cls, {});
+  setBusy(false);
 }
+
+// 구버전 버튼 호출이 남아 있어도 안전하게 드롭다운 확인 로직으로 연결합니다.
+function selectStudentChoice(rowNumber, name) {
+  const candidates = tabletStudentChoiceCandidates || [];
+  let idx = candidates.findIndex(function(student) {
+    return String(student.rowNumber || student.studentRowNumber || "") === String(rowNumber || "");
+  });
+  if (idx < 0) {
+    idx = candidates.findIndex(function(student) {
+      return String(student.name || student.studentName || "") === String(name || "");
+    });
+  }
+  const select = document.getElementById("studentChoiceSelect");
+  if (select && idx >= 0) select.value = String(idx);
+  confirmStudentDropdownChoice();
+}
+
 function showClassChoice(data) {
   const classes = Array.isArray(data.classes) ? data.classes : [];
-  if (!classes.length) { showModal("수업을 찾지 못했습니다.", "데스크에 문의해주세요.", "warning"); return; }
-  const attendanceNo = escapeAttr(data.attendanceNo || lastAttendanceNo || "");
-  const studentName = escapeAttr(data.studentName || "학생");
-  const studentRowNumber = escapeAttr(data.studentRowNumber || data.rowNumber || "");
-  const buttons = classes.map(function(cls, idx) {
-    const classIndex = cls.index !== undefined ? cls.index : idx;
-    const className = cls.className || "오늘 수업 확인 필요";
-    const roomName = cls.roomName || "데스크문의";
-    const instructor = cls.instructor || "";
-    return `<button class="choice-btn" onclick="selectClassChoice('${attendanceNo}', '${studentRowNumber}', '${studentName}', '${escapeAttr(classIndex)}', '${escapeAttr(className)}', '${escapeAttr(instructor)}', '${escapeAttr(roomName)}')"><b>${escapeHtml(className)}</b><br>강의실: ${escapeHtml(roomName)}</button>`;
+  if (!classes.length) {
+    showModal("수업을 찾지 못했습니다.", "데스크에 문의해주세요.", "warning");
+    return;
+  }
+
+  const attendanceNo = data.attendanceNo || lastAttendanceNo || "";
+  const studentName = data.studentName || (data.student && (data.student.name || data.student.studentName)) || "학생";
+  const studentRowNumber = data.studentRowNumber || data.rowNumber || (data.student && (data.student.rowNumber || data.student.studentRowNumber)) || "";
+  const student = data.student || selectedStudent || { rowNumber: studentRowNumber, name: studentName };
+
+  tabletClassChoiceContext = {
+    attendanceNo: attendanceNo,
+    studentName: studentName,
+    studentRowNumber: studentRowNumber,
+    student: student,
+    classes: classes
+  };
+
+  const options = classes.map(function(cls, idx) {
+    return `<option value="${idx}">${escapeHtml(getClassDisplayLabel(cls, idx))}</option>`;
   }).join("");
-  showModal("수업을 선택해주세요.", `${data.studentName || "학생"}님의 오늘 수업이 여러 개 있습니다.`, "success", `<div class="choice-list">${buttons}</div><div class="modal-actions"><button class="modal-btn gray" onclick="closeModal(); setDefaultStatus();">취소</button></div>`, "select-modal");
+
+  showModal(
+    "수업을 선택해주세요.",
+    `${studentName}님의 오늘 수업이 여러 개 있습니다.`,
+    "success",
+    `
+      <div class="choice-select-wrap">
+        <label class="choice-label" for="classChoiceSelect">수업 선택</label>
+        <select id="classChoiceSelect" class="choice-select">${options}</select>
+        <div class="choice-help">등원/하원 처리할 수업을 선택한 뒤 확인을 눌러주세요.</div>
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn" onclick="confirmClassDropdownChoice()">확인</button>
+        <button class="modal-btn gray" onclick="closeModal(); setDefaultStatus();">취소</button>
+      </div>
+    `,
+    "select-modal"
+  );
 }
-function selectClassChoice(attendanceNo, studentRowNumber, studentName, classIndex, className, instructor, roomName) {
+
+function confirmClassDropdownChoice() {
+  const ctx = tabletClassChoiceContext;
+  const select = document.getElementById("classChoiceSelect");
+  const idx = select ? Number(select.value) : 0;
+  if (!ctx || !ctx.classes || !ctx.classes[idx]) {
+    closeModal();
+    setDefaultStatus();
+    return;
+  }
+
+  const cls = ctx.classes[idx];
+  const classIndex = cls.index !== undefined ? cls.index : idx;
+  const student = ctx.student || selectedStudent || {
+    rowNumber: ctx.studentRowNumber || "",
+    name: ctx.studentName || "학생"
+  };
+  const normalizedClass = Object.assign({}, cls, { index: classIndex });
+
   closeModal();
-  submitCheck(lastMode, { attendanceNo: attendanceNo || lastAttendanceNo, selectedRowNumber: studentRowNumber || "", selectedStudentName: studentName || "", selectedClassIndex: classIndex, className: className || "", instructor: instructor || "", roomName: roomName || "데스크문의" });
+  clearProcessingFallback();
+
+  localImmediateProcess(ctx.attendanceNo || lastAttendanceNo, lastMode, student, normalizedClass, {
+    attendanceNo: ctx.attendanceNo || lastAttendanceNo,
+    selectedRowNumber: ctx.studentRowNumber || student.rowNumber || student.studentRowNumber || "",
+    selectedStudentName: ctx.studentName || student.name || student.studentName || "학생",
+    selectedClassIndex: classIndex,
+    className: normalizedClass.className || "데스크문의",
+    instructor: normalizedClass.instructor || student.instructor || "",
+    roomName: normalizedClass.roomName || "데스크문의"
+  });
+  setBusy(false);
+}
+
+// 구버전 버튼 호출이 남아 있어도 안전하게 드롭다운 확인 로직으로 연결합니다.
+function selectClassChoice(attendanceNo, studentRowNumber, studentName, classIndex, className, instructor, roomName) {
+  const ctx = tabletClassChoiceContext;
+  if (ctx && ctx.classes) {
+    let idx = ctx.classes.findIndex(function(cls, i) {
+      const idxValue = cls.index !== undefined ? String(cls.index) : String(i);
+      return idxValue === String(classIndex);
+    });
+    if (idx < 0) {
+      idx = ctx.classes.findIndex(function(cls) {
+        return String(cls.className || "") === String(className || "") && String(cls.roomName || "") === String(roomName || "");
+      });
+    }
+    const select = document.getElementById("classChoiceSelect");
+    if (select && idx >= 0) select.value = String(idx);
+    confirmClassDropdownChoice();
+    return;
+  }
+
+  closeModal();
+  const student = { rowNumber: studentRowNumber || "", name: studentName || "학생", instructor: instructor || "" };
+  const cls = { index: classIndex, className: className || "데스크문의", instructor: instructor || "", roomName: roomName || "데스크문의" };
+  localImmediateProcess(attendanceNo || lastAttendanceNo, lastMode, student, cls, {
+    selectedRowNumber: studentRowNumber || "",
+    selectedStudentName: studentName || "학생",
+    selectedClassIndex: classIndex,
+    className: className || "데스크문의",
+    instructor: instructor || "",
+    roomName: roomName || "데스크문의"
+  });
+  setBusy(false);
 }
 
 async function warmup() { try { await tabletFetchJson({ action: "tabletWarmup" }, 0); } catch (err) {} }
