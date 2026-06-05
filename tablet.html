@@ -9,7 +9,7 @@
 <link rel="dns-prefetch" href="https://script.googleusercontent.com">
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>울림연기학원 등하원 체크 2026.06.06.043.17</title>
+<title>울림연기학원 등하원 체크 2026.06.06.043.22</title>
 <style>
   :root {
     --green: #16a34a;
@@ -169,7 +169,7 @@
  * - 구글시트 기록/알림톡은 백그라운드 대기열로 전송
  ****************************************************/
 const API_URL = "https://script.google.com/macros/s/AKfycbx7wQFuw6MqqOijmvuwpeiCWOk3xU3hr41xoKbRltQHLb1kLbr_1RD5Zzy3iuWcrhUD0A/exec";
-const TABLET_APP_VERSION = "2026.06.06.043.21";
+const TABLET_APP_VERSION = "2026.06.06.043.22";
 const TABLET_DEBUG = false;
 
 const URL_PARAMS = new URLSearchParams(location.search);
@@ -487,7 +487,20 @@ function showAttendanceSuccess(mode, name, className, roomName) {
   }
   resetStatusSoon(STATUS_RESET_DELAY_MS);
 }
-function showDuplicate(mode) { setStatus(duplicateMessageOf(mode), "", "warning"); resetStatusSoon(STATUS_RESET_DELAY_MS); }
+// 43차-22: duplicate 응답도 roomName을 표시합니다.
+// 이전에는 "이미 등원처리되었습니다." 메시지만 띄우고 강의실을 비워뒀는데,
+// entries에 저장된 구버전 roomName(예: 2강의실)과 혼동되는 문제가 있었습니다.
+// 이제 서버 응답 또는 스냅샷의 최신 roomName을 그대로 표시합니다.
+function showDuplicate(mode, name, className, roomName) {
+  const safeName = name || "";
+  if (roomName && modeTextOf(mode) !== "하원") {
+    const namePrefix = safeName ? safeName + "님, " : "";
+    setStatus(namePrefix + duplicateMessageOf(mode), ["오늘 수업: " + (className || "데스크문의"), "오늘 강의실: " + roomName].join("\n"), "warning");
+  } else {
+    setStatus(safeName ? safeName + "님, " + duplicateMessageOf(mode) : duplicateMessageOf(mode), "", "warning");
+  }
+  resetStatusSoon(STATUS_RESET_DELAY_MS);
+}
 
 function queueAttendanceBackground(entry) {
   // 43차-21: 대기열 처리 타이머만 기다리지 않고 방금 만든 항목을 즉시 서버로 전송합니다.
@@ -553,7 +566,10 @@ function localImmediateProcess(attendanceNo, mode, student, cls, extra) {
   const className = (cls && cls.className) || (extra && extra.className) || "데스크문의";
   const roomName = (cls && cls.roomName) || (extra && extra.roomName) || "데스크문의";
   if (isLocalDuplicateEvent(attendanceNo, mode, studentName, className)) {
-    showDuplicate(mode);
+    // 43차-22: duplicate일 때도 스냅샷에서 가져온 최신 roomName을 표시합니다.
+    // 이전에는 roomName을 비워서 표시했고, entries에 저장된 구버전 roomName(예: 2강의실)과
+    // 혼동되는 문제가 있었습니다.
+    showDuplicate(mode, studentName, className, roomName);
     return true;
   }
   const params = buildAttendanceParams(attendanceNo, mode, student, cls, extra || {});
@@ -641,7 +657,12 @@ async function submitCheckLegacy(mode, extra = {}, seqFromParent) {
     const data = await tabletFetchJson(params, 0);
     if (seq !== statusRequestSeq) return;
     clearProcessingFallback();
-    if (data && (data.duplicate === true || data.status === "duplicate" || data.status === "already")) { showDuplicate(mode); return; }
+    if (data && (data.duplicate === true || data.status === "duplicate" || data.status === "already")) {
+      // 43차-22: 서버 응답에 roomName이 있으면 그대로 표시합니다.
+      // 기존에는 showDuplicate(mode)만 호출해 강의실 정보를 버렸습니다.
+      showDuplicate(mode, data.studentName || "", data.className || "", data.roomName || "");
+      return;
+    }
     if (data && data.status === "multiple") { showStudentChoice(data); return; }
     if (data && data.status === "multipleClasses") { showClassChoice(data); return; }
     if (!data || data.status !== "success") { setStatus("잠시 후 다시 시도해주세요.", "문제가 계속되면 데스크에 문의해주세요.", "warning"); resetStatusSoon(); return; }
