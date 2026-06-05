@@ -1,36 +1,792 @@
-/****************************************************
- * 울림 태블릿 43차-2 패치
- * 목적: 학생/학부모가 보는 태블릿 화면에서 관리자/운영용 문구 숨김
- * 기준: tablet_5_38차_일일캐시_비동기출결_인증파라미터수정본.html
- ****************************************************/
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<link rel="manifest" href="./manifest-tablet.json">
+<meta name="theme-color" content="#16a34a">
+<link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://script.googleusercontent.com">
+<link rel="dns-prefetch" href="https://script.google.com">
+<link rel="dns-prefetch" href="https://script.googleusercontent.com">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>울림연기학원 등하원 체크 2026.06.06.043.2</title>
+<style>
+  :root {
+    --green: #16a34a;
+    --green-dark: #166534;
+    --green-soft: #ecfdf5;
+    --blue: #2563eb;
+    --red: #b91c1c;
+    --red-soft: #fee2e2;
+    --text: #0f172a;
+    --muted: #64748b;
+    --line: #e5e7eb;
+    --bg: #f8fafc;
+    --dark: #0f172a;
+  }
 
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html,
+  body {
+    margin: 0;
+    width: 100%;
+    min-height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", Arial, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    overflow: hidden;
+  }
+
+  body {
+    display: grid;
+    grid-template-columns: minmax(520px, 1fr) minmax(520px, 1fr);
+    min-height: 100vh;
+  }
+
+  .left {
+    position: relative;
+    padding: 28px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    background: #ffffff;
+  }
+
+  .right {
+    position: relative;
+    min-height: 100vh;
+    background: #0b1220;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .top-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+  }
+
+  .title {
+    margin: 0;
+    color: var(--green-dark);
+    font-size: 26px;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+  }
+
+  .clock {
+    text-align: right;
+    font-weight: 900;
+    color: #111827;
+    line-height: 1.25;
+    white-space: nowrap;
+  }
+
+  .clock-date {
+    font-size: 15px;
+  }
+
+  .clock-time {
+    font-size: 24px;
+  }
+
+  .card {
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: #fff;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+    padding: 24px;
+  }
+
+  .input-title {
+    margin: 0 0 18px;
+    text-align: center;
+    color: var(--green-dark);
+    font-size: 21px;
+    font-weight: 900;
+  }
+
+  .pin-display {
+    height: 62px;
+    border: 2px solid #86efac;
+    border-radius: 16px;
+    background: #f0fdf4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    font-weight: 900;
+    letter-spacing: 0.20em;
+    color: #052e16;
+    margin-bottom: 14px;
+    user-select: none;
+  }
+
+  .pin-placeholder {
+    color: #94a3b8;
+    font-size: 22px;
+    letter-spacing: -0.03em;
+  }
+
+  .keypad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  button {
+    border: 0;
+    border-radius: 14px;
+    font-family: inherit;
+    font-weight: 900;
+    cursor: pointer;
+    transition: transform .06s ease, filter .12s ease, opacity .12s ease;
+    user-select: none;
+  }
+
+  button:active {
+    transform: translateY(1px);
+  }
+
+  button:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+  }
+
+  .num-btn {
+    height: 54px;
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 24px;
+    box-shadow: 0 5px 14px rgba(15, 23, 42, 0.08);
+    border: 1px solid #eef2f7;
+  }
+
+  .num-btn.utility-red {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  .num-btn.utility-gray {
+    background: #f1f5f9;
+    color: #334155;
+  }
+
+  .action-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 14px;
+  }
+
+  .action-btn {
+    height: 64px;
+    color: #fff;
+    font-size: 23px;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
+  }
+
+  .check-in {
+    background: linear-gradient(180deg, #22c55e, #16a34a);
+  }
+
+  .check-out {
+    background: linear-gradient(180deg, #3b82f6, #2563eb);
+  }
+
+  .status-card {
+    flex: 1;
+    min-height: 260px;
+    border: 1px solid #86efac;
+    background: #ecfdf5;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 28px;
+    color: var(--green-dark);
+  }
+
+  .status-card.error {
+    border-color: #fecaca;
+    background: #fef2f2;
+    color: #991b1b;
+  }
+
+  .status-card.warning {
+    border-color: #fde68a;
+    background: #fffbeb;
+    color: #92400e;
+  }
+
+  .status-card h2 {
+    margin: 0 0 12px;
+    font-size: 25px;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+  }
+
+  .status-card p {
+    margin: 5px 0;
+    font-size: 16px;
+    color: #475569;
+    line-height: 1.45;
+    white-space: pre-line;
+  }
+
+  .status-card .small {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #64748b;
+  }
+
+  .ad-wrap {
+    width: min(92%, 900px);
+    max-width: none;
+    text-align: center;
+    transform: translateY(-2vh);
+  }
+
+  .ad-title {
+    margin: 0 0 18px;
+    font-size: clamp(30px, 3.1vw, 42px);
+    font-weight: 900;
+    letter-spacing: -0.04em;
+  }
+
+  .ad-box {
+    width: 100%;
+    border-radius: 20px;
+    overflow: hidden;
+    background: #020617;
+    box-shadow: 0 24px 60px rgba(0,0,0,.34);
+    min-height: clamp(320px, 58vh, 560px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ad-box iframe,
+  .ad-box video,
+  .ad-box img {
+    width: 100%;
+    display: block;
+    border: 0;
+  }
+
+  .ad-box img,
+  .ad-box video {
+    width: 100%;
+    height: 100%;
+    max-height: calc(100vh - 150px);
+    object-fit: contain;
+    background: #020617;
+  }
+
+  .ad-box iframe {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    max-height: calc(100vh - 150px);
+  }
+
+  .ad-text {
+    padding: 44px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    font-size: 20px;
+  }
+
+  .slide-count {
+    position: absolute;
+    left: 20px;
+    bottom: 18px;
+    color: #cbd5e1;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .ad-click-hint {
+    position: absolute;
+    right: 20px;
+    top: 18px;
+    color: #cbd5e1;
+    font-size: 13px;
+    font-weight: 800;
+    opacity: .75;
+    background: rgba(255,255,255,.08);
+    padding: 8px 12px;
+    border-radius: 999px;
+    pointer-events: none;
+  }
+
+  .ad-nav-row {
+    position: absolute;
+    right: 20px;
+    bottom: 18px;
+    display: flex;
+    gap: 8px;
+    z-index: 20;
+  }
+
+  .ad-nav-btn {
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.14);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 900;
+    border: 1px solid rgba(255,255,255,.14);
+  }
+
+  .ad-nav-btn:hover {
+    background: rgba(255,255,255,.22);
+  }
+
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, .52);
+    z-index: 1000;
+    padding: 24px;
+  }
+
+  .modal {
+    width: min(620px, 92vw);
+    border-radius: 22px;
+    background: #fff;
+    box-shadow: 0 30px 90px rgba(15, 23, 42, .35);
+    border: 2px solid #bbf7d0;
+    padding: 38px 42px;
+    text-align: center;
+    animation: pop .12s ease-out;
+  }
+
+  .modal.error {
+    border-color: #fecaca;
+  }
+
+  .modal.warning {
+    border-color: #fde68a;
+  }
+
+  .modal.select-modal {
+    width: min(740px, 94vw);
+    padding: 34px 36px;
+  }
+
+  .modal h2 {
+    margin: 0 0 16px;
+    font-size: 30px;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    color: var(--green-dark);
+  }
+
+  .modal.error h2 {
+    color: #991b1b;
+  }
+
+  .modal.warning h2 {
+    color: #92400e;
+  }
+
+  .modal p {
+    margin: 7px 0;
+    color: #475569;
+    font-size: 17px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 22px;
+  }
+
+  .modal.select-modal .modal-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .modal-btn {
+    min-width: 130px;
+    padding: 14px 18px;
+    font-size: 16px;
+    background: #16a34a;
+    color: #fff;
+  }
+
+  .modal.select-modal .modal-btn {
+    width: 100%;
+    min-width: 0;
+    min-height: 72px;
+    font-size: 22px;
+    border-radius: 18px;
+  }
+
+  .modal-btn.gray {
+    background: #475569;
+  }
+
+  .choice-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+    text-align: left;
+  }
+
+  .choice-btn {
+    width: 100%;
+    padding: 16px 18px;
+    border-radius: 14px;
+    background: #f8fafc;
+    color: #111827;
+    text-align: left;
+    border: 1px solid #e5e7eb;
+    font-size: 16px;
+    line-height: 1.4;
+  }
+
+  .choice-btn b {
+    color: #166534;
+  }
+
+  @keyframes pop {
+    from { transform: scale(.98); opacity: .6; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  @media (max-width: 1024px) {
+    html,
+    body {
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      min-height: auto;
+      background: #eef2f7;
+    }
+
+    .left {
+      width: 100%;
+      max-width: 100%;
+      min-height: auto;
+    }
+
+    .right {
+      width: 100%;
+      min-height: auto;
+      padding: 20px 12px 80px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ad-wrap {
+      width: 100%;
+      max-width: 100%;
+      transform: none;
+    }
+
+    .ad-box {
+      width: 100%;
+      min-height: 240px;
+    }
+
+    .ad-box img,
+    .ad-box video {
+      width: 100%;
+      height: auto;
+      max-height: 70vh;
+      object-fit: contain;
+      background: #020617;
+    }
+
+    .ad-box iframe {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+    }
+
+    .ad-text {
+      padding: 28px 22px;
+      font-size: 15px;
+    }
+
+    .ad-click-hint {
+      top: 12px;
+      right: 14px;
+      font-size: 11px;
+      padding: 6px 9px;
+    }
+
+    .slide-count {
+      left: 14px;
+      bottom: 18px;
+    }
+
+    .ad-nav-row {
+      right: 14px;
+      bottom: 18px;
+    }
+
+    .ad-nav-btn {
+      padding: 9px 12px;
+      font-size: 12px;
+    }
+
+    .modal {
+      padding: 30px 24px;
+    }
+
+    .modal h2 {
+      font-size: 25px;
+    }
+
+    .modal p {
+      font-size: 15px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .left {
+      padding: 14px 12px 18px;
+    }
+
+    .title {
+      font-size: 19px;
+    }
+
+    .clock-time {
+      font-size: 18px;
+    }
+
+    .card {
+      padding: 16px;
+    }
+
+    .keypad {
+      gap: 8px;
+    }
+
+    .num-btn {
+      height: 43px;
+    }
+
+    .right {
+      padding: 20px 12px 64px;
+    }
+
+    .ad-title {
+      font-size: 24px;
+    }
+
+    .ad-box img,
+    .ad-box video {
+      max-height: 68vh;
+    }
+  }
+</style>
+</head>
+<body>
+  <section class="left">
+    <div class="top-row">
+      <h1 class="title">울림연기학원 등하원 체크</h1>
+      <div class="clock">
+        <div class="clock-date" id="clockDate">-</div>
+        <div class="clock-time" id="clockTime">-</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="input-title">출결번호를 입력하세요</h2>
+      <div class="pin-display" id="pinDisplay"><span class="pin-placeholder">출결번호</span></div>
+
+      <div class="keypad">
+        <button class="num-btn" onclick="pressNum('1')">1</button>
+        <button class="num-btn" onclick="pressNum('2')">2</button>
+        <button class="num-btn" onclick="pressNum('3')">3</button>
+        <button class="num-btn" onclick="pressNum('4')">4</button>
+        <button class="num-btn" onclick="pressNum('5')">5</button>
+        <button class="num-btn" onclick="pressNum('6')">6</button>
+        <button class="num-btn" onclick="pressNum('7')">7</button>
+        <button class="num-btn" onclick="pressNum('8')">8</button>
+        <button class="num-btn" onclick="pressNum('9')">9</button>
+        <button class="num-btn utility-red" onclick="backspacePin()">지움</button>
+        <button class="num-btn" onclick="pressNum('0')">0</button>
+        <button class="num-btn utility-gray" onclick="clearPin()">전체삭제</button>
+      </div>
+
+      <div class="action-row">
+        <button class="action-btn check-in" id="checkInBtn" onclick="submitCheck('in')">등원</button>
+        <button class="action-btn check-out" id="checkOutBtn" onclick="submitCheck('out')">하원</button>
+      </div>
+    </div>
+
+    <div class="status-card" id="statusCard">
+      <div>
+        <h2>출결번호를 입력해주세요.</h2>
+        <p>출결번호는 휴대폰 번호 뒤 네 자리</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="right" onclick="handleAdAreaClick(event)" title="클릭하면 다음 안내 자료로 넘어갑니다.">
+    <div class="ad-wrap">
+      <h2 class="ad-title" id="adTitle">홍보 영상</h2>
+      <div class="ad-box" id="adBox">
+        <div class="ad-text">홍보 자료를 불러오는 중입니다.</div>
+      </div>
+    </div>
+    <div class="ad-click-hint">홍보 영역 클릭 시 다음</div>
+    <div class="slide-count" id="slideCount">1 / 1</div>
+    <div class="ad-nav-row">
+      <button class="ad-nav-btn" onclick="event.stopPropagation(); prevAdSlide(true);">이전</button>
+      <button class="ad-nav-btn" onclick="event.stopPropagation(); nextAdSlide(true);">다음</button>
+    </div>
+  </section>
+
+  <div class="modal-backdrop" id="modalBackdrop" onclick="closeModalByBackdrop(event)">
+    <div class="modal" id="modalBox">
+      <h2 id="modalTitle">안내</h2>
+      <p id="modalMessage"></p>
+      <div class="modal-actions" id="modalActions">
+        <button class="modal-btn" onclick="closeModal()">확인</button>
+      </div>
+    </div>
+  </div>
+
+<script>
 /****************************************************
- * 1) function apiUrl(params) 바로 아래에 추가/교체
+ * 울림 태블릿 43차-2 전체본
+ * - 기준: 38차 일일캐시/비동기 출결 구조
+ * - 보강: 안전 호출, 학생용 문구, 관리자/운영용 화면 문구 숨김
  ****************************************************/
+const API_URL = "https://script.google.com/macros/s/AKfycbx7wQFuw6MqqOijmvuwpeiCWOk3xU3hr41xoKbRltQHLb1kLbr_1RD5Zzy3iuWcrhUD0A/exec";
+const TABLET_APP_VERSION = "2026.06.06.043.2";
+
+const URL_PARAMS = new URLSearchParams(location.search);
+const KIOSK_KEY = URL_PARAMS.get("kioskKey") || localStorage.getItem("ULIM_TABLET_KIOSK_KEY") || "";
+
+const DAILY_SNAPSHOT_KEY = "ULIM_TABLET_DAILY_SNAPSHOT_V43_2";
+const DAILY_SNAPSHOT_AT_KEY = "ULIM_TABLET_DAILY_SNAPSHOT_AT_V43_2";
+const DAILY_SNAPSHOT_DATE_KEY = "ULIM_TABLET_DAILY_SNAPSHOT_DATE_V43_2";
+const STATUS_RESET_DELAY_MS = 5000;
+
+let pin = "";
+let busy = false;
+let lastMode = "in";
+let lastAttendanceNo = "";
+let selectedStudent = null;
+let adSlides = [];
+let adIndex = 0;
+let adTimer = null;
+let tabletPreload = null;
+let tabletPreloadAt = 0;
+let tabletPreloadLoading = false;
+let statusRequestSeq = 0;
+let statusResetTimer = null;
+let tabletProcessingFallbackTimer = null;
+
+function pad2(n) {
+  return String(n).padStart(2, "0");
+}
+
+function updateClock() {
+  const now = new Date();
+  const weekdays = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"];
+  const ampm = now.getHours() >= 12 ? "오후" : "오전";
+  const h12 = now.getHours() % 12 || 12;
+  document.getElementById("clockDate").textContent = `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일 ${weekdays[now.getDay()]}`;
+  document.getElementById("clockTime").textContent = `${ampm} ${pad2(h12)}:${pad2(now.getMinutes())}`;
+}
+
+function getTodayKey() {
+  const now = new Date();
+  return [now.getFullYear(), pad2(now.getMonth() + 1), pad2(now.getDate())].join("-");
+}
+
+function pressNum(num) {
+  if (busy) return;
+  if (pin.length >= 8) return;
+  pin += num;
+  renderPin();
+}
+
+function backspacePin() {
+  if (busy) return;
+  pin = pin.slice(0, -1);
+  renderPin();
+}
+
+function clearPin() {
+  pin = "";
+  selectedStudent = null;
+  renderPin();
+}
+
+function renderPin() {
+  const el = document.getElementById("pinDisplay");
+  if (!pin) {
+    el.innerHTML = `<span class="pin-placeholder">출결번호</span>`;
+  } else {
+    el.textContent = pin;
+  }
+}
+
+function setBusy(value) {
+  busy = !!value;
+  document.getElementById("checkInBtn").disabled = busy;
+  document.getElementById("checkOutBtn").disabled = busy;
+}
+
+function apiUrl(params) {
+  const q = new URLSearchParams(params || {});
+  q.set("_", Date.now());
+  if (KIOSK_KEY) q.set("kioskKey", KIOSK_KEY);
+  return `${API_URL}?${q.toString()}`;
+}
 
 function tabletPublicMessage_(value, fallback) {
-  const raw = String(value || '').trim();
-  if (!raw) return fallback || '잠시 후 다시 시도해주세요.';
+  const raw = String(value || "").trim();
+  if (!raw) return fallback || "잠시 후 다시 시도해주세요.";
 
-  // 학생/학부모 화면에는 내부 운영 문구를 노출하지 않습니다.
-  // 내부 상세는 브라우저 콘솔 또는 GAS 실행 로그에서만 확인합니다.
   if (/GAS|API|HTTP|JSON|HTML|서버|배포|웹앱|권한|대기열|출석부|알림톡|관리자|Script|Apps Script/i.test(raw)) {
-    return fallback || '잠시 연결이 지연되고 있습니다. 다시 시도해주세요.';
+    return fallback || "잠시 연결이 지연되고 있습니다. 다시 시도해주세요.";
   }
 
   return raw;
 }
 
 function tabletPublicErrorTitle_() {
-  return '잠시 후 다시 시도해주세요.';
+  return "잠시 후 다시 시도해주세요.";
 }
 
 function tabletPublicErrorMessage_() {
-  return '문제가 계속되면 데스크에 문의해주세요.';
+  return "문제가 계속되면 데스크에 문의해주세요.";
 }
 
 async function tabletFetchJson(params, timeoutMs = 4500) {
-  const controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  const controller = (typeof AbortController !== "undefined") ? new AbortController() : null;
   let timer = null;
 
   if (controller) {
@@ -41,163 +797,743 @@ async function tabletFetchJson(params, timeoutMs = 4500) {
 
   try {
     const res = await fetch(apiUrl(params), {
-      method: 'GET',
-      cache: 'no-store',
+      method: "GET",
+      cache: "no-store",
       signal: controller ? controller.signal : undefined
     });
 
     const text = await res.text();
 
     if (!res.ok) {
-      console.warn('[Tablet API] HTTP 오류:', res.status, text ? text.slice(0, 200) : '');
-      throw new Error('잠시 연결이 지연되고 있습니다. 다시 시도해주세요.');
+      console.warn("[Tablet API] HTTP 오류:", res.status, text ? text.slice(0, 200) : "");
+      throw new Error("잠시 연결이 지연되고 있습니다. 다시 시도해주세요.");
     }
 
-    if (/^\s*</.test(text || '')) {
-      console.warn('[Tablet API] JSON 대신 HTML 응답:', text.slice(0, 200));
-      throw new Error('잠시 연결이 지연되고 있습니다. 다시 시도해주세요.');
+    if (/^\s*</.test(text || "")) {
+      console.warn("[Tablet API] JSON 대신 HTML 응답:", text.slice(0, 200));
+      throw new Error("잠시 연결이 지연되고 있습니다. 다시 시도해주세요.");
     }
 
     const data = JSON.parse(text);
-    if (!data || typeof data !== 'object') {
-      console.warn('[Tablet API] 응답 형식 오류:', data);
-      throw new Error('잠시 연결이 지연되고 있습니다. 다시 시도해주세요.');
+    if (!data || typeof data !== "object") {
+      console.warn("[Tablet API] 응답 형식 오류:", data);
+      throw new Error("잠시 연결이 지연되고 있습니다. 다시 시도해주세요.");
     }
 
-    if (data.status === 'error' && data.message) {
-      data.message = tabletPublicMessage_(data.message, '잠시 연결이 지연되고 있습니다. 다시 시도해주세요.');
-      data.popupMessage = tabletPublicMessage_(data.popupMessage || data.message, data.message);
+    if (data.message) {
+      data.message = tabletPublicMessage_(data.message, "잠시 연결이 지연되고 있습니다. 다시 시도해주세요.");
+    }
+    if (data.popupMessage) {
+      data.popupMessage = tabletPublicMessage_(data.popupMessage, data.message || "잠시 연결이 지연되고 있습니다. 다시 시도해주세요.");
     }
 
     return data;
   } catch (err) {
-    console.warn('[Tablet API] 호출 실패:', err);
-    throw new Error(tabletPublicMessage_(err && err.message, '잠시 연결이 지연되고 있습니다. 다시 시도해주세요.'));
+    console.warn("[Tablet API] 호출 실패:", err);
+    throw new Error(tabletPublicMessage_(err && err.message, "잠시 연결이 지연되고 있습니다. 다시 시도해주세요."));
   } finally {
     if (timer) clearTimeout(timer);
   }
 }
 
-/****************************************************
- * 2) submitCheckLegacy(mode, extra = {}) 안의 처리중 문구 교체
- ****************************************************/
-
-// 기존:
-// setStatus(
-//   mode === "out" ? "하원 처리 중입니다." : "등원 처리 중입니다.",
-//   "출석부와 강의실을 확인하고 있습니다.",
-//   "success"
-// );
-
-// 교체:
-setStatus(
-  mode === "out" ? "하원 처리 중입니다." : "등원 처리 중입니다.",
-  "잠시만 기다려주세요.",
-  "success"
-);
-
-/****************************************************
- * 3) submitCheckLegacy 안의 GAS 호출부 교체
- ****************************************************/
-
-// 기존:
-// const res = await fetch(apiUrl(params), { method: "GET", cache: "no-store" });
-// const data = await res.json();
-
-// 교체:
-const data = await tabletFetchJson(params, 5500);
-
-/****************************************************
- * 4) submitCheckLegacy 안의 실패 표시 교체
- ****************************************************/
-
-// 기존:
-// if (data.status !== "success") {
-//   const msg = data.message || "처리에 실패했습니다.";
-//   setStatus("처리 실패", msg, "error");
-//   resetStatusSoon(3000);
-//   return;
-// }
-
-// 교체:
-if (data.status !== "success") {
-  const msg = tabletPublicMessage_(data.message, tabletPublicErrorMessage_());
-  setStatus(tabletPublicErrorTitle_(), msg, "warning");
-  resetStatusSoon(3000);
-  return;
+function escapeHtml(value) {
+  return String(value == null ? "" : value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
+function escapeAttr(value) {
+  return escapeHtml(value).replace(/`/g, "&#096;");
+}
+
+function setStatus(title, message, type) {
+  const card = document.getElementById("statusCard");
+  const safeTitle = tabletPublicMessage_(title || "안내", "잠시 후 다시 시도해주세요.");
+  const safeMessage = tabletPublicMessage_(message || "", "");
+
+  card.className = "status-card" + (type === "error" ? " error" : type === "warning" ? " warning" : "");
+  card.innerHTML = `
+    <div>
+      <h2>${escapeHtml(safeTitle)}</h2>
+      ${safeMessage ? `<p>${escapeHtml(safeMessage)}</p>` : ""}
+    </div>
+  `;
+}
+
+function setDefaultStatus() {
+  setStatus("출결번호를 입력해주세요.", "출결번호는 휴대폰 번호 뒤 네 자리", "success");
+}
+
+function resetStatusSoon(delay = STATUS_RESET_DELAY_MS) {
+  if (statusResetTimer) clearTimeout(statusResetTimer);
+  statusResetTimer = setTimeout(function () {
+    setDefaultStatus();
+  }, delay);
+}
+
+function clearProcessingFallback() {
+  if (tabletProcessingFallbackTimer) {
+    clearTimeout(tabletProcessingFallbackTimer);
+    tabletProcessingFallbackTimer = null;
+  }
+}
+
+function showInstantGreeting(mode) {
+  const title = mode === "out" ? "안녕히 가세요!" : "어서오세요!";
+  const message = mode === "out" ? "오늘도 수고 많았습니다." : "오늘도 즐거운 수업 되시길 바랍니다.";
+  setStatus(title, message, "success");
+  resetStatusSoon(2000);
+}
+
+function startProcessingFallback(seq, mode) {
+  clearProcessingFallback();
+  tabletProcessingFallbackTimer = setTimeout(function () {
+    if (seq !== statusRequestSeq) return;
+    showInstantGreeting(mode);
+    statusRequestSeq++;
+  }, 3000);
+}
+
+function showModal(title, message, type, innerHtml, extraClass) {
+  const backdrop = document.getElementById("modalBackdrop");
+  const box = document.getElementById("modalBox");
+  box.className = "modal" + (type === "error" ? " error" : type === "warning" ? " warning" : "") + (extraClass ? " " + extraClass : "");
+  document.getElementById("modalTitle").textContent = tabletPublicMessage_(title || "안내", "안내");
+  document.getElementById("modalMessage").textContent = tabletPublicMessage_(message || "", "");
+  document.getElementById("modalActions").innerHTML = innerHtml || `<button class="modal-btn" onclick="closeModal()">확인</button>`;
+  backdrop.style.display = "flex";
+}
+
+function closeModal() {
+  document.getElementById("modalBackdrop").style.display = "none";
+  document.getElementById("modalBox").className = "modal";
+}
+
+function closeModalByBackdrop(event) {
+  if (event.target && event.target.id === "modalBackdrop") closeModal();
+}
+
+function normalizeAttendanceNoClient(value) {
+  return String(value || "").replace(/[^0-9]/g, "");
+}
+
+function saveDailySnapshot(data) {
+  if (!data || data.status !== "success" || !data.attendanceMap) return false;
+  tabletPreload = data;
+  tabletPreloadAt = Date.now();
+  try {
+    localStorage.setItem(DAILY_SNAPSHOT_KEY, JSON.stringify(data));
+    localStorage.setItem(DAILY_SNAPSHOT_AT_KEY, String(tabletPreloadAt));
+    localStorage.setItem(DAILY_SNAPSHOT_DATE_KEY, String(data.date || getTodayKey()));
+  } catch (err) {
+    console.warn("[Tablet Cache] 저장 실패:", err);
+  }
+  return true;
+}
+
+function loadDailySnapshotFromLocal() {
+  try {
+    const dateKey = localStorage.getItem(DAILY_SNAPSHOT_DATE_KEY) || "";
+    if (dateKey && dateKey !== getTodayKey()) return null;
+    const raw = localStorage.getItem(DAILY_SNAPSHOT_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data || data.status !== "success" || !data.attendanceMap) return null;
+    tabletPreload = data;
+    tabletPreloadAt = Number(localStorage.getItem(DAILY_SNAPSHOT_AT_KEY) || 0) || Date.now();
+    return data;
+  } catch (err) {
+    return null;
+  }
+}
+
+async function loadTabletPreload(force = false) {
+  const now = Date.now();
+  const localSnapshot = loadDailySnapshotFromLocal();
+
+  if (!force && tabletPreload && now - tabletPreloadAt < 30 * 60 * 1000) return tabletPreload;
+  if (!force && localSnapshot) return localSnapshot;
+  if (tabletPreloadLoading) return tabletPreload || localSnapshot;
+
+  tabletPreloadLoading = true;
+  try {
+    const data = await tabletFetchJson({ action: "tabletGetDailySnapshot", force: force ? "1" : "0" }, 4500);
+    if (saveDailySnapshot(data)) return data;
+  } catch (err) {
+    console.warn("[Tablet Cache] 일일자료 갱신 실패:", err);
+  }
+
+  try {
+    const legacyData = await tabletFetchJson({ action: "tabletPreload" }, 4500);
+    if (saveDailySnapshot(legacyData)) return legacyData;
+  } catch (err) {
+    console.warn("[Tablet Cache] 보조자료 갱신 실패:", err);
+  } finally {
+    tabletPreloadLoading = false;
+  }
+
+  return tabletPreload || localSnapshot;
+}
+
+async function refreshTabletDailySnapshotLocal(forceServer = true) {
+  try {
+    const data = await tabletFetchJson({ action: "tabletGetDailySnapshot", force: forceServer ? "1" : "0" }, 5000);
+    saveDailySnapshot(data);
+    return data;
+  } catch (err) {
+    return loadDailySnapshotFromLocal();
+  }
+}
+
+function getPreloadedCandidates(attendanceNo) {
+  if (!tabletPreload || !tabletPreload.attendanceMap) return null;
+  const key = normalizeAttendanceNoClient(attendanceNo);
+  return tabletPreload.attendanceMap[key] || null;
+}
+
+async function tryHandleWithPreload(attendanceNo, mode, extra, seq) {
+  if (!tabletPreload || !tabletPreload.attendanceMap) return false;
+  if (extra && (extra.selectedClassIndex !== undefined || extra.classIndex !== undefined || extra.selectedRowNumber || extra.rowNumber)) return false;
+
+  const candidates = getPreloadedCandidates(attendanceNo);
+  if (!candidates || !candidates.length) return false;
+
+  lastMode = mode;
+  lastAttendanceNo = attendanceNo;
+
+  if (candidates.length > 1) {
+    clearProcessingFallback();
+    setBusy(false);
+    showStudentChoice({
+      status: "multiple",
+      attendanceNo: attendanceNo,
+      candidates: candidates
+    });
+    return true;
+  }
+
+  const student = candidates[0];
+  selectedStudent = student;
+  const classes = Array.isArray(student.classes) ? student.classes : [];
+
+  if (classes.length > 1) {
+    clearProcessingFallback();
+    setBusy(false);
+    showClassChoice({
+      status: "multipleClasses",
+      attendanceNo: attendanceNo,
+      studentName: student.name,
+      studentRowNumber: student.rowNumber,
+      classes: classes
+    });
+    return true;
+  }
+
+  const cls = classes.length === 1 ? classes[0] : {
+    index: 0,
+    className: student.className || "오늘 수업 확인 필요",
+    instructor: student.instructor || "",
+    roomName: "데스크문의"
+  };
+
+  await enqueueAttendanceFromLocalSnapshot(attendanceNo, mode, student, cls, seq);
+  return true;
+}
+
+async function enqueueAttendanceFromLocalSnapshot(attendanceNo, mode, student, cls, seq) {
+  const modeText = mode === "out" ? "하원" : "등원";
+  const params = {
+    action: "tabletEnqueueAttendance",
+    attendanceNo: attendanceNo,
+    mode: mode,
+    selectedRowNumber: student.rowNumber || "",
+    selectedStudentName: student.name || "",
+    selectedClassIndex: cls.index !== undefined ? cls.index : "",
+    className: cls.className || "",
+    instructor: cls.instructor || student.instructor || "",
+    roomName: cls.roomName || "데스크문의"
+  };
+
+  try {
+    const data = await tabletFetchJson(params, 5000);
+    if (seq !== statusRequestSeq) return;
+    clearProcessingFallback();
+
+    if (data && (data.duplicate === true || data.status === "duplicate" || data.status === "already")) {
+      const message = tabletPublicMessage_(data.message || data.popupMessage || ("이미 " + modeText + "처리되었습니다."), "이미 " + modeText + "처리되었습니다.");
+      setStatus(message, "", "warning");
+      resetStatusSoon(5000);
+      return;
+    }
+
+    if (data && data.status === "multiple") {
+      showStudentChoice(data);
+      return;
+    }
+
+    if (data && data.status === "multipleClasses") {
+      showClassChoice(data);
+      return;
+    }
+
+    if (!data || (data.status !== "queued" && data.status !== "success")) {
+      return submitCheckLegacy(mode, params, seq);
+    }
+
+    const name = data.studentName || student.name || "학생";
+    const className = data.className || cls.className || "데스크문의";
+    const roomName = data.roomName || cls.roomName || "데스크문의";
+
+    setStatus(
+      mode === "out" ? `${name}님, 수고하셨습니다.` : `${name}님, 어서오세요.`,
+      mode === "out" ? "오늘도 수고 많았습니다." : [`오늘 수업: ${className}`, `오늘 강의실: ${roomName}`].join("\n"),
+      "success"
+    );
+    resetStatusSoon(5000);
+  } catch (err) {
+    if (seq === statusRequestSeq) {
+      return submitCheckLegacy(mode, params, seq);
+    }
+  }
+}
+
+async function submitCheck(mode, extra = {}) {
+  const attendanceNo = extra.attendanceNo || pin;
+  if (!attendanceNo) {
+    showModal("출결번호를 입력해주세요.", "", "warning");
+    resetStatusSoon();
+    return;
+  }
+
+  if (busy) return;
+  setBusy(true);
+
+  const seq = ++statusRequestSeq;
+  lastMode = mode;
+  lastAttendanceNo = attendanceNo;
+
+  if (!extra || (!extra.selectedRowNumber && extra.selectedClassIndex === undefined && extra.classIndex === undefined)) {
+    clearPin();
+  }
+
+  setStatus(mode === "out" ? "하원 처리 중입니다." : "등원 처리 중입니다.", "잠시만 기다려주세요.", "success");
+  startProcessingFallback(seq, mode);
+
+  try {
+    if (!extra || (!extra.selectedRowNumber && extra.selectedClassIndex === undefined && extra.classIndex === undefined)) {
+      await loadTabletPreload(false);
+      const handled = await tryHandleWithPreload(attendanceNo, mode, extra, seq);
+      if (handled) return;
+    }
+
+    await submitCheckLegacy(mode, extra, seq);
+  } finally {
+    setBusy(false);
+  }
+}
+
+async function submitCheckLegacy(mode, extra = {}, seqFromParent) {
+  const seq = seqFromParent || statusRequestSeq;
+  const attendanceNo = extra.attendanceNo || lastAttendanceNo || pin;
+  const modeText = mode === "out" ? "하원" : "등원";
+
+  if (!attendanceNo) {
+    showModal("출결번호를 입력해주세요.", "", "warning");
+    resetStatusSoon();
+    return;
+  }
+
+  try {
+    const params = {
+      action: "tabletCheck",
+      attendanceNo: attendanceNo,
+      mode: mode
+    };
+
+    if (selectedStudent && selectedStudent.rowNumber) {
+      params.selectedRowNumber = selectedStudent.rowNumber;
+      params.selectedStudentName = selectedStudent.name || "";
+    }
+
+    Object.keys(extra || {}).forEach(function (key) {
+      if (key === "action") return;
+      if (extra[key] !== undefined && extra[key] !== null) params[key] = extra[key];
+    });
+
+    const data = await tabletFetchJson(params, 5500);
+    if (seq !== statusRequestSeq) return;
+    clearProcessingFallback();
+
+    if (data && (data.duplicate === true || data.status === "duplicate" || data.status === "already")) {
+      const message = tabletPublicMessage_(data.message || data.popupMessage || ("이미 " + modeText + "처리되었습니다."), "이미 " + modeText + "처리되었습니다.");
+      setStatus(message, "", "warning");
+      resetStatusSoon(5000);
+      return;
+    }
+
+    if (data && data.status === "multiple") {
+      showStudentChoice(data);
+      return;
+    }
+
+    if (data && data.status === "multipleClasses") {
+      showClassChoice(data);
+      return;
+    }
+
+    if (!data || data.status !== "success") {
+      const msg = tabletPublicMessage_(data && data.message, tabletPublicErrorMessage_());
+      setStatus(tabletPublicErrorTitle_(), msg, "warning");
+      resetStatusSoon(3000);
+      return;
+    }
+
+    const name = data.studentName || "학생";
+    const className = data.className || "데스크문의";
+    const roomName = data.roomName || "데스크문의";
+
+    setStatus(
+      mode === "out" ? `${name}님, 수고하셨습니다.` : `${name}님, 어서오세요.`,
+      mode === "out" ? "오늘도 수고 많았습니다." : [`오늘 수업: ${className}`, `오늘 강의실: ${roomName}`].join("\n"),
+      "success"
+    );
+    resetStatusSoon(5000);
+  } catch (err) {
+    if (seq !== statusRequestSeq) return;
+    clearProcessingFallback();
+    setStatus(tabletPublicErrorTitle_(), tabletPublicMessage_(err && err.message, tabletPublicErrorMessage_()), "warning");
+    resetStatusSoon(3000);
+  }
+}
+
+function showStudentChoice(data) {
+  const candidates = Array.isArray(data.candidates) ? data.candidates : [];
+  if (!candidates.length) {
+    showModal("학생을 찾지 못했습니다.", "데스크에 문의해주세요.", "warning");
+    return;
+  }
+
+  const buttons = candidates.map(function (student) {
+    const rowNumber = escapeAttr(student.rowNumber || student.studentRowNumber || "");
+    const name = escapeAttr(student.name || student.studentName || "학생");
+    return `<button class="choice-btn" onclick="selectStudentChoice('${rowNumber}', '${name}')"><b>${escapeHtml(student.name || student.studentName || "학생")}</b></button>`;
+  }).join("");
+
+  showModal(
+    "학생을 선택해주세요.",
+    "같은 출결번호를 사용하는 학생이 있습니다.",
+    "success",
+    `<div class="choice-list">${buttons}</div><div class="modal-actions"><button class="modal-btn gray" onclick="closeModal(); setDefaultStatus();">취소</button></div>`
+  );
+}
+
+function selectStudentChoice(rowNumber, name) {
+  closeModal();
+  selectedStudent = { rowNumber: rowNumber, name: name };
+  submitCheck(lastMode, {
+    attendanceNo: lastAttendanceNo,
+    selectedRowNumber: rowNumber,
+    selectedStudentName: name
+  });
+}
+
+function showClassChoice(data) {
+  const classes = Array.isArray(data.classes) ? data.classes : [];
+  if (!classes.length) {
+    showModal("수업을 찾지 못했습니다.", "데스크에 문의해주세요.", "warning");
+    return;
+  }
+
+  const attendanceNo = escapeAttr(data.attendanceNo || lastAttendanceNo || "");
+  const studentName = escapeAttr(data.studentName || "학생");
+  const studentRowNumber = escapeAttr(data.studentRowNumber || data.rowNumber || "");
+
+  const buttons = classes.map(function (cls, idx) {
+    const classIndex = cls.index !== undefined ? cls.index : idx;
+    const className = cls.className || "오늘 수업 확인 필요";
+    const roomName = cls.roomName || "데스크문의";
+    const instructor = cls.instructor || "";
+    return `<button class="choice-btn" onclick="selectClassChoice('${attendanceNo}', '${studentRowNumber}', '${studentName}', '${escapeAttr(classIndex)}', '${escapeAttr(className)}', '${escapeAttr(instructor)}', '${escapeAttr(roomName)}')"><b>${escapeHtml(className)}</b><br>강의실: ${escapeHtml(roomName)}</button>`;
+  }).join("");
+
+  showModal(
+    "수업을 선택해주세요.",
+    `${data.studentName || "학생"}님의 오늘 수업이 여러 개 있습니다.`,
+    "success",
+    `<div class="choice-list">${buttons}</div><div class="modal-actions"><button class="modal-btn gray" onclick="closeModal(); setDefaultStatus();">취소</button></div>`,
+    "select-modal"
+  );
+}
+
+function selectClassChoice(attendanceNo, studentRowNumber, studentName, classIndex, className, instructor, roomName) {
+  closeModal();
+  submitCheck(lastMode, {
+    attendanceNo: attendanceNo || lastAttendanceNo,
+    selectedRowNumber: studentRowNumber || "",
+    selectedStudentName: studentName || "",
+    selectedClassIndex: classIndex,
+    className: className || "",
+    instructor: instructor || "",
+    roomName: roomName || "데스크문의"
+  });
+}
+
+async function warmup() {
+  try {
+    await tabletFetchJson({ action: "tabletWarmup" }, 2500);
+  } catch (err) {}
+}
+
+async function loadAds() {
+  try {
+    const data = await tabletFetchJson({ action: "tabletGetAds" }, 4500);
+    adSlides = data.slides && data.slides.length ? data.slides : defaultSlides();
+  } catch (err) {
+    adSlides = defaultSlides();
+  }
+  adIndex = 0;
+  renderAdSlide();
+}
+
+function defaultSlides() {
+  return [
+    {
+      type: "공지",
+      title: "홍보 영상",
+      content: "울림연기학원에 오신 것을 환영합니다.",
+      imageUrl: "",
+      videoUrl: "",
+      seconds: 8
+    }
+  ];
+}
+
+function extractYoutubeId(url) {
+  const text = String(url || "");
+  const m = text.match(/embed\/([^?&/]+)/) || text.match(/[?&]v=([^?&]+)/) || text.match(/youtu\.be\/([^?&/]+)/);
+  return m ? m[1] : "";
+}
+
+function buildYoutubeEmbedUrl(url) {
+  const safeUrl = String(url || "");
+  const id = extractYoutubeId(safeUrl);
+  const sep = safeUrl.indexOf("?") === -1 ? "?" : "&";
+  return safeUrl + sep + "autoplay=1&mute=1&loop=1" + (id ? "&playlist=" + encodeURIComponent(id) : "");
+}
+
+function renderAdSlide() {
+  if (!adSlides.length) adSlides = defaultSlides();
+
+  const slide = adSlides[adIndex] || adSlides[0];
+  document.getElementById("adTitle").textContent = slide.title || "홍보 영상";
+  document.getElementById("slideCount").textContent = `${adIndex + 1} / ${adSlides.length}`;
+
+  const box = document.getElementById("adBox");
+  const videoUrl = slide.videoUrl || "";
+  const imageUrl = slide.imageUrl || "";
+
+  if (videoUrl) {
+    if (videoUrl.includes("youtube.com/embed/")) {
+      box.innerHTML = `<iframe src="${escapeAttr(buildYoutubeEmbedUrl(videoUrl))}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+    } else {
+      box.innerHTML = `<video src="${escapeAttr(videoUrl)}" autoplay muted loop playsinline></video>`;
+    }
+  } else if (imageUrl) {
+    box.innerHTML = `<img src="${escapeAttr(imageUrl)}" alt="홍보 이미지" onerror="this.parentElement.innerHTML=\`<div class='ad-text'>이미지를 불러오지 못했습니다.</div>\`;">`;
+  } else {
+    box.innerHTML = `<div class="ad-text">${escapeHtml(slide.content || "오늘도 좋은 수업 되세요.")}</div>`;
+  }
+
+  clearTimeout(adTimer);
+  const seconds = Math.max(5, Number(slide.seconds || 10));
+  adTimer = setTimeout(function () {
+    nextAdSlide(false);
+  }, seconds * 1000);
+}
+
+function nextAdSlide(manual = true) {
+  if (!adSlides.length) return;
+  clearTimeout(adTimer);
+  adIndex = (adIndex + 1) % adSlides.length;
+  renderAdSlide();
+}
+
+function prevAdSlide(manual = true) {
+  if (!adSlides.length) return;
+  clearTimeout(adTimer);
+  adIndex = (adIndex - 1 + adSlides.length) % adSlides.length;
+  renderAdSlide();
+}
+
+function handleAdAreaClick(event) {
+  const tag = String((event.target && event.target.tagName) || "").toLowerCase();
+  if (["button", "iframe", "video"].indexOf(tag) !== -1) return;
+  nextAdSlide(true);
+}
+
+window.addEventListener("keydown", function (event) {
+  if (/^[0-9]$/.test(event.key)) {
+    pressNum(event.key);
+    return;
+  }
+  if (event.key === "Backspace") {
+    backspacePin();
+    return;
+  }
+  if (event.key === "Enter") {
+    submitCheck("in");
+  }
+});
+</script>
+
+<script>
 /****************************************************
- * 5) enqueueAttendanceFromLocalSnapshot(...) 안의 GAS 호출부 교체
+ * 태블릿 PWA 설치 안내
  ****************************************************/
+const PWA_HIDE_KEY = "ULIM_TABLET_PWA_INSTALL_HIDE";
+let deferredPrompt = null;
 
-// 기존:
-// const res = await fetch(apiUrl(params), { method: "GET", cache: "no-store" });
-// const data = await res.json();
+window.addEventListener("beforeinstallprompt", function (e) {
+  if (localStorage.getItem(PWA_HIDE_KEY) === "Y") return;
+  e.preventDefault();
+  deferredPrompt = e;
+  setTimeout(function () {
+    showPwaInstallGuide();
+  }, 1800);
+});
 
-// 교체:
-const data = await tabletFetchJson(params, 5000);
+function showPwaInstallGuide() {
+  if (!deferredPrompt) return;
+  showModal(
+    "앱으로 설치하기",
+    "울림연기학원 앱을 홈 화면에 설치하면 더 편하게 사용할 수 있습니다.",
+    "success",
+    `
+      <div class="modal-actions">
+        <button class="modal-btn" onclick="installPwa()">앱 설치하기</button>
+        <button class="modal-btn gray" onclick="closeModal()">나중에</button>
+        <button class="modal-btn gray" onclick="hidePwaForever()">다시는 보지 않기</button>
+      </div>
+    `
+  );
+}
 
+async function installPwa() {
+  if (!deferredPrompt) {
+    closeModal();
+    return;
+  }
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  closeModal();
+}
+
+function hidePwaForever() {
+  localStorage.setItem(PWA_HIDE_KEY, "Y");
+  closeModal();
+}
+</script>
+
+<script>
 /****************************************************
- * 6) enqueueAttendanceFromLocalSnapshot(...) 안의 성공 표시 교체
+ * 태블릿 PWA 업데이트 확인
  ****************************************************/
+const TABLET_VERSION_CHECK_KEY = "ULIM_TABLET_VERSION_CHECK_DATE";
+const TABLET_VERSION_SKIP_KEY = "ULIM_TABLET_VERSION_SKIP_DATE";
+const TABLET_SAVED_VERSION_KEY = "ULIM_TABLET_APP_VERSION";
+const TABLET_UPDATE_QUERY_KEY = "tabletUpdate";
 
-// 기존:
-// setStatus(
-//   `${name}님 ${modeText} 접수되었습니다.`,
-//   [`오늘 수업: ${className}`, `오늘 강의실: ${roomName}`, "출석부 기록과 알림톡은 3~5분 이내 처리됩니다."].join("\n"),
-//   "success"
-// );
+function getTabletBaseUrl() {
+  return location.origin + location.pathname;
+}
 
-// 교체:
-setStatus(
-  mode === "out" ? `${name}님, 수고하셨습니다.` : `${name}님, 어서오세요.`,
-  mode === "out"
-    ? "오늘도 수고 많았습니다."
-    : [`오늘 수업: ${className}`, `오늘 강의실: ${roomName}`].join("\n"),
-  "success"
-);
+async function checkTabletAppUpdateOncePerDay() {
+  try {
+    const today = getTodayKey();
+    if (localStorage.getItem(TABLET_VERSION_CHECK_KEY) === today) return;
+    localStorage.setItem(TABLET_VERSION_CHECK_KEY, today);
 
+    const remoteUrl = getTabletBaseUrl() + "?_versionCheck=" + Date.now();
+    const response = await fetch(remoteUrl, { method: "GET", cache: "no-store" });
+    if (!response.ok) return;
+
+    const html = await response.text();
+    const match = html.match(/const\s+TABLET_APP_VERSION\s*=\s*["']([^"']+)["']/);
+    const remoteVersion = match ? String(match[1]).trim() : "";
+    if (!remoteVersion) return;
+
+    const savedVersion = localStorage.getItem(TABLET_SAVED_VERSION_KEY) || TABLET_APP_VERSION;
+    localStorage.setItem(TABLET_SAVED_VERSION_KEY, savedVersion);
+
+    if (remoteVersion !== TABLET_APP_VERSION && remoteVersion !== savedVersion) {
+      showTabletUpdateModal(remoteVersion);
+    }
+  } catch (err) {
+    console.log("[Tablet Update] 업데이트 확인 실패:", err);
+  }
+}
+
+function showTabletUpdateModal(remoteVersion) {
+  showModal(
+    "업데이트 안내",
+    "태블릿 앱 새 버전이 있습니다.\n지금 업데이트하시겠습니까?",
+    "success",
+    `
+      <div class="modal-actions">
+        <button class="modal-btn" onclick="applyTabletAppUpdate('${escapeAttr(remoteVersion)}')">업데이트</button>
+        <button class="modal-btn gray" onclick="skipTabletAppUpdateToday('${escapeAttr(remoteVersion)}')">나중에</button>
+      </div>
+    `
+  );
+}
+
+function skipTabletAppUpdateToday(remoteVersion) {
+  localStorage.setItem(TABLET_VERSION_SKIP_KEY, getTodayKey());
+  closeModal();
+}
+
+async function applyTabletAppUpdate(remoteVersion) {
+  try {
+    closeModal();
+    localStorage.setItem(TABLET_SAVED_VERSION_KEY, remoteVersion || TABLET_APP_VERSION);
+    if ("serviceWorker" in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map(function (reg) {
+        try { return reg.update(); } catch (e) { return Promise.resolve(); }
+      }));
+    }
+  } catch (err) {
+    console.log("[Tablet Update] Service Worker 업데이트 확인 실패:", err);
+  } finally {
+    const updateUrl = getTabletBaseUrl() +
+      "?v=" + encodeURIComponent(remoteVersion || TABLET_APP_VERSION) +
+      "&" + TABLET_UPDATE_QUERY_KEY + "=" + Date.now();
+    location.replace(updateUrl);
+  }
+}
+</script>
+
+<script>
 /****************************************************
- * 7) enqueueAttendanceFromLocalSnapshot(...) 안의 실패 fallback 주석은 그대로 둬도 됨
- *    주석은 화면에 보이지 않지만, 화면 문구는 아래처럼 바꾸면 안전함
+ * 초기 실행
  ****************************************************/
-
-// 기존:
-// 대기열 등록 실패 시 기존 실시간 처리 경로로 fallback합니다.
-
-// 화면 표시가 아니므로 필수 수정 대상은 아닙니다.
-// 다만 추후 코드 정리 시 '대기열'이라는 주석도 '비동기 출결 처리' 정도로 바꿔도 됩니다.
-
-/****************************************************
- * 8) warmup() 안 교체
- ****************************************************/
-
-// 기존:
-// await fetch(apiUrl({ action: "tabletWarmup" }), { method: "GET", cache: "no-store" });
-
-// 교체:
-await tabletFetchJson({ action: "tabletWarmup" }, 2500);
-
-/****************************************************
- * 9) loadTabletPreload / refreshTabletDailySnapshotLocal 안의 fetch도 같은 방식으로 교체
- ****************************************************/
-
-// tabletGetDailySnapshot 호출:
-// const data = await tabletFetchJson({ action: "tabletGetDailySnapshot" }, 4500);
-
-// tabletPreload fallback 호출:
-// const legacyData = await tabletFetchJson({ action: "tabletPreload" }, 4500);
-
-// force refresh 호출:
-// const data = await tabletFetchJson({ action: "tabletGetDailySnapshot", force: forceServer ? "1" : "0" }, 5000);
-
-/****************************************************
- * 10) 버전 표기 변경
- ****************************************************/
-
-// 기존:
-// const TABLET_APP_VERSION = "2026.06.05.038";
-
-// 교체:
-// const TABLET_APP_VERSION = "2026.06.06.043.2";
+updateClock();
+setInterval(updateClock, 1000);
+renderPin();
+setDefaultStatus();
+loadAds();
+warmup();
+loadTabletPreload(true);
+setInterval(warmup, 4 * 60 * 1000);
+setInterval(function () { loadTabletPreload(false); }, 30 * 60 * 1000);
+setInterval(function () { refreshTabletDailySnapshotLocal(false); }, 60 * 60 * 1000);
+document.addEventListener("DOMContentLoaded", function () {
+  setTimeout(checkTabletAppUpdateOncePerDay, 2500);
+});
+</script>
+</body>
+</html>
