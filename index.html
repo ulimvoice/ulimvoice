@@ -7408,23 +7408,54 @@ function roomJsonp(params, options = {}) {
 
         const script = document.createElement('script');
         let timer = null;
+        let done = false;
 
-        /* 정리됨: 중복 함수 cleanup (기존 7868행 정의 제거) */
+        // JSONP 응답이 즉시 도착해도 안전하도록 cleanup을 콜백 등록 전에 먼저 선언합니다.
+        function cleanup() {
+            try {
+                if (timer) {
+                    clearTimeout(timer);
+                    timer = null;
+                }
 
+                try {
+                    delete window[callbackName];
+                } catch (e) {
+                    window[callbackName] = undefined;
+                }
 
-        window[callbackName] = function(data) {
+                if (script && script.parentNode) {
+                    script.parentNode.removeChild(script);
+                }
+            } catch (e) {
+                console.warn('[roomJsonp cleanup ignored]', e);
+            }
+        }
+
+        function finishSuccess(data) {
+            if (done) return;
+            done = true;
             cleanup();
             resolve(data);
+        }
+
+        function finishError(error) {
+            if (done) return;
+            done = true;
+            cleanup();
+            reject(error);
+        }
+
+        window[callbackName] = function(data) {
+            finishSuccess(data);
         };
 
         script.onerror = function() {
-            cleanup();
-            reject(new Error("예약 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요."));
+            finishError(new Error("예약 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요."));
         };
 
         timer = setTimeout(() => {
-            cleanup();
-            reject(new Error("예약 정보를 불러오는 데 시간이 오래 걸리고 있습니다."));
+            finishError(new Error("예약 정보를 불러오는 데 시간이 오래 걸리고 있습니다."));
         }, 16000);
 
         script.src = ROOM_API_URL + '?' + query.toString();
