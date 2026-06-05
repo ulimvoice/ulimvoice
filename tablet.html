@@ -9,7 +9,7 @@
 <link rel="dns-prefetch" href="https://script.googleusercontent.com">
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>울림연기학원 등하원 체크 2026.06.06.043.9</title>
+<title>울림연기학원 등하원 체크 2026.06.06.043.16</title>
 <style>
   :root {
     --green: #16a34a;
@@ -161,7 +161,7 @@
 
 <script>
 /****************************************************
- * 울림 태블릿 43차-8
+ * 울림 태블릿 43차-16
  * - 로컬 일일스냅샷 저장
  * - 등하원 클릭 즉시 로컬 출결로그 저장
  * - 로컬 중복 요청 즉시 차단
@@ -169,18 +169,18 @@
  * - 구글시트 기록/알림톡은 백그라운드 대기열로 전송
  ****************************************************/
 const API_URL = "https://script.google.com/macros/s/AKfycbx7wQFuw6MqqOijmvuwpeiCWOk3xU3hr41xoKbRltQHLb1kLbr_1RD5Zzy3iuWcrhUD0A/exec";
-const TABLET_APP_VERSION = "2026.06.06.043.15";
+const TABLET_APP_VERSION = "2026.06.06.043.16";
 const TABLET_DEBUG = false;
 
 const URL_PARAMS = new URLSearchParams(location.search);
 const KIOSK_KEY = URL_PARAMS.get("kioskKey") || localStorage.getItem("ULIM_TABLET_KIOSK_KEY") || "";
 
-const DAILY_SNAPSHOT_KEY = "ULIM_TABLET_DAILY_SNAPSHOT_V43_15";
-const DAILY_SNAPSHOT_AT_KEY = "ULIM_TABLET_DAILY_SNAPSHOT_AT_V43_15";
-const DAILY_SNAPSHOT_DATE_KEY = "ULIM_TABLET_DAILY_SNAPSHOT_DATE_V43_15";
-const LOCAL_ATTENDANCE_LOG_KEY = "ULIM_TABLET_LOCAL_ATTENDANCE_LOG_V43_15";
-const LOCAL_ATTENDANCE_PENDING_KEY = "ULIM_TABLET_LOCAL_ATTENDANCE_PENDING_V43_15";
-const LOCAL_DATA_DATE_KEY = "ULIM_TABLET_LOCAL_DATA_DATE_V43_15";
+const DAILY_SNAPSHOT_KEY = "ULIM_TABLET_DAILY_SNAPSHOT_V43_16";
+const DAILY_SNAPSHOT_AT_KEY = "ULIM_TABLET_DAILY_SNAPSHOT_AT_V43_16";
+const DAILY_SNAPSHOT_DATE_KEY = "ULIM_TABLET_DAILY_SNAPSHOT_DATE_V43_16";
+const LOCAL_ATTENDANCE_LOG_KEY = "ULIM_TABLET_LOCAL_ATTENDANCE_LOG_V43_16";
+const LOCAL_ATTENDANCE_PENDING_KEY = "ULIM_TABLET_LOCAL_ATTENDANCE_PENDING_V43_16";
+const LOCAL_DATA_DATE_KEY = "ULIM_TABLET_LOCAL_DATA_DATE_V43_16";
 const STATUS_RESET_DELAY_MS = 3500;
 
 let pin = "";
@@ -324,6 +324,7 @@ function loadDailySnapshotFromLocal() {
     if (!raw) return null;
     const data = JSON.parse(raw);
     if (!data || data.status !== "success" || !data.attendanceMap) return null;
+    if (data.version && String(data.version) !== "2026-06-06-v43-16-room-coordinate") return null;
     tabletPreload = data;
     tabletPreloadAt = Number(localStorage.getItem(DAILY_SNAPSHOT_AT_KEY) || 0) || Date.now();
     return data;
@@ -339,7 +340,7 @@ async function loadTabletPreload(force = false) {
   if (tabletPreloadLoading) return tabletPreload || localSnapshot;
   tabletPreloadLoading = true;
   try {
-    const data = await tabletFetchJson({ action: "tabletGetDailySnapshot", force: force ? "1" : "0" }, 0);
+    const data = await tabletFetchJson({ action: "tabletGetDailySnapshot", force: force ? "1" : "0", clientVersion: TABLET_APP_VERSION }, 0);
     if (saveDailySnapshot(data)) return data;
   } catch (err) { if (TABLET_DEBUG) console.warn("[Tablet Cache] snapshot fail", err); }
   try {
