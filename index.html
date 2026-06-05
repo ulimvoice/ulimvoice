@@ -3,12 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
-<!-- 울림앱 INDEX 5_43차 긴급복구: AdGuard 주입라인/단독 async 제거 + 발성 달력 누락함수 보강 -->
-<!-- 울림앱 INDEX 5_44차 로그인멘트제거: 전역 alert 리미문구 치환 제거 / AI fallback 중립문구화 -->
-<!-- 5_44차 로그인멘트제거 기준 유지 + 5_45차 긴급복구 패치 적용 -->
-<!-- 5_39차: AdGuard 주입 스크립트 제거, 중복 함수 정리, 38차 반응속도 개선 유지 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script type="text/javascript" nonce="5878564e64bc424ab28cf8dfbd2" src="//local.adguard.org?ts=1780655235281&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000008b6c7206bd0fe7393e887369%26fn%3D%25EC%259A%25B8%25EB%25A6%25BC%25EC%2595%25B1_index_5_46%25EC%25B0%25A8_%25EA%25B4%2580%25EB%25A6%25AC%25EC%259E%2590%25EA%25B8%25B0%25EB%258A%25A5_%25EC%25A0%2595%25EC%2583%2581%25EC%259E%2591%25EB%258F%2599%25EB%25B3%25B5%25EA%25B5%25AC_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D494626%26p%3Dfs%26cid%3D1%26sig%3D9abeba1a834f75bf2c9d2948fd618ce2aa69427dcab1656ab1b67e7aa3d1d5e1%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.googleusercontent.com">
+<script type="text/javascript" nonce="5878564e64bc424ab28cf8dfbd2" src="//local.adguard.org?ts=1780648028262&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000003c14720bb79de5d8ecaa354c%26fn%3D%25EC%259A%25B8%25EB%25A6%25BC%25EC%2595%25B1_index_5_36%25EC%25B0%25A8_%25EB%25A6%25AC%25EB%25AF%25B8%25EC%259C%25A0%25EB%25A8%25B8%25EB%25AC%25B8%25EA%25B5%25AC_%25EA%25B4%2580%25EB%25A6%25AC%25EC%259E%2590%25EC%2583%2581%25EC%2584%25B8%25EC%2598%25A4%25EB%25A5%2598%25EC%2599%2584%25EC%2584%25B1.html%26cd%3Dattachment%26ts%3D494624%26p%3Dfs%26cid%3D1%26sig%3Dae0a3d054999d0630c506f78e648f32658a550322e6eba698c75cc84cc4ef205%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://script.googleusercontent.com">
 <link rel="dns-prefetch" href="//script.google.com">
 <link rel="dns-prefetch" href="//script.googleusercontent.com">
 
@@ -2492,6 +2489,14 @@ document.querySelectorAll('.tab').forEach(t => {
 // =========================================================================================
 
 // 페이지 로드 시 학생 이름 및 인증 확인
+async function checkStudentName() {
+    if (!studentName || !phoneLast4 || instructorName === '기본') {
+        await promptAndAuthenticate();
+    }
+    // 페이지 로드 시 파일명을 업데이트
+    updateFilenameConstants();
+}
+
 // 인증 프롬프트 및 GAS 인증 요청 함수
 async function promptAndAuthenticate() {
     let name = prompt("학생 이름을 입력해주세요.");
@@ -3106,6 +3111,14 @@ function getVocalRecords() {
 // [2-1] 서버 기반 100일 발성훈련 문장 관리
 // - 학생번호/이름+전화번호 기준으로 이전에 완료한 문장을 서버에서 제외합니다.
 // - 100일 주기마다 서버가 새로운 랜덤 100문장을 생성해 내려줍니다.
+function getTrainingStudentIdentity_() {
+    return {
+        studentNo: (typeof studentNo !== 'undefined' ? studentNo : '') || localStorage.getItem('studentNo') || '',
+        studentName: (typeof studentName !== 'undefined' ? studentName : '') || localStorage.getItem('studentName') || '게스트',
+        phoneLast4: (typeof phoneLast4 !== 'undefined' ? phoneLast4 : '') || localStorage.getItem('phoneLast4') || '',
+        deviceKey: (typeof pronGetDeviceKey === 'function' ? pronGetDeviceKey() : (localStorage.getItem('pronEtriDeviceKey') || ''))
+    };
+}
 function getTrainingStudentIdentityCacheKey_() {
     const ident = getTrainingStudentIdentity_();
     return [ident.studentNo || '', ident.studentName || '', ident.phoneLast4 || '', ident.deviceKey || ''].join('|');
@@ -3504,86 +3517,6 @@ async function toggleCalendar() {
 }
 
 
-
-// 5_43차 긴급복구: 발성훈련 서버 연습일지 달력 캐시/조회 함수
-// 5_41차 파일에는 아래 함수들이 호출만 있고 정의가 없어 달력 렌더링 시 전체 스크립트 오류가 발생했습니다.
-window.__ulimStudentVocalPracticeLogCache = window.__ulimStudentVocalPracticeLogCache || {};
-
-function escapeHtml_(value) {
-    if (typeof escapeHtml === 'function') return escapeHtml(value);
-    return String(value == null ? '' : value)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
-
-function getStudentVocalPracticeLogsByDate_(dateKey) {
-    const key = String(dateKey || '').trim();
-    if (!key) return [];
-    const cache = window.__ulimStudentVocalPracticeLogCache || {};
-    const rows = cache[key];
-    return Array.isArray(rows) ? rows : [];
-}
-
-async function loadStudentVocalPracticeLogsForMonth_(year, monthZeroBased) {
-    const y = Number(year || new Date().getFullYear());
-    const m0 = Number(monthZeroBased !== undefined ? monthZeroBased : new Date().getMonth());
-    const m1 = m0 + 1;
-
-    const params = {
-        action: 'getStudentVocalPracticeLogs',
-        year: y,
-        month: m1,
-        name: studentName || localStorage.getItem('studentName') || '',
-        studentName: studentName || localStorage.getItem('studentName') || '',
-        studentNo: studentNo || localStorage.getItem('studentNo') || '',
-        phoneLast4: phoneLast4 || localStorage.getItem('phoneLast4') || '',
-        studentSessionToken: studentSessionToken || localStorage.getItem('studentSessionToken') || '',
-        _: Date.now()
-    };
-
-    let data = null;
-
-    try {
-        if (typeof pronJsonpRequest === 'function') {
-            data = await pronJsonpRequest(params, 10000);
-        } else {
-            const query = new URLSearchParams(params);
-            const res = await fetch(GET_API_URL + '?' + query.toString(), { cache: 'no-store' });
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            data = await res.json();
-        }
-    } catch (err) {
-        console.warn('학생 발성 연습일지 서버 조회 실패:', err);
-        data = { status: 'success', logs: [] };
-    }
-
-    const logs = Array.isArray(data && data.logs) ? data.logs : [];
-    const cache = window.__ulimStudentVocalPracticeLogCache = window.__ulimStudentVocalPracticeLogCache || {};
-
-    // 해당 월 캐시만 먼저 정리해서 이전 조회 결과가 섞이지 않게 합니다.
-    const monthPrefix = y + '-' + String(m1).padStart(2, '0') + '-';
-    Object.keys(cache).forEach(key => {
-        if (key.indexOf(monthPrefix) === 0) delete cache[key];
-    });
-
-    logs.forEach(log => {
-        const key = String(log.practiceDate || log.date || '').trim();
-        if (!key) return;
-        if (!cache[key]) cache[key] = [];
-        cache[key].push(log);
-    });
-
-    return logs;
-}
-
-async function renderCalendarWithServer_(year, monthZeroBased) {
-    await loadStudentVocalPracticeLogsForMonth_(year, monthZeroBased);
-    renderCalendar(year, monthZeroBased);
-}
-
 // 달력 렌더링 로직
 function renderCalendar(year, month) {
     const today = new Date();
@@ -3955,6 +3888,46 @@ function buildTrainingFinalGeneralAnalysisText_(recognized, similarity, metrics)
 표준발음 참고: ${pron || '[문장을 입력하면 표준발음으로 변환합니다.]'}`;
 }
 
+async function checkVocalTrainingTodayCompletedFromServer_(options = {}) {
+    const today = new Date().toISOString().slice(0, 10);
+    const records = getVocalRecords ? getVocalRecords() : new Map();
+
+    if (records && records.has && records.has(today)) {
+        return { completed: true, source: 'local', message: '오늘은 연습을 완료했습니다.' };
+    }
+
+    if (!GET_API_URL || !GET_API_URL.includes('script.google.com/macros/s/')) {
+        return { completed: false, source: 'no_api' };
+    }
+
+    const ident = getTrainingStudentIdentity_ ? getTrainingStudentIdentity_() : {};
+    try {
+        const data = await pronJsonpRequest({
+            action: 'checkVocalTrainingTodayComplete',
+            studentNo: ident.studentNo || studentNo || '',
+            studentName: ident.studentName || studentName || '',
+            phoneLast4: ident.phoneLast4 || phoneLast4 || '',
+            date: today,
+            _: Date.now()
+        }, options.timeoutMs || 10000);
+
+        if (data && data.completed) {
+            return {
+                completed: true,
+                source: 'server',
+                data,
+                message: data.message || '오늘은 연습을 완료했습니다.'
+            };
+        }
+
+        return { completed: false, source: 'server', data };
+    } catch (err) {
+        console.warn('[오늘 발성훈련 완료 여부 확인 실패]', err);
+        if (options.strict) throw err;
+        return { completed: false, source: 'check_failed', error: err };
+    }
+}
+
 function buildTrainingAiAnalysisText_(transcript) {
     const source = currentTrainObj ? String(currentTrainObj.text || '') : '';
     const pron = currentTrainObj ? String(currentTrainObj.pron || '') : '';
@@ -4248,6 +4221,9 @@ async function createTrainingResultVideoBlob_(audioBlob, originalText, analysisT
 let trainingFinalAiPollingTimer = null;
 let trainingFinalAiPollingCount = 0;
 
+function buildTrainingFinalRequestId_() {
+    return "TRAIN_AI_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
+}
 
 function sanitizeTrainingFinalUserMessage_(msg) {
     let text = String(msg || '').trim();
@@ -4259,11 +4235,207 @@ function sanitizeTrainingFinalUserMessage_(msg) {
     return text.replace(/\s*\/\s*fallback\s*:.+$/i, '').trim();
 }
 
+function getTrainingFinalUserKey_() {
+    const no = (typeof studentNo !== 'undefined' && studentNo) ? studentNo : (localStorage.getItem('studentNo') || '');
+    const name = (typeof studentName !== 'undefined' && studentName) ? studentName : (localStorage.getItem('studentName') || '게스트');
+    const phone = (typeof phoneLast4 !== 'undefined' && phoneLast4) ? phoneLast4 : (localStorage.getItem('phoneLast4') || '0000');
+    if (no && no !== 'GUEST') return 'NO_' + String(no).replace(/[^0-9A-Za-z가-힣_-]/g, '_');
+    if (name && name !== '게스트' && phone && phone !== '0000') return (name + '_' + phone).replace(/[^0-9A-Za-z가-힣_-]/g, '_');
+    return pronGetDeviceKey ? pronGetDeviceKey() : ('DEV_' + Date.now());
+}
+
+function setTrainingAiLoadingState_(isLoading) {
+    const btn = document.getElementById('trainingAiAnalyzeBtn');
+    const btnLabel = document.getElementById('trainingAiAnalyzeBtnLabel');
+    const titleText = document.getElementById('aiSectionTitleText');
+    const loadingVisual = document.getElementById('aiLoadingVisual');
+    const sttEl = document.getElementById('sttResult');
+    const badge = document.getElementById('accBadge');
+
+    // 5-28: 리미 GIF는 초록 박스가 아니라 보라색 AI 버튼 안에 표시합니다.
+    if (loadingVisual) {
+        loadingVisual.classList.remove('show');
+        loadingVisual.style.display = 'none';
+    }
+
+    if (btn) {
+        btn.disabled = !!isLoading;
+        btn.style.opacity = isLoading ? '.9' : '1';
+        btn.style.transform = isLoading ? 'scale(0.98)' : 'scale(1)';
+
+        if (isLoading) {
+            btn.classList.add('training-ai-loading');
+            btn.innerHTML = '<img class="training-ai-loading-img" src="assets/rimi_analyzing.gif" alt="리미 분석중">';
+        } else {
+            btn.classList.remove('training-ai-loading');
+            btn.textContent = 'AI';
+        }
+    }
+
+    if (btnLabel) btnLabel.textContent = isLoading ? '분석중..' : 'AI 분석';
+    if (titleText) titleText.textContent = isLoading ? '분석중..' : 'AI 분석결과';
+
+    // 결과 텍스트는 분석중에도 숨기지 않고, 기존처럼 "리미가 분석중입니다." 상태문구를 보여줍니다.
+    if (sttEl) sttEl.classList.remove('hidden-during-loading');
+    if (badge) badge.classList.remove('hidden-during-loading');
+}
+
+async function runTrainingFinalAiAnalysisFromButton() {
+    if (step !== 6 || !currentTrainObj) {
+        return alert('최종녹음 및 AI 분석 단계에서 사용할 수 있습니다.');
+    }
+    if (!lastRecordedBlob) {
+        return alert('먼저 녹음을 완료해주세요.');
+    }
+
+    const todayCheck = await checkVocalTrainingTodayCompletedFromServer_({ timeoutMs: 10000 });
+    if (todayCheck && todayCheck.completed) {
+        return alert('오늘은 연습을 완료했습니다.');
+    }
+
+    if (window.trainingFinalAiResult && window.trainingFinalAiResult.requestSentence === currentTrainObj.text) {
+        return alert('이미 마지막 녹음본의 AI 분석이 완료되었습니다. 다시 분석하려면 새로 녹음 후 실행해주세요.');
+    }
+
+    const ok = confirm('AI분석을 시작하면 오늘연습이 완료됩니다. 진행하시겠습니까?');
+    if (!ok) return;
+
+    const btn = document.getElementById('trainingAiAnalyzeBtn');
+    const prevText = btn ? btn.textContent : '';
+
+    try {
+        if (btn) { btn.disabled = true; btn.textContent = '…'; btn.style.opacity = '.65'; }
+        setTrainingAiLoadingState_(true);
+        document.getElementById('resultBox').style.display = 'block';
+
+        const aiSection = document.getElementById('aiSection');
+        const recSection = document.getElementById('recSection');
+        if (aiSection) aiSection.style.display = 'block';
+        if (recSection) recSection.style.display = 'block';
+
+        const sttEl = document.getElementById('sttResult');
+        const badge = document.getElementById('accBadge');
+        if (sttEl) sttEl.textContent = '리미가 분석중입니다.';
+        if (badge) { badge.className = 'accuracy-badge acc-wait'; badge.textContent = '분석중'; }
+
+        document.getElementById('recStatus').textContent = '리미가 분석중입니다.';
+
+        await runTrainingFinalAiAnalysis_(lastRecordedBlob, { force: true });
+
+        document.getElementById('recStatus').textContent = '리미 분석 완료. 연습완료 버튼을 눌러 결과를 업로드할 수 있습니다.';
+        enableVocalTrainingCompleteButton_();
+    } catch (err) {
+        console.warn('Gemini final training analysis failed. Local general analysis will be used:', err);
+
+        const fallbackResult = await buildTrainingFinalFallbackResult_(lastRecordedBlob, err);
+        renderTrainingFinalAiResult_(fallbackResult);
+        enableVocalTrainingCompleteButton_();
+
+        const recStatusEl = document.getElementById('recStatus');
+        if (recStatusEl) {
+            recStatusEl.textContent = '리미의 간단분석! 연습완료 버튼을 눌러 결과를 업로드할 수 있습니다.';
+        }
+    } finally {
+        setTrainingAiLoadingState_(false);
+        if (btn) { btn.disabled = false; btn.classList.remove('training-ai-loading'); btn.textContent = 'AI'; btn.style.opacity = '1'; }
+    }
+}
 
 
 
+async function runTrainingFinalAiAnalysis_(audioBlob, options = {}) {
+    if (!audioBlob) throw new Error('녹음 파일이 없습니다.');
+    if (!GET_API_URL || !GET_API_URL.includes('script.google.com/macros/s/')) {
+        throw new Error('서비스 연결이 준비되지 않았습니다. 잠시 후 다시 시도해주세요.');
+    }
+    if (!currentTrainObj) throw new Error('연습 문장이 없습니다.');
+    const requestId = buildTrainingFinalRequestId_();
 
-async function renderTrainingFinalAiResult_(data) {
+    // 서버 고급분석이 일시적으로 연결되지 않아도 분석이 완전히 실패하지 않도록,
+    // 먼저 기기 안에서 리미 인식결과를 만들어 GAS에 함께 보냅니다.
+    let localRecognized = String(recognitionResult || '').trim();
+    if (!localRecognized && window.UlimLocalWhisper && typeof window.UlimLocalWhisper.transcribe === 'function') {
+        const sttEl = document.getElementById('sttResult');
+        if (sttEl) sttEl.textContent = '리미가 분석중입니다.';
+        const localResult = await window.UlimLocalWhisper.transcribe(audioBlob, {
+            language: 'ko',
+            task: 'transcribe',
+            model: ULIM_LOCAL_WHISPER_MODEL,
+            onStatus: msg => {
+                const el = document.getElementById('sttResult');
+                if (el && msg) el.textContent = '리미가 분석중입니다.';
+            }
+        });
+        localRecognized = String(localResult.text || '').trim();
+        recognitionResult = localRecognized;
+    }
+
+    const scriptText = String(currentTrainObj.text || '');
+    const cleanTarget = scriptText.replace(/[^가-힣]/g, '');
+    const cleanHeard = localRecognized.replace(/[^가-힣]/g, '');
+    const localMatchScore = cleanTarget && cleanHeard ? Math.round(getSimilarity(cleanTarget, cleanHeard) * 100) : 0;
+    const localScore5 = (1 + (localMatchScore / 100) * 4).toFixed(1);
+
+    const audio = await pronBlobToEtriAudioBase64(audioBlob);
+    const sizeMb = pronBase64ToByteSize(audio.base64) / 1024 / 1024;
+    if (sizeMb > 8) throw new Error(`녹음 파일이 너무 큽니다. (${sizeMb.toFixed(1)}MB) 60초 이내로 다시 녹음해주세요.`);
+
+    const payload = {
+        action: 'trainingFinalAnalysis',
+        requestId,
+        userKey: getTrainingFinalUserKey_(),
+        dateKey: pronTodayKey ? pronTodayKey() : new Date().toISOString().slice(0,10).replace(/-/g,''),
+        studentNo: (typeof studentNo !== 'undefined' ? studentNo : '') || localStorage.getItem('studentNo') || '',
+        studentName: (typeof studentName !== 'undefined' ? studentName : '') || '',
+        phoneLast4: (typeof phoneLast4 !== 'undefined' ? phoneLast4 : '') || '',
+        instructor: (typeof instructorName !== 'undefined' ? instructorName : '') || '',
+        script: scriptText,
+        recognized: localRecognized,
+        matchScore: localMatchScore,
+        score5: localScore5,
+        standardPronunciation: currentTrainObj.pron || '',
+        audio: audio.base64,
+        audioMimeType: audio.mimeType,
+        sampleRate: audio.sampleRate,
+        clientTime: new Date().toISOString()
+    };
+    await fetch(GET_API_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+    });
+    return await pollTrainingFinalAiResult_(requestId);
+}
+function pollTrainingFinalAiResult_(requestId) {
+    if (trainingFinalAiPollingTimer) clearTimeout(trainingFinalAiPollingTimer);
+    trainingFinalAiPollingCount = 0;
+    return new Promise((resolve, reject) => {
+        const poll = async () => {
+            trainingFinalAiPollingCount += 1;
+            try {
+                const data = await pronJsonpRequest({ action: 'getTrainingFinalAnalysisResult', requestId, _: Date.now() }, 12000);
+                if (!data || data.status === 'pending' || data.status === 'not_found') {
+                    if (trainingFinalAiPollingCount > 24) return reject(new Error('AI 분석 결과 대기 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.'));
+                    const st = document.getElementById('recStatus');
+                    if (st) st.textContent = '리미가 분석중입니다.';
+                    trainingFinalAiPollingTimer = setTimeout(poll, 2500);
+                    return;
+                }
+                if (data.status === 'limit') return reject(new Error(data.message || '오늘 최종 AI 분석은 이미 사용했습니다.'));
+                if (!data.ok || data.status === 'error') return reject(new Error(sanitizeTrainingFinalUserMessage_(data.message) || 'AI 분석 처리 중 오류가 발생했습니다.'));
+                data.message = sanitizeTrainingFinalUserMessage_(data.message) || data.message;
+                renderTrainingFinalAiResult_(data);
+                resolve(data);
+            } catch (err) {
+                if (trainingFinalAiPollingCount > 24) return reject(err);
+                trainingFinalAiPollingTimer = setTimeout(poll, 2500);
+            }
+        };
+        trainingFinalAiPollingTimer = setTimeout(poll, 1800);
+    });
+}
+function renderTrainingFinalAiResult_(data) {
     data = data || {};
     const recognized = String(data.recognized || '').trim();
     const rawScore = Number(data.score);
@@ -4542,7 +4714,33 @@ window.onload = async function() {
 
     renderCalendar();
 };
+function showLoading(message = "처리 중...") {
+    let el = document.getElementById("loadingOverlay");
+    if (!el) {
+        el = document.createElement("div");
+        el.id = "loadingOverlay";
+        el.style.position = "fixed";
+        el.style.top = "0";
+        el.style.left = "0";
+        el.style.width = "100%";
+        el.style.height = "100%";
+        el.style.background = "rgba(0,0,0,0.6)";
+        el.style.display = "flex";
+        el.style.alignItems = "center";
+        el.style.justifyContent = "center";
+        el.style.zIndex = "99999";
+        el.style.color = "white";
+        el.style.fontSize = "20px";
+        document.body.appendChild(el);
+    }
+    el.textContent = message;
+    el.style.display = "flex";
+}
 
+function hideLoading() {
+    const el = document.getElementById("loadingOverlay");
+    if (el) el.style.display = "none";
+}
 
 /* ===========================
    🔄 PWA 업데이트 확인 설정
@@ -4969,6 +5167,18 @@ function showMainContent(isAuthenticated) {
         setTimeout(showNoticeIfNeeded, 0);
     }
 }
+function guestLogin() {
+    studentName = "게스트";
+    instructorName = "기본";
+    phoneLast4 = "0000";
+    localStorage.setItem('studentName', studentName);
+    localStorage.setItem('instructorName', instructorName);
+    localStorage.setItem('phoneLast4', phoneLast4);
+    studentNo = 'GUEST';
+    localStorage.setItem('studentNo', studentNo);
+    updateFilenameConstants();
+    showMainContent(false);
+}
 async function authenticateStudentFromInputs() {
     const nameInput = document.getElementById('studentNameInput');
     const phoneInput = document.getElementById('phoneLast4Input');
@@ -5326,12 +5536,12 @@ const ULIM_ADMIN_API_CACHE_TTL = {
     adminGetClassList: 10 * 60 * 1000,
     adminGetStudents: 3 * 60 * 1000,
     adminGetStudentsByClass: 3 * 60 * 1000,
-    adminGetAttendanceSnapshot: 60 * 1000,       // 25→60초 (반응속도 개선)
-    adminGetDailyEvaluations: 60 * 1000,         // 25→60초
+    adminGetAttendanceSnapshot: 25 * 1000,
+    adminGetDailyEvaluations: 25 * 1000,
     adminGetDailyEvalTemplate: 10 * 60 * 1000,
-    adminGetVocalPracticeLogs: 60 * 1000,        // 25→60초
-    adminGetClassroomUsage: 60 * 1000,           // 20→60초
-    adminGetRoomReservations: 60 * 1000          // 25→60초
+    adminGetVocalPracticeLogs: 25 * 1000,
+    adminGetClassroomUsage: 20 * 1000,
+    adminGetRoomReservations: 25 * 1000
 };
 
 const ULIM_ADMIN_WRITE_ACTIONS = new Set([
@@ -5613,19 +5823,6 @@ async function adminLoadInitialData() {
         if (adminIsTeacherMode()) {
             showAdminPanel('adminPanelAttendance');
         }
-
-        // 백그라운드 프리패치: 로그인 직후 주요 데이터를 미리 캐싱합니다.
-        // 탭 진입 시 캐시 히트로 즉시 응답하게 됩니다. (반응속도 개선)
-        setTimeout(function() {
-            try {
-                const today = (function() {
-                    const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
-                    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-                })();
-                adminApi('adminGetStudents', { adminToken }).catch(function(){});
-                adminApi('adminGetClassList', { adminToken, date: today }).catch(function(){});
-            } catch(e) {}
-        }, 300);
     } catch (e) {
         hideLoading();
         alert(e.message);
@@ -6009,6 +6206,13 @@ function adminCloseClassCombosOnOutsideClick(event) {
 
 document.addEventListener('click', adminCloseClassCombosOnOutsideClick);
 
+
+function adminRenderStudentDatalist() {
+    const dl = document.getElementById('adminStudentDatalist');
+    if (!dl) return;
+    dl.innerHTML = adminStudents.map(s => `<option value="${escapeHtml(s.name)}">${escapeHtml(s.instructor || '')} ${escapeHtml(s.studentPhone || '')}</option>`).join('');
+}
+
 function adminStudentBelongsToCurrentTeacher(student) {
     if (!adminIsTeacherMode()) return true;
     const teacherKey = adminTeacherKey();
@@ -6024,6 +6228,32 @@ function adminFilteredStudents(inputId) {
     const base = adminStudents.filter(adminStudentBelongsToCurrentTeacher).filter(s => adminStudentMatchesStatusFilter(s, statusFilter));
     if (!keyword) return base;
     return base.filter(s => [s.name, s.studentNo, s.studentPhone, s.parentPhone, s.instructor, s.className, s.memo, adminStudentStatusLabel(s)].join(' ').toLowerCase().includes(keyword));
+}
+
+function adminRenderStudentTable() {
+    const wrap = document.getElementById('adminStudentTableWrap');
+    if (!wrap) return;
+    const list = adminFilteredStudents('adminStudentSearch');
+    adminStudentSearchRows = list;
+    if (!list.length) {
+        wrap.innerHTML = `<div class="notice-empty">표시할 학생이 없습니다.</div>`;
+        return;
+    }
+    let html = `<table class="admin-table"><thead><tr><th>분류</th><th>출결번호</th><th>학생명</th><th>학생전화</th><th>학부모전화</th><th>담당강사</th><th>반/메모</th><th>결석 알림</th></tr></thead><tbody>`;
+    list.forEach((s, idx) => {
+        html += `<tr>
+          <td>${adminStudentStatusBadge(s)}</td>
+          <td>${escapeHtml(s.studentNo)}</td>
+          <td><b>${escapeHtml(s.name)}</b></td>
+          <td>${escapeHtml(s.studentPhone)}</td>
+          <td>${escapeHtml(s.parentPhone)}</td>
+          <td>${escapeHtml(s.instructor)}</td>
+          <td>${escapeHtml(s.className || s.memo || '')}</td>
+          <td><button type="button" class="admin-btn red" style="padding:8px 10px; font-size:12px;" onclick="adminSendAbsenceForStudent(${idx})">결석 알림톡</button></td>
+        </tr>`;
+    });
+    html += `</tbody></table>`;
+    wrap.innerHTML = html;
 }
 
 async function adminSendAbsenceForStudent(index) {
@@ -6347,6 +6577,53 @@ function adminSelectAllNoticeTargets(checked) {
 
 function adminGetCheckedNoticeTargets() {
     return (adminNoticeTargetRows || []).filter(s => adminNoticeSelectedMap[adminNoticeTargetKey(s)]);
+}
+
+function adminRenderNoticeTargetTable() {
+    const wrap = document.getElementById('noticeTargetTableWrap');
+    if (!wrap) return;
+
+    const list = adminNoticeTargetRows || [];
+    if (!list.length) {
+        wrap.innerHTML = '<div class="notice-empty">대상 학생이 없습니다. 반 또는 학생명을 검색한 뒤 대상 불러오기를 눌러주세요.</div>';
+        return;
+    }
+
+    let html = `
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th style="width:42px;"><input type="checkbox" onchange="adminSelectAllNoticeTargets(this.checked)" ${list.every(s => adminNoticeSelectedMap[adminNoticeTargetKey(s)]) ? 'checked' : ''}></th>
+              <th>분류</th>
+              <th>출결번호</th>
+              <th>학생명</th>
+              <th>학생전화</th>
+              <th>학부모전화</th>
+              <th>담당강사</th>
+              <th>반/메모</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    list.forEach(s => {
+        const key = adminNoticeTargetKey(s);
+        html += `
+            <tr>
+              <td><input type="checkbox" ${adminNoticeSelectedMap[key] ? 'checked' : ''} onchange="adminToggleNoticeTarget('${escapeJsString(key)}', this.checked)"></td>
+              <td>${adminStudentStatusBadge(s)}</td>
+              <td>${escapeHtml(s.studentNo || '')}</td>
+              <td><b>${escapeHtml(s.name || '')}</b></td>
+              <td>${escapeHtml(s.studentPhone || '')}</td>
+              <td>${escapeHtml(s.parentPhone || '')}</td>
+              <td>${escapeHtml(s.instructor || '')}</td>
+              <td>${escapeHtml(s.className || s.memo || '')}</td>
+            </tr>
+        `;
+    });
+
+    html += '</tbody></table>';
+    wrap.innerHTML = html;
 }
 
 function getNoticeRecipientTypes() {
@@ -6883,6 +7160,40 @@ async function adminLoadAttendanceSnapshot(showAlert = true) {
     }
 }
 
+function adminRenderAttendanceTable() {
+    const wrap = document.getElementById('adminAttendanceTableWrap');
+    if (!wrap) return;
+    if (!adminAttendanceRecords.length) {
+        wrap.innerHTML = `<div class="notice-empty">출석부 데이터를 불러오세요. 날짜와 반명을 선택한 뒤 [출석부 반영]을 누르면 됩니다.</div>`;
+        return;
+    }
+    const isFull = adminIsFullAdmin();
+    let html = `<table class="admin-table"><thead><tr><th><input type="checkbox" id="adminAttendSelectAll" onchange="adminToggleAttendanceAll(this.checked)" checked></th><th>출결상태</th><th>특이사항</th><th>학생명</th><th>반명/수업명</th><th>강의실</th><th>담당강사</th>${isFull ? '<th>학생전화</th><th>학부모전화</th>' : ''}<th>메모</th></tr></thead><tbody>`;
+    adminAttendanceRecords.forEach((r, idx) => {
+        const statusClass = r.status === '출석' ? 'attendance-ok' : (r.status === '결석' ? 'attendance-no' : '');
+        const phoneCells = isFull ? `<td>${escapeHtml(r.studentPhone || '')}</td><td>${escapeHtml(r.parentPhone || '')}</td>` : '';
+        html += `<tr data-att-index="${idx}"><td><input type="checkbox" class="admin-att-check" checked></td><td><span class="admin-status-badge ${statusClass}">${escapeHtml(r.status || '미체크')}</span></td><td>${r.specialStatus ? `<span class="admin-status-badge">${escapeHtml(r.specialStatus)}</span>` : '-'}</td><td><b>${escapeHtml(r.studentName)}</b></td><td>${escapeHtml(r.className || '')}</td><td>${escapeHtml(r.classroom || r.roomName || r.room || '')}</td><td>${escapeHtml(r.instructor || '')}</td>${phoneCells}<td><input class="admin-small-input" data-field="memo" value="${escapeHtml(r.memo || '')}" placeholder="메모"></td></tr>`;
+    });
+    html += `</tbody></table>`;
+    wrap.innerHTML = html;
+}
+
+function adminToggleAttendanceAll(checked) {
+    document.querySelectorAll('.admin-att-check').forEach(ch => ch.checked = checked);
+}
+
+function adminGetSelectedAttendanceRecords() {
+    const rows = Array.from(document.querySelectorAll('#adminAttendanceTableWrap tr[data-att-index]'));
+    return rows.map(row => {
+        const idx = Number(row.dataset.attIndex);
+        const checked = row.querySelector('.admin-att-check')?.checked;
+        if (!checked) return null;
+        const r = Object.assign({}, adminAttendanceRecords[idx] || {});
+        r.memo = row.querySelector('input[data-field="memo"]')?.value || r.memo || '';
+        return r;
+    }).filter(Boolean);
+}
+
 function buildAttendanceMessageText(record) {
     const roomName = record.classroom || record.roomName || record.room || '';
     const safeClassName = (record.className || '').trim() || '미확인';
@@ -7303,6 +7614,29 @@ function adminRenderDailyEvalTable() {
     adminRenderDailyEvalRows();
 }
 
+function adminRenderDailyEvalRows(message = '') {
+    const wrap = document.getElementById('adminDailyEvalTableWrap');
+    if (!wrap) return;
+    const list = adminDailyEvalRows;
+    if (!list.length) {
+        wrap.innerHTML = `<div class="notice-empty">표시할 학생이 없습니다. 반명 또는 검색어를 확인하세요.</div>`;
+        return;
+    }
+    const isFull = adminIsFullAdmin();
+    let html = '';
+    if (message) html += `<div style="font-size:13px; color:#666; margin:8px 0;">${escapeHtml(message)}</div>`;
+    html += `<table class="admin-table"><thead><tr><th><input type="checkbox" onchange="adminToggleDailyAll(this.checked)" checked></th><th>학생명</th><th>담당강사</th><th>반명</th>${isFull ? '<th>학생전화</th><th>학부모전화</th>' : ''}<th>출결/특이사항</th><th>일일평가 작성</th></tr></thead><tbody>`;
+    list.forEach((s, idx) => {
+        const parts = adminExtractDailyEvalParts_(s);
+        const statusText = [s.attendanceStatus, s.specialStatus].filter(Boolean).join(' / ');
+        const savedInfo = s.savedAt ? `<div style="font-size:11px; color:#16a34a; margin-bottom:4px; font-weight:700;">저장됨: ${escapeHtml(s.savedAt)}${s.savedBy ? ' / ' + escapeHtml(s.savedBy) : ''}</div>` : '';
+        const phoneCells = isFull ? `<td>${escapeHtml(s.studentPhone)}</td><td>${escapeHtml(s.parentPhone)}</td>` : '';
+        html += `<tr data-daily-index="${idx}"><td><input type="checkbox" class="admin-daily-check" checked></td><td><b>${escapeHtml(s.studentName || s.name)}</b></td><td>${escapeHtml(s.instructor)}</td><td>${escapeHtml(adminCleanClassNameOnly_(s.className))}</td>${phoneCells}<td>${escapeHtml(statusText || '-')}</td><td>${savedInfo}<div class="daily-eval-parts"><div class="daily-eval-part-label">이번주 수업</div><textarea class="daily-eval-part-textarea admin-eval-lesson" placeholder="이번주 수업 내용을 입력하세요.">${escapeHtml(parts.lessonContent)}</textarea><div class="daily-eval-part-label">수업 활동 및 태도</div><textarea class="daily-eval-part-textarea admin-eval-attitude" placeholder="수업 활동 및 태도를 입력하세요.">${escapeHtml(parts.lessonAttitude)}</textarea><div class="daily-eval-part-label">선생님 전달 사항</div><textarea class="daily-eval-part-textarea admin-eval-comment" placeholder="학부모님께 전달할 사항을 입력하세요.">${escapeHtml(parts.teacherComment)}</textarea><div class="daily-eval-preview-small"></div></div></td></tr>`;
+    });
+    html += `</tbody></table>`;
+    wrap.innerHTML = html;
+}
+
 function adminToggleDailyAll(checked) {
     document.querySelectorAll('.admin-daily-check').forEach(ch => ch.checked = checked);
 }
@@ -7609,7 +7943,13 @@ function normalizeHourForMatch(value) {
     return match ? Number(match[1]) : null;
 }
 
+function getRoomCacheKey(year, month) {
+    return `${year}-${String(month).padStart(2, '0')}`;
+}
 
+function getRoomLocalStorageKey(cacheKey) {
+    return `ulimRoomReservationCache_${cacheKey}`;
+}
 
 function getRoomSlotKey(date, room, hour) {
     return [
@@ -9102,6 +9442,14 @@ function pronGetDeviceKey() {
     }
     return key;
 }
+function pronGetEtriUserKey() {
+    const name = (typeof studentName !== "undefined" && studentName) ? studentName : (localStorage.getItem("studentName") || "게스트");
+    const phone = (typeof phoneLast4 !== "undefined" && phoneLast4) ? phoneLast4 : (localStorage.getItem("phoneLast4") || "0000");
+    if (name && name !== "게스트" && phone && phone !== "0000") {
+        return `${name}_${phone}`.replace(/[^0-9A-Za-z가-힣_\-]/g, "_");
+    }
+    return pronGetDeviceKey();
+}
 function pronTodayKey() {
     const d = new Date();
     const yyyy = d.getFullYear();
@@ -9318,6 +9666,63 @@ async function pronRunEtriAdvancedAnalysis() {
         console.error(err);
         pronSetAdvancedStatus("고급분석 요청 실패: " + (err.message || err), "error");
     }
+}
+function pronPollEtriResult(requestId) {
+    if (pronEtriPollingTimer) {
+        clearTimeout(pronEtriPollingTimer);
+        pronEtriPollingTimer = null;
+    }
+    pronEtriPollingCount = 0;
+    const poll = async () => {
+        pronEtriPollingCount += 1;
+        try {
+            const data = await pronJsonpRequest({ action: "getGeminiPronunciationCommentResult", requestId, _: Date.now() }, 10000);
+            if (!data || data.status === "pending" || data.status === "not_found") {
+                if (pronEtriPollingCount > 20) {
+                    pronSetAdvancedStatus("고급분석 결과 대기 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.", "error");
+                    return;
+                }
+                pronSetAdvancedStatus("리미가 정밀하게 분석중입니다.");
+                pronEtriPollingTimer = setTimeout(poll, 2500);
+                return;
+            }
+            if (!data.ok || data.status === "error") {
+                pronSetAdvancedStatus(data.message || "리미 정밀진단 처리 중 오류가 발생했습니다.", "error");
+                return;
+            }
+            pronRenderEtriResult(data);
+        } catch (err) {
+            if (pronEtriPollingCount > 20) {
+                pronSetAdvancedStatus("고급분석 결과 조회 실패: " + String(err.message || err), "error");
+                return;
+            }
+            pronEtriPollingTimer = setTimeout(poll, 2500);
+        }
+    };
+    pronEtriPollingTimer = setTimeout(poll, 2500);
+}
+function pronRenderEtriResult(data) {
+    const recognized = data.recognized || pronLastSttText || "인식 결과 없음";
+    const rawScore = data.score5 || data.score || "-";
+    const nScore = Number(rawScore);
+    const scoreText = Number.isFinite(nScore) ? nScore.toFixed(1) : String(rawScore || "-");
+    const source = document.getElementById("pronInputText")?.value || "";
+    const converted = source ? pronConvertText(source).converted : "";
+    const ruleSummary = pronGetRuleSummaryForVoice(source);
+    const comment = String(data.comment || '').trim() || '분석 결과를 기준으로 다시 녹음하며 비교해보세요.';
+    pronSetAdvancedStatus(`리미의 정밀진단 완료!
+
+발음평가 점수: ${scoreText} / 5
+리미 인식결과: ${recognized}
+
+표준발음 참고:
+${converted ? "[" + converted + "]" : "먼저 문장을 입력하세요."}
+
+리미 코멘트:
+- ${comment}
+
+표준발음 점검 대상:
+${ruleSummary}`, "success");
 }
 
 
@@ -10587,6 +10992,1550 @@ window.UlimLocalWhisper = {
 let studentVocalPracticeLogMap = new Map();
 let studentVocalPracticeLoadedKey = '';
 let adminVocalPracticeLogs = [];
+
+function escapeHtml_(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+async function renderCalendarWithServer_(year, month) {
+    await loadStudentVocalPracticeLogsForMonth_(year, month);
+    renderCalendar(year, month);
+}
+
+function getStudentVocalPracticeLogsByDate_(dateKey) {
+    return studentVocalPracticeLogMap.get(dateKey) || [];
+}
+
+async function loadStudentVocalPracticeLogsForMonth_(year, month, force = false) {
+    if (!studentName || studentName === '게스트' || !phoneLast4) return;
+    const key = `${year}-${String(month + 1).padStart(2, '0')}`;
+    if (!force && studentVocalPracticeLoadedKey === key) return;
+
+    try {
+        const query = new URLSearchParams();
+        query.set('action', 'getStudentVocalPracticeLogs');
+        query.set('name', studentName);
+        query.set('phoneLast4', phoneLast4);
+        query.set('year', String(year));
+        query.set('month', String(month + 1));
+        query.set('_', Date.now());
+
+        const response = await fetch(`${GET_API_URL}?${query.toString()}`);
+        if (!response.ok) throw new Error('연습일지 조회 실패: HTTP ' + response.status);
+        const data = await response.json();
+        if (!data || data.status !== 'success') throw new Error((data && data.message) || '연습일지 응답 오류');
+
+        studentVocalPracticeLogMap = new Map();
+        (data.logs || []).forEach(log => {
+            const dateKey = String(log.practiceDate || '').trim();
+            if (!dateKey) return;
+            if (!studentVocalPracticeLogMap.has(dateKey)) studentVocalPracticeLogMap.set(dateKey, []);
+            studentVocalPracticeLogMap.get(dateKey).push(log);
+        });
+        studentVocalPracticeLoadedKey = key;
+    } catch (err) {
+        console.warn('학생 연습일지 서버 조회 실패:', err);
+    }
+}
+
+function adminInitVocalPracticePanel_() {
+    const dateInput = document.getElementById('adminVocalPracticeDate');
+    if (dateInput && !dateInput.value) dateInput.value = getTodayInputValue();
+}
+
+async function adminLoadVocalPracticeLogs(showOverlay = true) {
+    if (!adminToken) return;
+    const date = document.getElementById('adminVocalPracticeDate')?.value || getTodayInputValue();
+    const instructor = document.getElementById('adminVocalPracticeInstructor')?.value || '';
+    const keyword = document.getElementById('adminVocalPracticeKeyword')?.value || '';
+
+    try {
+        if (showOverlay) showLoading('발성 연습일지 불러오는 중...');
+        const data = await adminApi('adminGetVocalPracticeLogs', { adminToken, date, instructor, keyword });
+        if (showOverlay) hideLoading();
+        adminVocalPracticeLogs = Array.isArray(data.logs) ? data.logs : [];
+        adminRenderVocalPracticeLogs();
+    } catch (err) {
+        if (showOverlay) hideLoading();
+        alert(err.message || err);
+    }
+}
+
+function adminRenderVocalPracticeLogs() {
+    const list = document.getElementById('adminVocalPracticeList');
+    const summary = document.getElementById('adminVocalPracticeSummary');
+    if (!list) return;
+
+    if (summary) summary.textContent = `연습기록 ${adminVocalPracticeLogs.length}건`;
+
+    if (!adminVocalPracticeLogs.length) {
+        list.innerHTML = '<div class="admin-message-preview">조회된 발성 연습기록이 없습니다.</div>';
+        return;
+    }
+
+    list.innerHTML = adminVocalPracticeLogs.map((log, idx) => {
+        const hasComment = String(log.teacherComment || '').trim();
+        const audio = log.fileUrl && String(log.fileUrl).indexOf('http') === 0
+            ? `<p><a href="${escapeHtml_(log.fileUrl)}" target="_blank">녹음파일 열기</a></p>`
+            : '<p style="color:#999;">녹음파일 링크 없음</p>';
+
+        return `
+            <div class="practice-log-card ${hasComment ? 'has-comment' : ''}">
+                <div class="practice-log-title">${escapeHtml_(log.studentName)} ${hasComment ? '★' : ''}</div>
+                <div class="practice-log-meta">
+                    ${escapeHtml_(log.practiceDate)} / 담당강사: ${escapeHtml_(log.instructor)} / 문장ID: ${escapeHtml_(log.vocalId || '')}<br>
+                    기록ID: ${escapeHtml_(log.recordId)}
+                </div>
+                <div class="practice-log-text"><b>문장</b><br>${escapeHtml_(log.sentence || '')}</div>
+                ${log.aiComment ? `<div class="practice-log-text" style="margin-top:8px;"><b>AI 코멘트</b><br>${escapeHtml_(log.aiComment)}</div>` : ''}
+                ${audio}
+                <div style="margin-top:10px;">
+                    <label style="font-size:13px; font-weight:900; color:#166534;">강사 코멘트</label>
+                    <textarea class="practice-comment-textarea" id="practiceComment_${idx}" placeholder="학생에게 보여줄 코멘트를 입력하세요.">${escapeHtml_(log.teacherComment || '')}</textarea>
+                    <button type="button" class="admin-btn" style="margin-top:8px;" onclick="adminSaveVocalPracticeComment(${idx})">코멘트 저장</button>
+                    ${log.teacherCommentAt ? `<div class="practice-log-meta">최근 코멘트: ${escapeHtml_(log.teacherCommentAt)} / ${escapeHtml_(log.teacherCommentTeacher || '')}</div>` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function adminSaveVocalPracticeComment(index) {
+    const log = adminVocalPracticeLogs[index];
+    if (!log || !log.recordId) return alert('저장할 기록ID가 없습니다.');
+    const comment = document.getElementById(`practiceComment_${index}`)?.value || '';
+
+    try {
+        showLoading('강사 코멘트 저장 중...');
+        await adminPostNoCors('adminSaveVocalPracticeComment', {
+            adminToken,
+            recordId: log.recordId,
+            comment
+        });
+        hideLoading();
+        alert('코멘트 저장 요청을 보냈습니다. 잠시 후 다시 조회하면 반영됩니다.');
+        await adminLoadVocalPracticeLogs(false);
+    } catch (err) {
+        hideLoading();
+        alert(err.message || err);
+    }
+}
+
+
+
+
+/* =========================================================
+   울림앱 2차 패치 - 강사페이지 출석체크 O/X → 출석부 즉시 반영
+   적용 위치:
+   1) index.html의 기존 관리자 페이지 스크립트 영역 아래쪽에 그대로 붙여넣기
+   2) 기존 adminRenderAttendanceTable / adminGetSelectedAttendanceRecords / adminSaveAttendance가 있더라도
+      이 코드가 뒤에서 같은 이름으로 덮어쓰기 때문에 삭제하지 않아도 됩니다.
+   ========================================================= */
+
+function adminEscapeAttendanceHtml_(value) {
+    if (typeof escapeHtml === 'function') return escapeHtml(value);
+    if (typeof escapeHtml_ === 'function') return escapeHtml_(value);
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function adminNormalizeAttendanceStatusForUi_(value) {
+    const raw = String(value || '').replace(/\s/g, '').trim();
+    if (!raw || raw === '-' || raw === '미체크' || raw === '미출결') return '미체크';
+    if (/^(O|o|○|ㅇ|출|출석|참석|등원)$/.test(raw)) return '출석';
+    if (/^(X|x|×|✕|결|결석|미등원)$/.test(raw)) return '결석';
+    if (raw.indexOf('지각') !== -1 || raw === '△') return '지각';
+    if (raw.indexOf('휴원') !== -1) return '휴원';
+    if (raw.indexOf('보강') !== -1) return '보강';
+    if (raw.indexOf('신규') !== -1 || raw.indexOf('첫수업') !== -1) return '신규';
+    if (raw.indexOf('반이동') !== -1 || raw.indexOf('반변경') !== -1) return '반이동';
+    return value || '미체크';
+}
+
+function adminAttendanceStatusClass_(status) {
+    const normalized = adminNormalizeAttendanceStatusForUi_(status);
+    if (normalized === '출석') return 'attendance-ok';
+    if (normalized === '결석') return 'attendance-no';
+    if (normalized === '지각') return 'attendance-late';
+    return '';
+}
+
+function adminAttendanceStatusOptions_(current) {
+    const selected = adminNormalizeAttendanceStatusForUi_(current);
+    const base = [
+        ['미체크', '- 미체크'],
+        ['출석', 'O 출석'],
+        ['결석', 'X 결석'],
+        ['지각', '지각'],
+        ['휴원', '휴원']
+    ];
+
+    // 기존 출석부에 보강/신규/반이동이 들어와 있는 경우 선택값을 보존합니다.
+    ['보강', '신규', '반이동'].forEach(v => {
+        if (selected === v && !base.some(opt => opt[0] === v)) base.push([v, v]);
+    });
+
+    return base.map(([value, label]) => {
+        const sel = selected === value ? ' selected' : '';
+        return `<option value="${adminEscapeAttendanceHtml_(value)}"${sel}>${adminEscapeAttendanceHtml_(label)}</option>`;
+    }).join('');
+}
+
+function adminAttendanceStatusBadgeHtml_(status, idx) {
+    const normalized = adminNormalizeAttendanceStatusForUi_(status);
+    const cls = adminAttendanceStatusClass_(normalized);
+    return `<span id="admin-att-badge-${idx}" class="admin-status-badge ${cls}">${adminEscapeAttendanceHtml_(normalized || '미체크')}</span>`;
+}
+
+function adminSetAttendanceSaveState_(idx, text, isError = false) {
+    const el = document.getElementById(`admin-att-save-state-${idx}`);
+    if (!el) return;
+    el.textContent = text || '';
+    el.style.color = isError ? '#dc2626' : '#16a34a';
+    if (text && !isError) {
+        setTimeout(() => {
+            if (el.textContent === text) el.textContent = '';
+        }, 1800);
+    }
+}
+
+function adminRenderAttendanceTable() {
+    const wrap = document.getElementById('adminAttendanceTableWrap');
+    if (!wrap) return;
+
+    if (!adminAttendanceRecords.length) {
+        wrap.innerHTML = `<div class="notice-empty">출석부 데이터를 불러오세요. 날짜와 반명을 선택한 뒤 [출석부 반영]을 누르면 됩니다.</div>`;
+        return;
+    }
+
+    const isFull = adminIsFullAdmin();
+    let html = `<table class="admin-table">
+        <thead>
+            <tr>
+                <th><input type="checkbox" id="adminAttendSelectAll" onchange="adminToggleAttendanceAll(this.checked)" checked></th>
+                <th>출석체크</th>
+                <th>현재상태</th>
+                <th>특이사항</th>
+                <th>학생명</th>
+                <th>반명/수업명</th>
+                <th>강의실</th>
+                <th>담당강사</th>
+                ${isFull ? '<th>학생전화</th><th>학부모전화</th>' : ''}
+                <th>메모</th>
+            </tr>
+        </thead>
+        <tbody>`;
+
+    adminAttendanceRecords.forEach((r, idx) => {
+        const status = adminNormalizeAttendanceStatusForUi_(r.status || r.attendanceStatus || '');
+        const phoneCells = isFull
+            ? `<td>${adminEscapeAttendanceHtml_(r.studentPhone || '')}</td><td>${adminEscapeAttendanceHtml_(r.parentPhone || '')}</td>`
+            : '';
+
+        html += `<tr data-att-index="${idx}">
+            <td><input type="checkbox" class="admin-att-check" checked></td>
+            <td>
+                <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; min-width:180px;">
+                    <button type="button"
+                        style="border:none; border-radius:8px; padding:7px 10px; font-weight:900; cursor:pointer; background:#16a34a; color:white;"
+                        onclick="adminQuickSetAttendance(${idx}, '출석')">O</button>
+                    <button type="button"
+                        style="border:none; border-radius:8px; padding:7px 10px; font-weight:900; cursor:pointer; background:#dc2626; color:white;"
+                        onclick="adminQuickSetAttendance(${idx}, '결석')">X</button>
+                    <select class="admin-small-input admin-att-status"
+                        data-field="status"
+                        onchange="adminSaveAttendanceStatusChange(${idx})"
+                        style="min-width:90px;">
+                        ${adminAttendanceStatusOptions_(status)}
+                    </select>
+                    <span id="admin-att-save-state-${idx}" style="font-size:12px; font-weight:800;"></span>
+                </div>
+            </td>
+            <td>${adminAttendanceStatusBadgeHtml_(status, idx)}</td>
+            <td>${r.specialStatus ? `<span class="admin-status-badge">${adminEscapeAttendanceHtml_(r.specialStatus)}</span>` : '-'}</td>
+            <td><b>${adminEscapeAttendanceHtml_(r.studentName)}</b></td>
+            <td>${adminEscapeAttendanceHtml_(r.className || '')}</td>
+            <td>${adminEscapeAttendanceHtml_(r.classroom || r.roomName || r.room || '')}</td>
+            <td>${adminEscapeAttendanceHtml_(r.instructor || '')}</td>
+            ${phoneCells}
+            <td><input class="admin-small-input" data-field="memo" value="${adminEscapeAttendanceHtml_(r.memo || '')}" placeholder="메모"></td>
+        </tr>`;
+    });
+
+    html += `</tbody></table>
+        <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px; flex-wrap:wrap;">
+            <button type="button" class="admin-btn" onclick="adminSaveAttendanceFromTable(false)">선택 출석부 저장</button>
+            <button type="button" class="admin-btn gray" onclick="adminLoadAttendanceSnapshot(true)">출석부 다시 불러오기</button>
+        </div>`;
+
+    wrap.innerHTML = html;
+}
+
+function adminToggleAttendanceAll(checked) {
+    document.querySelectorAll('.admin-att-check').forEach(ch => ch.checked = checked);
+}
+
+function adminGetAttendanceRowElement_(idx) {
+    return document.querySelector(`#adminAttendanceTableWrap tr[data-att-index="${idx}"]`);
+}
+
+function adminUpdateAttendanceRecordFromRow_(idx) {
+    const row = adminGetAttendanceRowElement_(idx);
+    const base = Object.assign({}, adminAttendanceRecords[idx] || {});
+    if (!row) return base;
+
+    const status = row.querySelector('select[data-field="status"]')?.value || base.status || '';
+    const memo = row.querySelector('input[data-field="memo"]')?.value || base.memo || '';
+
+    base.status = adminNormalizeAttendanceStatusForUi_(status);
+    base.attendanceStatus = base.status;
+    base.memo = memo;
+
+    // 화면 조회 기준 날짜/반명이 누락된 레코드 보정
+    base.date = base.date || document.getElementById('adminAttendanceDate')?.value || getTodayInputValue();
+    base.className = base.className || document.getElementById('adminAttendanceClass')?.value || '';
+
+    adminAttendanceRecords[idx] = base;
+    return base;
+}
+
+function adminGetSelectedAttendanceRecords() {
+    const rows = Array.from(document.querySelectorAll('#adminAttendanceTableWrap tr[data-att-index]'));
+    return rows.map(row => {
+        const idx = Number(row.dataset.attIndex);
+        const checked = row.querySelector('.admin-att-check')?.checked;
+        if (!checked) return null;
+        return adminUpdateAttendanceRecordFromRow_(idx);
+    }).filter(Boolean);
+}
+
+async function adminQuickSetAttendance(idx, status) {
+    const row = adminGetAttendanceRowElement_(idx);
+    if (!row) return;
+
+    const select = row.querySelector('select[data-field="status"]');
+    if (select) select.value = adminNormalizeAttendanceStatusForUi_(status);
+
+    const check = row.querySelector('.admin-att-check');
+    if (check) check.checked = true;
+
+    const badge = document.getElementById(`admin-att-badge-${idx}`);
+    if (badge) {
+        const normalized = adminNormalizeAttendanceStatusForUi_(status);
+        badge.textContent = normalized;
+        badge.className = `admin-status-badge ${adminAttendanceStatusClass_(normalized)}`;
+    }
+
+    await adminSaveAttendanceStatusChange(idx);
+}
+
+async function adminSaveAttendanceStatusChange(idx) {
+    const record = adminUpdateAttendanceRecordFromRow_(idx);
+    if (!record || !record.studentName) return alert('학생 정보를 찾지 못했습니다. 출석부를 다시 불러와주세요.');
+
+    adminSetAttendanceSaveState_(idx, '저장 중...');
+    try {
+        const ok = await adminSaveAttendanceRecords_([record], true);
+        adminSetAttendanceSaveState_(idx, ok ? '반영됨' : '확인 필요', !ok);
+    } catch (e) {
+        adminSetAttendanceSaveState_(idx, '실패', true);
+        alert(e.message);
+    }
+}
+
+async function adminSaveAttendanceFromTable(silent = false) {
+    const records = adminGetSelectedAttendanceRecords();
+    if (!records.length) {
+        alert('선택된 출석 데이터가 없습니다.');
+        return false;
+    }
+    return adminSaveAttendanceRecords_(records, silent);
+}
+
+// 기존 버튼 onclick="adminSaveAttendance()"가 있어도 동작하도록 호환 이름 유지
+async function adminSaveAttendance(silent = false) {
+    return adminSaveAttendanceFromTable(silent);
+}
+
+async function adminSaveAttendanceRecords_(records, silent = false) {
+    if (!adminToken) {
+        alert('관리자 로그인이 필요합니다.');
+        return false;
+    }
+    if (!records || !records.length) {
+        alert('저장할 출석 상태가 없습니다.');
+        return false;
+    }
+
+    try {
+        showLoading(records.length === 1 ? '출석부 즉시 반영 중...' : `선택한 ${records.length}명 출석부 반영 중...`);
+
+        const data = await adminApi('adminSaveAttendance', {
+            adminToken,
+            records: JSON.stringify(records)
+        });
+
+        hideLoading();
+
+        const summary = document.getElementById('adminAttendanceSummary');
+        if (summary) {
+            summary.textContent = data.message || `출석부 반영 완료: ${data.updated || data.count || records.length}건`;
+        }
+
+        const failed = Number(data.failed || 0);
+        if (!silent || failed) {
+            alert(data.message || `출석부 반영 완료: ${data.updated || data.count || records.length}건`);
+        }
+
+        return failed === 0;
+    } catch (e) {
+        hideLoading();
+        if (!silent) alert(e.message);
+        throw e;
+    }
+}
+
+
+
+
+/* =========================================================
+   울림앱 4차 - 강사페이지 강의실 사용체크 시간표 UI
+   ========================================================= */
+let ADMIN_CLASSROOM_USAGE_ROOMS = ["2강의실", "3강의실", "녹음실", "4강의실", "5강의실", "신체훈련실"];
+let ADMIN_CLASSROOM_USAGE_INSTRUCTORS = [];
+let adminClassroomUsageOptionsLoadedDate = '';
+let adminClassroomUsageRows = [];
+let adminClassroomUsageLoadedDate = '';
+
+function adminClassroomUsageHours_() {
+    const list = [];
+    for (let h = 10; h <= 22; h++) list.push(h);
+    return list;
+}
+
+function adminFormatClassroomHour_(h) {
+    const n = Number(h);
+    if (!Number.isFinite(n)) return String(h || '');
+    return String(n).padStart(2, '0') + ':00';
+}
+
+function adminRenderClassroomUsageOptionControls_() {
+    const roomEl = document.getElementById('adminClassroomUsageRoom');
+    if (roomEl) {
+        const current = roomEl.value;
+        roomEl.innerHTML = (ADMIN_CLASSROOM_USAGE_ROOMS || []).map(r => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join('');
+        if (current && (ADMIN_CLASSROOM_USAGE_ROOMS || []).includes(current)) roomEl.value = current;
+    }
+
+    const instructorListEl = document.getElementById('adminClassroomUsageInstructorList');
+    if (instructorListEl) {
+        const names = Array.from(new Set([
+            ...(ADMIN_CLASSROOM_USAGE_INSTRUCTORS || []),
+            (adminInfo && (adminInfo.name || adminInfo.id)) || ''
+        ].filter(Boolean)));
+        instructorListEl.innerHTML = names.map(n => `<option value="${escapeHtml(n)}"></option>`).join('');
+    }
+}
+
+async function adminLoadClassroomUsageOptions(force = false) {
+    if (!adminToken) return;
+    const date = adminClassroomUsageDate_();
+    if (!force && adminClassroomUsageOptionsLoadedDate === date && ADMIN_CLASSROOM_USAGE_INSTRUCTORS.length && ADMIN_CLASSROOM_USAGE_ROOMS.length) return;
+
+    try {
+        const data = await adminApi('adminGetClassroomUsageOptions', { adminToken, date, noCache: 1 });
+        if (Array.isArray(data.rooms) && data.rooms.length) ADMIN_CLASSROOM_USAGE_ROOMS = data.rooms;
+        if (Array.isArray(data.instructors)) ADMIN_CLASSROOM_USAGE_INSTRUCTORS = data.instructors;
+        adminClassroomUsageOptionsLoadedDate = date;
+        adminRenderClassroomUsageOptionControls_();
+    } catch (e) {
+        console.warn('[adminLoadClassroomUsageOptions] failed:', e);
+        adminRenderClassroomUsageOptionControls_();
+    }
+}
+
+function adminInitClassroomUsagePanel() {
+    const dateEl = document.getElementById('adminClassroomUsageDate');
+    if (dateEl && !dateEl.value) dateEl.value = getTodayInputValue();
+
+    adminRenderClassroomUsageOptionControls_();
+
+    const instructorEl = document.getElementById('adminClassroomUsageInstructor');
+    if (instructorEl && !instructorEl.value && adminInfo && !adminIsFullAdmin()) {
+        instructorEl.value = adminInfo.name || adminInfo.id || '';
+    }
+
+    const startEl = document.getElementById('adminClassroomUsageStart');
+    const endEl = document.getElementById('adminClassroomUsageEnd');
+    if (startEl && !startEl.dataset.ready) {
+        startEl.innerHTML = adminClassroomUsageHours_().slice(0, -1).map(h => `<option value="${h}">${adminFormatClassroomHour_(h)}</option>`).join('');
+        startEl.value = '10';
+        startEl.dataset.ready = '1';
+    }
+    if (endEl && !endEl.dataset.ready) {
+        endEl.innerHTML = adminClassroomUsageHours_().slice(1).map(h => `<option value="${h}">${adminFormatClassroomHour_(h)}</option>`).join('');
+        endEl.value = '11';
+        endEl.dataset.ready = '1';
+    }
+}
+
+function adminClassroomUsageDate_() {
+    return document.getElementById('adminClassroomUsageDate')?.value || getTodayInputValue();
+}
+
+function adminClassroomUsageIsMine_(row) {
+    const myName = String((adminInfo && (adminInfo.name || adminInfo.id)) || '').replace(/\s/g, '');
+    const rowName = String(row.instructor || row.adminName || row.adminId || '').replace(/\s/g, '');
+    return !!myName && !!rowName && (myName === rowName || rowName.includes(myName) || myName.includes(rowName));
+}
+
+async function adminLoadClassroomUsage(showOverlay = true) {
+    if (!adminToken) return;
+    adminInitClassroomUsagePanel();
+    const date = adminClassroomUsageDate_();
+    try {
+        if (showOverlay) showLoading('강의실 사용 현황 불러오는 중...');
+        await adminLoadClassroomUsageOptions(true);
+        const data = await adminApi('adminGetClassroomUsage', { adminToken, date });
+        if (showOverlay) hideLoading();
+        adminClassroomUsageRows = Array.isArray(data.records) ? data.records : [];
+        adminClassroomUsageLoadedDate = date;
+        adminRenderClassroomUsageTable();
+        const summary = document.getElementById('adminClassroomUsageSummary');
+        if (summary) summary.textContent = data.message || `${date} 사용중 ${adminClassroomUsageRows.length}건`;
+    } catch (e) {
+        if (showOverlay) hideLoading();
+        alert(e.message || '강의실 사용 현황 조회에 실패했습니다.');
+    }
+}
+
+function adminFindClassroomUsageAt_(room, hour) {
+    const h = Number(hour);
+    return (adminClassroomUsageRows || []).find(r => {
+        const start = Number(r.startHour);
+        const end = Number(r.endHour);
+        return String(r.room || '').replace(/\s/g, '') === String(room || '').replace(/\s/g, '') && start <= h && h < end && String(r.status || '') === '사용중';
+    }) || null;
+}
+
+function adminRenderClassroomUsageTable() {
+    const wrap = document.getElementById('adminClassroomUsageTableWrap');
+    if (!wrap) return;
+    const date = adminClassroomUsageDate_();
+    const slotHours = adminClassroomUsageHours_().slice(0, -1);
+    let html = `<table class="classroom-usage-table"><thead><tr><th class="classroom-usage-time-head">시간</th>`;
+    ADMIN_CLASSROOM_USAGE_ROOMS.forEach(room => { html += `<th>${escapeHtml(room)}</th>`; });
+    html += `</tr></thead><tbody>`;
+
+    slotHours.forEach(hour => {
+        html += `<tr><th class="classroom-usage-time-head">${adminFormatClassroomHour_(hour)}~${adminFormatClassroomHour_(hour + 1)}</th>`;
+        ADMIN_CLASSROOM_USAGE_ROOMS.forEach(room => {
+            const used = adminFindClassroomUsageAt_(room, hour);
+            if (used) {
+                const mine = adminClassroomUsageIsMine_(used);
+                html += `<td class="classroom-usage-cell-used ${mine ? 'mine' : ''}" ${adminIsFullAdmin() ? `onclick="adminSelectClassroomUsageRecord('${escapeHtml(used.recordId || '')}')"` : ''}>
+                    <div>${escapeHtml(used.instructor || used.adminName || '-')}</div>
+                    <div style="font-size:11px; font-weight:700;">${escapeHtml(used.className || used.purpose || '사용중')}</div>
+                    <div style="font-size:11px; color:inherit; opacity:.85;">${adminFormatClassroomHour_(used.startHour)}~${adminFormatClassroomHour_(used.endHour)}</div>
+                    ${mine || adminIsFullAdmin() ? `<button type="button" class="classroom-usage-release-btn" onclick="event.stopPropagation(); adminReleaseClassroomUsage('${escapeHtml(used.recordId || '')}')">해제</button>` : ''}
+                    ${adminIsFullAdmin() ? `<button type="button" class="classroom-usage-release-btn" style="background:#f59e0b;" onclick="event.stopPropagation(); adminSelectClassroomUsageRecord('${escapeHtml(used.recordId || '')}')">수정</button>` : ''}
+                </td>`;
+            } else {
+                html += `<td><button type="button" class="classroom-usage-empty-btn" onclick="adminQuickClassroomUsage('${escapeHtml(room)}', ${hour})">사용</button></td>`;
+            }
+        });
+        html += `</tr>`;
+    });
+
+    html += `</tbody></table>`;
+    wrap.innerHTML = html;
+}
+
+function adminSelectClassroomUsageRecord(recordId) {
+    if (!adminIsFullAdmin()) return;
+    const used = (adminClassroomUsageRows || []).find(r => String(r.recordId || '') === String(recordId || ''));
+    if (!used) return alert('수정할 강의실 기록을 찾지 못했습니다.');
+    adminInitClassroomUsagePanel();
+    const roomEl = document.getElementById('adminClassroomUsageRoom');
+    const startEl = document.getElementById('adminClassroomUsageStart');
+    const endEl = document.getElementById('adminClassroomUsageEnd');
+    const instructorEl = document.getElementById('adminClassroomUsageInstructor');
+    const classEl = document.getElementById('adminClassroomUsageClass');
+    const memoEl = document.getElementById('adminClassroomUsageMemo');
+    if (roomEl) roomEl.value = used.room || '';
+    if (startEl) startEl.value = String(used.startHour || 10);
+    if (endEl) endEl.value = String(used.endHour || (Number(used.startHour || 10) + 1));
+    if (instructorEl) instructorEl.value = used.instructor || '';
+    if (classEl) classEl.value = used.className || used.purpose || '';
+    if (memoEl) memoEl.value = used.memo || '';
+    const summary = document.getElementById('adminClassroomUsageSummary');
+    if (summary) summary.textContent = '선택됨: ' + (used.room || '') + ' ' + adminFormatClassroomHour_(used.startHour) + '~' + adminFormatClassroomHour_(used.endHour) + ' / 수정 후 [관리자 배정/용도변경]';
+}
+
+function adminClearClassroomUsageForm() {
+    adminInitClassroomUsagePanel();
+    const instructorEl = document.getElementById('adminClassroomUsageInstructor');
+    const classEl = document.getElementById('adminClassroomUsageClass');
+    const memoEl = document.getElementById('adminClassroomUsageMemo');
+    if (instructorEl) instructorEl.value = adminIsFullAdmin() ? '' : ((adminInfo && (adminInfo.name || adminInfo.id)) || '');
+    if (classEl) classEl.value = '';
+    if (memoEl) memoEl.value = '';
+}
+
+async function adminQuickClassroomUsage(room, hour) {
+    adminInitClassroomUsagePanel();
+    const roomEl = document.getElementById('adminClassroomUsageRoom');
+    const startEl = document.getElementById('adminClassroomUsageStart');
+    const endEl = document.getElementById('adminClassroomUsageEnd');
+    const instructorEl = document.getElementById('adminClassroomUsageInstructor');
+    if (roomEl) roomEl.value = room;
+    if (instructorEl && !instructorEl.value) instructorEl.value = (adminInfo && (adminInfo.name || adminInfo.id)) || '';
+    if (startEl) startEl.value = String(hour);
+    if (endEl) endEl.value = String(hour + 1);
+    await adminSaveClassroomUsageFromForm(true);
+}
+
+async function adminSaveClassroomUsageFromForm(silentConfirm = false, forceOverride = false) {
+    if (!adminToken) return alert('로그인이 필요합니다.');
+    adminInitClassroomUsagePanel();
+
+    const date = adminClassroomUsageDate_();
+    const room = document.getElementById('adminClassroomUsageRoom')?.value || '';
+    const startHour = Number(document.getElementById('adminClassroomUsageStart')?.value || 0);
+    const endHour = Number(document.getElementById('adminClassroomUsageEnd')?.value || 0);
+    const assignedInstructor = document.getElementById('adminClassroomUsageInstructor')?.value.trim() || '';
+    const className = document.getElementById('adminClassroomUsageClass')?.value.trim() || '';
+    const memo = document.getElementById('adminClassroomUsageMemo')?.value.trim() || '';
+
+    if (!date || !room || !startHour || !endHour) return alert('사용일, 강의실, 시간을 확인해주세요.');
+    if (endHour <= startHour) return alert('종료시간은 시작시간보다 늦어야 합니다.');
+
+    if (!silentConfirm && !confirm(`${date}\n${room}\n${adminFormatClassroomHour_(startHour)}~${adminFormatClassroomHour_(endHour)}\n\n강의실 사용 체크할까요?`)) return;
+
+    try {
+        showLoading('강의실 사용 체크 중...');
+
+        await adminPostNoCors('adminSaveClassroomUsage', {
+            adminToken, date, room, startHour, endHour, assignedInstructor, className, memo, override: forceOverride ? '1' : '0'
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 900));
+
+        const data = await adminApi('adminGetClassroomUsage', { adminToken, date });
+        hideLoading();
+
+        adminClassroomUsageRows = Array.isArray(data.records) ? data.records : [];
+        adminRenderClassroomUsageTable();
+
+        const summary = document.getElementById('adminClassroomUsageSummary');
+        if (summary) summary.textContent = data.message || '강의실 사용 현황을 새로 불러왔습니다.';
+    } catch (e) {
+        hideLoading();
+        alert(e.message || '강의실 사용 체크에 실패했습니다. 잠시 후 다시 시도해주세요.');
+    }
+}
+
+
+
+async function adminReleaseClassroomUsage(recordId) {
+    if (!adminToken) return alert('로그인이 필요합니다.');
+    if (!recordId) return alert('해제할 기록을 찾지 못했습니다.');
+    if (!confirm('해당 강의실 사용 기록을 해제할까요?')) return;
+
+    const date = adminClassroomUsageDate_();
+
+    try {
+        showLoading('강의실 사용 해제 중...');
+
+        await adminPostNoCors('adminReleaseClassroomUsage', {
+            adminToken,
+            recordId,
+            date
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 900));
+
+        const data = await adminApi('adminGetClassroomUsage', { adminToken, date });
+        hideLoading();
+
+        adminClassroomUsageRows = Array.isArray(data.records) ? data.records : [];
+        adminRenderClassroomUsageTable();
+
+        const summary = document.getElementById('adminClassroomUsageSummary');
+        if (summary) summary.textContent = data.message || '강의실 사용 현황을 새로 불러왔습니다.';
+    } catch (e) {
+        hideLoading();
+        alert(e.message || '강의실 사용 해제에 실패했습니다. 잠시 후 다시 시도해주세요.');
+    }
+}
+
+
+
+
+</script>
+
+
+<script>
+/* 5-7 사용자 노출 문구 안전필터: 개발자용 연결/설정 문구를 일반 안내문으로 변환 */
+(function () {
+  if (window.__ulimUserMessageSanitizerInstalled) return;
+  window.__ulimUserMessageSanitizerInstalled = true;
+
+  function sanitizeUlimUserMessage(message) {
+    const text = String(message == null ? '' : message);
+    const riskPattern = /(GAS|Apps Script|script\.google|JSONP|라우팅|배포|스크립트\s*속성|관리자\s*API|API_KEY|API_SECRET|KAKAO_PFID|SOLAPI_|ROOM_API_URL|GET_API_URL|GOOGLE_APP_SCRIPT_URL|코드\s*확인|setupAdminSheets)/i;
+
+    if (!riskPattern.test(text)) return text;
+
+    if (/예약/.test(text)) {
+      return '예약 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.';
+    }
+    if (/발성|녹음|분석|문장/.test(text)) {
+      return '분석 또는 기록 처리 중 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.';
+    }
+    if (/알림|문자|톡|발송/.test(text)) {
+      return '알림 발송 준비 중 문제가 발생했습니다. 관리자에게 문의해주세요.';
+    }
+    if (/로그인|인증/.test(text)) {
+      return '인증 정보를 확인하지 못했습니다. 다시 로그인해주세요.';
+    }
+
+    return '요청을 처리하지 못했습니다. 잠시 후 다시 시도해주세요.';
+  }
+
+  const nativeAlert = window.alert ? window.alert.bind(window) : null;
+  if (nativeAlert) {
+    window.alert = function (message) {
+      nativeAlert(sanitizeUlimUserMessage(message));
+    };
+  }
+
+  window.sanitizeUlimUserMessage = sanitizeUlimUserMessage;
+})();
+</script>
+
+
+<script>
+/* =========================================================
+   5-8 1차 보안패치
+   - 학생명 + 비밀번호 로그인
+   - 초기 비밀번호: 전화번호 뒤 4자리
+   - 학생 세션토큰 기반 요청
+   - 전화뒤4자리/학생UID는 브라우저에 저장하지 않음
+   ========================================================= */
+
+function getStudentSessionToken_() {
+    return studentSessionToken || localStorage.getItem('studentSessionToken') || '';
+}
+
+function clearStudentSecureSession_() {
+    studentSessionToken = '';
+    studentMustChangePassword = false;
+    phoneLast4 = '';
+    studentNo = '';
+    localStorage.removeItem('studentSessionToken');
+    localStorage.removeItem('studentMustChangePassword');
+    localStorage.removeItem('phoneLast4');
+    localStorage.removeItem('studentNo');
+    localStorage.removeItem('instructorFolderId');
+}
+
+function setStudentSecureSession_(result) {
+    studentName = result.name || result.studentName || '';
+    instructorName = result.instructor || '';
+    studentSessionToken = result.sessionToken || '';
+    studentMustChangePassword = !!result.mustChangePassword;
+
+    // 보안상 전화뒤4자리/내부 학생UID는 브라우저에 저장하지 않습니다.
+    phoneLast4 = '';
+    studentNo = '';
+
+    localStorage.setItem('studentName', studentName);
+    localStorage.setItem('instructorName', instructorName);
+    localStorage.setItem('studentSessionToken', studentSessionToken);
+    localStorage.setItem('studentMustChangePassword', studentMustChangePassword ? 'Y' : 'N');
+    localStorage.removeItem('phoneLast4');
+    localStorage.removeItem('studentNo');
+    localStorage.removeItem('instructorFolderId');
+
+    updateFilenameConstants();
+}
+
+async function authenticateStudentFromInputs() {
+    const nameInput = document.getElementById('studentNameInput');
+    const pwInput = document.getElementById('phoneLast4Input');
+    const name = nameInput ? nameInput.value.trim() : '';
+    const password = pwInput ? pwInput.value : '';
+
+    if (!name || !password) {
+        alert("학생 이름과 비밀번호를 입력해주세요.");
+        return;
+    }
+
+    await authenticate(name, password);
+}
+
+async function authenticate(name, password) {
+    showLoading("로그인 정보 확인 중...");
+
+    try {
+        const query = new URLSearchParams();
+        query.set('action', 'secureStudentLogin');
+        query.set('name', name);
+        query.set('password', password);
+        query.set('_', Date.now());
+
+        const response = await fetch(`${GET_API_URL}?${query.toString()}`);
+        hideLoading();
+
+        if (!response.ok) throw new Error('서버 응답이 원활하지 않습니다. 잠시 후 다시 시도해주세요.');
+
+        const result = await response.json();
+        if (result && result.status === 'success') {
+            setStudentSecureSession_(result);
+            alert(`${studentName}님 로그인되었습니다.`);
+
+            if (studentMustChangePassword) {
+                await changeStudentPasswordByPrompt(true, password);
+            }
+
+            showMainContent(true);
+        } else {
+            clearStudentSecureSession_();
+            alert((result && result.message) || "로그인에 실패했습니다.");
+        }
+    } catch (e) {
+        hideLoading();
+        clearStudentSecureSession_();
+        alert(e.message || "로그인 처리 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.");
+    }
+}
+
+async function changeStudentPasswordByPrompt(force = false, knownCurrentPassword = '') {
+    const token = getStudentSessionToken_();
+
+    if (!token) {
+        if (!force) alert("먼저 학생 로그인을 해주세요.");
+        return false;
+    }
+
+    const currentPassword = knownCurrentPassword || prompt("현재 비밀번호를 입력해주세요.");
+    if (!currentPassword) return false;
+
+    const newPassword = prompt("새 비밀번호를 입력해주세요.\n영문/숫자 조합 4자 이상을 권장합니다.");
+    if (!newPassword) return false;
+
+    if (String(newPassword).length < 4) {
+        alert("새 비밀번호는 4자 이상으로 설정해주세요.");
+        return false;
+    }
+
+    const newPassword2 = prompt("새 비밀번호를 한 번 더 입력해주세요.");
+    if (newPassword !== newPassword2) {
+        alert("새 비밀번호가 서로 다릅니다.");
+        return false;
+    }
+
+    try {
+        showLoading("비밀번호 변경 중...");
+
+        const query = new URLSearchParams();
+        query.set('action', 'changeStudentPassword');
+        query.set('studentSessionToken', token);
+        query.set('currentPassword', currentPassword);
+        query.set('newPassword', newPassword);
+        query.set('_', Date.now());
+
+        const response = await fetch(`${GET_API_URL}?${query.toString()}`);
+        hideLoading();
+
+        if (!response.ok) throw new Error('서버 응답이 원활하지 않습니다. 잠시 후 다시 시도해주세요.');
+        const result = await response.json();
+
+        if (result && result.status === 'success') {
+            studentMustChangePassword = false;
+            localStorage.setItem('studentMustChangePassword', 'N');
+            alert("비밀번호가 변경되었습니다.");
+            return true;
+        }
+
+        alert((result && result.message) || "비밀번호를 변경하지 못했습니다.");
+        return false;
+    } catch (err) {
+        hideLoading();
+        alert(err.message || "비밀번호 변경 중 문제가 발생했습니다.");
+        return false;
+    }
+}
+
+async function checkStudentName() {
+    const token = getStudentSessionToken_();
+    const isGuest = studentName === '게스트';
+
+    if (token && studentName && instructorName && instructorName !== '기본') {
+        try {
+            const query = new URLSearchParams();
+            query.set('action', 'getStudentSession');
+            query.set('studentSessionToken', token);
+            query.set('_', Date.now());
+
+            const response = await fetch(`${GET_API_URL}?${query.toString()}`);
+            if (response.ok) {
+                const result = await response.json();
+                if (result && result.status === 'success') {
+                    setStudentSecureSession_(result);
+                    showMainContent(true);
+                    return;
+                }
+            }
+        } catch (ignore) {}
+
+        clearStudentSecureSession_();
+    }
+
+    if (isGuest) {
+        updateFilenameConstants();
+        showMainContent(false);
+        return;
+    }
+
+    const overlay = document.getElementById('loginOverlay');
+    if (overlay) overlay.style.display = 'flex';
+    const wrapper = document.querySelector('.wrapper');
+    if (wrapper) wrapper.style.display = 'none';
+}
+
+function guestLogin() {
+    studentName = "게스트";
+    instructorName = "기본";
+    phoneLast4 = "";
+    studentNo = "GUEST";
+    studentSessionToken = "";
+    localStorage.setItem('studentName', studentName);
+    localStorage.setItem('instructorName', instructorName);
+    localStorage.removeItem('phoneLast4');
+    localStorage.setItem('studentNo', studentNo);
+    localStorage.removeItem('studentSessionToken');
+    localStorage.removeItem('studentMustChangePassword');
+    updateFilenameConstants();
+    showMainContent(false);
+}
+
+function getTrainingStudentIdentity_() {
+    return {
+        studentSessionToken: getStudentSessionToken_(),
+        studentNo: '',
+        studentName: (typeof studentName !== 'undefined' ? studentName : '') || localStorage.getItem('studentName') || '게스트',
+        phoneLast4: '',
+        deviceKey: (typeof pronGetDeviceKey === 'function' ? pronGetDeviceKey() : (localStorage.getItem('ulimDeviceKey') || ''))
+    };
+}
+
+function getVocalTrainingUserKey_() {
+    const token = getStudentSessionToken_();
+    if (token) return 'SESSION_' + token.slice(0, 16);
+    const name = (typeof studentName !== 'undefined' && studentName) ? studentName : (localStorage.getItem('studentName') || '게스트');
+    if (name && name !== '게스트') return ('NAME_' + name).replace(/[^0-9A-Za-z가-힣_-]/g, '_');
+    return pronGetDeviceKey ? pronGetDeviceKey() : ('DEV_' + Date.now());
+}
+
+const __ulimOriginalUploadAudioToDriveAndLog = window.uploadAudioToDriveAndLog || uploadAudioToDriveAndLog;
+uploadAudioToDriveAndLog = function(vocalId, sentenceText, base64Data, mimeType, action, extraMeta = {}) {
+    extraMeta = Object.assign({}, extraMeta || {}, {
+        studentSessionToken: getStudentSessionToken_()
+    });
+    return __ulimOriginalUploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeType, action, extraMeta);
+};
+
+const __ulimOriginalRoomJsonp = window.roomJsonp || roomJsonp;
+roomJsonp = function(params, options = {}) {
+    params = Object.assign({}, params || {});
+    if (
+        params.action === 'getRoomReservations' ||
+        params.action === 'reserveRoom' ||
+        params.action === 'cancelRoom'
+    ) {
+        params.studentSessionToken = getStudentSessionToken_();
+        delete params.phoneLast4;
+    }
+    return __ulimOriginalRoomJsonp(params, options);
+};
+
+function getRoomCacheKey(year, month) {
+    const sessionKey = getStudentSessionToken_() ? getStudentSessionToken_().slice(0, 12) : 'public';
+    return `${year}-${String(month).padStart(2, '0')}-${sessionKey}`;
+}
+
+function getRoomLocalStorageKey(cacheKey) {
+    return `ulimRoomReservationCache_secure_${cacheKey}`;
+}
+
+function loadStudentVocalPracticeLogsForMonth_(year, month, force = false) {
+    if (!studentName || studentName === '게스트' || !getStudentSessionToken_()) return;
+    const key = `${year}-${String(month + 1).padStart(2, '0')}`;
+    if (!force && studentVocalPracticeLoadedKey === key) return;
+
+    try {
+        const query = new URLSearchParams();
+        query.set('action', 'getStudentVocalPracticeLogs');
+        query.set('studentSessionToken', getStudentSessionToken_());
+        query.set('year', String(year));
+        query.set('month', String(month + 1));
+        query.set('_', Date.now());
+
+        fetch(`${GET_API_URL}?${query.toString()}`)
+            .then(response => {
+                if (!response.ok) throw new Error('연습일지 조회 실패');
+                return response.json();
+            })
+            .then(data => {
+                if (!data || data.status !== 'success') throw new Error((data && data.message) || '연습일지 응답 오류');
+                studentVocalPracticeLogMap = new Map();
+                (data.logs || []).forEach(log => {
+                    const dateKey = String(log.practiceDate || '').trim();
+                    if (!dateKey) return;
+                    if (!studentVocalPracticeLogMap.has(dateKey)) studentVocalPracticeLogMap.set(dateKey, []);
+                    studentVocalPracticeLogMap.get(dateKey).push(log);
+                });
+                studentVocalPracticeLoadedKey = key;
+                if (typeof renderCalendar === 'function') renderCalendar();
+            })
+            .catch(err => console.warn('학생 연습일지 서버 조회 실패:', err));
+    } catch (err) {
+        console.warn('학생 연습일지 서버 조회 실패:', err);
+    }
+}
+
+</script>
+
+
+<script>
+/* =========================================================
+   5-9 2차 보안패치
+   - 강사/관리자 계정 비밀번호 Hash + Salt 저장
+   - 로그인 실패 제한
+   - adminToken 세션버전 검증
+   - 강사/관리자 비밀번호 변경
+   ========================================================= */
+
+function setAdminSecureSession_(data) {
+    adminToken = data.adminToken || '';
+    adminInfo = data.admin || {};
+    localStorage.setItem('adminToken', adminToken);
+    localStorage.setItem('adminInfo', JSON.stringify(adminInfo));
+    localStorage.setItem('ulimLastMode', 'admin');
+}
+
+async function promptAdminPasswordChangeIfNeeded_(knownCurrentPassword = '') {
+    if (!adminInfo || !adminInfo.mustChangePassword) return true;
+
+    alert('초기 비밀번호 상태입니다. 보안을 위해 새 비밀번호로 변경해주세요.');
+    const ok = await changeAdminPasswordByPrompt(true, knownCurrentPassword);
+    return !!ok;
+}
+
+async function adminLogin() {
+    const id = document.getElementById('adminIdInput').value.trim();
+    const pw = document.getElementById('adminPwInput').value.trim();
+
+    if (!id || !pw) return alert('강사 ID와 비밀번호를 입력해주세요.');
+
+    try {
+        showLoading('로그인 정보 확인 중...');
+        const data = await adminApi('adminLogin', { adminId: id, adminPw: pw });
+        hideLoading();
+
+        setAdminSecureSession_(data);
+
+        adminModeActive = true;
+        adminEnableAllTabsForAdminMode();
+        setAdminTabVisibility();
+        applyAdminPermissions();
+
+        document.getElementById('adminLoginBox').style.display = 'none';
+        document.getElementById('adminDashboard').style.display = 'block';
+
+        const changedOk = await promptAdminPasswordChangeIfNeeded_(pw);
+        if (!changedOk && adminInfo && adminInfo.mustChangePassword) {
+            alert('비밀번호 변경 전에는 일부 기능 사용이 제한될 수 있습니다.');
+        }
+
+        await adminLoadInitialData();
+
+        try {
+            if (window.registerRoomPushTokenAfterAdminLogin) window.registerRoomPushTokenAfterAdminLogin();
+        } catch (pushErr) {
+            console.warn(pushErr);
+        }
+    } catch (e) {
+        hideLoading();
+        alert(e.message || '로그인 처리 중 문제가 발생했습니다.');
+    }
+}
+
+async function changeAdminPasswordByPrompt(force = false, knownCurrentPassword = '') {
+    if (!adminToken) {
+        alert('강사 로그인 후 이용해주세요.');
+        return false;
+    }
+
+    const currentPassword = knownCurrentPassword || prompt('현재 비밀번호를 입력해주세요.');
+    if (!currentPassword) return false;
+
+    const newPassword = prompt('새 비밀번호를 입력해주세요.\n영문/숫자/특수문자 조합 6자 이상을 권장합니다.');
+    if (!newPassword) return false;
+
+    if (String(newPassword).length < 6) {
+        alert('새 비밀번호는 6자 이상으로 설정해주세요.');
+        return false;
+    }
+
+    if (String(currentPassword) === String(newPassword)) {
+        alert('새 비밀번호는 현재 비밀번호와 다르게 설정해주세요.');
+        return false;
+    }
+
+    const newPassword2 = prompt('새 비밀번호를 한 번 더 입력해주세요.');
+    if (newPassword !== newPassword2) {
+        alert('새 비밀번호가 서로 다릅니다.');
+        return false;
+    }
+
+    try {
+        showLoading('비밀번호 변경 중...');
+
+        const data = await adminApi('changeAdminPassword', {
+            adminToken,
+            currentPassword,
+            newPassword,
+            noCache: 1
+        });
+
+        hideLoading();
+
+        if (data && data.status === 'success') {
+            if (data.adminToken) {
+                setAdminSecureSession_(data);
+            } else if (adminInfo) {
+                adminInfo.mustChangePassword = false;
+                localStorage.setItem('adminInfo', JSON.stringify(adminInfo));
+            }
+
+            alert('비밀번호가 변경되었습니다.');
+            return true;
+        }
+
+        alert((data && data.message) || '비밀번호를 변경하지 못했습니다.');
+        return false;
+    } catch (err) {
+        hideLoading();
+        alert(err.message || '비밀번호 변경 중 문제가 발생했습니다.');
+        return false;
+    }
+}
+
+// 기존 adminLoadInitialData가 세션을 확인할 때 보안세션의 mustChangePassword를 반영하도록 보조 처리
+const __ulimOriginalAdminLoadInitialData = window.adminLoadInitialData || adminLoadInitialData;
+adminLoadInitialData = async function() {
+    await __ulimOriginalAdminLoadInitialData();
+
+    try {
+        if (adminInfo && adminInfo.mustChangePassword) {
+            const warnEl = document.getElementById('adminWelcomeText');
+            if (warnEl) {
+                warnEl.textContent = (adminInfo.name || adminInfo.id || '강사') + ' / 비밀번호 변경 필요';
+            }
+        }
+    } catch (ignore) {}
+};
+
+</script>
+
+
+<script>
+/* =========================================================
+   5-11 표준발음 고급분석 사용량 학생별 제한 패치
+   - 기존: 전화뒤4자리 또는 기기ID 기반으로 떨어질 수 있음
+   - 변경: studentSessionToken을 서버로 보내고, 서버에서 학생UID 기준으로 1일 제한 계산
+   ========================================================= */
+
+function pronGetStudentSessionTokenForUsage_() {
+    if (typeof getStudentSessionToken_ === 'function') return getStudentSessionToken_() || '';
+    if (typeof studentSessionToken !== 'undefined' && studentSessionToken) return studentSessionToken;
+    return localStorage.getItem('studentSessionToken') || '';
+}
+
+function pronGetEtriUserKey() {
+    const token = pronGetStudentSessionTokenForUsage_();
+    if (token) {
+        // 실제 학생UID는 서버에서만 계산합니다.
+        // 프론트 localStorage 캐시 분리용으로만 세션토큰 앞부분을 사용합니다.
+        return ('SESSION_' + token.slice(0, 18)).replace(/[^0-9A-Za-z_\-]/g, '_');
+    }
+
+    const name = (typeof studentName !== "undefined" && studentName) ? studentName : (localStorage.getItem("studentName") || "게스트");
+    if (name && name !== "게스트") {
+        return ('LOGIN_' + name).replace(/[^0-9A-Za-z가-힣_\-]/g, "_");
+    }
+
+    return pronGetDeviceKey();
+}
+
+async function pronRefreshEtriUsage() {
+    try {
+        const token = pronGetStudentSessionTokenForUsage_();
+        pronSetAdvancedStatus("고급분석 잔여횟수를 확인하는 중입니다.");
+
+        const data = await pronJsonpRequest({
+            action: "getEtriPronunciationUsage",
+            userKey: pronGetEtriUserKey(),
+            studentSessionToken: token,
+            dateKey: pronTodayKey(),
+            _: Date.now()
+        }, 10000);
+
+        if (!data || !data.ok) throw new Error(data && data.message ? data.message : "잔여횟수 확인 실패");
+
+        pronSetLocalEtriUsed(data.used || 0);
+        pronUpdateEtriUsageBadge(data.used || 0, data.remaining);
+        pronSetAdvancedStatus(`오늘 고급분석 사용량: ${data.used || 0}/${PRON_ETRI_DAILY_LIMIT}회\n잔여횟수: ${data.remaining}회`, "success");
+    } catch (err) {
+        const localUsed = pronGetLocalEtriUsed();
+        pronUpdateEtriUsageBadge(localUsed, PRON_ETRI_DAILY_LIMIT - localUsed);
+        pronSetAdvancedStatus("잔여횟수를 확인하지 못했습니다. 잠시 후 다시 시도해주세요.", "error");
+    }
+}
+
+async function pronRunEtriAdvancedAnalysis() {
+    const source = document.getElementById("pronInputText")?.value.trim() || "";
+    if (!source) {
+        alert("먼저 읽을 문장을 입력해주세요.");
+        return;
+    }
+    if (!pronRecordedBlob) {
+        alert("먼저 녹음을 완료해주세요. 녹음이 끝난 뒤 고급분석을 실행할 수 있습니다.");
+        return;
+    }
+    if (!GET_API_URL || !GET_API_URL.includes("script.google.com/macros/s/")) {
+        pronSetAdvancedStatus("고급분석 서비스를 준비 중입니다. 잠시 후 다시 시도해주세요.", "error");
+        return;
+    }
+
+    const token = pronGetStudentSessionTokenForUsage_();
+    const currentName = (typeof studentName !== "undefined" && studentName) ? studentName : (localStorage.getItem("studentName") || "게스트");
+
+    if (currentName !== "게스트" && !token) {
+        pronSetAdvancedStatus("학생별 사용량 확인을 위해 다시 로그인해주세요.", "error");
+        return;
+    }
+
+    try {
+        pronSetAdvancedStatus("리미가 조금 더 정확하게 분석중입니다.");
+        if (!pronLastSttText) {
+            await pronRunWhisperTranscription();
+        }
+
+        const recognized = pronLastSttText || "";
+        const n = pronGetAnalysisNumbers();
+        const converted = source ? pronConvertText(source).converted : "";
+        const ruleSummary = pronGetRuleSummaryForVoice(source);
+        const target = pronNormalizeCompareText(source);
+        const heard = pronNormalizeCompareText(recognized);
+        const matchScore = target && heard ? Math.max(0, Math.round((1 - pronLevenshtein(target, heard) / Math.max(target.length, heard.length, 1)) * 100)) : 0;
+        const score5 = Math.max(1, Math.min(5, 1 + (matchScore / 100) * 4));
+        const requestId = pronBuildRequestId();
+
+        const payload = {
+            action: "geminiPronunciationComment",
+            requestId,
+            userKey: pronGetEtriUserKey(),
+            studentSessionToken: token,
+            studentNo: '',
+            studentName: currentName !== "게스트" ? currentName : '',
+            phoneLast4: '',
+            script: source,
+            recognized,
+            standardPronunciation: converted,
+            matchScore,
+            score5: score5.toFixed(1),
+            durationSec: n.durationSec ? n.durationSec.toFixed(1) : '',
+            syllablesPerSec: n.syllablesPerSec ? n.syllablesPerSec.toFixed(1) : '',
+            avgVolume: n.avgRms ? pronPercent(n.avgRms * 260) : '',
+            silenceRatio: n.durationSec ? pronPercent(n.silenceRatio * 100) : '',
+            ruleSummary,
+            dateKey: pronTodayKey(),
+            clientTime: new Date().toISOString()
+        };
+
+        await fetch(GET_API_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(payload)
+        });
+
+        pronPollEtriResult(requestId);
+    } catch (err) {
+        console.error(err);
+        pronSetAdvancedStatus("고급분석 요청 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.", "error");
+    }
+}
+
+function pronRenderEtriResult(data) {
+    const recognized = data.recognized || pronLastSttText || "인식 결과 없음";
+    const rawScore = data.score5 || data.score || "-";
+    const nScore = Number(rawScore);
+    const scoreText = Number.isFinite(nScore) ? nScore.toFixed(1) : String(rawScore || "-");
+    const source = document.getElementById("pronInputText")?.value || "";
+    const converted = source ? pronConvertText(source).converted : "";
+    const ruleSummary = pronGetRuleSummaryForVoice(source);
+    const comment = String(data.comment || '').trim() || '분석 결과를 기준으로 다시 녹음하며 비교해보세요.';
+
+    if (typeof data.used !== 'undefined') {
+        pronSetLocalEtriUsed(data.used || 0);
+        pronUpdateEtriUsageBadge(data.used || 0, data.remaining);
+    }
+
+    pronSetAdvancedStatus(`리미의 정밀진단 완료!
+
+발음평가 점수: ${scoreText} / 5
+리미 인식결과: ${recognized}
+
+표준발음 참고:
+${converted ? "[" + converted + "]" : "먼저 문장을 입력하세요."}
+
+리미 코멘트:
+- ${comment}
+
+표준발음 점검 대상:
+${ruleSummary}`, "success");
+}
+</script>
+
+
+<script>
+/* =========================================================
+   5-13 학생 비밀번호 변경 적용 보정
+   - 비밀번호 변경 후 서버가 새 studentSessionToken을 내려주면 즉시 반영
+   - 기존 세션버전 무효화로 인해 변경 직후 세션이 끊기는 문제 방지
+   ========================================================= */
+
+async function changeStudentPasswordByPrompt(force = false, knownCurrentPassword = '') {
+    const token = getStudentSessionToken_ ? getStudentSessionToken_() : (studentSessionToken || localStorage.getItem('studentSessionToken') || '');
+
+    if (!token) {
+        if (!force) alert("먼저 학생 로그인을 해주세요.");
+        return false;
+    }
+
+    const currentPassword = knownCurrentPassword || prompt("현재 비밀번호를 입력해주세요.");
+    if (!currentPassword) return false;
+
+    const newPassword = prompt("새 비밀번호를 입력해주세요.\n영문/숫자 조합 4자 이상을 권장합니다.");
+    if (!newPassword) return false;
+
+    if (String(newPassword).length < 4) {
+        alert("새 비밀번호는 4자 이상으로 설정해주세요.");
+        return false;
+    }
+
+    if (String(currentPassword) === String(newPassword)) {
+        alert("새 비밀번호는 현재 비밀번호와 다르게 설정해주세요.");
+        return false;
+    }
+
+    const newPassword2 = prompt("새 비밀번호를 한 번 더 입력해주세요.");
+    if (newPassword !== newPassword2) {
+        alert("새 비밀번호가 서로 다릅니다.");
+        return false;
+    }
+
+    try {
+        showLoading("비밀번호 변경 중...");
+
+        const query = new URLSearchParams();
+        query.set('action', 'changeStudentPassword');
+        query.set('studentSessionToken', token);
+        query.set('currentPassword', currentPassword);
+        query.set('newPassword', newPassword);
+        query.set('_', Date.now());
+
+        const response = await fetch(`${GET_API_URL}?${query.toString()}`);
+        hideLoading();
+
+        if (!response.ok) throw new Error('서버 응답이 원활하지 않습니다. 잠시 후 다시 시도해주세요.');
+        const result = await response.json();
+
+        if (result && result.status === 'success') {
+            if (result.sessionToken) {
+                studentSessionToken = result.sessionToken;
+                localStorage.setItem('studentSessionToken', studentSessionToken);
+            }
+
+            if (result.name) {
+                studentName = result.name;
+                localStorage.setItem('studentName', studentName);
+            }
+
+            if (result.instructor) {
+                instructorName = result.instructor;
+                localStorage.setItem('instructorName', instructorName);
+            }
+
+            studentMustChangePassword = false;
+            localStorage.setItem('studentMustChangePassword', 'N');
+
+            if (typeof updateFilenameConstants === 'function') updateFilenameConstants();
+
+            alert("비밀번호가 변경되었습니다.");
+            return true;
+        }
+
+        alert((result && result.message) || "비밀번호를 변경하지 못했습니다.");
+        return false;
+    } catch (err) {
+        hideLoading();
+        alert(err.message || "비밀번호 변경 중 문제가 발생했습니다.");
+        return false;
+    }
+}
+</script>
+
+
+<style>
+/* =========================================================
+   5-14 학생 계정 버튼 UI
+   ========================================================= */
+.ulim-student-account-bar {
+    position: fixed;
+    top: 12px;
+    right: 18px;
+    z-index: 9998;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    background: rgba(255,255,255,.94);
+    border: 1px solid #d9eadf;
+    border-radius: 999px;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, .10);
+    backdrop-filter: blur(6px);
+    font-size: 12px;
+}
+.ulim-student-account-name {
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #166534;
+    font-weight: 800;
+    padding: 0 6px;
+}
+.ulim-student-account-btn {
+    border: 0;
+    border-radius: 999px;
+    padding: 7px 10px;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    color: #fff;
+    background: #22c55e;
+    transition: transform .12s ease, opacity .12s ease;
+}
+.ulim-student-account-btn:hover {
+    transform: translateY(-1px);
+    opacity: .92;
+}
+.ulim-student-account-btn.gray {
+    background: #64748b;
+}
+.ulim-student-account-btn.blue {
+    background: #2563eb;
+}
+.ulim-student-account-btn.orange {
+    background: #f97316;
+}
+.ulim-student-account-btn.dark {
+    background: #111827;
+}
+@media (max-width: 720px) {
+    .ulim-student-account-bar {
+        top: auto;
+        bottom: 12px;
+        right: 10px;
+        left: 10px;
+        justify-content: center;
+        flex-wrap: wrap;
+        border-radius: 18px;
+    }
+    .ulim-student-account-name {
+        max-width: 100%;
+        flex-basis: 100%;
+        text-align: center;
+    }
+}
+</style>
+
+<script>
+/* =========================================================
+   5-14 학생 계정 버튼 UI + 비밀번호 찾기
+   - 우측 상단: 학생 로그인/로그아웃/비밀번호 찾기/비밀번호 변경
+   - 비밀번호 찾기는 현재 비밀번호를 보여주지 않고, 등록된 전화번호 뒤4자리 확인 후 초기비밀번호로 재설정
+   ========================================================= */
+
+function ulimIsStudentLoggedIn_() {
+    const token = (typeof getStudentSessionToken_ === 'function')
+        ? getStudentSessionToken_()
+        : (typeof studentSessionToken !== 'undefined' ? studentSessionToken : localStorage.getItem('studentSessionToken'));
+    const name = (typeof studentName !== 'undefined' && studentName) ? studentName : localStorage.getItem('studentName');
+    return !!token && !!name && name !== '게스트';
+}
+
+function renderStudentAccountBar_() {
+    let bar = document.getElementById('ulimStudentAccountBar');
+    if (!bar) {
+        bar = document.createElement('div');
+        bar.id = 'ulimStudentAccountBar';
+        bar.className = 'ulim-student-account-bar';
+        document.body.appendChild(bar);
+    }
+
+    const loggedIn = ulimIsStudentLoggedIn_();
+    const name = (typeof studentName !== 'undefined' && studentName)
+        ? studentName
+        : (localStorage.getItem('studentName') || '');
+
+    if (loggedIn) {
+        bar.innerHTML = `
+            <span class="ulim-student-account-name">👤 ${escapeHtml_(name)}님</span>
+            <button type="button" class="ulim-student-account-btn blue" onclick="changeStudentPasswordByPrompt()">비밀번호 변경</button>
+            <button type="button" class="ulim-student-account-btn gray" onclick="studentSecureLogout()">로그아웃</button>
+        `;
+    } else {
+        bar.innerHTML = `
+            <button type="button" class="ulim-student-account-btn" onclick="showStudentLoginPanel()">학생 로그인</button>
+        `;
+    }
+}
+
+function escapeHtml_(value) {
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 function showStudentLoginPanel() {
     const overlay = document.getElementById('loginOverlay');
     const wrapper = document.querySelector('.wrapper');
@@ -11219,6 +13168,65 @@ function adminRenderNoticeTargetTable() {
     ulimAdminAfterRender_();
 }
 
+function adminRenderAttendanceTable() {
+    const wrap = document.getElementById('adminAttendanceTableWrap');
+    if (!wrap) return;
+
+    if (!adminAttendanceRecords.length) {
+        wrap.innerHTML = `<div class="notice-empty">출석부 데이터를 불러오세요. 날짜와 반명을 선택한 뒤 [출석부 반영]을 누르면 됩니다.</div>`;
+        return;
+    }
+
+    const isFull = adminIsFullAdmin();
+    let html = `<table class="admin-table">
+        <thead>
+            <tr>
+                <th><input type="checkbox" id="adminAttendSelectAll" onchange="adminToggleAttendanceAll(this.checked)" checked></th>
+                <th>출석체크</th>
+                <th>현재상태</th>
+                <th>특이사항</th>
+                <th>학생명</th>
+                <th>반명/수업명</th>
+                <th>강의실</th>
+                ${isFull ? '<th>학생전화</th><th>학부모전화</th>' : ''}
+                <th>메모</th>
+            </tr>
+        </thead>
+        <tbody>`;
+
+    adminAttendanceRecords.forEach((r, idx) => {
+        const status = adminNormalizeAttendanceStatusForUi_(r.status || r.attendanceStatus || '');
+        const phoneCells = isFull
+            ? `<td>${ulimAdminEsc_(r.studentPhone || '')}</td><td>${ulimAdminEsc_(r.parentPhone || '')}</td>`
+            : '';
+        const specialCell = r.specialStatus
+            ? `<span class="admin-status-badge">${ulimAdminEsc_(r.specialStatus)}</span>`
+            : '-';
+
+        html += `<tr data-att-index="${idx}">
+            <td><input type="checkbox" class="admin-att-check" checked></td>
+            <td>
+                <button type="button" class="admin-att-mini ok" onclick="adminSetAttendanceRowStatus(${idx}, '출석')">O</button>
+                <button type="button" class="admin-att-mini no" onclick="adminSetAttendanceRowStatus(${idx}, '결석')">X</button>
+                <select class="admin-att-status-select" data-field="status" onchange="adminSyncAttendanceRowStatus(${idx}, this.value)">
+                    ${['미체크','출석','결석','지각','조퇴','보강','휴원'].map(v => `<option value="${v}" ${status === v ? 'selected' : ''}>${v}</option>`).join('')}
+                </select>
+            </td>
+            <td><span class="admin-status-badge ${status === '출석' ? 'attendance-ok' : (status === '결석' ? 'attendance-no' : '')}">${ulimAdminEsc_(status || '미체크')}</span></td>
+            <td>${specialCell}</td>
+            <td><b>${ulimAdminEsc_(r.studentName)}</b></td>
+            <td>${ulimAdminEsc_(r.className || '')}</td>
+            <td>${ulimAdminEsc_(r.classroom || r.roomName || r.room || '')}</td>
+            ${phoneCells}
+            <td><input class="admin-small-input" data-field="memo" value="${ulimAdminEsc_(r.memo || '')}" placeholder="메모"></td>
+        </tr>`;
+    });
+
+    html += `</tbody></table>`;
+    wrap.innerHTML = html;
+    ulimAdminAfterRender_();
+}
+
 function adminRenderDailyEvalRows(message = '') {
     const wrap = document.getElementById('adminDailyEvalTableWrap');
     if (!wrap) return;
@@ -11793,7 +13801,7 @@ function pollTrainingFinalAiResult_(requestId) {
                     }
                     const st = document.getElementById('recStatus');
                     if (st) st.textContent = '리미가 분석중입니다.';
-                    trainingFinalAiPollingTimer = setTimeout(poll, 1500); // 2200→1500ms (반응속도 개선)
+                    trainingFinalAiPollingTimer = setTimeout(poll, 2200);
                     return;
                 }
 
@@ -11810,11 +13818,100 @@ function pollTrainingFinalAiResult_(requestId) {
                 resolve(data);
             } catch (err) {
                 if (trainingFinalAiPollingCount > 20) return reject(err);
-                trainingFinalAiPollingTimer = setTimeout(poll, 1500); // 2200→1500ms
+                trainingFinalAiPollingTimer = setTimeout(poll, 2200);
             }
         };
-        trainingFinalAiPollingTimer = setTimeout(poll, 800); // 1200→800ms (반응속도 개선)
+        trainingFinalAiPollingTimer = setTimeout(poll, 1200);
     });
+}
+
+async function runTrainingFinalAiAnalysisFromButton() {
+    if (window.trainingFinalAiInProgress) {
+        return alert('리미가 이미 분석중입니다. 잠시만 기다려주세요.');
+    }
+
+    if (step !== 6 || !currentTrainObj) {
+        return alert('최종녹음 및 AI 분석 단계에서 사용할 수 있습니다.');
+    }
+    if (!lastRecordedBlob) {
+        return alert('먼저 녹음을 완료해주세요.');
+    }
+
+    const todayCheck = await checkVocalTrainingTodayCompletedFromServer_({ timeoutMs: 10000 });
+    if (todayCheck && todayCheck.completed) {
+        resetTrainingFinalAiRequestState_();
+        return alert('오늘은 연습을 완료했습니다.');
+    }
+
+    if (window.trainingFinalAiResult && window.trainingFinalAiResult.requestSentence === currentTrainObj.text) {
+        resetTrainingFinalAiRequestState_();
+        return alert('이미 마지막 녹음본의 AI 분석이 완료되었습니다. 다시 분석하려면 새로 녹음 후 실행해주세요.');
+    }
+
+    const ok = confirm('AI분석을 시작하면 오늘연습이 완료됩니다. 진행하시겠습니까?');
+    if (!ok) return;
+
+    window.trainingFinalAiInProgress = true;
+    window.trainingFinalAiActiveRequestId = buildTrainingFinalRequestId_();
+
+    const btn = document.getElementById('trainingAiAnalyzeBtn');
+
+    try {
+        setTrainingAiLoadingState_(true);
+
+        const resultBox = document.getElementById('resultBox');
+        if (resultBox) resultBox.style.display = 'block';
+
+        const aiSection = document.getElementById('aiSection');
+        const recSection = document.getElementById('recSection');
+        if (aiSection) aiSection.style.display = 'block';
+        if (recSection) recSection.style.display = 'block';
+
+        const sttEl = document.getElementById('sttResult');
+        const badge = document.getElementById('accBadge');
+        if (sttEl) sttEl.textContent = '리미가 분석중입니다.';
+        if (badge) { badge.className = 'accuracy-badge acc-wait'; badge.textContent = '분석중'; }
+
+        const recStatus = document.getElementById('recStatus');
+        if (recStatus) recStatus.textContent = '리미가 분석중입니다.';
+
+        await Promise.race([
+            runTrainingFinalAiAnalysis_(lastRecordedBlob, { force: true }),
+            trainingAiTimeout_(90000, '리미 분석 시간이 오래 걸리고 있습니다. 잠시 후 다시 시도해주세요.')
+        ]);
+
+        const recStatusDone = document.getElementById('recStatus');
+        if (recStatusDone) recStatusDone.textContent = '리미 분석 완료. 연습완료 버튼을 눌러 결과를 업로드할 수 있습니다.';
+        enableVocalTrainingCompleteButton_();
+    } catch (err) {
+        console.warn('Training final analysis failed:', err);
+
+        if (isTrainingAiLimitError_(err)) {
+            renderTrainingFinalAiLimitState_(err.message || '오늘 최종 AI 분석은 이미 사용했습니다.');
+            return;
+        }
+
+        const fallbackResult = await buildTrainingFinalFallbackResult_(lastRecordedBlob, err);
+        renderTrainingFinalAiResult_(fallbackResult);
+        enableVocalTrainingCompleteButton_();
+
+        const recStatusEl = document.getElementById('recStatus');
+        if (recStatusEl) {
+            recStatusEl.textContent = '리미의 간단분석! 연습완료 버튼을 눌러 결과를 업로드할 수 있습니다.';
+        }
+    } finally {
+        window.__ulimTrainingAiDuplicateFixVersion = "5-29";
+window.trainingFinalAiInProgress = false;
+        window.trainingFinalAiActiveRequestId = '';
+        setTrainingAiLoadingState_(false);
+        if (btn) {
+            btn.disabled = false;
+            btn.classList.remove('training-ai-loading');
+            btn.dataset.loading = '0';
+            btn.textContent = 'AI';
+            btn.style.opacity = '1';
+        }
+    }
 }
 
 /* 새 녹음 시작/완료 이후에도 혹시 남은 분석중 상태 제거 */
@@ -12501,7 +14598,12 @@ ${ruleSummary}`, isFallback ? "success" : "success");
   window.ULIM_PATCH_5_36_LIMI_FUNNY_AND_ADMIN_DETAIL = true;
 
   const LIMI_PUBLIC_FALLBACK_MESSAGES_5_36 = [
-    '분석 서버 응답이 지연되어 기본 분석 결과를 먼저 보여드립니다.'
+    '리미가 잠시 파업중입니다 😅\n기본 분석 결과를 먼저 보여드릴게요.',
+    '리미가 커피를 마시러 갔습니다 ☕\n기본 분석으로 먼저 확인해볼게요.',
+    '리미가 발음사전을 너무 진지하게 뒤적이고 있습니다 📚\n기본 분석 결과를 표시합니다.',
+    '리미가 녹음실에서 길을 잃었습니다 🎙️\n기본 분석으로 이어서 진행할게요.',
+    '리미가 오늘 너무 열심히 일해서 쉬는 중입니다 😴\n기본 분석 결과를 보여드릴게요.',
+    '리미가 결과지를 들고 오다가 넘어졌습니다 📄\n기본 분석으로 먼저 확인해볼게요.'
   ];
 
   function ulimGetActiveRole_5_36() {
@@ -12588,9 +14690,8 @@ ${ruleSummary}`, isFallback ? "success" : "success");
 
   const nativeAlert_5_36 = window.alert;
   window.alert = function(message) {
-    // 5-44: 로그인/비밀번호/일반 안내 alert까지 AI fallback 문구로 바뀌는 문제 방지.
-    // AI 분석 영역의 문구 치환은 pronSetAdvancedStatus / ulimSafeUserMessage_5_35에서만 처리합니다.
-    return nativeAlert_5_36.call(window, String(message || ''));
+    if (ulimIsFullAdmin_5_36()) return nativeAlert_5_36.call(window, String(message || ''));
+    return nativeAlert_5_36.call(window, ulimPublicAiMessage_5_36(message));
   };
 
   window.pronSetAdvancedStatus = function(message, type) {
@@ -12728,778 +14829,6 @@ ${ruleSummary}`, isFallback ? "success" : "success");
     };
     try { pronRunEtriAdvancedAnalysis = window.pronRunEtriAdvancedAnalysis; } catch(e) {}
   }
-})();
-</script>
-
-
-
-<script>
-/* =========================================================
-   5_45차 긴급복구 패치
-   - 연습실 예약 달력: getRoomCacheKey / getRoomLocalStorageKey 누락 복구
-   - 학생 상단 계정바: renderStudentAccountBar_ 누락 복구
-   - 관리자 출석체크: adminNormalizeAttendanceStatusForUi_ 누락 복구
-   - 기존 구조를 변경하지 않고 누락 헬퍼만 보강
-   ========================================================= */
-(function installUlimV545MissingHelperRecovery_(){
-    function cleanKeyPart_(value) {
-        return String(value == null ? '' : value)
-            .replace(/\s+/g, '')
-            .replace(/[^0-9A-Za-z가-힣_-]/g, '_')
-            .slice(0, 80) || 'guest';
-    }
-
-    window.getRoomCacheKey = function getRoomCacheKey(year, month) {
-        const y = Number(year) || new Date().getFullYear();
-        const m = String(Number(month) || (new Date().getMonth() + 1)).padStart(2, '0');
-        return `${y}-${m}`;
-    };
-
-    window.getRoomLocalStorageKey = function getRoomLocalStorageKey(cacheKey) {
-        const name = (typeof window.studentName !== 'undefined' && window.studentName) ? window.studentName : (localStorage.getItem('studentName') || 'guest');
-        const no = (typeof window.studentNo !== 'undefined' && window.studentNo) ? window.studentNo : (localStorage.getItem('studentNo') || '');
-        const phone = (typeof window.phoneLast4 !== 'undefined' && window.phoneLast4) ? window.phoneLast4 : (localStorage.getItem('phoneLast4') || '');
-        const userKey = cleanKeyPart_([no, name, phone].filter(Boolean).join('_'));
-        return `ulim_room_reservation_cache_${userKey}_${String(cacheKey || '')}`;
-    };
-
-    window.adminNormalizeAttendanceStatusForUi_ = function adminNormalizeAttendanceStatusForUi_(value) {
-        const raw = String(value == null ? '' : value).replace(/\s+/g, '').trim();
-        if (!raw) return '미체크';
-        if (/^(O|○|출석|등원|완료|참석|출결완료)$/i.test(raw)) return '출석';
-        if (/^(X|×|✕|결석|미출석|불참)$/i.test(raw)) return '결석';
-        if (/지각/.test(raw)) return '지각';
-        if (/휴원|휴강|쉼|쉬/.test(raw)) return '휴원';
-        if (/보강/.test(raw)) return '보강';
-        if (/미체크|대기|미정|확인전/.test(raw)) return '미체크';
-        return value || '미체크';
-    };
-
-    window.renderStudentAccountBar_ = function renderStudentAccountBar_() {
-        let bar = document.getElementById('ulimStudentAccountBar');
-        const isAdminView = document.body && (
-            document.body.classList.contains('admin-mode') ||
-            document.body.classList.contains('teacher-mode') ||
-            (document.getElementById('tabAdmin') && document.getElementById('tabAdmin').classList.contains('active'))
-        );
-
-        if (isAdminView) {
-            if (bar) bar.style.display = 'none';
-            return;
-        }
-
-        const name = (typeof window.studentName !== 'undefined' && window.studentName) ? window.studentName : (localStorage.getItem('studentName') || '');
-        const instructor = (typeof window.instructorName !== 'undefined' && window.instructorName) ? window.instructorName : (localStorage.getItem('instructorName') || '');
-        const token = (typeof window.studentSessionToken !== 'undefined' && window.studentSessionToken) ? window.studentSessionToken : (localStorage.getItem('studentSessionToken') || '');
-        const isStudent = !!name && name !== '게스트';
-        const isGuest = name === '게스트';
-
-        if (!isStudent && !isGuest) {
-            if (bar) bar.style.display = 'none';
-            return;
-        }
-
-        if (!bar) {
-            bar = document.createElement('div');
-            bar.id = 'ulimStudentAccountBar';
-            bar.className = 'ulim-student-account-bar';
-            document.body.appendChild(bar);
-        }
-
-        bar.style.cssText = [
-            'position:fixed',
-            'right:18px',
-            'bottom:18px',
-            'z-index:12000',
-            'display:flex',
-            'align-items:center',
-            'gap:8px',
-            'padding:10px 12px',
-            'border-radius:999px',
-            'background:rgba(255,255,255,0.96)',
-            'border:1px solid #dcfce7',
-            'box-shadow:0 8px 24px rgba(15,23,42,0.16)',
-            'font-size:13px',
-            'font-weight:800',
-            'color:#166534'
-        ].join(';');
-
-        const infoText = isStudent
-            ? `${name}${instructor && instructor !== '기본' ? ' · ' + instructor + 'T' : ''}`
-            : '게스트 모드';
-
-        const showPasswordButton = isStudent && !!token;
-        bar.innerHTML = `
-            <span style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtmlForUlim545_(infoText)}</span>
-            ${showPasswordButton ? '<button type="button" data-ulim-account-action="password">비밀번호 변경</button>' : ''}
-            <button type="button" data-ulim-account-action="logout">${isStudent ? '로그아웃' : '로그인'}</button>
-        `;
-
-        bar.querySelectorAll('button').forEach(btn => {
-            btn.style.cssText = 'border:none; border-radius:999px; padding:7px 10px; font-size:12px; font-weight:900; cursor:pointer; color:#fff; background:#16a34a;';
-        });
-
-        const pwBtn = bar.querySelector('[data-ulim-account-action="password"]');
-        if (pwBtn) {
-            pwBtn.onclick = function() {
-                if (typeof changeStudentPasswordByPrompt === 'function') return changeStudentPasswordByPrompt();
-                alert('비밀번호 변경 기능을 준비 중입니다.');
-            };
-        }
-
-        const logoutBtn = bar.querySelector('[data-ulim-account-action="logout"]');
-        if (logoutBtn) {
-            logoutBtn.onclick = function() {
-                if (isStudent && typeof studentSecureLogout === 'function') return studentSecureLogout();
-                if (typeof showStudentLoginPanel === 'function') return showStudentLoginPanel();
-                const overlay = document.getElementById('loginOverlay');
-                const wrapper = document.querySelector('.wrapper');
-                if (overlay) overlay.style.display = 'flex';
-                if (wrapper) wrapper.style.display = 'none';
-            };
-        }
-    };
-
-    function escapeHtmlForUlim545_(value) {
-        if (typeof window.escapeHtml === 'function') return window.escapeHtml(value);
-        if (typeof window.escapeHtml_ === 'function') return window.escapeHtml_(value);
-        return String(value == null ? '' : value)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
-    }
-
-    window.addEventListener('DOMContentLoaded', function() {
-        try { window.renderStudentAccountBar_(); } catch (e) { console.warn('계정바 렌더링 보강 실패:', e); }
-    });
-})();
-</script>
-
-<script>
-/* =========================================================
-   울림앱 5_46차 관리자 기능 복구 패치
-   - 5_37 시점에 작동하던 관리자 탭 흐름 기준으로 프론트 누락 함수 복구
-   - 출석체크 O/X 즉시 저장, 선택 저장, 발성 연습일지 조회/코멘트,
-     강의실 사용체크 시간표/저장/해제, 게스트 로그인, 관리자 비밀번호 변경 보강
-   ========================================================= */
-(function(){
-  'use strict';
-  window.__ULIM_INDEX_5_46_ADMIN_REPAIR__ = true;
-
-  const DEFAULT_CLASSROOM_ROOMS_546 = ['2강의실','3강의실','4강의실','5강의실','신체훈련실','개인부스1','개인부스2','개인부스3','녹음실'];
-  const DEFAULT_CLASSROOM_INSTRUCTORS_546 = ['이용우','김하은','박소연','양슬기','최봄결','강호철','김인형','박성광','박송','박주광','안수현','최현식','상담','녹음'];
-  let classroomUsageRecords_546 = [];
-  let classroomUsageRooms_546 = [];
-  let classroomUsageOptionsDate_546 = '';
-
-  function safeEsc546(value) {
-    if (typeof window.ulimAdminEsc_ === 'function') return window.ulimAdminEsc_(value);
-    if (typeof window.escapeHtml_ === 'function') return window.escapeHtml_(value);
-    if (typeof window.escapeHtml === 'function') return window.escapeHtml(value);
-    return String(value == null ? '' : value)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
-
-  function adminToken546() {
-    try {
-      if (typeof adminToken !== 'undefined' && adminToken) return adminToken;
-    } catch (e) {}
-    return localStorage.getItem('adminToken') || '';
-  }
-
-  function adminInfo546() {
-    try {
-      if (typeof adminInfo !== 'undefined' && adminInfo) return adminInfo;
-    } catch (e) {}
-    try { return JSON.parse(localStorage.getItem('adminInfo') || 'null') || {}; }
-    catch (e) { return {}; }
-  }
-
-  function today546() {
-    if (typeof window.getTodayInputValue === 'function') return window.getTodayInputValue();
-    const d = new Date();
-    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-  }
-
-  function showLoading546(message) {
-    if (typeof window.showLoading === 'function') window.showLoading(message || '처리 중...');
-  }
-
-  function hideLoading546() {
-    if (typeof window.hideLoading === 'function') window.hideLoading();
-  }
-
-  function normalizeText546(value) {
-    return String(value || '').replace(/\s+/g, '').replace(/T$/i, '').trim();
-  }
-
-  function normalizeStatus546(value) {
-    if (typeof window.adminNormalizeAttendanceStatusForUi_ === 'function') return window.adminNormalizeAttendanceStatusForUi_(value);
-    const raw = String(value == null ? '' : value).replace(/\s+/g, '').trim();
-    if (!raw) return '미체크';
-    if (/^(O|○|출석|등원|완료|참석|출결완료)$/i.test(raw)) return '출석';
-    if (/^(X|×|✕|결석|미출석|불참)$/i.test(raw)) return '결석';
-    if (/지각/.test(raw)) return '지각';
-    if (/휴원|휴강|쉼|쉬/.test(raw)) return '휴원';
-    if (/보강/.test(raw)) return '보강';
-    return raw || '미체크';
-  }
-
-  function setSaveState546(idx, text, kind) {
-    const el = document.getElementById('admin-att-save-state-' + idx);
-    if (!el) return;
-    el.textContent = text || '';
-    el.style.color = kind === 'error' ? '#dc2626' : (kind === 'ok' ? '#16a34a' : '#6b7280');
-  }
-
-  function syncAttendanceRowUi546(idx, status) {
-    const normalized = normalizeStatus546(status);
-    const row = document.querySelector('#adminAttendanceTableWrap tr[data-att-index="' + idx + '"]');
-    if (row) {
-      const select = row.querySelector('select[data-field="status"]');
-      if (select) select.value = normalized;
-      const badge = row.querySelector('#admin-att-badge-' + idx) || row.querySelector('.admin-status-badge');
-      if (badge) {
-        badge.textContent = normalized || '미체크';
-        badge.className = 'admin-status-badge ' + (normalized === '출석' ? 'attendance-ok' : (normalized === '결석' ? 'attendance-no' : (normalized === '지각' ? 'attendance-late' : '')));
-      }
-      row.querySelectorAll('.admin-att-mini').forEach(btn => btn.classList.remove('selected'));
-      if (normalized === '출석') {
-        const btn = row.querySelector('.admin-att-mini.ok');
-        if (btn) btn.classList.add('selected');
-      }
-      if (normalized === '결석') {
-        const btn = row.querySelector('.admin-att-mini.no');
-        if (btn) btn.classList.add('selected');
-      }
-    }
-    try {
-      if (typeof adminAttendanceRecords !== 'undefined' && adminAttendanceRecords[idx]) {
-        adminAttendanceRecords[idx].status = normalized;
-        adminAttendanceRecords[idx].attendanceStatus = normalized;
-      }
-    } catch (e) {}
-    return normalized;
-  }
-
-  function attendanceRecordFromRow546(idx) {
-    let base = {};
-    try { base = Object.assign({}, (typeof adminAttendanceRecords !== 'undefined' ? adminAttendanceRecords[idx] : {}) || {}); }
-    catch (e) { base = {}; }
-    const row = document.querySelector('#adminAttendanceTableWrap tr[data-att-index="' + idx + '"]');
-    if (row) {
-      const statusEl = row.querySelector('[data-field="status"]');
-      const memoEl = row.querySelector('[data-field="memo"]');
-      if (statusEl) {
-        base.status = normalizeStatus546(statusEl.value);
-        base.attendanceStatus = base.status;
-      } else {
-        base.status = normalizeStatus546(base.status || base.attendanceStatus || '');
-        base.attendanceStatus = base.status;
-      }
-      if (memoEl) base.memo = memoEl.value || '';
-    }
-    if (!base.date) base.date = document.getElementById('adminAttendanceDate')?.value || today546();
-    return base;
-  }
-
-  window.adminToggleAttendanceAll = function adminToggleAttendanceAll(checked) {
-    document.querySelectorAll('#adminAttendanceTableWrap .admin-att-check').forEach(chk => { chk.checked = !!checked; });
-  };
-  window.adminToggleSelectAllAttendanceTable = window.adminToggleAttendanceAll;
-
-  window.adminGetSelectedAttendanceRecords = function adminGetSelectedAttendanceRecords() {
-    const records = [];
-    document.querySelectorAll('#adminAttendanceTableWrap tr[data-att-index]').forEach(row => {
-      const chk = row.querySelector('.admin-att-check');
-      if (chk && !chk.checked) return;
-      const idx = Number(row.dataset.attIndex);
-      if (!Number.isFinite(idx)) return;
-      records.push(attendanceRecordFromRow546(idx));
-    });
-    return records;
-  };
-
-  window.adminSaveAttendanceFromTable = async function adminSaveAttendanceFromTable(silent) {
-    const records = window.adminGetSelectedAttendanceRecords();
-    if (!records.length) {
-      alert('선택된 출석 데이터가 없습니다.');
-      return;
-    }
-    try {
-      showLoading546('출석부에 반영 중...');
-      const data = await adminApi('adminSaveAttendance', {
-        adminToken: adminToken546(),
-        records: JSON.stringify(records),
-        noCache: '1'
-      });
-      hideLoading546();
-      const summary = document.getElementById('adminAttendanceSummary');
-      if (summary) summary.textContent = data.message || ('출석부 저장 완료: ' + records.length + '건');
-      if (!silent) alert(data.message || '출석부에 저장했습니다.');
-      return data;
-    } catch (e) {
-      hideLoading546();
-      alert(e.message || '출석부 저장에 실패했습니다.');
-      throw e;
-    }
-  };
-
-  window.adminQuickSetAttendance = async function adminQuickSetAttendance(idx, status) {
-    const normalized = syncAttendanceRowUi546(idx, status);
-    const record = attendanceRecordFromRow546(idx);
-    record.status = normalized;
-    record.attendanceStatus = normalized;
-    setSaveState546(idx, '저장중...', 'wait');
-    try {
-      const data = await adminApi('adminSaveAttendance', {
-        adminToken: adminToken546(),
-        records: JSON.stringify([record]),
-        noCache: '1'
-      });
-      setSaveState546(idx, '저장완료', 'ok');
-      const summary = document.getElementById('adminAttendanceSummary');
-      if (summary) summary.textContent = data.message || (record.studentName || '') + ' 출석부 반영 완료';
-      setTimeout(() => setSaveState546(idx, '', ''), 1600);
-      return data;
-    } catch (e) {
-      setSaveState546(idx, '저장실패', 'error');
-      alert(e.message || '출석부 저장에 실패했습니다.');
-      throw e;
-    }
-  };
-
-  window.adminSaveAttendanceStatusChange = async function adminSaveAttendanceStatusChange(idx) {
-    const record = attendanceRecordFromRow546(idx);
-    return window.adminQuickSetAttendance(idx, record.status || record.attendanceStatus || '미체크');
-  };
-
-  // 기존 showAdminPanel에서 호출하던 반목록 로딩 호환명입니다.
-  window.adminGetAttendanceClassesForUi = async function adminGetAttendanceClassesForUi(force) {
-    const date = document.getElementById('adminAttendanceDate')?.value || today546();
-    if (typeof window.adminLoadClassList === 'function') {
-      await window.adminLoadClassList(date, !!force);
-    }
-    try { return (typeof adminClassList !== 'undefined' && Array.isArray(adminClassList)) ? adminClassList : []; }
-    catch (e) { return []; }
-  };
-
-  function extractTeacherFromClassName546(className) {
-    const text = String(className || '').trim();
-    let m = text.match(/^\[([^\]]+?)T?\]/);
-    if (m) return m[1].replace(/T$/i, '').trim();
-    m = text.match(/^([^\s\[]+?)T\s/);
-    if (m) return m[1].replace(/T$/i, '').trim();
-    return '';
-  }
-
-  async function ensureVocalClassUi546(force) {
-    const panel = document.getElementById('adminPanelVocalPractice');
-    const grid = panel ? panel.querySelector('.admin-grid') : null;
-    if (!grid) return;
-
-    let field = document.getElementById('adminVocalPracticeClassField');
-    if (!field) {
-      field = document.createElement('div');
-      field.className = 'admin-field';
-      field.id = 'adminVocalPracticeClassField';
-      field.innerHTML = '<label for="adminVocalPracticeClassSelect">반목록</label><select id="adminVocalPracticeClassSelect"><option value="">전체 반</option></select>';
-      const keywordField = document.getElementById('adminVocalPracticeKeyword')?.closest('.admin-field');
-      if (keywordField) grid.insertBefore(field, keywordField);
-      else grid.appendChild(field);
-    }
-
-    const date = document.getElementById('adminVocalPracticeDate')?.value || today546();
-    if (typeof window.adminLoadClassList === 'function') {
-      try { await window.adminLoadClassList(date, !!force); } catch (e) { console.warn('발성 연습일지 반목록 로딩 실패:', e); }
-    }
-
-    const select = document.getElementById('adminVocalPracticeClassSelect');
-    if (!select) return;
-    const previous = select.value || '';
-    let classes = [];
-    try { classes = (typeof adminClassList !== 'undefined' && Array.isArray(adminClassList)) ? adminClassList.slice() : []; } catch (e) {}
-    if (!classes.length && Array.isArray(window.ADMIN_NOTICE_FIXED_CLASS_LIST)) classes = window.ADMIN_NOTICE_FIXED_CLASS_LIST.slice();
-    try { if (!classes.length && typeof ADMIN_NOTICE_FIXED_CLASS_LIST !== 'undefined') classes = ADMIN_NOTICE_FIXED_CLASS_LIST.slice(); } catch (e) {}
-    const normalizedSeen = {};
-    classes = classes.map(c => typeof c === 'string' ? c : (c.className || c.name || c.title || '')).filter(Boolean).filter(c => {
-      const key = normalizeText546(c);
-      if (!key || normalizedSeen[key]) return false;
-      normalizedSeen[key] = true;
-      return true;
-    });
-    select.innerHTML = '<option value="">전체 반</option>' + classes.map(c => '<option value="' + safeEsc546(c) + '">' + safeEsc546(c) + '</option>').join('');
-    if (previous && Array.from(select.options).some(o => o.value === previous)) select.value = previous;
-    select.onchange = function() {
-      const teacher = extractTeacherFromClassName546(this.value);
-      const instructorInput = document.getElementById('adminVocalPracticeInstructor');
-      if (instructorInput && teacher) instructorInput.value = teacher;
-      window.adminLoadVocalPracticeLogs(false);
-    };
-  }
-
-  window.adminInitVocalPracticePanel_ = async function adminInitVocalPracticePanel_() {
-    const dateEl = document.getElementById('adminVocalPracticeDate');
-    if (dateEl && !dateEl.value) dateEl.value = today546();
-    await ensureVocalClassUi546(false);
-  };
-
-  window.adminLoadVocalPracticeLogs = async function adminLoadVocalPracticeLogs(showAlert) {
-    if (!adminToken546()) return;
-    try {
-      await ensureVocalClassUi546(false);
-      const date = document.getElementById('adminVocalPracticeDate')?.value || today546();
-      const classValue = document.getElementById('adminVocalPracticeClassSelect')?.value || '';
-      const instructorInput = document.getElementById('adminVocalPracticeInstructor');
-      const instructor = (instructorInput?.value || extractTeacherFromClassName546(classValue) || '').trim();
-      const keyword = document.getElementById('adminVocalPracticeKeyword')?.value || '';
-      showLoading546('발성 연습기록 조회 중...');
-      const data = await adminApi('adminGetVocalPracticeLogs', {
-        adminToken: adminToken546(),
-        date,
-        instructor,
-        keyword,
-        forceRefresh: '1'
-      });
-      hideLoading546();
-      try { adminVocalPracticeLogs = Array.isArray(data.logs) ? data.logs : []; }
-      catch (e) { window.adminVocalPracticeLogs = Array.isArray(data.logs) ? data.logs : []; }
-      if (typeof window.adminRenderVocalPracticeLogs === 'function') window.adminRenderVocalPracticeLogs();
-      const summary = document.getElementById('adminVocalPracticeSummary');
-      if (summary) summary.textContent = data.message || ('연습기록 ' + ((data.logs || []).length) + '건');
-      if (showAlert && !(data.logs || []).length) alert('조회된 발성 연습기록이 없습니다. 날짜/반목록/학생명을 확인해주세요.');
-      return data;
-    } catch (e) {
-      hideLoading546();
-      alert(e.message || '발성 연습기록을 불러오지 못했습니다.');
-      throw e;
-    }
-  };
-
-  window.adminSaveVocalPracticeComment = async function adminSaveVocalPracticeComment(idx) {
-    let log = null;
-    try { log = (typeof adminVocalPracticeLogs !== 'undefined' ? adminVocalPracticeLogs[idx] : null); } catch (e) {}
-    if (!log) return alert('저장할 연습기록을 찾지 못했습니다.');
-    const textarea = document.getElementById('practiceComment_' + idx);
-    const comment = textarea ? textarea.value : '';
-    try {
-      showLoading546('강사 코멘트 저장 중...');
-      const data = await adminApi('adminSaveVocalPracticeComment', {
-        adminToken: adminToken546(),
-        recordId: log.recordId,
-        comment,
-        noCache: '1'
-      });
-      hideLoading546();
-      log.teacherComment = comment;
-      log.teacherCommentAt = new Date().toLocaleString('ko-KR');
-      alert(data.message || '강사 코멘트를 저장했습니다.');
-      await window.adminLoadVocalPracticeLogs(false);
-      return data;
-    } catch (e) {
-      hideLoading546();
-      alert(e.message || '강사 코멘트 저장에 실패했습니다.');
-      throw e;
-    }
-  };
-
-  function hourNumber546(value) {
-    if (typeof value === 'number') return value;
-    const m = String(value == null ? '' : value).match(/\d{1,2}/);
-    if (!m) return null;
-    const n = Number(m[0]);
-    return Number.isFinite(n) ? n : null;
-  }
-
-  function hourText546(h) {
-    const n = Number(h);
-    if (!Number.isFinite(n)) return '';
-    return String(n).padStart(2, '0') + ':00';
-  }
-
-  function fillSelect546(select, values, current) {
-    if (!select) return;
-    const prev = current !== undefined ? current : select.value;
-    select.innerHTML = (values || []).map(v => '<option value="' + safeEsc546(v) + '">' + safeEsc546(v) + '</option>').join('');
-    if (prev && Array.from(select.options).some(o => o.value === prev)) select.value = prev;
-  }
-
-  async function loadClassroomOptions546(force) {
-    const date = document.getElementById('adminClassroomUsageDate')?.value || today546();
-    if (!force && classroomUsageOptionsDate_546 === date && classroomUsageRooms_546.length) return;
-    let rooms = DEFAULT_CLASSROOM_ROOMS_546.slice();
-    let instructors = DEFAULT_CLASSROOM_INSTRUCTORS_546.slice();
-    try {
-      const data = await adminApi('adminGetClassroomUsageOptions', {
-        adminToken: adminToken546(),
-        date,
-        forceRefresh: force ? '1' : ''
-      });
-      if (Array.isArray(data.rooms) && data.rooms.length) rooms = data.rooms;
-      if (Array.isArray(data.instructors) && data.instructors.length) instructors = data.instructors;
-    } catch (e) {
-      console.warn('강의실 사용체크 옵션 로딩 실패, 기본값 사용:', e);
-    }
-    classroomUsageRooms_546 = rooms;
-    classroomUsageOptionsDate_546 = date;
-    fillSelect546(document.getElementById('adminClassroomUsageRoom'), rooms);
-    const dl = document.getElementById('adminClassroomUsageInstructorList');
-    if (dl) dl.innerHTML = instructors.map(v => '<option value="' + safeEsc546(v) + '"></option>').join('');
-    const startValues = [];
-    for (let h = 10; h <= 21; h++) startValues.push(hourText546(h));
-    const endValues = [];
-    for (let h = 11; h <= 22; h++) endValues.push(hourText546(h));
-    fillSelect546(document.getElementById('adminClassroomUsageStart'), startValues);
-    fillSelect546(document.getElementById('adminClassroomUsageEnd'), endValues);
-  }
-
-  window.adminLoadClassroomUsageOptions = loadClassroomOptions546;
-
-  window.adminInitClassroomUsagePanel = async function adminInitClassroomUsagePanel() {
-    const dateEl = document.getElementById('adminClassroomUsageDate');
-    if (dateEl && !dateEl.value) dateEl.value = today546();
-    const info = adminInfo546();
-    const instEl = document.getElementById('adminClassroomUsageInstructor');
-    if (instEl && !instEl.value) instEl.value = info.name || info.id || '';
-    await loadClassroomOptions546(false);
-  };
-
-  function findClassroomRecord546(room, hour) {
-    const roomKey = normalizeText546(room);
-    const h = Number(hour);
-    return classroomUsageRecords_546.find(r => {
-      const start = hourNumber546(r.startHour || r.startTime);
-      const end = hourNumber546(r.endHour || r.endTime);
-      return normalizeText546(r.room) === roomKey && start != null && end != null && start <= h && h < end;
-    });
-  }
-
-  function renderClassroomUsage546() {
-    const wrap = document.getElementById('adminClassroomUsageTableWrap');
-    if (!wrap) return;
-    const rooms = classroomUsageRooms_546.length ? classroomUsageRooms_546 : DEFAULT_CLASSROOM_ROOMS_546;
-    let html = '<table class="classroom-usage-table"><thead><tr><th class="classroom-usage-time-head">시간</th>';
-    rooms.forEach(room => { html += '<th>' + safeEsc546(room) + '</th>'; });
-    html += '</tr></thead><tbody>';
-    for (let h = 10; h <= 21; h++) {
-      html += '<tr><th class="classroom-usage-time-head">' + hourText546(h) + '<br>~' + hourText546(h + 1) + '</th>';
-      rooms.forEach(room => {
-        const rec = findClassroomRecord546(room, h);
-        if (rec) {
-          const label = [rec.instructor, rec.className || rec.purpose, rec.memo].filter(Boolean).join('<br>');
-          html += '<td class="classroom-usage-cell-used" title="' + safeEsc546(rec.recordId || '') + '">' +
-            '<div>' + (label ? label : '사용중') + '</div>' +
-            '<button type="button" class="classroom-usage-release-btn" onclick="adminReleaseClassroomUsageFromForm(\'' + safeEsc546(rec.recordId || '') + '\')">해제</button>' +
-            '</td>';
-        } else {
-          html += '<td><button type="button" class="classroom-usage-empty-btn" onclick="adminPickClassroomUsageCell(\'' + safeEsc546(room) + '\',' + h + ',' + (h + 1) + ')">체크</button></td>';
-        }
-      });
-      html += '</tr>';
-    }
-    html += '</tbody></table>';
-    wrap.innerHTML = html;
-  }
-
-  window.adminLoadClassroomUsage = async function adminLoadClassroomUsage(showOverlay, force) {
-    if (!adminToken546()) return;
-    try {
-      await window.adminInitClassroomUsagePanel();
-      const date = document.getElementById('adminClassroomUsageDate')?.value || today546();
-      if (showOverlay) showLoading546('강의실 사용 현황 조회 중...');
-      const data = await adminApi('adminGetClassroomUsage', {
-        adminToken: adminToken546(),
-        date,
-        forceRefresh: force ? '1' : ''
-      });
-      if (showOverlay) hideLoading546();
-      classroomUsageRecords_546 = Array.isArray(data.records) ? data.records : [];
-      renderClassroomUsage546();
-      const summary = document.getElementById('adminClassroomUsageSummary');
-      if (summary) summary.textContent = data.message || (date + ' 사용중 ' + classroomUsageRecords_546.length + '건');
-      return data;
-    } catch (e) {
-      if (showOverlay) hideLoading546();
-      alert(e.message || '강의실 사용 현황을 불러오지 못했습니다.');
-      throw e;
-    }
-  };
-
-  window.adminPickClassroomUsageCell = function adminPickClassroomUsageCell(room, startHour, endHour) {
-    const roomEl = document.getElementById('adminClassroomUsageRoom');
-    const startEl = document.getElementById('adminClassroomUsageStart');
-    const endEl = document.getElementById('adminClassroomUsageEnd');
-    if (roomEl) roomEl.value = room;
-    if (startEl) startEl.value = hourText546(startHour);
-    if (endEl) endEl.value = hourText546(endHour);
-    const classEl = document.getElementById('adminClassroomUsageClass');
-    if (classEl && !classEl.value) classEl.focus();
-  };
-
-  window.adminSaveClassroomUsageFromForm = async function adminSaveClassroomUsageFromForm(silent, override) {
-    const date = document.getElementById('adminClassroomUsageDate')?.value || today546();
-    const room = document.getElementById('adminClassroomUsageRoom')?.value || '';
-    const startHour = document.getElementById('adminClassroomUsageStart')?.value || '';
-    const endHour = document.getElementById('adminClassroomUsageEnd')?.value || '';
-    const instructor = document.getElementById('adminClassroomUsageInstructor')?.value || (adminInfo546().name || '');
-    const className = document.getElementById('adminClassroomUsageClass')?.value || '';
-    const memo = document.getElementById('adminClassroomUsageMemo')?.value || '';
-    if (!room) return alert('강의실을 선택해주세요.');
-    if (!startHour || !endHour) return alert('사용 시간을 선택해주세요.');
-    try {
-      showLoading546('강의실 사용체크 저장 중...');
-      const data = await adminApi('adminSaveClassroomUsage', {
-        adminToken: adminToken546(),
-        date,
-        room,
-        startHour,
-        endHour,
-        assignedInstructor: instructor,
-        instructor,
-        className,
-        purpose: className,
-        memo,
-        override: override ? '1' : '',
-        noCache: '1'
-      });
-      hideLoading546();
-      classroomUsageRecords_546 = Array.isArray(data.records) ? data.records : classroomUsageRecords_546;
-      renderClassroomUsage546();
-      const summary = document.getElementById('adminClassroomUsageSummary');
-      if (summary) summary.textContent = data.message || '강의실 사용체크 완료';
-      if (!silent) alert(data.message || '강의실 사용체크를 저장했습니다.');
-      return data;
-    } catch (e) {
-      hideLoading546();
-      alert(e.message || '강의실 사용체크 저장에 실패했습니다.');
-      throw e;
-    }
-  };
-
-  window.adminClearClassroomUsageForm = function adminClearClassroomUsageForm() {
-    const info = adminInfo546();
-    const dateEl = document.getElementById('adminClassroomUsageDate');
-    if (dateEl && !dateEl.value) dateEl.value = today546();
-    const instEl = document.getElementById('adminClassroomUsageInstructor');
-    if (instEl) instEl.value = info.name || info.id || '';
-    ['adminClassroomUsageClass','adminClassroomUsageMemo'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.value = '';
-    });
-  };
-
-  window.adminReleaseClassroomUsageFromForm = async function adminReleaseClassroomUsageFromForm(recordId) {
-    if (!recordId) return alert('해제할 기록ID가 없습니다.');
-    if (!confirm('선택한 강의실 사용 기록을 해제할까요?')) return;
-    const date = document.getElementById('adminClassroomUsageDate')?.value || today546();
-    try {
-      showLoading546('강의실 사용 해제 중...');
-      const data = await adminApi('adminReleaseClassroomUsage', {
-        adminToken: adminToken546(),
-        date,
-        recordId,
-        noCache: '1'
-      });
-      hideLoading546();
-      classroomUsageRecords_546 = Array.isArray(data.records) ? data.records : classroomUsageRecords_546.filter(r => String(r.recordId) !== String(recordId));
-      renderClassroomUsage546();
-      const summary = document.getElementById('adminClassroomUsageSummary');
-      if (summary) summary.textContent = data.message || '강의실 사용 해제 완료';
-      return data;
-    } catch (e) {
-      hideLoading546();
-      alert(e.message || '강의실 사용 해제에 실패했습니다.');
-      throw e;
-    }
-  };
-  window.adminReleaseClassroomUsage = window.adminReleaseClassroomUsageFromForm;
-
-  window.guestLogin = function guestLogin() {
-    try {
-      localStorage.setItem('studentName', '게스트');
-      localStorage.setItem('studentNo', 'GUEST');
-      localStorage.setItem('instructorName', '');
-    } catch (e) {}
-    try { studentName = '게스트'; } catch (e) { window.studentName = '게스트'; }
-    try { studentNo = 'GUEST'; } catch (e) { window.studentNo = 'GUEST'; }
-    const overlay = document.getElementById('loginOverlay');
-    const wrapper = document.querySelector('.wrapper');
-    if (overlay) overlay.style.display = 'none';
-    if (wrapper) wrapper.style.display = '';
-    if (typeof window.activateTabById === 'function') window.activateTabById('tabScene');
-    if (typeof window.renderStudentAccountBar_ === 'function') window.renderStudentAccountBar_();
-  };
-
-  window.changeAdminPasswordByPrompt = async function changeAdminPasswordByPrompt() {
-    if (!adminToken546()) return alert('관리자 로그인 후 이용해주세요.');
-    const oldPassword = prompt('현재 비밀번호를 입력해주세요.');
-    if (oldPassword === null) return;
-    const newPassword = prompt('새 비밀번호를 입력해주세요.');
-    if (newPassword === null) return;
-    if (String(newPassword).length < 4) return alert('새 비밀번호는 4자리 이상으로 입력해주세요.');
-    const confirmPassword = prompt('새 비밀번호를 한 번 더 입력해주세요.');
-    if (confirmPassword === null) return;
-    if (newPassword !== confirmPassword) return alert('새 비밀번호가 서로 일치하지 않습니다.');
-    try {
-      showLoading546('비밀번호 변경 중...');
-      const data = await adminApi('changeAdminPassword', {
-        adminToken: adminToken546(),
-        oldPassword,
-        newPassword,
-        noCache: '1'
-      });
-      hideLoading546();
-      alert(data.message || '비밀번호를 변경했습니다.');
-    } catch (e) {
-      hideLoading546();
-      alert(e.message || '비밀번호 변경에 실패했습니다.');
-    }
-  };
-
-  // 탭 진입 초기화 보강: 기존 showAdminPanel이 누락 함수 때문에 멈추는 것을 방지합니다.
-  const oldShowAdminPanel546 = window.showAdminPanel || (typeof showAdminPanel === 'function' ? showAdminPanel : null);
-  if (oldShowAdminPanel546 && !oldShowAdminPanel546.__ulim546Wrapped) {
-    const wrapped = function(panelId) {
-      try {
-        const result = oldShowAdminPanel546.apply(this, arguments);
-        setTimeout(() => {
-          try {
-            if (panelId === 'adminPanelAttendance') window.adminGetAttendanceClassesForUi(false);
-            if (panelId === 'adminPanelVocalPractice') window.adminInitVocalPracticePanel_();
-            if (panelId === 'adminPanelClassroomUsage') window.adminInitClassroomUsagePanel();
-          } catch (e) { console.warn('관리자 탭 보강 초기화 실패:', e); }
-        }, 0);
-        return result;
-      } catch (e) {
-        console.warn('관리자 탭 전환 중 오류 보강:', e);
-        document.querySelectorAll('.admin-subtab').forEach(btn => btn.classList.toggle('active', btn.dataset.adminPanel === panelId));
-        document.querySelectorAll('.admin-panel').forEach(panel => panel.classList.toggle('active', panel.id === panelId));
-        setTimeout(() => {
-          if (panelId === 'adminPanelVocalPractice') window.adminInitVocalPracticePanel_().then(() => window.adminLoadVocalPracticeLogs(false)).catch(console.warn);
-          if (panelId === 'adminPanelClassroomUsage') window.adminInitClassroomUsagePanel().then(() => window.adminLoadClassroomUsage(false)).catch(console.warn);
-          if (panelId === 'adminPanelAttendance') window.adminGetAttendanceClassesForUi(false).catch(console.warn);
-        }, 0);
-      }
-    };
-    wrapped.__ulim546Wrapped = true;
-    window.showAdminPanel = wrapped;
-    try { showAdminPanel = wrapped; } catch (e) {}
-  }
-
-  window.addEventListener('DOMContentLoaded', function() {
-    setTimeout(() => {
-      try {
-        if (document.getElementById('adminPanelClassroomUsage')) window.adminInitClassroomUsagePanel();
-        if (document.getElementById('adminPanelVocalPractice')) window.adminInitVocalPracticePanel_();
-      } catch (e) { console.warn('관리자 5_46 초기화 실패:', e); }
-    }, 300);
-  });
 })();
 </script>
 
