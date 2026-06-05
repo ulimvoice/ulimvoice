@@ -169,7 +169,7 @@
  * - 구글시트 기록/알림톡은 백그라운드 대기열로 전송
  ****************************************************/
 const API_URL = "https://script.google.com/macros/s/AKfycbx7wQFuw6MqqOijmvuwpeiCWOk3xU3hr41xoKbRltQHLb1kLbr_1RD5Zzy3iuWcrhUD0A/exec";
-const TABLET_APP_VERSION = "2026.06.06.043.11";
+const TABLET_APP_VERSION = "2026.06.06.043.12";
 const TABLET_DEBUG = false;
 
 const URL_PARAMS = new URLSearchParams(location.search);
@@ -640,14 +640,10 @@ function showStudentChoice(data) {
 
   tabletStudentChoiceCandidates = candidates;
   const options = candidates.map(function(student, idx) {
+    // 동일 출결번호 학생 선택 단계에서는 학생명만 표시합니다.
+    // 수업명/반명/수업 개수는 학생 선택 후 수업 선택 단계에서만 보여줍니다.
     const name = student.name || student.studentName || "학생";
-    const classes = Array.isArray(student.classes) ? student.classes : [];
-    const classInfo = classes.length === 1
-      ? ` - ${classes[0].className || "수업 확인 필요"}`
-      : classes.length > 1
-        ? ` - 수업 ${classes.length}개`
-        : "";
-    return `<option value="${idx}">${escapeHtml(name + classInfo)}</option>`;
+    return `<option value="${idx}">${escapeHtml(name)}</option>`;
   }).join("");
 
   showModal(
