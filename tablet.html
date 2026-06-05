@@ -9,7 +9,7 @@
 <link rel="dns-prefetch" href="https://script.googleusercontent.com">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>울림연기학원 등하원 체크 2026.06.01.008</title>
+  <title>울림연기학원 등하원 체크 2026.06.05.038</title>
   <style>
     :root {
       --green: #16a34a;
@@ -847,7 +847,7 @@
       resetStatusSoon();
     }
 
-    async function submitCheck(mode, extra = {}) {
+    async function submitCheckLegacy(mode, extra = {}) {
       // v008:
       // 1) 버튼 클릭 후 "등원/하원 처리 중입니다." 문구는 최대 3초만 표시합니다.
       // 2) 3초 안에 GAS 응답이 오면 기존처럼 결과/중복/선택창을 표시합니다.
@@ -1279,22 +1279,82 @@
       return escapeHtml(value).replace(/`/g, "&#096;");
     }
 
+    const TABLET_DAILY_SNAPSHOT_LOCAL_KEY = "ULIM_TABLET_DAILY_SNAPSHOT_V38";
+
+    function getLocalDateKey() {
+      const now = new Date();
+      return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+    }
+
+    function saveTabletSnapshotToLocal(data) {
+      try {
+        localStorage.setItem(TABLET_DAILY_SNAPSHOT_LOCAL_KEY, JSON.stringify({
+          savedAt: Date.now(),
+          date: data && data.date ? data.date : getLocalDateKey(),
+          data: data
+        }));
+      } catch (err) {}
+    }
+
+    function loadTabletSnapshotFromLocal() {
+      try {
+        const raw = localStorage.getItem(TABLET_DAILY_SNAPSHOT_LOCAL_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !parsed.data || !parsed.data.attendanceMap) return null;
+        if (parsed.date !== getLocalDateKey()) return null;
+        return parsed.data;
+      } catch (err) {
+        return null;
+      }
+    }
+
     async function loadTabletPreload(force = false) {
       const now = Date.now();
-      if (!force && tabletPreload && now - tabletPreloadAt < 2 * 60 * 1000) return tabletPreload;
+
+      // 1순위: 메모리 캐시
+      if (!force && tabletPreload && tabletPreload.attendanceMap && now - tabletPreloadAt < 30 * 60 * 1000) {
+        return tabletPreload;
+      }
+
+      // 2순위: 태블릿 로컬 캐시(localStorage)
+      if (!force) {
+        const localData = loadTabletSnapshotFromLocal();
+        if (localData && localData.attendanceMap) {
+          tabletPreload = localData;
+          tabletPreloadAt = now;
+          return tabletPreload;
+        }
+      }
+
       if (tabletPreloadLoading) return tabletPreload;
 
       tabletPreloadLoading = true;
       try {
-        const res = await fetch(apiUrl({ action: "tabletPreload" }), { method: "GET", cache: "no-store" });
+        // 서버가 새벽/수업 전 생성한 일일 스냅샷을 우선 사용합니다.
+        const res = await fetch(apiUrl({ action: "tabletGetDailySnapshot" }), { method: "GET", cache: "no-store" });
         const data = await res.json();
 
         if (data && data.status === "success" && data.attendanceMap) {
           tabletPreload = data;
           tabletPreloadAt = Date.now();
+          saveTabletSnapshotToLocal(data);
+        } else {
+          // 새 GAS가 아직 배포되지 않은 경우를 위한 기존 preload fallback
+          const legacyRes = await fetch(apiUrl({ action: "tabletPreload" }), { method: "GET", cache: "no-store" });
+          const legacyData = await legacyRes.json();
+          if (legacyData && legacyData.status === "success" && legacyData.attendanceMap) {
+            tabletPreload = legacyData;
+            tabletPreloadAt = Date.now();
+            saveTabletSnapshotToLocal(legacyData);
+          }
         }
       } catch (err) {
-        // 사전 캐시 실패 시 기존 tabletCheck 경로로 처리합니다.
+        const localData = loadTabletSnapshotFromLocal();
+        if (localData && localData.attendanceMap) {
+          tabletPreload = localData;
+          tabletPreloadAt = Date.now();
+        }
       } finally {
         tabletPreloadLoading = false;
       }
@@ -1302,7 +1362,21 @@
       return tabletPreload;
     }
 
-    function normalizeAttendanceNoClient(value) {
+    async function refreshTabletDailySnapshotLocal(forceServer = true) {
+      try {
+        const res = await fetch(apiUrl({ action: "tabletGetDailySnapshot", force: forceServer ? "1" : "0" }), { method: "GET", cache: "no-store" });
+        const data = await res.json();
+        if (data && data.status === "success" && data.attendanceMap) {
+          tabletPreload = data;
+          tabletPreloadAt = Date.now();
+          saveTabletSnapshotToLocal(data);
+          return data;
+        }
+      } catch (err) {}
+      return loadTabletPreload(false);
+    }
+
+    function normalizeAttendanceNoClient    function normalizeAttendanceNoClient(value) {
       return String(value || "").replace(/[^0-9]/g, "");
     }
 
@@ -1357,6 +1431,178 @@
       return true;
     }
 
+
+    async function submitCheck(mode, extra = {}) {
+      const attendanceNo = extra.attendanceNo || pin;
+      if (!attendanceNo) {
+        showModal("출결번호를 입력해주세요.", "", "warning");
+        resetStatusSoon();
+        return;
+      }
+
+      try {
+        const snapshot = await loadTabletPreload(false);
+        if (snapshot && snapshot.attendanceMap) {
+          const handled = await tryHandleWithDailySnapshot(attendanceNo, mode, extra || {});
+          if (handled) return;
+        }
+      } catch (err) {
+        // 로컬 스냅샷 처리 실패 시 기존 실시간 tabletCheck 경로로 안전하게 fallback합니다.
+      }
+
+      return submitCheckLegacy(mode, extra);
+    }
+
+    async function tryHandleWithDailySnapshot(attendanceNo, mode, extra = {}) {
+      if (!tabletPreload || !tabletPreload.attendanceMap) return false;
+
+      const key = normalizeAttendanceNoClient(attendanceNo);
+      const candidates = tabletPreload.attendanceMap[key] || [];
+      if (!candidates || !candidates.length) return false;
+
+      lastMode = mode;
+      lastAttendanceNo = attendanceNo;
+
+      const isSelectionCall = !!(extra && (extra.selectedRowNumber || extra.rowNumber || extra.selectedStudentName || extra.selectedClassIndex !== undefined || extra.classIndex !== undefined));
+
+      if (!isSelectionCall) {
+        clearPin();
+      }
+
+      let student = null;
+      const selectedRowNumber = String(extra.selectedRowNumber || extra.studentRowNumber || extra.rowNumber || "").trim();
+      const selectedStudentName = String(extra.selectedStudentName || extra.studentName || "").trim();
+
+      if (selectedRowNumber) {
+        student = candidates.find(s => String(s.rowNumber || "") === selectedRowNumber) || null;
+      }
+
+      if (!student && selectedStudentName) {
+        const selectedKey = selectedStudentName.replace(/\s+/g, "");
+        student = candidates.find(s => String(s.name || "").replace(/\s+/g, "") === selectedKey) || null;
+      }
+
+      if (!student && selectedStudent && selectedStudent.rowNumber) {
+        student = candidates.find(s => String(s.rowNumber || "") === String(selectedStudent.rowNumber || "")) || null;
+      }
+
+      if (!student && candidates.length > 1) {
+        showStudentChoice({
+          status: "multiple",
+          attendanceNo: attendanceNo,
+          candidates: candidates
+        });
+        return true;
+      }
+
+      student = student || candidates[0];
+      selectedStudent = student;
+
+      const classes = Array.isArray(student.classes) ? student.classes : [];
+      let selectedClassIndexText = extra.selectedClassIndex;
+      if (selectedClassIndexText === undefined) selectedClassIndexText = extra.classIndex;
+      const hasSelectedClass = selectedClassIndexText !== undefined && selectedClassIndexText !== null && String(selectedClassIndexText) !== "";
+      const selectedClassIndex = hasSelectedClass ? Number(selectedClassIndexText) : -1;
+
+      if (classes.length > 1 && !(selectedClassIndex >= 0)) {
+        showClassChoice({
+          status: "multipleClasses",
+          attendanceNo: attendanceNo,
+          studentName: student.name,
+          classes: classes
+        });
+        return true;
+      }
+
+      let cls = null;
+      if (classes.length) {
+        cls = selectedClassIndex >= 0
+          ? (classes.find(c => Number(c.index) === selectedClassIndex) || classes[selectedClassIndex] || classes[0])
+          : classes[0];
+      }
+
+      cls = cls || {
+        index: "",
+        className: "데스크문의",
+        instructor: student.instructor || "",
+        roomName: "데스크문의"
+      };
+
+      await enqueueAttendanceFromLocalSnapshot(mode, attendanceNo, student, cls);
+      return true;
+    }
+
+    async function enqueueAttendanceFromLocalSnapshot(mode, attendanceNo, student, cls) {
+      const seq = ++statusRequestSeq;
+      const modeText = mode === "out" ? "하원" : "등원";
+
+      lastMode = mode;
+      lastAttendanceNo = attendanceNo;
+
+      setStatus(
+        modeText + " 접수 중입니다.",
+        "태블릿 캐시 기준으로 수업 정보를 확인하고 있습니다.",
+        "success"
+      );
+
+      const params = {
+        action: "tabletEnqueueAttendance",
+        attendanceNo: attendanceNo,
+        mode: mode,
+        selectedRowNumber: student.rowNumber || "",
+        selectedStudentName: student.name || "",
+        selectedClassIndex: cls.index !== undefined ? cls.index : "",
+        className: cls.className || "",
+        instructor: cls.instructor || student.instructor || "",
+        roomName: cls.roomName || "데스크문의"
+      };
+
+      try {
+        const res = await fetch(apiUrl(params), { method: "GET", cache: "no-store" });
+        const data = await res.json();
+
+        if (seq !== statusRequestSeq) return;
+
+        if (data && (data.duplicate === true || data.status === "duplicate" || data.status === "already")) {
+          const message = data.message || data.popupMessage || ("이미 " + modeText + "처리되었습니다.");
+          setStatus(message, "", "warning");
+          resetStatusSoon(5000);
+          return;
+        }
+
+        if (data && data.status === "multiple") {
+          showStudentChoice(data);
+          return;
+        }
+
+        if (data && data.status === "multipleClasses") {
+          showClassChoice(data);
+          return;
+        }
+
+        if (!data || (data.status !== "queued" && data.status !== "success")) {
+          // 대기열 등록 실패 시 기존 실시간 처리 경로로 fallback합니다.
+          return submitCheckLegacy(mode, params);
+        }
+
+        const name = data.studentName || student.name || "학생";
+        const className = data.className || cls.className || "데스크문의";
+        const roomName = data.roomName || cls.roomName || "데스크문의";
+
+        setStatus(
+          `${name}님 ${modeText} 접수되었습니다.`,
+          [`오늘 수업: ${className}`, `오늘 강의실: ${roomName}`, "출석부 기록과 알림톡은 3~5분 이내 처리됩니다."].join("\n"),
+          "success"
+        );
+        resetStatusSoon(5000);
+      } catch (err) {
+        if (seq === statusRequestSeq) {
+          // 네트워크/배포 오류 시 기존 실시간 tabletCheck 경로로 fallback합니다.
+          return submitCheckLegacy(mode, params);
+        }
+      }
+    }
+
     async function warmup() {
       try {
         await fetch(apiUrl({ action: "tabletWarmup" }), { method: "GET", cache: "no-store" });
@@ -1372,7 +1618,7 @@
     // Apps Script 콜드스타트 방지를 위해 주기적으로 가볍게 예열합니다.
     // 태블릿 출결 버튼을 눌렀을 때 첫 응답 대기 시간을 줄이는 용도입니다.
     setInterval(warmup, 4 * 60 * 1000);
-    setInterval(() => loadTabletPreload(true), 2 * 60 * 1000);
+    setInterval(() => loadTabletPreload(false), 30 * 60 * 1000);
 
     // 키보드 숫자 입력도 지원
     document.addEventListener("keydown", event => {
@@ -1445,7 +1691,7 @@ function hidePwaForever() {
  * - 새 버전 발견 시 확인창 표시
  * - 확인 시 캐시 우회 주소로 새로고침
  ****************************************************/
-const TABLET_APP_VERSION = "2026.06.01.008";
+const TABLET_APP_VERSION = "2026.06.05.038";
 const TABLET_VERSION_CHECK_KEY = "ULIM_TABLET_VERSION_CHECK_DATE";
 const TABLET_VERSION_SKIP_KEY = "ULIM_TABLET_VERSION_SKIP_DATE";
 const TABLET_SAVED_VERSION_KEY = "ULIM_TABLET_APP_VERSION";
