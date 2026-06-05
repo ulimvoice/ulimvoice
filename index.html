@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
 <!-- 울림앱 INDEX 5_43차 긴급복구: AdGuard 주입라인/단독 async 제거 + 발성 달력 누락함수 보강 -->
-<!-- 울림앱 INDEX 5_41차 최종클린안정화: 중복 함수 정리 / 중복요청 방어 유지 / 오류대체 유지 -->
-<!-- 5_40차: 서버 중복요청 방어/반응속도 보강 버전. 클라이언트 UI 흐름은 39차 안정본 유지. -->
+<!-- 울림앱 INDEX 5_44차 로그인멘트제거: 전역 alert 리미문구 치환 제거 / AI fallback 중립문구화 -->
+<!-- 5_44차 로그인멘트제거 기준 유지 + 5_45차 긴급복구 패치 적용 -->
 <!-- 5_39차: AdGuard 주입 스크립트 제거, 중복 함수 정리, 38차 반응속도 개선 유지 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script type="text/javascript" nonce="5878564e64bc424ab28cf8dfbd2" src="//local.adguard.org?ts=1780651929127&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000dae872098f052f85e73d812b%26fn%3D%25EC%259A%25B8%25EB%25A6%25BC%25EC%2595%25B1_index_5_43%25EC%25B0%25A8_%25EB%25A8%25B9%25ED%2586%25B5%25EC%2598%25A4%25EB%25A5%2598%25EB%25B3%25B5%25EA%25B5%25AC_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D494625%26p%3Dfs%26cid%3D1%26sig%3D1d2c2f2b96a395e28c8bb7aaedae37ceeec3c6b330400cc52e90af57bcf9bd1d%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.googleusercontent.com">
+<script type="text/javascript" nonce="5878564e64bc424ab28cf8dfbd2" src="//local.adguard.org?ts=1780651929127&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000e22872098f988aded54dc0c4%26fn%3D%25EC%259A%25B8%25EB%25A6%25BC%25EC%2595%25B1_index_5_45%25EC%25B0%25A8_%25EC%2597%25B0%25EC%258A%25B5%25EC%258B%25A4%25EA%25B4%2580%25EB%25A6%25AC%25EC%259E%2590%25EC%2598%25A4%25EB%25A5%2598%25EB%25B3%25B5%25EA%25B5%25AC_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D494626%26p%3Dfs%26cid%3D1%26sig%3D487aa96e8b4ac8c29f9f93527cae5a2209a9489f68ad6deed9154ed8273c9d34%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.googleusercontent.com">
 <link rel="dns-prefetch" href="//script.google.com">
 <link rel="dns-prefetch" href="//script.googleusercontent.com">
 
@@ -12501,12 +12501,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
   window.ULIM_PATCH_5_36_LIMI_FUNNY_AND_ADMIN_DETAIL = true;
 
   const LIMI_PUBLIC_FALLBACK_MESSAGES_5_36 = [
-    '리미가 잠시 파업중입니다 😅\n기본 분석 결과를 먼저 보여드릴게요.',
-    '리미가 커피를 마시러 갔습니다 ☕\n기본 분석으로 먼저 확인해볼게요.',
-    '리미가 발음사전을 너무 진지하게 뒤적이고 있습니다 📚\n기본 분석 결과를 표시합니다.',
-    '리미가 녹음실에서 길을 잃었습니다 🎙️\n기본 분석으로 이어서 진행할게요.',
-    '리미가 오늘 너무 열심히 일해서 쉬는 중입니다 😴\n기본 분석 결과를 보여드릴게요.',
-    '리미가 결과지를 들고 오다가 넘어졌습니다 📄\n기본 분석으로 먼저 확인해볼게요.'
+    '분석 서버 응답이 지연되어 기본 분석 결과를 먼저 보여드립니다.'
   ];
 
   function ulimGetActiveRole_5_36() {
@@ -12593,8 +12588,9 @@ ${ruleSummary}`, isFallback ? "success" : "success");
 
   const nativeAlert_5_36 = window.alert;
   window.alert = function(message) {
-    if (ulimIsFullAdmin_5_36()) return nativeAlert_5_36.call(window, String(message || ''));
-    return nativeAlert_5_36.call(window, ulimPublicAiMessage_5_36(message));
+    // 5-44: 로그인/비밀번호/일반 안내 alert까지 AI fallback 문구로 바뀌는 문제 방지.
+    // AI 분석 영역의 문구 치환은 pronSetAdvancedStatus / ulimSafeUserMessage_5_35에서만 처리합니다.
+    return nativeAlert_5_36.call(window, String(message || ''));
   };
 
   window.pronSetAdvancedStatus = function(message, type) {
@@ -12732,6 +12728,152 @@ ${ruleSummary}`, isFallback ? "success" : "success");
     };
     try { pronRunEtriAdvancedAnalysis = window.pronRunEtriAdvancedAnalysis; } catch(e) {}
   }
+})();
+</script>
+
+
+
+<script>
+/* =========================================================
+   5_45차 긴급복구 패치
+   - 연습실 예약 달력: getRoomCacheKey / getRoomLocalStorageKey 누락 복구
+   - 학생 상단 계정바: renderStudentAccountBar_ 누락 복구
+   - 관리자 출석체크: adminNormalizeAttendanceStatusForUi_ 누락 복구
+   - 기존 구조를 변경하지 않고 누락 헬퍼만 보강
+   ========================================================= */
+(function installUlimV545MissingHelperRecovery_(){
+    function cleanKeyPart_(value) {
+        return String(value == null ? '' : value)
+            .replace(/\s+/g, '')
+            .replace(/[^0-9A-Za-z가-힣_-]/g, '_')
+            .slice(0, 80) || 'guest';
+    }
+
+    window.getRoomCacheKey = function getRoomCacheKey(year, month) {
+        const y = Number(year) || new Date().getFullYear();
+        const m = String(Number(month) || (new Date().getMonth() + 1)).padStart(2, '0');
+        return `${y}-${m}`;
+    };
+
+    window.getRoomLocalStorageKey = function getRoomLocalStorageKey(cacheKey) {
+        const name = (typeof window.studentName !== 'undefined' && window.studentName) ? window.studentName : (localStorage.getItem('studentName') || 'guest');
+        const no = (typeof window.studentNo !== 'undefined' && window.studentNo) ? window.studentNo : (localStorage.getItem('studentNo') || '');
+        const phone = (typeof window.phoneLast4 !== 'undefined' && window.phoneLast4) ? window.phoneLast4 : (localStorage.getItem('phoneLast4') || '');
+        const userKey = cleanKeyPart_([no, name, phone].filter(Boolean).join('_'));
+        return `ulim_room_reservation_cache_${userKey}_${String(cacheKey || '')}`;
+    };
+
+    window.adminNormalizeAttendanceStatusForUi_ = function adminNormalizeAttendanceStatusForUi_(value) {
+        const raw = String(value == null ? '' : value).replace(/\s+/g, '').trim();
+        if (!raw) return '미체크';
+        if (/^(O|○|출석|등원|완료|참석|출결완료)$/i.test(raw)) return '출석';
+        if (/^(X|×|✕|결석|미출석|불참)$/i.test(raw)) return '결석';
+        if (/지각/.test(raw)) return '지각';
+        if (/휴원|휴강|쉼|쉬/.test(raw)) return '휴원';
+        if (/보강/.test(raw)) return '보강';
+        if (/미체크|대기|미정|확인전/.test(raw)) return '미체크';
+        return value || '미체크';
+    };
+
+    window.renderStudentAccountBar_ = function renderStudentAccountBar_() {
+        let bar = document.getElementById('ulimStudentAccountBar');
+        const isAdminView = document.body && (
+            document.body.classList.contains('admin-mode') ||
+            document.body.classList.contains('teacher-mode') ||
+            (document.getElementById('tabAdmin') && document.getElementById('tabAdmin').classList.contains('active'))
+        );
+
+        if (isAdminView) {
+            if (bar) bar.style.display = 'none';
+            return;
+        }
+
+        const name = (typeof window.studentName !== 'undefined' && window.studentName) ? window.studentName : (localStorage.getItem('studentName') || '');
+        const instructor = (typeof window.instructorName !== 'undefined' && window.instructorName) ? window.instructorName : (localStorage.getItem('instructorName') || '');
+        const token = (typeof window.studentSessionToken !== 'undefined' && window.studentSessionToken) ? window.studentSessionToken : (localStorage.getItem('studentSessionToken') || '');
+        const isStudent = !!name && name !== '게스트';
+        const isGuest = name === '게스트';
+
+        if (!isStudent && !isGuest) {
+            if (bar) bar.style.display = 'none';
+            return;
+        }
+
+        if (!bar) {
+            bar = document.createElement('div');
+            bar.id = 'ulimStudentAccountBar';
+            bar.className = 'ulim-student-account-bar';
+            document.body.appendChild(bar);
+        }
+
+        bar.style.cssText = [
+            'position:fixed',
+            'right:18px',
+            'bottom:18px',
+            'z-index:12000',
+            'display:flex',
+            'align-items:center',
+            'gap:8px',
+            'padding:10px 12px',
+            'border-radius:999px',
+            'background:rgba(255,255,255,0.96)',
+            'border:1px solid #dcfce7',
+            'box-shadow:0 8px 24px rgba(15,23,42,0.16)',
+            'font-size:13px',
+            'font-weight:800',
+            'color:#166534'
+        ].join(';');
+
+        const infoText = isStudent
+            ? `${name}${instructor && instructor !== '기본' ? ' · ' + instructor + 'T' : ''}`
+            : '게스트 모드';
+
+        const showPasswordButton = isStudent && !!token;
+        bar.innerHTML = `
+            <span style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtmlForUlim545_(infoText)}</span>
+            ${showPasswordButton ? '<button type="button" data-ulim-account-action="password">비밀번호 변경</button>' : ''}
+            <button type="button" data-ulim-account-action="logout">${isStudent ? '로그아웃' : '로그인'}</button>
+        `;
+
+        bar.querySelectorAll('button').forEach(btn => {
+            btn.style.cssText = 'border:none; border-radius:999px; padding:7px 10px; font-size:12px; font-weight:900; cursor:pointer; color:#fff; background:#16a34a;';
+        });
+
+        const pwBtn = bar.querySelector('[data-ulim-account-action="password"]');
+        if (pwBtn) {
+            pwBtn.onclick = function() {
+                if (typeof changeStudentPasswordByPrompt === 'function') return changeStudentPasswordByPrompt();
+                alert('비밀번호 변경 기능을 준비 중입니다.');
+            };
+        }
+
+        const logoutBtn = bar.querySelector('[data-ulim-account-action="logout"]');
+        if (logoutBtn) {
+            logoutBtn.onclick = function() {
+                if (isStudent && typeof studentSecureLogout === 'function') return studentSecureLogout();
+                if (typeof showStudentLoginPanel === 'function') return showStudentLoginPanel();
+                const overlay = document.getElementById('loginOverlay');
+                const wrapper = document.querySelector('.wrapper');
+                if (overlay) overlay.style.display = 'flex';
+                if (wrapper) wrapper.style.display = 'none';
+            };
+        }
+    };
+
+    function escapeHtmlForUlim545_(value) {
+        if (typeof window.escapeHtml === 'function') return window.escapeHtml(value);
+        if (typeof window.escapeHtml_ === 'function') return window.escapeHtml_(value);
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    window.addEventListener('DOMContentLoaded', function() {
+        try { window.renderStudentAccountBar_(); } catch (e) { console.warn('계정바 렌더링 보강 실패:', e); }
+    });
 })();
 </script>
 
