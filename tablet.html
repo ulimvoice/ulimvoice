@@ -9,7 +9,7 @@
 <link rel="dns-prefetch" href="https://script.googleusercontent.com">
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>울림연기학원 등하원 체크 2026.06.06.043.2</title>
+<title>울림연기학원 등하원 체크 2026.06.06.043.8</title>
 <style>
   :root {
     --green: #16a34a;
@@ -25,13 +25,8 @@
     --dark: #0f172a;
   }
 
-  * {
-    box-sizing: border-box;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  html,
-  body {
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
     margin: 0;
     width: 100%;
     min-height: 100%;
@@ -47,651 +42,141 @@
     min-height: 100vh;
   }
 
-  .left {
-    position: relative;
-    padding: 28px 32px;
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-    background: #ffffff;
-  }
-
-  .right {
-    position: relative;
-    min-height: 100vh;
-    background: #0b1220;
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-  }
-
-  .top-row {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 20px;
-  }
-
-  .title {
-    margin: 0;
-    color: var(--green-dark);
-    font-size: 26px;
-    font-weight: 900;
-    letter-spacing: -0.03em;
-  }
-
-  .clock {
-    text-align: right;
-    font-weight: 900;
-    color: #111827;
-    line-height: 1.25;
-    white-space: nowrap;
-  }
-
-  .clock-date {
-    font-size: 15px;
-  }
-
-  .clock-time {
-    font-size: 24px;
-  }
-
-  .card {
-    border: 1px solid var(--line);
-    border-radius: 20px;
-    background: #fff;
-    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
-    padding: 24px;
-  }
-
-  .input-title {
-    margin: 0 0 18px;
-    text-align: center;
-    color: var(--green-dark);
-    font-size: 21px;
-    font-weight: 900;
-  }
-
-  .pin-display {
-    height: 62px;
-    border: 2px solid #86efac;
-    border-radius: 16px;
-    background: #f0fdf4;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 32px;
-    font-weight: 900;
-    letter-spacing: 0.20em;
-    color: #052e16;
-    margin-bottom: 14px;
-    user-select: none;
-  }
-
-  .pin-placeholder {
-    color: #94a3b8;
-    font-size: 22px;
-    letter-spacing: -0.03em;
-  }
-
-  .keypad {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-  }
-
-  button {
-    border: 0;
-    border-radius: 14px;
-    font-family: inherit;
-    font-weight: 900;
-    cursor: pointer;
-    transition: transform .06s ease, filter .12s ease, opacity .12s ease;
-    user-select: none;
-  }
-
-  button:active {
-    transform: translateY(1px);
-  }
-
-  button:disabled {
-    opacity: .55;
-    cursor: not-allowed;
-  }
-
-  .num-btn {
-    height: 54px;
-    background: #ffffff;
-    color: #0f172a;
-    font-size: 24px;
-    box-shadow: 0 5px 14px rgba(15, 23, 42, 0.08);
-    border: 1px solid #eef2f7;
-  }
-
-  .num-btn.utility-red {
-    background: #fee2e2;
-    color: #991b1b;
-  }
-
-  .num-btn.utility-gray {
-    background: #f1f5f9;
-    color: #334155;
-  }
-
-  .action-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-top: 14px;
-  }
-
-  .action-btn {
-    height: 64px;
-    color: #fff;
-    font-size: 23px;
-    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
-  }
-
-  .check-in {
-    background: linear-gradient(180deg, #22c55e, #16a34a);
-  }
-
-  .check-out {
-    background: linear-gradient(180deg, #3b82f6, #2563eb);
-  }
-
-  .status-card {
-    flex: 1;
-    min-height: 260px;
-    border: 1px solid #86efac;
-    background: #ecfdf5;
-    border-radius: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 28px;
-    color: var(--green-dark);
-  }
-
-  .status-card.error {
-    border-color: #fecaca;
-    background: #fef2f2;
-    color: #991b1b;
-  }
-
-  .status-card.warning {
-    border-color: #fde68a;
-    background: #fffbeb;
-    color: #92400e;
-  }
-
-  .status-card h2 {
-    margin: 0 0 12px;
-    font-size: 25px;
-    font-weight: 900;
-    letter-spacing: -0.03em;
-  }
-
-  .status-card p {
-    margin: 5px 0;
-    font-size: 16px;
-    color: #475569;
-    line-height: 1.45;
-    white-space: pre-line;
-  }
-
-  .status-card .small {
-    margin-top: 10px;
-    font-size: 14px;
-    color: #64748b;
-  }
-
-  .ad-wrap {
-    width: min(92%, 900px);
-    max-width: none;
-    text-align: center;
-    transform: translateY(-2vh);
-  }
-
-  .ad-title {
-    margin: 0 0 18px;
-    font-size: clamp(30px, 3.1vw, 42px);
-    font-weight: 900;
-    letter-spacing: -0.04em;
-  }
-
-  .ad-box {
-    width: 100%;
-    border-radius: 20px;
-    overflow: hidden;
-    background: #020617;
-    box-shadow: 0 24px 60px rgba(0,0,0,.34);
-    min-height: clamp(320px, 58vh, 560px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .ad-box iframe,
-  .ad-box video,
-  .ad-box img {
-    width: 100%;
-    display: block;
-    border: 0;
-  }
-
-  .ad-box img,
-  .ad-box video {
-    width: 100%;
-    height: 100%;
-    max-height: calc(100vh - 150px);
-    object-fit: contain;
-    background: #020617;
-  }
-
-  .ad-box iframe {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 16 / 9;
-    max-height: calc(100vh - 150px);
-  }
-
-  .ad-text {
-    padding: 44px;
-    line-height: 1.55;
-    white-space: pre-wrap;
-    font-size: 20px;
-  }
-
-  .slide-count {
-    position: absolute;
-    left: 20px;
-    bottom: 18px;
-    color: #cbd5e1;
-    font-size: 13px;
-    font-weight: 700;
-  }
-
-  .ad-click-hint {
-    position: absolute;
-    right: 20px;
-    top: 18px;
-    color: #cbd5e1;
-    font-size: 13px;
-    font-weight: 800;
-    opacity: .75;
-    background: rgba(255,255,255,.08);
-    padding: 8px 12px;
-    border-radius: 999px;
-    pointer-events: none;
-  }
-
-  .ad-nav-row {
-    position: absolute;
-    right: 20px;
-    bottom: 18px;
-    display: flex;
-    gap: 8px;
-    z-index: 20;
-  }
-
-  .ad-nav-btn {
-    padding: 10px 14px;
-    border-radius: 999px;
-    background: rgba(255,255,255,.14);
-    color: #fff;
-    font-size: 13px;
-    font-weight: 900;
-    border: 1px solid rgba(255,255,255,.14);
-  }
-
-  .ad-nav-btn:hover {
-    background: rgba(255,255,255,.22);
-  }
-
-  .modal-backdrop {
-    position: fixed;
-    inset: 0;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    background: rgba(15, 23, 42, .52);
-    z-index: 1000;
-    padding: 24px;
-  }
-
-  .modal {
-    width: min(620px, 92vw);
-    border-radius: 22px;
-    background: #fff;
-    box-shadow: 0 30px 90px rgba(15, 23, 42, .35);
-    border: 2px solid #bbf7d0;
-    padding: 38px 42px;
-    text-align: center;
-    animation: pop .12s ease-out;
-  }
-
-  .modal.error {
-    border-color: #fecaca;
-  }
-
-  .modal.warning {
-    border-color: #fde68a;
-  }
-
-  .modal.select-modal {
-    width: min(740px, 94vw);
-    padding: 34px 36px;
-  }
-
-  .modal h2 {
-    margin: 0 0 16px;
-    font-size: 30px;
-    font-weight: 900;
-    letter-spacing: -0.03em;
-    color: var(--green-dark);
-  }
-
-  .modal.error h2 {
-    color: #991b1b;
-  }
-
-  .modal.warning h2 {
-    color: #92400e;
-  }
-
-  .modal p {
-    margin: 7px 0;
-    color: #475569;
-    font-size: 17px;
-    line-height: 1.5;
-    white-space: pre-wrap;
-  }
-
-  .modal-actions {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-    flex-wrap: wrap;
-    margin-top: 22px;
-  }
-
-  .modal.select-modal .modal-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-  }
-
-  .modal-btn {
-    min-width: 130px;
-    padding: 14px 18px;
-    font-size: 16px;
-    background: #16a34a;
-    color: #fff;
-  }
-
-  .modal.select-modal .modal-btn {
-    width: 100%;
-    min-width: 0;
-    min-height: 72px;
-    font-size: 22px;
-    border-radius: 18px;
-  }
-
-  .modal-btn.gray {
-    background: #475569;
-  }
-
-  .choice-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-top: 20px;
-    text-align: left;
-  }
-
-  .choice-btn {
-    width: 100%;
-    padding: 16px 18px;
-    border-radius: 14px;
-    background: #f8fafc;
-    color: #111827;
-    text-align: left;
-    border: 1px solid #e5e7eb;
-    font-size: 16px;
-    line-height: 1.4;
-  }
-
-  .choice-btn b {
-    color: #166534;
-  }
-
-  @keyframes pop {
-    from { transform: scale(.98); opacity: .6; }
-    to { transform: scale(1); opacity: 1; }
-  }
-
+  .left { position: relative; padding: 28px 32px; display: flex; flex-direction: column; gap: 18px; background: #fff; }
+  .right { position: relative; min-height: 100vh; background: #0b1220; color: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .top-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+  .title { margin: 0; color: var(--green-dark); font-size: 26px; font-weight: 900; letter-spacing: -0.03em; }
+  .clock { text-align: right; font-weight: 900; color: #111827; line-height: 1.25; white-space: nowrap; }
+  .clock-date { font-size: 15px; }
+  .clock-time { font-size: 24px; }
+  .card { border: 1px solid var(--line); border-radius: 20px; background: #fff; box-shadow: 0 10px 30px rgba(15,23,42,.06); padding: 24px; }
+  .input-title { margin: 0 0 18px; text-align: center; color: var(--green-dark); font-size: 21px; font-weight: 900; }
+  .pin-display { height: 62px; border: 2px solid #86efac; border-radius: 16px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 900; letter-spacing: .20em; color: #052e16; margin-bottom: 14px; user-select: none; }
+  .pin-placeholder { color: #94a3b8; font-size: 22px; letter-spacing: -0.03em; }
+  .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  button { border: 0; border-radius: 14px; font-family: inherit; font-weight: 900; cursor: pointer; transition: transform .06s ease, filter .12s ease, opacity .12s ease; user-select: none; }
+  button:active { transform: translateY(1px); }
+  button:disabled { opacity: .55; cursor: not-allowed; }
+  .num-btn { height: 54px; background: #fff; color: #0f172a; font-size: 24px; box-shadow: 0 5px 14px rgba(15,23,42,.08); border: 1px solid #eef2f7; }
+  .num-btn.utility-red { background: #fee2e2; color: #991b1b; }
+  .num-btn.utility-gray { background: #f1f5f9; color: #334155; }
+  .action-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+  .action-btn { height: 64px; color: #fff; font-size: 23px; box-shadow: 0 8px 18px rgba(15,23,42,.16); }
+  .check-in { background: linear-gradient(180deg, #22c55e, #16a34a); }
+  .check-out { background: linear-gradient(180deg, #3b82f6, #2563eb); }
+  .status-card { flex: 1; min-height: 260px; border: 1px solid #86efac; background: #ecfdf5; border-radius: 20px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 28px; color: var(--green-dark); }
+  .status-card.error { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
+  .status-card.warning { border-color: #fde68a; background: #fffbeb; color: #92400e; }
+  .status-card h2 { margin: 0 0 12px; font-size: 25px; font-weight: 900; letter-spacing: -0.03em; }
+  .status-card p { margin: 5px 0; font-size: 16px; color: #475569; line-height: 1.45; white-space: pre-line; }
+  .ad-wrap { width: min(92%, 900px); max-width: none; text-align: center; transform: translateY(-2vh); }
+  .ad-title { margin: 0 0 18px; font-size: clamp(30px, 3.1vw, 42px); font-weight: 900; letter-spacing: -0.04em; }
+  .ad-box { width: 100%; border-radius: 20px; overflow: hidden; background: #020617; box-shadow: 0 24px 60px rgba(0,0,0,.34); min-height: clamp(320px, 58vh, 560px); display: flex; align-items: center; justify-content: center; }
+  .ad-box iframe, .ad-box video, .ad-box img { width: 100%; display: block; border: 0; }
+  .ad-box img, .ad-box video { width: 100%; height: 100%; max-height: calc(100vh - 150px); object-fit: contain; background: #020617; }
+  .ad-box iframe { width: 100%; height: auto; aspect-ratio: 16 / 9; max-height: calc(100vh - 150px); }
+  .ad-text { padding: 44px; line-height: 1.55; white-space: pre-wrap; font-size: 20px; }
+  .slide-count { position: absolute; left: 20px; bottom: 18px; color: #cbd5e1; font-size: 13px; font-weight: 700; }
+  .ad-click-hint { position: absolute; right: 20px; top: 18px; color: #cbd5e1; font-size: 13px; font-weight: 800; opacity: .75; background: rgba(255,255,255,.08); padding: 8px 12px; border-radius: 999px; pointer-events: none; }
+  .ad-nav-row { position: absolute; right: 20px; bottom: 18px; display: flex; gap: 8px; z-index: 20; }
+  .ad-nav-btn { padding: 10px 14px; border-radius: 999px; background: rgba(255,255,255,.14); color: #fff; font-size: 13px; font-weight: 900; border: 1px solid rgba(255,255,255,.14); }
+  .modal-backdrop { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(15,23,42,.52); z-index: 1000; padding: 24px; }
+  .modal { width: min(620px, 92vw); border-radius: 22px; background: #fff; box-shadow: 0 30px 90px rgba(15,23,42,.35); border: 2px solid #bbf7d0; padding: 38px 42px; text-align: center; animation: pop .12s ease-out; }
+  .modal.error { border-color: #fecaca; }
+  .modal.warning { border-color: #fde68a; }
+  .modal.select-modal { width: min(740px, 94vw); padding: 34px 36px; }
+  .modal h2 { margin: 0 0 16px; font-size: 30px; font-weight: 900; letter-spacing: -0.03em; color: var(--green-dark); }
+  .modal.error h2 { color: #991b1b; }
+  .modal.warning h2 { color: #92400e; }
+  .modal p { margin: 7px 0; color: #475569; font-size: 17px; line-height: 1.5; white-space: pre-wrap; }
+  .modal-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 22px; }
+  .modal.select-modal .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .modal-btn { min-width: 130px; padding: 14px 18px; font-size: 16px; background: #16a34a; color: #fff; }
+  .modal.select-modal .modal-btn { width: 100%; min-width: 0; min-height: 72px; font-size: 22px; border-radius: 18px; }
+  .modal-btn.gray { background: #475569; }
+  .choice-list { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; text-align: left; }
+  .choice-btn { width: 100%; padding: 16px 18px; border-radius: 14px; background: #f8fafc; color: #111827; text-align: left; border: 1px solid #e5e7eb; font-size: 16px; line-height: 1.4; }
+  .choice-btn b { color: #166534; }
+  @keyframes pop { from { transform: scale(.98); opacity: .6; } to { transform: scale(1); opacity: 1; } }
   @media (max-width: 1024px) {
-    html,
-    body {
-      overflow-x: hidden;
-      overflow-y: auto;
-    }
-
-    body {
-      display: flex;
-      flex-direction: column;
-      min-height: auto;
-      background: #eef2f7;
-    }
-
-    .left {
-      width: 100%;
-      max-width: 100%;
-      min-height: auto;
-    }
-
-    .right {
-      width: 100%;
-      min-height: auto;
-      padding: 20px 12px 80px;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .ad-wrap {
-      width: 100%;
-      max-width: 100%;
-      transform: none;
-    }
-
-    .ad-box {
-      width: 100%;
-      min-height: 240px;
-    }
-
-    .ad-box img,
-    .ad-box video {
-      width: 100%;
-      height: auto;
-      max-height: 70vh;
-      object-fit: contain;
-      background: #020617;
-    }
-
-    .ad-box iframe {
-      width: 100%;
-      aspect-ratio: 16 / 9;
-    }
-
-    .ad-text {
-      padding: 28px 22px;
-      font-size: 15px;
-    }
-
-    .ad-click-hint {
-      top: 12px;
-      right: 14px;
-      font-size: 11px;
-      padding: 6px 9px;
-    }
-
-    .slide-count {
-      left: 14px;
-      bottom: 18px;
-    }
-
-    .ad-nav-row {
-      right: 14px;
-      bottom: 18px;
-    }
-
-    .ad-nav-btn {
-      padding: 9px 12px;
-      font-size: 12px;
-    }
-
-    .modal {
-      padding: 30px 24px;
-    }
-
-    .modal h2 {
-      font-size: 25px;
-    }
-
-    .modal p {
-      font-size: 15px;
-    }
+    html, body { overflow-x: hidden; overflow-y: auto; }
+    body { display: flex; flex-direction: column; min-height: auto; background: #eef2f7; }
+    .left { width: 100%; max-width: 100%; min-height: auto; }
+    .right { width: 100%; min-height: auto; padding: 20px 12px 80px; }
+    .ad-wrap { width: 100%; max-width: 100%; transform: none; }
+    .ad-box { width: 100%; min-height: 240px; }
+    .ad-box img, .ad-box video { width: 100%; height: auto; max-height: 70vh; object-fit: contain; }
+    .ad-box iframe { width: 100%; aspect-ratio: 16 / 9; }
+    .ad-text { padding: 28px 22px; font-size: 15px; }
   }
-
   @media (max-width: 480px) {
-    .left {
-      padding: 14px 12px 18px;
-    }
-
-    .title {
-      font-size: 19px;
-    }
-
-    .clock-time {
-      font-size: 18px;
-    }
-
-    .card {
-      padding: 16px;
-    }
-
-    .keypad {
-      gap: 8px;
-    }
-
-    .num-btn {
-      height: 43px;
-    }
-
-    .right {
-      padding: 20px 12px 64px;
-    }
-
-    .ad-title {
-      font-size: 24px;
-    }
-
-    .ad-box img,
-    .ad-box video {
-      max-height: 68vh;
-    }
+    .left { padding: 14px 12px 18px; }
+    .title { font-size: 19px; }
+    .clock-time { font-size: 18px; }
+    .card { padding: 16px; }
+    .keypad { gap: 8px; }
+    .num-btn { height: 43px; }
+    .right { padding: 20px 12px 64px; }
+    .ad-title { font-size: 24px; }
+    .ad-box img, .ad-box video { max-height: 68vh; }
   }
 </style>
 </head>
 <body>
-  <section class="left">
-    <div class="top-row">
-      <h1 class="title">울림연기학원 등하원 체크</h1>
-      <div class="clock">
-        <div class="clock-date" id="clockDate">-</div>
-        <div class="clock-time" id="clockTime">-</div>
-      </div>
+<section class="left">
+  <div class="top-row">
+    <h1 class="title">울림연기학원 등하원 체크</h1>
+    <div class="clock"><div class="clock-date" id="clockDate">-</div><div class="clock-time" id="clockTime">-</div></div>
+  </div>
+  <div class="card">
+    <h2 class="input-title">출결번호를 입력하세요</h2>
+    <div class="pin-display" id="pinDisplay"><span class="pin-placeholder">출결번호</span></div>
+    <div class="keypad">
+      <button class="num-btn" onclick="pressNum('1')">1</button><button class="num-btn" onclick="pressNum('2')">2</button><button class="num-btn" onclick="pressNum('3')">3</button>
+      <button class="num-btn" onclick="pressNum('4')">4</button><button class="num-btn" onclick="pressNum('5')">5</button><button class="num-btn" onclick="pressNum('6')">6</button>
+      <button class="num-btn" onclick="pressNum('7')">7</button><button class="num-btn" onclick="pressNum('8')">8</button><button class="num-btn" onclick="pressNum('9')">9</button>
+      <button class="num-btn utility-red" onclick="backspacePin()">지움</button><button class="num-btn" onclick="pressNum('0')">0</button><button class="num-btn utility-gray" onclick="clearPin()">전체삭제</button>
     </div>
-
-    <div class="card">
-      <h2 class="input-title">출결번호를 입력하세요</h2>
-      <div class="pin-display" id="pinDisplay"><span class="pin-placeholder">출결번호</span></div>
-
-      <div class="keypad">
-        <button class="num-btn" onclick="pressNum('1')">1</button>
-        <button class="num-btn" onclick="pressNum('2')">2</button>
-        <button class="num-btn" onclick="pressNum('3')">3</button>
-        <button class="num-btn" onclick="pressNum('4')">4</button>
-        <button class="num-btn" onclick="pressNum('5')">5</button>
-        <button class="num-btn" onclick="pressNum('6')">6</button>
-        <button class="num-btn" onclick="pressNum('7')">7</button>
-        <button class="num-btn" onclick="pressNum('8')">8</button>
-        <button class="num-btn" onclick="pressNum('9')">9</button>
-        <button class="num-btn utility-red" onclick="backspacePin()">지움</button>
-        <button class="num-btn" onclick="pressNum('0')">0</button>
-        <button class="num-btn utility-gray" onclick="clearPin()">전체삭제</button>
-      </div>
-
-      <div class="action-row">
-        <button class="action-btn check-in" id="checkInBtn" onclick="submitCheck('in')">등원</button>
-        <button class="action-btn check-out" id="checkOutBtn" onclick="submitCheck('out')">하원</button>
-      </div>
-    </div>
-
-    <div class="status-card" id="statusCard">
-      <div>
-        <h2>출결번호를 입력해주세요.</h2>
-        <p>출결번호는 휴대폰 번호 뒤 네 자리</p>
-      </div>
-    </div>
-  </section>
-
-  <section class="right" onclick="handleAdAreaClick(event)" title="클릭하면 다음 안내 자료로 넘어갑니다.">
-    <div class="ad-wrap">
-      <h2 class="ad-title" id="adTitle">홍보 영상</h2>
-      <div class="ad-box" id="adBox">
-        <div class="ad-text">홍보 자료를 불러오는 중입니다.</div>
-      </div>
-    </div>
-    <div class="ad-click-hint">홍보 영역 클릭 시 다음</div>
-    <div class="slide-count" id="slideCount">1 / 1</div>
-    <div class="ad-nav-row">
-      <button class="ad-nav-btn" onclick="event.stopPropagation(); prevAdSlide(true);">이전</button>
-      <button class="ad-nav-btn" onclick="event.stopPropagation(); nextAdSlide(true);">다음</button>
-    </div>
-  </section>
-
-  <div class="modal-backdrop" id="modalBackdrop" onclick="closeModalByBackdrop(event)">
-    <div class="modal" id="modalBox">
-      <h2 id="modalTitle">안내</h2>
-      <p id="modalMessage"></p>
-      <div class="modal-actions" id="modalActions">
-        <button class="modal-btn" onclick="closeModal()">확인</button>
-      </div>
+    <div class="action-row">
+      <button class="action-btn check-in" id="checkInBtn" onclick="submitCheck('in')">등원</button>
+      <button class="action-btn check-out" id="checkOutBtn" onclick="submitCheck('out')">하원</button>
     </div>
   </div>
+  <div class="status-card" id="statusCard"><div><h2>출결번호를 입력해주세요.</h2><p>출결번호는 휴대폰 번호 뒤 네 자리</p></div></div>
+</section>
+<section class="right" onclick="handleAdAreaClick(event)" title="클릭하면 다음 안내 자료로 넘어갑니다.">
+  <div class="ad-wrap"><h2 class="ad-title" id="adTitle">홍보 영상</h2><div class="ad-box" id="adBox"><div class="ad-text">홍보 자료를 불러오는 중입니다.</div></div></div>
+  <div class="ad-click-hint">홍보 영역 클릭 시 다음</div>
+  <div class="slide-count" id="slideCount">1 / 1</div>
+  <div class="ad-nav-row"><button class="ad-nav-btn" onclick="event.stopPropagation(); prevAdSlide(true);">이전</button><button class="ad-nav-btn" onclick="event.stopPropagation(); nextAdSlide(true);">다음</button></div>
+</section>
+<div class="modal-backdrop" id="modalBackdrop" onclick="closeModalByBackdrop(event)">
+  <div class="modal" id="modalBox"><h2 id="modalTitle">안내</h2><p id="modalMessage"></p><div class="modal-actions" id="modalActions"><button class="modal-btn" onclick="closeModal()">확인</button></div></div>
+</div>
 
 <script>
 /****************************************************
- * 울림 태블릿 43차-2 전체본
- * - 기준: 38차 일일캐시/비동기 출결 구조
- * - 보강: 안전 호출, 학생용 문구, 관리자/운영용 화면 문구 숨김
+ * 울림 태블릿 43차-8
+ * - 로컬 일일스냅샷 저장
+ * - 등하원 클릭 즉시 로컬 출결로그 저장
+ * - 로컬 중복 요청 즉시 차단
+ * - 화면 안내는 로컬 기준 1회만 표시
+ * - 구글시트 기록/알림톡은 백그라운드 대기열로 전송
  ****************************************************/
 const API_URL = "https://script.google.com/macros/s/AKfycbx7wQFuw6MqqOijmvuwpeiCWOk3xU3hr41xoKbRltQHLb1kLbr_1RD5Zzy3iuWcrhUD0A/exec";
-const TABLET_APP_VERSION = "2026.06.06.043.7";
+const TABLET_APP_VERSION = "2026.06.06.043.8";
 const TABLET_DEBUG = false;
 
 const URL_PARAMS = new URLSearchParams(location.search);
 const KIOSK_KEY = URL_PARAMS.get("kioskKey") || localStorage.getItem("ULIM_TABLET_KIOSK_KEY") || "";
 
-const DAILY_SNAPSHOT_KEY = "ULIM_TABLET_DAILY_SNAPSHOT_V43_2";
-const DAILY_SNAPSHOT_AT_KEY = "ULIM_TABLET_DAILY_SNAPSHOT_AT_V43_2";
-const DAILY_SNAPSHOT_DATE_KEY = "ULIM_TABLET_DAILY_SNAPSHOT_DATE_V43_2";
-const STATUS_RESET_DELAY_MS = 5000;
+const DAILY_SNAPSHOT_KEY = "ULIM_TABLET_DAILY_SNAPSHOT_V43_8";
+const DAILY_SNAPSHOT_AT_KEY = "ULIM_TABLET_DAILY_SNAPSHOT_AT_V43_8";
+const DAILY_SNAPSHOT_DATE_KEY = "ULIM_TABLET_DAILY_SNAPSHOT_DATE_V43_8";
+const LOCAL_ATTENDANCE_LOG_KEY = "ULIM_TABLET_LOCAL_ATTENDANCE_LOG_V43_8";
+const LOCAL_ATTENDANCE_PENDING_KEY = "ULIM_TABLET_LOCAL_ATTENDANCE_PENDING_V43_8";
+const LOCAL_DATA_DATE_KEY = "ULIM_TABLET_LOCAL_DATA_DATE_V43_8";
+const STATUS_RESET_DELAY_MS = 3500;
 
 let pin = "";
 let busy = false;
@@ -704,13 +189,18 @@ let adTimer = null;
 let tabletPreload = null;
 let tabletPreloadAt = 0;
 let tabletPreloadLoading = false;
+let pendingProcessing = false;
 let statusRequestSeq = 0;
 let statusResetTimer = null;
 let tabletProcessingFallbackTimer = null;
 
-function pad2(n) {
-  return String(n).padStart(2, "0");
-}
+function pad2(n) { return String(n).padStart(2, "0"); }
+function getTodayKey() { const now = new Date(); return [now.getFullYear(), pad2(now.getMonth() + 1), pad2(now.getDate())].join("-"); }
+function getNowIso() { return new Date().toISOString(); }
+function modeTextOf(mode) { return mode === "out" || mode === "하원" ? "하원" : "등원"; }
+function duplicateMessageOf(mode) { return modeTextOf(mode) === "하원" ? "이미 하원처리되었습니다." : "이미 등원처리되었습니다."; }
+function normalizeAttendanceNoClient(value) { return String(value || "").replace(/[^0-9]/g, ""); }
+function normalizeLocalKeyPart(value) { return String(value || "").replace(/\s+/g, "").trim(); }
 
 function updateClock() {
   const now = new Date();
@@ -721,44 +211,11 @@ function updateClock() {
   document.getElementById("clockTime").textContent = `${ampm} ${pad2(h12)}:${pad2(now.getMinutes())}`;
 }
 
-function getTodayKey() {
-  const now = new Date();
-  return [now.getFullYear(), pad2(now.getMonth() + 1), pad2(now.getDate())].join("-");
-}
-
-function pressNum(num) {
-  if (busy) return;
-  if (pin.length >= 8) return;
-  pin += num;
-  renderPin();
-}
-
-function backspacePin() {
-  if (busy) return;
-  pin = pin.slice(0, -1);
-  renderPin();
-}
-
-function clearPin() {
-  pin = "";
-  selectedStudent = null;
-  renderPin();
-}
-
-function renderPin() {
-  const el = document.getElementById("pinDisplay");
-  if (!pin) {
-    el.innerHTML = `<span class="pin-placeholder">출결번호</span>`;
-  } else {
-    el.textContent = pin;
-  }
-}
-
-function setBusy(value) {
-  busy = !!value;
-  document.getElementById("checkInBtn").disabled = busy;
-  document.getElementById("checkOutBtn").disabled = busy;
-}
+function pressNum(num) { if (busy) return; if (pin.length >= 8) return; pin += num; renderPin(); }
+function backspacePin() { if (busy) return; pin = pin.slice(0, -1); renderPin(); }
+function clearPin() { pin = ""; selectedStudent = null; renderPin(); }
+function renderPin() { const el = document.getElementById("pinDisplay"); el.innerHTML = pin ? escapeHtml(pin) : `<span class="pin-placeholder">출결번호</span>`; }
+function setBusy(value) { busy = !!value; document.getElementById("checkInBtn").disabled = busy; document.getElementById("checkOutBtn").disabled = busy; }
 
 function apiUrl(params) {
   const q = new URLSearchParams(params || {});
@@ -770,156 +227,51 @@ function apiUrl(params) {
 function tabletPublicMessage_(value, fallback) {
   const raw = String(value || "").trim();
   if (!raw) return fallback || "잠시 후 다시 시도해주세요.";
-
   if (/GAS|API|HTTP|JSON|HTML|서버|배포|웹앱|권한|대기열|출석부|알림톡|관리자|Script|Apps Script/i.test(raw)) {
     return fallback || "잠시 연결이 지연되고 있습니다. 다시 시도해주세요.";
   }
-
   return raw;
 }
 
-function tabletPublicErrorTitle_() {
-  return "잠시 후 다시 시도해주세요.";
-}
-
-function tabletPublicErrorMessage_() {
-  return "문제가 계속되면 데스크에 문의해주세요.";
-}
-
 async function tabletFetchJson(params, timeoutMs = 0) {
-  // 43차-4 핵심 수정:
-  // AbortController로 fetch를 강제 중단하지 않습니다.
-  // Apps Script 첫 호출/캐시 생성은 15초 이상 걸릴 수 있는데,
-  // 기존 43차-3은 이 요청을 끊어버려 AbortError가 발생했습니다.
-  const startedAt = Date.now();
-  const hardTimeoutMs = Math.max(0, Number(timeoutMs) || 0);
-
-  const fetchPromise = fetch(apiUrl(params), {
-    method: "GET",
-    cache: "no-store"
-  }).then(async function (res) {
+  const fetchPromise = fetch(apiUrl(params), { method: "GET", cache: "no-store" }).then(async function(res) {
     const text = await res.text();
-
-    if (!res.ok) {
-      if (TABLET_DEBUG) console.warn("[Tablet API] HTTP 오류:", res.status, text ? text.slice(0, 200) : "");
-      throw new Error("잠시 연결이 지연되고 있습니다. 다시 시도해주세요.");
-    }
-
-    if (/^\s*</.test(text || "")) {
-      if (TABLET_DEBUG) console.warn("[Tablet API] JSON 대신 HTML 응답:", text.slice(0, 200));
-      throw new Error("잠시 연결이 지연되고 있습니다. 다시 시도해주세요.");
-    }
-
+    if (!res.ok) throw new Error("잠시 연결이 지연되고 있습니다. 다시 시도해주세요.");
+    if (/^\s*</.test(text || "")) throw new Error("잠시 연결이 지연되고 있습니다. 다시 시도해주세요.");
     let data;
-    try {
-      data = JSON.parse(text);
-    } catch (parseErr) {
-      if (TABLET_DEBUG) console.warn("[Tablet API] JSON 파싱 실패:", text ? text.slice(0, 200) : "");
-      throw new Error("잠시 연결이 지연되고 있습니다. 다시 시도해주세요.");
-    }
-
-    if (!data || typeof data !== "object") {
-      if (TABLET_DEBUG) console.warn("[Tablet API] 응답 형식 오류:", data);
-      throw new Error("잠시 연결이 지연되고 있습니다. 다시 시도해주세요.");
-    }
-
-    if (data.message) {
-      data.message = tabletPublicMessage_(data.message, "잠시 연결이 지연되고 있습니다. 다시 시도해주세요.");
-    }
-    if (data.popupMessage) {
-      data.popupMessage = tabletPublicMessage_(data.popupMessage, data.message || "잠시 연결이 지연되고 있습니다. 다시 시도해주세요.");
-    }
-
-    if (TABLET_DEBUG) {
-      console.log("[Tablet API] 성공:", params && params.action, (Date.now() - startedAt) + "ms");
-    }
-
+    try { data = JSON.parse(text); } catch (err) { throw new Error("잠시 연결이 지연되고 있습니다. 다시 시도해주세요."); }
+    if (!data || typeof data !== "object") throw new Error("잠시 연결이 지연되고 있습니다. 다시 시도해주세요.");
+    if (data.message) data.message = tabletPublicMessage_(data.message, "잠시 연결이 지연되고 있습니다. 다시 시도해주세요.");
+    if (data.popupMessage) data.popupMessage = tabletPublicMessage_(data.popupMessage, data.message || "잠시 연결이 지연되고 있습니다. 다시 시도해주세요.");
     return data;
   });
 
-  // timeoutMs가 0이면 끝까지 기다립니다. 주로 초기 캐시/광고/웜업에 사용합니다.
-  if (!hardTimeoutMs) {
-    return fetchPromise;
-  }
-
-  // timeout을 쓰더라도 AbortController로 실제 요청을 끊지 않습니다.
-  // 화면은 복구하되, 서버 요청은 가능한 한 끝까지 진행되게 둡니다.
-  const timeoutPromise = new Promise(function (_, reject) {
-    setTimeout(function () {
-      reject(new Error("잠시 연결이 지연되고 있습니다. 다시 시도해주세요."));
-    }, hardTimeoutMs);
+  const limit = Math.max(0, Number(timeoutMs) || 0);
+  if (!limit) return fetchPromise;
+  const timeoutPromise = new Promise(function(_, reject) {
+    setTimeout(function() { reject(new Error("잠시 연결이 지연되고 있습니다. 다시 시도해주세요.")); }, limit);
   });
-
-  try {
-    return await Promise.race([fetchPromise, timeoutPromise]);
-  } catch (err) {
-    if (TABLET_DEBUG) console.warn("[Tablet API] 호출 지연/실패:", params && params.action, err);
-    throw new Error(tabletPublicMessage_(err && err.message, "잠시 연결이 지연되고 있습니다. 다시 시도해주세요."));
-  }
+  return Promise.race([fetchPromise, timeoutPromise]);
 }
 
 function escapeHtml(value) {
   return String(value == null ? "" : value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
-
-function escapeAttr(value) {
-  return escapeHtml(value).replace(/`/g, "&#096;");
-}
+function escapeAttr(value) { return escapeHtml(value).replace(/`/g, "&#096;"); }
 
 function setStatus(title, message, type) {
   const card = document.getElementById("statusCard");
-  const safeTitle = tabletPublicMessage_(title || "안내", "잠시 후 다시 시도해주세요.");
+  const safeTitle = tabletPublicMessage_(title || "안내", "안내");
   const safeMessage = tabletPublicMessage_(message || "", "");
-
   card.className = "status-card" + (type === "error" ? " error" : type === "warning" ? " warning" : "");
-  card.innerHTML = `
-    <div>
-      <h2>${escapeHtml(safeTitle)}</h2>
-      ${safeMessage ? `<p>${escapeHtml(safeMessage)}</p>` : ""}
-    </div>
-  `;
+  card.innerHTML = `<div><h2>${escapeHtml(safeTitle)}</h2>${safeMessage ? `<p>${escapeHtml(safeMessage)}</p>` : ""}</div>`;
 }
-
-function setDefaultStatus() {
-  setStatus("출결번호를 입력해주세요.", "출결번호는 휴대폰 번호 뒤 네 자리", "success");
-}
-
-function resetStatusSoon(delay = STATUS_RESET_DELAY_MS) {
-  if (statusResetTimer) clearTimeout(statusResetTimer);
-  statusResetTimer = setTimeout(function () {
-    setDefaultStatus();
-  }, delay);
-}
-
-function clearProcessingFallback() {
-  if (tabletProcessingFallbackTimer) {
-    clearTimeout(tabletProcessingFallbackTimer);
-    tabletProcessingFallbackTimer = null;
-  }
-}
-
-function showInstantGreeting(mode) {
-  const title = mode === "out" ? "안녕히 가세요!" : "어서오세요!";
-  const message = mode === "out" ? "오늘도 수고 많았습니다." : "오늘도 즐거운 수업 되시길 바랍니다.";
-  setStatus(title, message, "success");
-  resetStatusSoon(2000);
-}
-
-function startProcessingFallback(seq, mode) {
-  clearProcessingFallback();
-  tabletProcessingFallbackTimer = setTimeout(function () {
-    if (seq !== statusRequestSeq) return;
-    showInstantGreeting(mode);
-    // 네트워크가 늦어도 태블릿 버튼은 즉시 다시 사용할 수 있게 풉니다.
-    setBusy(false);
-    statusRequestSeq++;
-  }, 3000);
-}
+function setDefaultStatus() { setStatus("출결번호를 입력해주세요.", "출결번호는 휴대폰 번호 뒤 네 자리", "success"); }
+function resetStatusSoon(delay = STATUS_RESET_DELAY_MS) { if (statusResetTimer) clearTimeout(statusResetTimer); statusResetTimer = setTimeout(setDefaultStatus, delay); }
+function clearProcessingFallback() { if (tabletProcessingFallbackTimer) { clearTimeout(tabletProcessingFallbackTimer); tabletProcessingFallbackTimer = null; } }
+function showNeutralWaiting(seq) { clearProcessingFallback(); tabletProcessingFallbackTimer = setTimeout(function(){ if (seq === statusRequestSeq) setStatus("확인 중입니다.", "잠시만 기다려주세요.", "success"); }, 900); }
 
 function showModal(title, message, type, innerHtml, extraClass) {
   const backdrop = document.getElementById("modalBackdrop");
@@ -930,31 +282,30 @@ function showModal(title, message, type, innerHtml, extraClass) {
   document.getElementById("modalActions").innerHTML = innerHtml || `<button class="modal-btn" onclick="closeModal()">확인</button>`;
   backdrop.style.display = "flex";
 }
+function closeModal() { document.getElementById("modalBackdrop").style.display = "none"; document.getElementById("modalBox").className = "modal"; }
+function closeModalByBackdrop(event) { if (event.target && event.target.id === "modalBackdrop") closeModal(); }
 
-function closeModal() {
-  document.getElementById("modalBackdrop").style.display = "none";
-  document.getElementById("modalBox").className = "modal";
-}
-
-function closeModalByBackdrop(event) {
-  if (event.target && event.target.id === "modalBackdrop") closeModal();
-}
-
-function normalizeAttendanceNoClient(value) {
-  return String(value || "").replace(/[^0-9]/g, "");
+function clearStaleTabletLocalData() {
+  const today = getTodayKey();
+  const storedDate = localStorage.getItem(LOCAL_DATA_DATE_KEY) || localStorage.getItem(DAILY_SNAPSHOT_DATE_KEY) || "";
+  if (storedDate && storedDate !== today) {
+    [DAILY_SNAPSHOT_KEY, DAILY_SNAPSHOT_AT_KEY, DAILY_SNAPSHOT_DATE_KEY, LOCAL_ATTENDANCE_LOG_KEY, LOCAL_ATTENDANCE_PENDING_KEY].forEach(function(key) {
+      try { localStorage.removeItem(key); } catch (err) {}
+    });
+    tabletPreload = null;
+    tabletPreloadAt = 0;
+  }
+  localStorage.setItem(LOCAL_DATA_DATE_KEY, today);
 }
 
 function saveDailySnapshot(data) {
   if (!data || data.status !== "success" || !data.attendanceMap) return false;
   tabletPreload = data;
   tabletPreloadAt = Date.now();
-  try {
-    localStorage.setItem(DAILY_SNAPSHOT_KEY, JSON.stringify(data));
-    localStorage.setItem(DAILY_SNAPSHOT_AT_KEY, String(tabletPreloadAt));
-    localStorage.setItem(DAILY_SNAPSHOT_DATE_KEY, String(data.date || getTodayKey()));
-  } catch (err) {
-    if (TABLET_DEBUG) console.warn("[Tablet Cache] 저장 실패:", err);
-  }
+  localStorage.setItem(DAILY_SNAPSHOT_KEY, JSON.stringify(data));
+  localStorage.setItem(DAILY_SNAPSHOT_AT_KEY, String(tabletPreloadAt));
+  localStorage.setItem(DAILY_SNAPSHOT_DATE_KEY, String(data.date || getTodayKey()));
+  localStorage.setItem(LOCAL_DATA_DATE_KEY, String(data.date || getTodayKey()));
   return true;
 }
 
@@ -969,486 +320,126 @@ function loadDailySnapshotFromLocal() {
     tabletPreload = data;
     tabletPreloadAt = Number(localStorage.getItem(DAILY_SNAPSHOT_AT_KEY) || 0) || Date.now();
     return data;
-  } catch (err) {
-    return null;
-  }
+  } catch (err) { return null; }
 }
 
 async function loadTabletPreload(force = false) {
+  clearStaleTabletLocalData();
   const now = Date.now();
   const localSnapshot = loadDailySnapshotFromLocal();
-
   if (!force && tabletPreload && now - tabletPreloadAt < 30 * 60 * 1000) return tabletPreload;
-  if (!force && localSnapshot) {
-    // 화면은 로컬 캐시로 즉시 살리고, 서버 캐시는 뒤에서 조용히 갱신합니다.
-    refreshTabletDailySnapshotLocal(false, true);
-    return localSnapshot;
-  }
+  if (!force && localSnapshot) { refreshTabletDailySnapshotLocal(false, true); return localSnapshot; }
   if (tabletPreloadLoading) return tabletPreload || localSnapshot;
-
   tabletPreloadLoading = true;
   try {
-    // 초기 캐시는 Abort/짧은 timeout 없이 기다립니다.
-    // 이 함수는 시작 시 백그라운드로 호출되므로 화면을 막지 않습니다.
     const data = await tabletFetchJson({ action: "tabletGetDailySnapshot", force: force ? "1" : "0" }, 0);
     if (saveDailySnapshot(data)) return data;
-  } catch (err) {
-    if (TABLET_DEBUG) console.warn("[Tablet Cache] 일일자료 갱신 실패:", err);
-  }
-
+  } catch (err) { if (TABLET_DEBUG) console.warn("[Tablet Cache] snapshot fail", err); }
   try {
     const legacyData = await tabletFetchJson({ action: "tabletPreload" }, 0);
     if (saveDailySnapshot(legacyData)) return legacyData;
-  } catch (err) {
-    if (TABLET_DEBUG) console.warn("[Tablet Cache] 보조자료 갱신 실패:", err);
-  } finally {
-    tabletPreloadLoading = false;
-  }
-
+  } catch (err) { if (TABLET_DEBUG) console.warn("[Tablet Cache] preload fail", err); }
+  finally { tabletPreloadLoading = false; }
   return tabletPreload || localSnapshot;
 }
 
 async function refreshTabletDailySnapshotLocal(forceServer = true, silent = false) {
+  clearStaleTabletLocalData();
   try {
     const data = await tabletFetchJson({ action: "tabletGetDailySnapshot", force: forceServer ? "1" : "0" }, 0);
     saveDailySnapshot(data);
     return data;
   } catch (err) {
-    if (!silent && TABLET_DEBUG) console.warn("[Tablet Cache] 새로고침 실패:", err);
+    if (!silent && TABLET_DEBUG) console.warn("[Tablet Cache] refresh fail", err);
     return loadDailySnapshotFromLocal();
   }
 }
 
 function getPreloadedCandidates(attendanceNo) {
   if (!tabletPreload || !tabletPreload.attendanceMap) return null;
-  const key = normalizeAttendanceNoClient(attendanceNo);
-  return tabletPreload.attendanceMap[key] || null;
+  return tabletPreload.attendanceMap[normalizeAttendanceNoClient(attendanceNo)] || null;
 }
 
-async function tryHandleWithPreload(attendanceNo, mode, extra, seq) {
-  if (!tabletPreload || !tabletPreload.attendanceMap) return false;
-  if (extra && (extra.selectedClassIndex !== undefined || extra.classIndex !== undefined || extra.selectedRowNumber || extra.rowNumber)) return false;
-
-  const candidates = getPreloadedCandidates(attendanceNo);
-  if (!candidates || !candidates.length) return false;
-
-  lastMode = mode;
-  lastAttendanceNo = attendanceNo;
-
-  if (candidates.length > 1) {
-    clearProcessingFallback();
-    setBusy(false);
-    showStudentChoice({
-      status: "multiple",
-      attendanceNo: attendanceNo,
-      candidates: candidates
-    });
-    return true;
-  }
-
-  const student = candidates[0];
-  selectedStudent = student;
-  const classes = Array.isArray(student.classes) ? student.classes : [];
-
-  if (classes.length > 1) {
-    clearProcessingFallback();
-    setBusy(false);
-    showClassChoice({
-      status: "multipleClasses",
-      attendanceNo: attendanceNo,
-      studentName: student.name,
-      studentRowNumber: student.rowNumber,
-      classes: classes
-    });
-    return true;
-  }
-
-  const cls = classes.length === 1 ? classes[0] : {
-    index: 0,
-    className: student.className || "오늘 수업 확인 필요",
-    instructor: student.instructor || "",
-    roomName: "데스크문의"
-  };
-
-  await enqueueAttendanceFromLocalSnapshot(attendanceNo, mode, student, cls, seq);
-  return true;
-}
-
-async function enqueueAttendanceFromLocalSnapshot(attendanceNo, mode, student, cls, seq) {
-  const modeText = mode === "out" ? "하원" : "등원";
-  const params = {
-    action: "tabletEnqueueAttendance",
-    attendanceNo: attendanceNo,
-    mode: mode,
-    selectedRowNumber: student.rowNumber || "",
-    selectedStudentName: student.name || "",
-    selectedClassIndex: cls.index !== undefined ? cls.index : "",
-    className: cls.className || "",
-    instructor: cls.instructor || student.instructor || "",
-    roomName: cls.roomName || "데스크문의"
-  };
-
+function getLocalAttendanceStore() {
+  const today = getTodayKey();
   try {
-    const data = await tabletFetchJson(params, 25000);
-    if (seq !== statusRequestSeq) return;
-    clearProcessingFallback();
-
-    if (data && (data.duplicate === true || data.status === "duplicate" || data.status === "already")) {
-      const message = tabletPublicMessage_(data.message || data.popupMessage || ("이미 " + modeText + "처리되었습니다."), "이미 " + modeText + "처리되었습니다.");
-      setStatus(message, "", "warning");
-      resetStatusSoon(5000);
-      return;
-    }
-
-    if (data && data.status === "multiple") {
-      showStudentChoice(data);
-      return;
-    }
-
-    if (data && data.status === "multipleClasses") {
-      showClassChoice(data);
-      return;
-    }
-
-    if (!data || (data.status !== "queued" && data.status !== "success")) {
-      return submitCheckLegacy(mode, params, seq);
-    }
-
-    const name = data.studentName || student.name || "학생";
-    const className = data.className || cls.className || "데스크문의";
-    const roomName = data.roomName || cls.roomName || "데스크문의";
-
-    setStatus(
-      mode === "out" ? `${name}님, 수고하셨습니다.` : `${name}님, 어서오세요.`,
-      mode === "out" ? "오늘도 수고 많았습니다." : [`오늘 수업: ${className}`, `오늘 강의실: ${roomName}`].join("\n"),
-      "success"
-    );
-    resetStatusSoon(5000);
-  } catch (err) {
-    if (seq === statusRequestSeq) {
-      return submitCheckLegacy(mode, params, seq);
-    }
-  }
-}
-
-async function submitCheck(mode, extra = {}) {
-  const attendanceNo = extra.attendanceNo || pin;
-  if (!attendanceNo) {
-    showModal("출결번호를 입력해주세요.", "", "warning");
-    resetStatusSoon();
-    return;
-  }
-
-  if (busy) return;
-  setBusy(true);
-
-  const seq = ++statusRequestSeq;
-  lastMode = mode;
-  lastAttendanceNo = attendanceNo;
-
-  if (!extra || (!extra.selectedRowNumber && extra.selectedClassIndex === undefined && extra.classIndex === undefined)) {
-    clearPin();
-  }
-
-  setStatus(mode === "out" ? "하원 처리 중입니다." : "등원 처리 중입니다.", "잠시만 기다려주세요.", "success");
-  startProcessingFallback(seq, mode);
-
-  try {
-    const isDirectFirstTry = !extra || (!extra.selectedRowNumber && extra.selectedClassIndex === undefined && extra.classIndex === undefined);
-
-    if (isDirectFirstTry) {
-      // 이미 받은 캐시가 있을 때만 즉시 로컬 처리합니다.
-      // 캐시가 아직 없으면 여기서 기다리지 않고 기존 API 처리로 바로 넘어갑니다.
-      const localSnapshot = tabletPreload || loadDailySnapshotFromLocal();
-      if (localSnapshot) {
-        const handled = await tryHandleWithPreload(attendanceNo, mode, extra, seq);
-        if (handled) return;
-      } else {
-        // 다음 학생부터 빨라지도록 백그라운드 캐시만 조용히 받아옵니다.
-        loadTabletPreload(false);
-      }
-    }
-
-    await submitCheckLegacy(mode, extra, seq);
-  } finally {
-    setBusy(false);
-  }
-}
-
-async function submitCheckLegacy(mode, extra = {}, seqFromParent) {
-  const seq = seqFromParent || statusRequestSeq;
-  const attendanceNo = extra.attendanceNo || lastAttendanceNo || pin;
-  const modeText = mode === "out" ? "하원" : "등원";
-
-  if (!attendanceNo) {
-    showModal("출결번호를 입력해주세요.", "", "warning");
-    resetStatusSoon();
-    return;
-  }
-
-  try {
-    const params = {
-      action: "tabletCheck",
-      attendanceNo: attendanceNo,
-      mode: mode
-    };
-
-    if (selectedStudent && selectedStudent.rowNumber) {
-      params.selectedRowNumber = selectedStudent.rowNumber;
-      params.selectedStudentName = selectedStudent.name || "";
-    }
-
-    Object.keys(extra || {}).forEach(function (key) {
-      if (key === "action") return;
-      if (extra[key] !== undefined && extra[key] !== null) params[key] = extra[key];
-    });
-
-    const data = await tabletFetchJson(params, 25000);
-    if (seq !== statusRequestSeq) return;
-    clearProcessingFallback();
-
-    if (data && (data.duplicate === true || data.status === "duplicate" || data.status === "already")) {
-      const message = tabletPublicMessage_(data.message || data.popupMessage || ("이미 " + modeText + "처리되었습니다."), "이미 " + modeText + "처리되었습니다.");
-      setStatus(message, "", "warning");
-      resetStatusSoon(5000);
-      return;
-    }
-
-    if (data && data.status === "multiple") {
-      showStudentChoice(data);
-      return;
-    }
-
-    if (data && data.status === "multipleClasses") {
-      showClassChoice(data);
-      return;
-    }
-
-    if (!data || data.status !== "success") {
-      const msg = tabletPublicMessage_(data && data.message, tabletPublicErrorMessage_());
-      setStatus(tabletPublicErrorTitle_(), msg, "warning");
-      resetStatusSoon(3000);
-      return;
-    }
-
-    const name = data.studentName || "학생";
-    const className = data.className || "데스크문의";
-    const roomName = data.roomName || "데스크문의";
-
-    setStatus(
-      mode === "out" ? `${name}님, 수고하셨습니다.` : `${name}님, 어서오세요.`,
-      mode === "out" ? "오늘도 수고 많았습니다." : [`오늘 수업: ${className}`, `오늘 강의실: ${roomName}`].join("\n"),
-      "success"
-    );
-    resetStatusSoon(5000);
-  } catch (err) {
-    if (seq !== statusRequestSeq) return;
-    clearProcessingFallback();
-    setStatus(tabletPublicErrorTitle_(), tabletPublicMessage_(err && err.message, tabletPublicErrorMessage_()), "warning");
-    resetStatusSoon(3000);
-  }
-}
-
-function showStudentChoice(data) {
-  const candidates = Array.isArray(data.candidates) ? data.candidates : [];
-  if (!candidates.length) {
-    showModal("학생을 찾지 못했습니다.", "데스크에 문의해주세요.", "warning");
-    return;
-  }
-
-  const buttons = candidates.map(function (student) {
-    const rowNumber = escapeAttr(student.rowNumber || student.studentRowNumber || "");
-    const name = escapeAttr(student.name || student.studentName || "학생");
-    return `<button class="choice-btn" onclick="selectStudentChoice('${rowNumber}', '${name}')"><b>${escapeHtml(student.name || student.studentName || "학생")}</b></button>`;
-  }).join("");
-
-  showModal(
-    "학생을 선택해주세요.",
-    "같은 출결번호를 사용하는 학생이 있습니다.",
-    "success",
-    `<div class="choice-list">${buttons}</div><div class="modal-actions"><button class="modal-btn gray" onclick="closeModal(); setDefaultStatus();">취소</button></div>`
-  );
-}
-
-function selectStudentChoice(rowNumber, name) {
-  closeModal();
-  selectedStudent = { rowNumber: rowNumber, name: name };
-  submitCheck(lastMode, {
-    attendanceNo: lastAttendanceNo,
-    selectedRowNumber: rowNumber,
-    selectedStudentName: name
-  });
-}
-
-function showClassChoice(data) {
-  const classes = Array.isArray(data.classes) ? data.classes : [];
-  if (!classes.length) {
-    showModal("수업을 찾지 못했습니다.", "데스크에 문의해주세요.", "warning");
-    return;
-  }
-
-  const attendanceNo = escapeAttr(data.attendanceNo || lastAttendanceNo || "");
-  const studentName = escapeAttr(data.studentName || "학생");
-  const studentRowNumber = escapeAttr(data.studentRowNumber || data.rowNumber || "");
-
-  const buttons = classes.map(function (cls, idx) {
-    const classIndex = cls.index !== undefined ? cls.index : idx;
-    const className = cls.className || "오늘 수업 확인 필요";
-    const roomName = cls.roomName || "데스크문의";
-    const instructor = cls.instructor || "";
-    return `<button class="choice-btn" onclick="selectClassChoice('${attendanceNo}', '${studentRowNumber}', '${studentName}', '${escapeAttr(classIndex)}', '${escapeAttr(className)}', '${escapeAttr(instructor)}', '${escapeAttr(roomName)}')"><b>${escapeHtml(className)}</b><br>강의실: ${escapeHtml(roomName)}</button>`;
-  }).join("");
-
-  showModal(
-    "수업을 선택해주세요.",
-    `${data.studentName || "학생"}님의 오늘 수업이 여러 개 있습니다.`,
-    "success",
-    `<div class="choice-list">${buttons}</div><div class="modal-actions"><button class="modal-btn gray" onclick="closeModal(); setDefaultStatus();">취소</button></div>`,
-    "select-modal"
-  );
-}
-
-function selectClassChoice(attendanceNo, studentRowNumber, studentName, classIndex, className, instructor, roomName) {
-  closeModal();
-  submitCheck(lastMode, {
-    attendanceNo: attendanceNo || lastAttendanceNo,
-    selectedRowNumber: studentRowNumber || "",
-    selectedStudentName: studentName || "",
-    selectedClassIndex: classIndex,
-    className: className || "",
-    instructor: instructor || "",
-    roomName: roomName || "데스크문의"
-  });
-}
-
-async function warmup() {
-  try {
-    await tabletFetchJson({ action: "tabletWarmup" }, 0);
+    const raw = localStorage.getItem(LOCAL_ATTENDANCE_LOG_KEY);
+    const store = raw ? JSON.parse(raw) : null;
+    if (store && store.date === today && store.entries && typeof store.entries === "object") return store;
   } catch (err) {}
+  return { date: today, entries: {} };
 }
-
-async function loadAds() {
+function saveLocalAttendanceStore(store) { store.date = getTodayKey(); localStorage.setItem(LOCAL_ATTENDANCE_LOG_KEY, JSON.stringify(store)); localStorage.setItem(LOCAL_DATA_DATE_KEY, getTodayKey()); }
+function getLocalPendingStore() {
+  const today = getTodayKey();
   try {
-    const data = await tabletFetchJson({ action: "tabletGetAds" }, 0);
-    adSlides = data.slides && data.slides.length ? data.slides : defaultSlides();
-  } catch (err) {
-    adSlides = defaultSlides();
+    const raw = localStorage.getItem(LOCAL_ATTENDANCE_PENDING_KEY);
+    const store = raw ? JSON.parse(raw) : null;
+    if (store && store.date === today && store.items && typeof store.items === "object") return store;
+  } catch (err) {}
+  return { date: today, items: {} };
+}
+function saveLocalPendingStore(store) { store.date = getTodayKey(); localStorage.setItem(LOCAL_ATTENDANCE_PENDING_KEY, JSON.stringify(store)); localStorage.setItem(LOCAL_DATA_DATE_KEY, getTodayKey()); }
+
+function buildLocalEventKey(attendanceNo, mode, studentName, className) {
+  return [getTodayKey(), normalizeAttendanceNoClient(attendanceNo), modeTextOf(mode), normalizeLocalKeyPart(studentName), normalizeLocalKeyPart(className)].join("|");
+}
+function isLocalDuplicateEvent(attendanceNo, mode, studentName, className) {
+  const store = getLocalAttendanceStore();
+  const key = buildLocalEventKey(attendanceNo, mode, studentName, className);
+  return !!store.entries[key];
+}
+function saveLocalAttendanceEvent(attendanceNo, mode, student, cls, params) {
+  const studentName = (student && (student.name || student.studentName)) || (params && params.selectedStudentName) || "학생";
+  const className = (cls && cls.className) || (params && params.className) || "데스크문의";
+  const roomName = (cls && cls.roomName) || (params && params.roomName) || "데스크문의";
+  const key = buildLocalEventKey(attendanceNo, mode, studentName, className);
+  const now = getNowIso();
+  const entry = {
+    eventKey: key,
+    date: getTodayKey(),
+    attendanceNo: normalizeAttendanceNoClient(attendanceNo),
+    mode: modeTextOf(mode),
+    studentName: studentName,
+    className: className,
+    roomName: roomName,
+    savedAt: now,
+    status: "pending",
+    attempts: 0,
+    params: params || {}
+  };
+  const log = getLocalAttendanceStore();
+  log.entries[key] = entry;
+  saveLocalAttendanceStore(log);
+  const pending = getLocalPendingStore();
+  pending.items[key] = entry;
+  saveLocalPendingStore(pending);
+  return entry;
+}
+function updateLocalAttendanceEventStatus(eventKey, status, data) {
+  const log = getLocalAttendanceStore();
+  if (log.entries[eventKey]) {
+    log.entries[eventKey].status = status;
+    log.entries[eventKey].updatedAt = getNowIso();
+    if (data && data.eventId) log.entries[eventKey].serverEventId = data.eventId;
+    saveLocalAttendanceStore(log);
   }
-  adIndex = 0;
-  renderAdSlide();
-}
-
-function defaultSlides() {
-  return [
-    {
-      type: "공지",
-      title: "홍보 영상",
-      content: "울림연기학원에 오신 것을 환영합니다.",
-      imageUrl: "",
-      videoUrl: "",
-      seconds: 8
-    }
-  ];
-}
-
-function extractYoutubeId(url) {
-  const text = String(url || "");
-  const m = text.match(/embed\/([^?&/]+)/) || text.match(/[?&]v=([^?&]+)/) || text.match(/youtu\.be\/([^?&/]+)/);
-  return m ? m[1] : "";
-}
-
-function buildYoutubeEmbedUrl(url) {
-  const safeUrl = String(url || "");
-  const id = extractYoutubeId(safeUrl);
-  const sep = safeUrl.indexOf("?") === -1 ? "?" : "&";
-  return safeUrl + sep + "autoplay=1&mute=1&loop=1" + (id ? "&playlist=" + encodeURIComponent(id) : "");
-}
-
-function renderAdSlide() {
-  if (!adSlides.length) adSlides = defaultSlides();
-
-  const slide = adSlides[adIndex] || adSlides[0];
-  document.getElementById("adTitle").textContent = slide.title || "홍보 영상";
-  document.getElementById("slideCount").textContent = `${adIndex + 1} / ${adSlides.length}`;
-
-  const box = document.getElementById("adBox");
-  const videoUrl = slide.videoUrl || "";
-  const imageUrl = slide.imageUrl || "";
-
-  if (videoUrl) {
-    if (videoUrl.includes("youtube.com/embed/")) {
-      box.innerHTML = `<iframe src="${escapeAttr(buildYoutubeEmbedUrl(videoUrl))}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+  const pending = getLocalPendingStore();
+  if (pending.items[eventKey]) {
+    if (status === "queued" || status === "success" || status === "duplicate" || status === "already") {
+      delete pending.items[eventKey];
     } else {
-      box.innerHTML = `<video src="${escapeAttr(videoUrl)}" autoplay muted loop playsinline></video>`;
+      pending.items[eventKey].status = status;
+      pending.items[eventKey].updatedAt = getNowIso();
     }
-  } else if (imageUrl) {
-    box.innerHTML = `<img src="${escapeAttr(imageUrl)}" alt="홍보 이미지" onerror="this.parentElement.innerHTML=\`<div class='ad-text'>이미지를 불러오지 못했습니다.</div>\`;">`;
-  } else {
-    box.innerHTML = `<div class="ad-text">${escapeHtml(slide.content || "오늘도 좋은 수업 되세요.")}</div>`;
+    saveLocalPendingStore(pending);
   }
-
-  clearTimeout(adTimer);
-  const seconds = Math.max(5, Number(slide.seconds || 10));
-  adTimer = setTimeout(function () {
-    nextAdSlide(false);
-  }, seconds * 1000);
 }
 
-function nextAdSlide(manual = true) {
-  if (!adSlides.length) return;
-  clearTimeout(adTimer);
-  adIndex = (adIndex + 1) % adSlides.length;
-  renderAdSlide();
-}
-
-function prevAdSlide(manual = true) {
-  if (!adSlides.length) return;
-  clearTimeout(adTimer);
-  adIndex = (adIndex - 1 + adSlides.length) % adSlides.length;
-  renderAdSlide();
-}
-
-function handleAdAreaClick(event) {
-  const tag = String((event.target && event.target.tagName) || "").toLowerCase();
-  if (["button", "iframe", "video"].indexOf(tag) !== -1) return;
-  nextAdSlide(true);
-}
-
-window.addEventListener("keydown", function (event) {
-  if (/^[0-9]$/.test(event.key)) {
-    pressNum(event.key);
-    return;
-  }
-  if (event.key === "Backspace") {
-    backspacePin();
-    return;
-  }
-  if (event.key === "Enter") {
-    submitCheck("in");
-  }
-});
-
-/****************************************************
- * 43차-7 로컬 안내 1회 고정 / 백그라운드 응답 화면반영 차단
- * - 로컬 캐시로 학생/수업/강의실을 찾으면 즉시 1회만 안내
- * - 그 뒤 tabletEnqueueAttendance 응답은 화면을 다시 바꾸지 않음
- * - 성공/queued/duplicate/already 모두 백그라운드 처리로 간주
- * - 실패해도 학생 화면에 두 번째 문구를 띄우지 않고 콘솔에만 남김
- * - 로컬 캐시에 없을 때만 기존 API 경로가 화면 문구를 담당
- ****************************************************/
-function hasClassSelectionExtra_43_7(extra) {
-  return !!(extra && (
-    extra.selectedClassIndex !== undefined ||
-    extra.classIndex !== undefined ||
-    extra.selectedRowNumber ||
-    extra.rowNumber
-  ));
-}
-
-function buildAttendanceParams_43_7(attendanceNo, mode, student, cls, extra) {
+function buildAttendanceParams(attendanceNo, mode, student, cls, extra) {
   const params = {
     action: "tabletEnqueueAttendance",
-    attendanceNo: attendanceNo,
+    attendanceNo: normalizeAttendanceNoClient(attendanceNo),
     mode: mode,
     selectedRowNumber: (student && (student.rowNumber || student.studentRowNumber)) || (extra && (extra.selectedRowNumber || extra.rowNumber)) || "",
     selectedStudentName: (student && (student.name || student.studentName)) || (extra && extra.selectedStudentName) || "",
@@ -1457,324 +448,261 @@ function buildAttendanceParams_43_7(attendanceNo, mode, student, cls, extra) {
     instructor: (cls && cls.instructor) || (student && student.instructor) || (extra && extra.instructor) || "",
     roomName: (cls && cls.roomName) || (extra && extra.roomName) || "데스크문의"
   };
-
-  Object.keys(extra || {}).forEach(function (key) {
-    if (key === "action") return;
-    if (params[key] === undefined || params[key] === "") {
-      if (extra[key] !== undefined && extra[key] !== null) params[key] = extra[key];
-    }
-  });
-
+  Object.keys(extra || {}).forEach(function(key) { if (key !== "action" && (params[key] === undefined || params[key] === "") && extra[key] != null) params[key] = extra[key]; });
   return params;
 }
 
-function showAttendanceSuccess_43_7(mode, name, className, roomName) {
+function showAttendanceSuccess(mode, name, className, roomName) {
   const safeName = name || "학생";
-  if (mode === "out") {
+  if (modeTextOf(mode) === "하원") {
     setStatus(`${safeName}님, 수고하셨습니다.`, "오늘도 수고 많았습니다.", "success");
   } else {
-    setStatus(
-      `${safeName}님, 어서오세요.`,
-      [`오늘 수업: ${className || "데스크문의"}`, `오늘 강의실: ${roomName || "데스크문의"}`].join("\n"),
-      "success"
-    );
+    setStatus(`${safeName}님, 어서오세요.`, [`오늘 수업: ${className || "데스크문의"}`, `오늘 강의실: ${roomName || "데스크문의"}`].join("\n"), "success");
   }
-  resetStatusSoon(3500);
+  resetStatusSoon(STATUS_RESET_DELAY_MS);
+}
+function showDuplicate(mode) { setStatus(duplicateMessageOf(mode), "", "warning"); resetStatusSoon(STATUS_RESET_DELAY_MS); }
+
+function queueAttendanceBackground(entry) {
+  processLocalPendingAttendanceQueue();
+}
+async function sendLocalPendingItem(eventKey, item) {
+  try {
+    const data = await tabletFetchJson(item.params, 0);
+    const status = data && (data.status || "success");
+    if (["queued", "success", "duplicate", "already"].indexOf(status) !== -1 || data.duplicate === true) {
+      updateLocalAttendanceEventStatus(eventKey, status === "error" ? "pending" : status, data);
+    } else {
+      const pending = getLocalPendingStore();
+      if (pending.items[eventKey]) {
+        pending.items[eventKey].attempts = Number(pending.items[eventKey].attempts || 0) + 1;
+        pending.items[eventKey].lastError = "unexpected response";
+        pending.items[eventKey].updatedAt = getNowIso();
+        saveLocalPendingStore(pending);
+      }
+    }
+  } catch (err) {
+    const pending = getLocalPendingStore();
+    if (pending.items[eventKey]) {
+      pending.items[eventKey].attempts = Number(pending.items[eventKey].attempts || 0) + 1;
+      pending.items[eventKey].lastError = err && err.message ? err.message : String(err);
+      pending.items[eventKey].updatedAt = getNowIso();
+      saveLocalPendingStore(pending);
+    }
+  }
+}
+async function processLocalPendingAttendanceQueue() {
+  if (pendingProcessing) return;
+  pendingProcessing = true;
+  try {
+    const pending = getLocalPendingStore();
+    const keys = Object.keys(pending.items || {});
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+      const item = pending.items[key];
+      if (!item || Number(item.attempts || 0) >= 10) continue;
+      await sendLocalPendingItem(key, item);
+      break;
+    }
+  } finally {
+    pendingProcessing = false;
+  }
 }
 
-function showNeutralWaiting_43_7(seq) {
-  clearProcessingFallback();
-  tabletProcessingFallbackTimer = setTimeout(function () {
-    if (seq !== statusRequestSeq) return;
-    setStatus("확인 중입니다.", "잠시만 기다려주세요.", "success");
-  }, 1200);
-}
-
-// 기존 3초 후 가짜 성공 문구를 띄우던 fallback은 더 이상 사용하지 않습니다.
-function startProcessingFallback(seq, mode) {
-  showNeutralWaiting_43_7(seq);
-}
-
-function enqueueAttendanceBackground_43_7(attendanceNo, mode, student, cls, extra, seq) {
-  const params = buildAttendanceParams_43_7(attendanceNo, mode, student, cls, extra || {});
-
-  // 중요:
-  // 로컬 캐시로 이미 안내를 끝낸 뒤에는 서버 응답으로 화면을 다시 바꾸지 않습니다.
-  // 여기서 duplicate/already를 다시 띄우면 "안내문구가 두 번 나오는" 현상이 생깁니다.
-  tabletFetchJson(params, 0).then(function (data) {
-    if (TABLET_DEBUG) console.log("[Tablet Attendance Background]", data);
-  }).catch(function (err) {
-    if (TABLET_DEBUG) console.warn("[Tablet Attendance Background] 기록 지연:", err);
-  });
+function hasClassSelectionExtra(extra) { return !!(extra && (extra.selectedClassIndex !== undefined || extra.classIndex !== undefined || extra.selectedRowNumber || extra.rowNumber)); }
+function localImmediateProcess(attendanceNo, mode, student, cls, extra) {
+  const studentName = (student && (student.name || student.studentName)) || (extra && extra.selectedStudentName) || "학생";
+  const className = (cls && cls.className) || (extra && extra.className) || "데스크문의";
+  const roomName = (cls && cls.roomName) || (extra && extra.roomName) || "데스크문의";
+  if (isLocalDuplicateEvent(attendanceNo, mode, studentName, className)) {
+    showDuplicate(mode);
+    return true;
+  }
+  const params = buildAttendanceParams(attendanceNo, mode, student, cls, extra || {});
+  const entry = saveLocalAttendanceEvent(attendanceNo, mode, student, cls, params);
+  showAttendanceSuccess(mode, studentName, className, roomName);
+  queueAttendanceBackground(entry);
+  return true;
 }
 
 async function tryHandleWithPreload(attendanceNo, mode, extra, seq) {
   if (!tabletPreload || !tabletPreload.attendanceMap) return false;
-  if (hasClassSelectionExtra_43_7(extra)) return false;
-
+  if (hasClassSelectionExtra(extra)) return false;
   const candidates = getPreloadedCandidates(attendanceNo);
   if (!candidates || !candidates.length) return false;
-
   lastMode = mode;
   lastAttendanceNo = attendanceNo;
-
   if (candidates.length > 1) {
     clearProcessingFallback();
     setBusy(false);
-    showStudentChoice({
-      status: "multiple",
-      attendanceNo: attendanceNo,
-      candidates: candidates
-    });
+    showStudentChoice({ status: "multiple", attendanceNo: attendanceNo, candidates: candidates });
     return true;
   }
-
   const student = candidates[0];
   selectedStudent = student;
   const classes = Array.isArray(student.classes) ? student.classes : [];
-
   if (classes.length > 1) {
     clearProcessingFallback();
     setBusy(false);
-    showClassChoice({
-      status: "multipleClasses",
-      attendanceNo: attendanceNo,
-      studentName: student.name,
-      studentRowNumber: student.rowNumber,
-      classes: classes
-    });
+    showClassChoice({ status: "multipleClasses", attendanceNo: attendanceNo, studentName: student.name, studentRowNumber: student.rowNumber, classes: classes });
     return true;
   }
-
-  const cls = classes.length === 1 ? classes[0] : {
-    index: 0,
-    className: student.className || "오늘 수업 확인 필요",
-    instructor: student.instructor || "",
-    roomName: "데스크문의"
-  };
-
+  const cls = classes.length === 1 ? classes[0] : { index: 0, className: student.className || "오늘 수업 확인 필요", instructor: student.instructor || "", roomName: "데스크문의" };
   clearProcessingFallback();
-  showAttendanceSuccess_43_7(mode, student.name || student.studentName || "학생", cls.className, cls.roomName);
+  localImmediateProcess(attendanceNo, mode, student, cls, {});
   setBusy(false);
-  enqueueAttendanceBackground_43_7(attendanceNo, mode, student, cls, {}, seq);
   return true;
 }
 
-async function enqueueAttendanceFromLocalSnapshot(attendanceNo, mode, student, cls, seq) {
-  clearProcessingFallback();
-  showAttendanceSuccess_43_7(mode, student && (student.name || student.studentName) || "학생", cls && cls.className, cls && cls.roomName);
-  setBusy(false);
-  enqueueAttendanceBackground_43_7(attendanceNo, mode, student, cls, {}, seq);
-}
-
 async function submitCheck(mode, extra = {}) {
-  const attendanceNo = extra.attendanceNo || pin;
-  if (!attendanceNo) {
-    showModal("출결번호를 입력해주세요.", "", "warning");
-    resetStatusSoon();
-    return;
-  }
-
+  const attendanceNo = normalizeAttendanceNoClient(extra.attendanceNo || pin);
+  if (!attendanceNo) { showModal("출결번호를 입력해주세요.", "", "warning"); resetStatusSoon(); return; }
   if (busy) return;
   setBusy(true);
-
   const seq = ++statusRequestSeq;
   lastMode = mode;
   lastAttendanceNo = attendanceNo;
-
-  const isChoiceSubmit = hasClassSelectionExtra_43_7(extra);
-  if (!isChoiceSubmit) {
-    clearPin();
-  }
+  const isChoiceSubmit = hasClassSelectionExtra(extra);
+  if (!isChoiceSubmit) clearPin();
 
   try {
-    // 반 선택 이후에는 이미 학생명/수업/강의실을 알고 있으므로 즉시 안내하고 기록만 뒤에서 보냅니다.
     if (extra && (extra.selectedClassIndex !== undefined || extra.classIndex !== undefined) && (extra.className || extra.roomName)) {
-      const studentForChoice = {
-        rowNumber: extra.selectedRowNumber || extra.rowNumber || "",
-        name: extra.selectedStudentName || (selectedStudent && selectedStudent.name) || "학생",
-        instructor: extra.instructor || ""
-      };
-      const classForChoice = {
-        index: extra.selectedClassIndex !== undefined ? extra.selectedClassIndex : extra.classIndex,
-        className: extra.className || "데스크문의",
-        instructor: extra.instructor || "",
-        roomName: extra.roomName || "데스크문의"
-      };
+      const studentForChoice = { rowNumber: extra.selectedRowNumber || extra.rowNumber || "", name: extra.selectedStudentName || (selectedStudent && selectedStudent.name) || "학생", instructor: extra.instructor || "" };
+      const classForChoice = { index: extra.selectedClassIndex !== undefined ? extra.selectedClassIndex : extra.classIndex, className: extra.className || "데스크문의", instructor: extra.instructor || "", roomName: extra.roomName || "데스크문의" };
       clearProcessingFallback();
-      showAttendanceSuccess_43_7(mode, studentForChoice.name, classForChoice.className, classForChoice.roomName);
+      localImmediateProcess(attendanceNo, mode, studentForChoice, classForChoice, extra);
       setBusy(false);
-      enqueueAttendanceBackground_43_7(attendanceNo, mode, studentForChoice, classForChoice, extra, seq);
       return;
     }
 
-    // 로컬 일일캐시가 있으면 화면은 즉시 1회만 처리합니다.
     const localSnapshot = tabletPreload || loadDailySnapshotFromLocal();
     if (localSnapshot) {
       const handled = await tryHandleWithPreload(attendanceNo, mode, extra, seq);
       if (handled) return;
     } else {
-      // 다음 학생부터 빨라지도록 백그라운드 캐시만 조용히 받아옵니다.
       loadTabletPreload(false);
     }
 
-    // 캐시에 없거나 선택 정보가 부족한 경우에만 서버 확인 문구를 표시합니다.
     setStatus("확인 중입니다.", "잠시만 기다려주세요.", "success");
-    showNeutralWaiting_43_7(seq);
+    showNeutralWaiting(seq);
     await submitCheckLegacy(mode, extra, seq);
   } finally {
     setBusy(false);
   }
 }
 
-</script>
+async function submitCheckLegacy(mode, extra = {}, seqFromParent) {
+  const seq = seqFromParent || statusRequestSeq;
+  const attendanceNo = normalizeAttendanceNoClient(extra.attendanceNo || lastAttendanceNo || pin);
+  const modeText = modeTextOf(mode);
+  if (!attendanceNo) { showModal("출결번호를 입력해주세요.", "", "warning"); resetStatusSoon(); return; }
+  try {
+    const params = { action: "tabletCheck", attendanceNo: attendanceNo, mode: mode };
+    if (selectedStudent && selectedStudent.rowNumber) { params.selectedRowNumber = selectedStudent.rowNumber; params.selectedStudentName = selectedStudent.name || ""; }
+    Object.keys(extra || {}).forEach(function(key) { if (key !== "action" && extra[key] != null) params[key] = extra[key]; });
+    const data = await tabletFetchJson(params, 0);
+    if (seq !== statusRequestSeq) return;
+    clearProcessingFallback();
+    if (data && (data.duplicate === true || data.status === "duplicate" || data.status === "already")) { showDuplicate(mode); return; }
+    if (data && data.status === "multiple") { showStudentChoice(data); return; }
+    if (data && data.status === "multipleClasses") { showClassChoice(data); return; }
+    if (!data || data.status !== "success") { setStatus("잠시 후 다시 시도해주세요.", "문제가 계속되면 데스크에 문의해주세요.", "warning"); resetStatusSoon(); return; }
+    showAttendanceSuccess(mode, data.studentName || "학생", data.className || "데스크문의", data.roomName || "데스크문의");
+  } catch (err) {
+    if (seq !== statusRequestSeq) return;
+    clearProcessingFallback();
+    setStatus("잠시 후 다시 시도해주세요.", "문제가 계속되면 데스크에 문의해주세요.", "warning");
+    resetStatusSoon();
+  }
+}
 
-<script>
-/****************************************************
- * 태블릿 PWA 설치 안내
- ****************************************************/
-const PWA_HIDE_KEY = "ULIM_TABLET_PWA_INSTALL_HIDE";
-let deferredPrompt = null;
+function showStudentChoice(data) {
+  const candidates = Array.isArray(data.candidates) ? data.candidates : [];
+  if (!candidates.length) { showModal("학생을 찾지 못했습니다.", "데스크에 문의해주세요.", "warning"); return; }
+  const buttons = candidates.map(function(student) {
+    const rowNumber = escapeAttr(student.rowNumber || student.studentRowNumber || "");
+    const name = escapeAttr(student.name || student.studentName || "학생");
+    return `<button class="choice-btn" onclick="selectStudentChoice('${rowNumber}', '${name}')"><b>${escapeHtml(student.name || student.studentName || "학생")}</b></button>`;
+  }).join("");
+  showModal("학생을 선택해주세요.", "같은 출결번호를 사용하는 학생이 있습니다.", "success", `<div class="choice-list">${buttons}</div><div class="modal-actions"><button class="modal-btn gray" onclick="closeModal(); setDefaultStatus();">취소</button></div>`);
+}
+function selectStudentChoice(rowNumber, name) {
+  closeModal();
+  selectedStudent = { rowNumber: rowNumber, name: name };
+  submitCheck(lastMode, { attendanceNo: lastAttendanceNo, selectedRowNumber: rowNumber, selectedStudentName: name });
+}
+function showClassChoice(data) {
+  const classes = Array.isArray(data.classes) ? data.classes : [];
+  if (!classes.length) { showModal("수업을 찾지 못했습니다.", "데스크에 문의해주세요.", "warning"); return; }
+  const attendanceNo = escapeAttr(data.attendanceNo || lastAttendanceNo || "");
+  const studentName = escapeAttr(data.studentName || "학생");
+  const studentRowNumber = escapeAttr(data.studentRowNumber || data.rowNumber || "");
+  const buttons = classes.map(function(cls, idx) {
+    const classIndex = cls.index !== undefined ? cls.index : idx;
+    const className = cls.className || "오늘 수업 확인 필요";
+    const roomName = cls.roomName || "데스크문의";
+    const instructor = cls.instructor || "";
+    return `<button class="choice-btn" onclick="selectClassChoice('${attendanceNo}', '${studentRowNumber}', '${studentName}', '${escapeAttr(classIndex)}', '${escapeAttr(className)}', '${escapeAttr(instructor)}', '${escapeAttr(roomName)}')"><b>${escapeHtml(className)}</b><br>강의실: ${escapeHtml(roomName)}</button>`;
+  }).join("");
+  showModal("수업을 선택해주세요.", `${data.studentName || "학생"}님의 오늘 수업이 여러 개 있습니다.`, "success", `<div class="choice-list">${buttons}</div><div class="modal-actions"><button class="modal-btn gray" onclick="closeModal(); setDefaultStatus();">취소</button></div>`, "select-modal");
+}
+function selectClassChoice(attendanceNo, studentRowNumber, studentName, classIndex, className, instructor, roomName) {
+  closeModal();
+  submitCheck(lastMode, { attendanceNo: attendanceNo || lastAttendanceNo, selectedRowNumber: studentRowNumber || "", selectedStudentName: studentName || "", selectedClassIndex: classIndex, className: className || "", instructor: instructor || "", roomName: roomName || "데스크문의" });
+}
 
-window.addEventListener("beforeinstallprompt", function (e) {
-  if (localStorage.getItem(PWA_HIDE_KEY) === "Y") return;
-  e.preventDefault();
-  deferredPrompt = e;
-  setTimeout(function () {
-    showPwaInstallGuide();
-  }, 1800);
+async function warmup() { try { await tabletFetchJson({ action: "tabletWarmup" }, 0); } catch (err) {} }
+async function loadAds() {
+  try { const data = await tabletFetchJson({ action: "tabletGetAds" }, 0); adSlides = data.slides && data.slides.length ? data.slides : defaultSlides(); }
+  catch (err) { adSlides = defaultSlides(); }
+  adIndex = 0; renderAdSlide();
+}
+function defaultSlides() { return [{ type: "공지", title: "홍보 영상", content: "울림연기학원에 오신 것을 환영합니다.", imageUrl: "", videoUrl: "", seconds: 8 }]; }
+function extractYoutubeId(url) { const text = String(url || ""); const m = text.match(/embed\/([^?&/]+)/) || text.match(/[?&]v=([^?&]+)/) || text.match(/youtu\.be\/([^?&/]+)/); return m ? m[1] : ""; }
+function buildYoutubeEmbedUrl(url) { const safeUrl = String(url || ""); const id = extractYoutubeId(safeUrl); const sep = safeUrl.indexOf("?") === -1 ? "?" : "&"; return safeUrl + sep + "autoplay=1&mute=1&loop=1" + (id ? "&playlist=" + encodeURIComponent(id) : ""); }
+function renderAdSlide() {
+  if (!adSlides.length) adSlides = defaultSlides();
+  const slide = adSlides[adIndex] || adSlides[0];
+  document.getElementById("adTitle").textContent = slide.title || "홍보 영상";
+  document.getElementById("slideCount").textContent = `${adIndex + 1} / ${adSlides.length}`;
+  const box = document.getElementById("adBox");
+  const videoUrl = slide.videoUrl || "";
+  const imageUrl = slide.imageUrl || "";
+  if (videoUrl) {
+    if (videoUrl.includes("youtube.com/embed/")) box.innerHTML = `<iframe src="${escapeAttr(buildYoutubeEmbedUrl(videoUrl))}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+    else box.innerHTML = `<video src="${escapeAttr(videoUrl)}" autoplay muted loop playsinline></video>`;
+  } else if (imageUrl) {
+    box.innerHTML = `<img src="${escapeAttr(imageUrl)}" alt="홍보 이미지" onerror="this.parentElement.innerHTML=\`<div class='ad-text'>이미지를 불러오지 못했습니다.</div>\`;">`;
+  } else {
+    box.innerHTML = `<div class="ad-text">${escapeHtml(slide.content || "오늘도 좋은 수업 되세요.")}</div>`;
+  }
+  clearTimeout(adTimer);
+  const seconds = Math.max(5, Number(slide.seconds || 10));
+  adTimer = setTimeout(function(){ nextAdSlide(false); }, seconds * 1000);
+}
+function nextAdSlide() { if (!adSlides.length) return; clearTimeout(adTimer); adIndex = (adIndex + 1) % adSlides.length; renderAdSlide(); }
+function prevAdSlide() { if (!adSlides.length) return; clearTimeout(adTimer); adIndex = (adIndex - 1 + adSlides.length) % adSlides.length; renderAdSlide(); }
+function handleAdAreaClick(event) { const tag = String((event.target && event.target.tagName) || "").toLowerCase(); if (["button", "iframe", "video"].indexOf(tag) !== -1) return; nextAdSlide(true); }
+
+window.addEventListener("keydown", function(event) {
+  if (/^[0-9]$/.test(event.key)) { pressNum(event.key); return; }
+  if (event.key === "Backspace") { backspacePin(); return; }
+  if (event.key === "Enter") submitCheck("in");
 });
 
-function showPwaInstallGuide() {
-  if (!deferredPrompt) return;
-  showModal(
-    "앱으로 설치하기",
-    "울림연기학원 앱을 홈 화면에 설치하면 더 편하게 사용할 수 있습니다.",
-    "success",
-    `
-      <div class="modal-actions">
-        <button class="modal-btn" onclick="installPwa()">앱 설치하기</button>
-        <button class="modal-btn gray" onclick="closeModal()">나중에</button>
-        <button class="modal-btn gray" onclick="hidePwaForever()">다시는 보지 않기</button>
-      </div>
-    `
-  );
-}
-
-async function installPwa() {
-  if (!deferredPrompt) {
-    closeModal();
-    return;
-  }
-  deferredPrompt.prompt();
-  await deferredPrompt.userChoice;
-  deferredPrompt = null;
-  closeModal();
-}
-
-function hidePwaForever() {
-  localStorage.setItem(PWA_HIDE_KEY, "Y");
-  closeModal();
-}
-</script>
-
-<script>
-/****************************************************
- * 태블릿 PWA 업데이트 확인
- ****************************************************/
-const TABLET_VERSION_CHECK_KEY = "ULIM_TABLET_VERSION_CHECK_DATE";
-const TABLET_VERSION_SKIP_KEY = "ULIM_TABLET_VERSION_SKIP_DATE";
-const TABLET_SAVED_VERSION_KEY = "ULIM_TABLET_APP_VERSION";
-const TABLET_UPDATE_QUERY_KEY = "tabletUpdate";
-
-function getTabletBaseUrl() {
-  return location.origin + location.pathname;
-}
-
-async function checkTabletAppUpdateOncePerDay() {
-  try {
-    const today = getTodayKey();
-    if (localStorage.getItem(TABLET_VERSION_CHECK_KEY) === today) return;
-    localStorage.setItem(TABLET_VERSION_CHECK_KEY, today);
-
-    const remoteUrl = getTabletBaseUrl() + "?_versionCheck=" + Date.now();
-    const response = await fetch(remoteUrl, { method: "GET", cache: "no-store" });
-    if (!response.ok) return;
-
-    const html = await response.text();
-    const match = html.match(/const\s+TABLET_APP_VERSION\s*=\s*["']([^"']+)["']/);
-    const remoteVersion = match ? String(match[1]).trim() : "";
-    if (!remoteVersion) return;
-
-    const savedVersion = localStorage.getItem(TABLET_SAVED_VERSION_KEY) || TABLET_APP_VERSION;
-    localStorage.setItem(TABLET_SAVED_VERSION_KEY, savedVersion);
-
-    if (remoteVersion !== TABLET_APP_VERSION && remoteVersion !== savedVersion) {
-      showTabletUpdateModal(remoteVersion);
-    }
-  } catch (err) {
-    console.log("[Tablet Update] 업데이트 확인 실패:", err);
-  }
-}
-
-function showTabletUpdateModal(remoteVersion) {
-  showModal(
-    "업데이트 안내",
-    "태블릿 앱 새 버전이 있습니다.\n지금 업데이트하시겠습니까?",
-    "success",
-    `
-      <div class="modal-actions">
-        <button class="modal-btn" onclick="applyTabletAppUpdate('${escapeAttr(remoteVersion)}')">업데이트</button>
-        <button class="modal-btn gray" onclick="skipTabletAppUpdateToday('${escapeAttr(remoteVersion)}')">나중에</button>
-      </div>
-    `
-  );
-}
-
-function skipTabletAppUpdateToday(remoteVersion) {
-  localStorage.setItem(TABLET_VERSION_SKIP_KEY, getTodayKey());
-  closeModal();
-}
-
-async function applyTabletAppUpdate(remoteVersion) {
-  try {
-    closeModal();
-    localStorage.setItem(TABLET_SAVED_VERSION_KEY, remoteVersion || TABLET_APP_VERSION);
-    if ("serviceWorker" in navigator) {
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(registrations.map(function (reg) {
-        try { return reg.update(); } catch (e) { return Promise.resolve(); }
-      }));
-    }
-  } catch (err) {
-    console.log("[Tablet Update] Service Worker 업데이트 확인 실패:", err);
-  } finally {
-    const updateUrl = getTabletBaseUrl() +
-      "?v=" + encodeURIComponent(remoteVersion || TABLET_APP_VERSION) +
-      "&" + TABLET_UPDATE_QUERY_KEY + "=" + Date.now();
-    location.replace(updateUrl);
-  }
-}
-</script>
-
-<script>
-/****************************************************
- * 초기 실행
- ****************************************************/
 updateClock();
 setInterval(updateClock, 1000);
 renderPin();
 setDefaultStatus();
+clearStaleTabletLocalData();
 loadAds();
 warmup();
 loadTabletPreload(false);
-setTimeout(function () { refreshTabletDailySnapshotLocal(false); }, 2000);
+processLocalPendingAttendanceQueue();
 setInterval(warmup, 4 * 60 * 1000);
-setInterval(function () { loadTabletPreload(false); }, 30 * 60 * 1000);
-setInterval(function () { refreshTabletDailySnapshotLocal(false); }, 60 * 60 * 1000);
-document.addEventListener("DOMContentLoaded", function () {
-  setTimeout(checkTabletAppUpdateOncePerDay, 2500);
-});
+setInterval(function(){ loadTabletPreload(false); }, 30 * 60 * 1000);
+setInterval(function(){ processLocalPendingAttendanceQueue(); }, 60 * 1000);
+setInterval(function(){ clearStaleTabletLocalData(); }, 5 * 60 * 1000);
 </script>
 </body>
 </html>
