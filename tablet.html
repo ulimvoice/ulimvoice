@@ -682,7 +682,7 @@
  * - 보강: 안전 호출, 학생용 문구, 관리자/운영용 화면 문구 숨김
  ****************************************************/
 const API_URL = "https://script.google.com/macros/s/AKfycbx7wQFuw6MqqOijmvuwpeiCWOk3xU3hr41xoKbRltQHLb1kLbr_1RD5Zzy3iuWcrhUD0A/exec";
-const TABLET_APP_VERSION = "2026.06.06.043.2";
+const TABLET_APP_VERSION = "2026.06.06.043.3";
 
 const URL_PARAMS = new URLSearchParams(location.search);
 const KIOSK_KEY = URL_PARAMS.get("kioskKey") || localStorage.getItem("ULIM_TABLET_KIOSK_KEY") || "";
@@ -785,14 +785,14 @@ function tabletPublicErrorMessage_() {
   return "문제가 계속되면 데스크에 문의해주세요.";
 }
 
-async function tabletFetchJson(params, timeoutMs = 4500) {
+async function tabletFetchJson(params, timeoutMs = 15000) {
   const controller = (typeof AbortController !== "undefined") ? new AbortController() : null;
   let timer = null;
 
   if (controller) {
     timer = setTimeout(function () {
       try { controller.abort(); } catch (e) {}
-    }, Math.max(1500, Number(timeoutMs) || 4500));
+    }, Math.max(5000, Number(timeoutMs) || 15000));
   }
 
   try {
@@ -960,14 +960,14 @@ async function loadTabletPreload(force = false) {
 
   tabletPreloadLoading = true;
   try {
-    const data = await tabletFetchJson({ action: "tabletGetDailySnapshot", force: force ? "1" : "0" }, 4500);
+    const data = await tabletFetchJson({ action: "tabletGetDailySnapshot", force: force ? "1" : "0" }, 15000);
     if (saveDailySnapshot(data)) return data;
   } catch (err) {
     console.warn("[Tablet Cache] 일일자료 갱신 실패:", err);
   }
 
   try {
-    const legacyData = await tabletFetchJson({ action: "tabletPreload" }, 4500);
+    const legacyData = await tabletFetchJson({ action: "tabletPreload" }, 15000);
     if (saveDailySnapshot(legacyData)) return legacyData;
   } catch (err) {
     console.warn("[Tablet Cache] 보조자료 갱신 실패:", err);
@@ -980,7 +980,7 @@ async function loadTabletPreload(force = false) {
 
 async function refreshTabletDailySnapshotLocal(forceServer = true) {
   try {
-    const data = await tabletFetchJson({ action: "tabletGetDailySnapshot", force: forceServer ? "1" : "0" }, 5000);
+    const data = await tabletFetchJson({ action: "tabletGetDailySnapshot", force: forceServer ? "1" : "0" }, 15000);
     saveDailySnapshot(data);
     return data;
   } catch (err) {
@@ -1058,7 +1058,7 @@ async function enqueueAttendanceFromLocalSnapshot(attendanceNo, mode, student, c
   };
 
   try {
-    const data = await tabletFetchJson(params, 5000);
+    const data = await tabletFetchJson(params, 12000);
     if (seq !== statusRequestSeq) return;
     clearProcessingFallback();
 
@@ -1163,7 +1163,7 @@ async function submitCheckLegacy(mode, extra = {}, seqFromParent) {
       if (extra[key] !== undefined && extra[key] !== null) params[key] = extra[key];
     });
 
-    const data = await tabletFetchJson(params, 5500);
+    const data = await tabletFetchJson(params, 15000);
     if (seq !== statusRequestSeq) return;
     clearProcessingFallback();
 
@@ -1283,13 +1283,13 @@ function selectClassChoice(attendanceNo, studentRowNumber, studentName, classInd
 
 async function warmup() {
   try {
-    await tabletFetchJson({ action: "tabletWarmup" }, 2500);
+    await tabletFetchJson({ action: "tabletWarmup" }, 8000);
   } catch (err) {}
 }
 
 async function loadAds() {
   try {
-    const data = await tabletFetchJson({ action: "tabletGetAds" }, 4500);
+    const data = await tabletFetchJson({ action: "tabletGetAds" }, 10000);
     adSlides = data.slides && data.slides.length ? data.slides : defaultSlides();
   } catch (err) {
     adSlides = defaultSlides();
@@ -1527,7 +1527,8 @@ renderPin();
 setDefaultStatus();
 loadAds();
 warmup();
-loadTabletPreload(true);
+loadTabletPreload(false);
+setTimeout(function () { refreshTabletDailySnapshotLocal(false); }, 2000);
 setInterval(warmup, 4 * 60 * 1000);
 setInterval(function () { loadTabletPreload(false); }, 30 * 60 * 1000);
 setInterval(function () { refreshTabletDailySnapshotLocal(false); }, 60 * 60 * 1000);
