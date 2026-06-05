@@ -169,18 +169,18 @@
  * - 구글시트 기록/알림톡은 백그라운드 대기열로 전송
  ****************************************************/
 const API_URL = "https://script.google.com/macros/s/AKfycbx7wQFuw6MqqOijmvuwpeiCWOk3xU3hr41xoKbRltQHLb1kLbr_1RD5Zzy3iuWcrhUD0A/exec";
-const TABLET_APP_VERSION = "2026.06.06.043.18";
+const TABLET_APP_VERSION = "2026.06.06.043.19";
 const TABLET_DEBUG = false;
 
 const URL_PARAMS = new URLSearchParams(location.search);
 const KIOSK_KEY = URL_PARAMS.get("kioskKey") || localStorage.getItem("ULIM_TABLET_KIOSK_KEY") || "";
 
-const DAILY_SNAPSHOT_KEY = "ULIM_TABLET_DAILY_SNAPSHOT_V43_18";
-const DAILY_SNAPSHOT_AT_KEY = "ULIM_TABLET_DAILY_SNAPSHOT_AT_V43_18";
-const DAILY_SNAPSHOT_DATE_KEY = "ULIM_TABLET_DAILY_SNAPSHOT_DATE_V43_18";
-const LOCAL_ATTENDANCE_LOG_KEY = "ULIM_TABLET_LOCAL_ATTENDANCE_LOG_V43_18";
-const LOCAL_ATTENDANCE_PENDING_KEY = "ULIM_TABLET_LOCAL_ATTENDANCE_PENDING_V43_18";
-const LOCAL_DATA_DATE_KEY = "ULIM_TABLET_LOCAL_DATA_DATE_V43_18";
+const DAILY_SNAPSHOT_KEY = "ULIM_TABLET_DAILY_SNAPSHOT_V43_19";
+const DAILY_SNAPSHOT_AT_KEY = "ULIM_TABLET_DAILY_SNAPSHOT_AT_V43_19";
+const DAILY_SNAPSHOT_DATE_KEY = "ULIM_TABLET_DAILY_SNAPSHOT_DATE_V43_19";
+const LOCAL_ATTENDANCE_LOG_KEY = "ULIM_TABLET_LOCAL_ATTENDANCE_LOG_V43_19";
+const LOCAL_ATTENDANCE_PENDING_KEY = "ULIM_TABLET_LOCAL_ATTENDANCE_PENDING_V43_19";
+const LOCAL_DATA_DATE_KEY = "ULIM_TABLET_LOCAL_DATA_DATE_V43_19";
 const STATUS_RESET_DELAY_MS = 3500;
 
 let pin = "";
@@ -293,10 +293,10 @@ function closeModal() { document.getElementById("modalBackdrop").style.display =
 function closeModalByBackdrop(event) { if (event.target && event.target.id === "modalBackdrop") closeModal(); }
 
 
-function clearLegacyTabletSnapshotKeys43_18() {
+function clearLegacyTabletSnapshotKeys43_19() {
   try {
     Object.keys(localStorage).forEach(function(k) {
-      if (/ULIM_TABLET_(DAILY_SNAPSHOT|LOCAL_DATA_DATE|LOCAL_ATTENDANCE_LOG|LOCAL_ATTENDANCE_PENDING)_V43_(15|16|17)/.test(k)) {
+      if (/ULIM_TABLET_(DAILY_SNAPSHOT|LOCAL_DATA_DATE|LOCAL_ATTENDANCE_LOG|LOCAL_ATTENDANCE_PENDING)_V43_(15|16|17|18)/.test(k)) {
         localStorage.removeItem(k);
       }
     });
@@ -335,7 +335,7 @@ function loadDailySnapshotFromLocal() {
     if (!raw) return null;
     const data = JSON.parse(raw);
     if (!data || data.status !== "success" || !data.attendanceMap) return null;
-    if (data.version && String(data.version) !== "2026-06-06-v43-18-room-coordinate-only") return null;
+    if (data.version && String(data.version) !== "2026-06-06-v43-19-room-strict-direct") return null;
     tabletPreload = data;
     tabletPreloadAt = Number(localStorage.getItem(DAILY_SNAPSHOT_AT_KEY) || 0) || Date.now();
     return data;
@@ -885,7 +885,7 @@ updateClock();
 setInterval(updateClock, 1000);
 renderPin();
 setDefaultStatus();
-clearLegacyTabletSnapshotKeys43_18();
+clearLegacyTabletSnapshotKeys43_19();
 clearStaleTabletLocalData();
 loadAds();
 warmup();
