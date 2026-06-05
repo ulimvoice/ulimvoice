@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
+<!-- 울림앱 INDEX 5_43차 긴급복구: AdGuard 주입라인/단독 async 제거 + 발성 달력 누락함수 보강 -->
 <!-- 울림앱 INDEX 5_41차 최종클린안정화: 중복 함수 정리 / 중복요청 방어 유지 / 오류대체 유지 -->
 <!-- 5_40차: 서버 중복요청 방어/반응속도 보강 버전. 클라이언트 UI 흐름은 39차 안정본 유지. -->
 <!-- 5_39차: AdGuard 주입 스크립트 제거, 중복 함수 정리, 38차 반응속도 개선 유지 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script type="text/javascript" nonce="5878564e64bc424ab28cf8dfbd2" src="//local.adguard.org?ts=1780649340654&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_0000000039ac7206a283f5d2cc139670%26fn%3D%25EC%259A%25B8%25EB%25A6%25BC%25EC%2595%25B1_index_5_41%25EC%25B0%25A8_%25EC%25B5%259C%25EC%25A2%2585%25ED%2581%25B4%25EB%25A6%25B0%25EC%2595%2588%25EC%25A0%2595%25ED%2599%2594_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D494625%26p%3Dfs%26cid%3D1%26sig%3Dde5935f9cf1a20632401823fbc617f64723004cec1287fcaf639c1f26ce3f2e3%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
-<link rel="preconnect" href="https://script.googleusercontent.com">
+<script type="text/javascript" nonce="5878564e64bc424ab28cf8dfbd2" src="//local.adguard.org?ts=1780651929127&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000dae872098f052f85e73d812b%26fn%3D%25EC%259A%25B8%25EB%25A6%25BC%25EC%2595%25B1_index_5_43%25EC%25B0%25A8_%25EB%25A8%25B9%25ED%2586%25B5%25EC%2598%25A4%25EB%25A5%2598%25EB%25B3%25B5%25EA%25B5%25AC_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D494625%26p%3Dfs%26cid%3D1%26sig%3D1d2c2f2b96a395e28c8bb7aaedae37ceeec3c6b330400cc52e90af57bcf9bd1d%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.googleusercontent.com">
 <link rel="dns-prefetch" href="//script.google.com">
 <link rel="dns-prefetch" href="//script.googleusercontent.com">
 
@@ -2492,7 +2492,6 @@ document.querySelectorAll('.tab').forEach(t => {
 // =========================================================================================
 
 // 페이지 로드 시 학생 이름 및 인증 확인
-async 
 // 인증 프롬프트 및 GAS 인증 요청 함수
 async function promptAndAuthenticate() {
     let name = prompt("학생 이름을 입력해주세요.");
@@ -3505,6 +3504,86 @@ async function toggleCalendar() {
 }
 
 
+
+// 5_43차 긴급복구: 발성훈련 서버 연습일지 달력 캐시/조회 함수
+// 5_41차 파일에는 아래 함수들이 호출만 있고 정의가 없어 달력 렌더링 시 전체 스크립트 오류가 발생했습니다.
+window.__ulimStudentVocalPracticeLogCache = window.__ulimStudentVocalPracticeLogCache || {};
+
+function escapeHtml_(value) {
+    if (typeof escapeHtml === 'function') return escapeHtml(value);
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function getStudentVocalPracticeLogsByDate_(dateKey) {
+    const key = String(dateKey || '').trim();
+    if (!key) return [];
+    const cache = window.__ulimStudentVocalPracticeLogCache || {};
+    const rows = cache[key];
+    return Array.isArray(rows) ? rows : [];
+}
+
+async function loadStudentVocalPracticeLogsForMonth_(year, monthZeroBased) {
+    const y = Number(year || new Date().getFullYear());
+    const m0 = Number(monthZeroBased !== undefined ? monthZeroBased : new Date().getMonth());
+    const m1 = m0 + 1;
+
+    const params = {
+        action: 'getStudentVocalPracticeLogs',
+        year: y,
+        month: m1,
+        name: studentName || localStorage.getItem('studentName') || '',
+        studentName: studentName || localStorage.getItem('studentName') || '',
+        studentNo: studentNo || localStorage.getItem('studentNo') || '',
+        phoneLast4: phoneLast4 || localStorage.getItem('phoneLast4') || '',
+        studentSessionToken: studentSessionToken || localStorage.getItem('studentSessionToken') || '',
+        _: Date.now()
+    };
+
+    let data = null;
+
+    try {
+        if (typeof pronJsonpRequest === 'function') {
+            data = await pronJsonpRequest(params, 10000);
+        } else {
+            const query = new URLSearchParams(params);
+            const res = await fetch(GET_API_URL + '?' + query.toString(), { cache: 'no-store' });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            data = await res.json();
+        }
+    } catch (err) {
+        console.warn('학생 발성 연습일지 서버 조회 실패:', err);
+        data = { status: 'success', logs: [] };
+    }
+
+    const logs = Array.isArray(data && data.logs) ? data.logs : [];
+    const cache = window.__ulimStudentVocalPracticeLogCache = window.__ulimStudentVocalPracticeLogCache || {};
+
+    // 해당 월 캐시만 먼저 정리해서 이전 조회 결과가 섞이지 않게 합니다.
+    const monthPrefix = y + '-' + String(m1).padStart(2, '0') + '-';
+    Object.keys(cache).forEach(key => {
+        if (key.indexOf(monthPrefix) === 0) delete cache[key];
+    });
+
+    logs.forEach(log => {
+        const key = String(log.practiceDate || log.date || '').trim();
+        if (!key) return;
+        if (!cache[key]) cache[key] = [];
+        cache[key].push(log);
+    });
+
+    return logs;
+}
+
+async function renderCalendarWithServer_(year, monthZeroBased) {
+    await loadStudentVocalPracticeLogsForMonth_(year, monthZeroBased);
+    renderCalendar(year, monthZeroBased);
+}
+
 // 달력 렌더링 로직
 function renderCalendar(year, month) {
     const today = new Date();
@@ -3876,7 +3955,6 @@ function buildTrainingFinalGeneralAnalysisText_(recognized, similarity, metrics)
 표준발음 참고: ${pron || '[문장을 입력하면 표준발음으로 변환합니다.]'}`;
 }
 
-async 
 function buildTrainingAiAnalysisText_(transcript) {
     const source = currentTrainObj ? String(currentTrainObj.text || '') : '';
     const pron = currentTrainObj ? String(currentTrainObj.pron || '') : '';
@@ -4183,7 +4261,6 @@ function sanitizeTrainingFinalUserMessage_(msg) {
 
 
 
-async 
 
 
 async function renderTrainingFinalAiResult_(data) {
@@ -11740,7 +11817,6 @@ function pollTrainingFinalAiResult_(requestId) {
     });
 }
 
-async 
 /* 새 녹음 시작/완료 이후에도 혹시 남은 분석중 상태 제거 */
 window.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('click', (ev) => {
