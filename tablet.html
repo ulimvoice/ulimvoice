@@ -169,18 +169,18 @@
  * - 구글시트 기록/알림톡은 백그라운드 대기열로 전송
  ****************************************************/
 const API_URL = "https://script.google.com/macros/s/AKfycbx7wQFuw6MqqOijmvuwpeiCWOk3xU3hr41xoKbRltQHLb1kLbr_1RD5Zzy3iuWcrhUD0A/exec";
-const TABLET_APP_VERSION = "2026.06.06.043.19";
+const TABLET_APP_VERSION = "2026.06.06.043.20";
 const TABLET_DEBUG = false;
 
 const URL_PARAMS = new URLSearchParams(location.search);
 const KIOSK_KEY = URL_PARAMS.get("kioskKey") || localStorage.getItem("ULIM_TABLET_KIOSK_KEY") || "";
 
-const DAILY_SNAPSHOT_KEY = "ULIM_TABLET_DAILY_SNAPSHOT_V43_19";
-const DAILY_SNAPSHOT_AT_KEY = "ULIM_TABLET_DAILY_SNAPSHOT_AT_V43_19";
-const DAILY_SNAPSHOT_DATE_KEY = "ULIM_TABLET_DAILY_SNAPSHOT_DATE_V43_19";
-const LOCAL_ATTENDANCE_LOG_KEY = "ULIM_TABLET_LOCAL_ATTENDANCE_LOG_V43_19";
-const LOCAL_ATTENDANCE_PENDING_KEY = "ULIM_TABLET_LOCAL_ATTENDANCE_PENDING_V43_19";
-const LOCAL_DATA_DATE_KEY = "ULIM_TABLET_LOCAL_DATA_DATE_V43_19";
+const DAILY_SNAPSHOT_KEY = "ULIM_TABLET_DAILY_SNAPSHOT_V43_20";
+const DAILY_SNAPSHOT_AT_KEY = "ULIM_TABLET_DAILY_SNAPSHOT_AT_V43_20";
+const DAILY_SNAPSHOT_DATE_KEY = "ULIM_TABLET_DAILY_SNAPSHOT_DATE_V43_20";
+const LOCAL_ATTENDANCE_LOG_KEY = "ULIM_TABLET_LOCAL_ATTENDANCE_LOG_V43_20";
+const LOCAL_ATTENDANCE_PENDING_KEY = "ULIM_TABLET_LOCAL_ATTENDANCE_PENDING_V43_20";
+const LOCAL_DATA_DATE_KEY = "ULIM_TABLET_LOCAL_DATA_DATE_V43_20";
 const STATUS_RESET_DELAY_MS = 3500;
 
 let pin = "";
@@ -293,10 +293,10 @@ function closeModal() { document.getElementById("modalBackdrop").style.display =
 function closeModalByBackdrop(event) { if (event.target && event.target.id === "modalBackdrop") closeModal(); }
 
 
-function clearLegacyTabletSnapshotKeys43_19() {
+function clearLegacyTabletSnapshotKeys43_20() {
   try {
     Object.keys(localStorage).forEach(function(k) {
-      if (/ULIM_TABLET_(DAILY_SNAPSHOT|LOCAL_DATA_DATE|LOCAL_ATTENDANCE_LOG|LOCAL_ATTENDANCE_PENDING)_V43_(15|16|17|18)/.test(k)) {
+      if (/ULIM_TABLET_(DAILY_SNAPSHOT|LOCAL_DATA_DATE|LOCAL_ATTENDANCE_LOG|LOCAL_ATTENDANCE_PENDING)_V43_(15|16|17|18|19)/.test(k)) {
         localStorage.removeItem(k);
       }
     });
@@ -335,7 +335,7 @@ function loadDailySnapshotFromLocal() {
     if (!raw) return null;
     const data = JSON.parse(raw);
     if (!data || data.status !== "success" || !data.attendanceMap) return null;
-    if (data.version && String(data.version) !== "2026-06-06-v43-19-room-strict-direct") return null;
+    if (data.version && String(data.version) !== "2026-06-06-v43-20-room-strict-direct") return null;
     tabletPreload = data;
     tabletPreloadAt = Number(localStorage.getItem(DAILY_SNAPSHOT_AT_KEY) || 0) || Date.now();
     return data;
@@ -406,7 +406,12 @@ function buildLocalEventKey(attendanceNo, mode, studentName, className) {
 function isLocalDuplicateEvent(attendanceNo, mode, studentName, className) {
   const store = getLocalAttendanceStore();
   const key = buildLocalEventKey(attendanceNo, mode, studentName, className);
-  return !!store.entries[key];
+  const entry = store.entries[key];
+  if (!entry) return false;
+  const status = String(entry.status || "").toLowerCase();
+  // 43차-20: 이전 전송이 pending/error 상태로 남아 있으면 중복 차단하지 않고 재전송을 허용합니다.
+  // 기존 방식은 로컬에 한 번 저장된 기록만으로 재시도를 막아 실제 구글시트 전송이 끊기는 문제가 있었습니다.
+  return ["queued", "success", "duplicate", "already", "done", "완료"].indexOf(status) !== -1;
 }
 function saveLocalAttendanceEvent(attendanceNo, mode, student, cls, params) {
   const studentName = (student && (student.name || student.studentName)) || (params && params.selectedStudentName) || "학생";
@@ -483,6 +488,18 @@ function showAttendanceSuccess(mode, name, className, roomName) {
 function showDuplicate(mode) { setStatus(duplicateMessageOf(mode), "", "warning"); resetStatusSoon(STATUS_RESET_DELAY_MS); }
 
 function queueAttendanceBackground(entry) {
+  // 43차-20: 대기열 처리 타이머만 기다리지 않고 방금 만든 항목을 즉시 서버로 전송합니다.
+  // 실패하면 pending으로 남겨두고 60초 재시도 루프/다음 버튼 클릭에서 다시 보냅니다.
+  if (entry && entry.eventKey) {
+    setTimeout(function() {
+      sendLocalPendingItem(entry.eventKey, entry).then(function() {
+        processLocalPendingAttendanceQueue();
+      }).catch(function() {
+        processLocalPendingAttendanceQueue();
+      });
+    }, 0);
+    return;
+  }
   processLocalPendingAttendanceQueue();
 }
 async function sendLocalPendingItem(eventKey, item) {
@@ -885,7 +902,7 @@ updateClock();
 setInterval(updateClock, 1000);
 renderPin();
 setDefaultStatus();
-clearLegacyTabletSnapshotKeys43_19();
+clearLegacyTabletSnapshotKeys43_20();
 clearStaleTabletLocalData();
 loadAds();
 warmup();
