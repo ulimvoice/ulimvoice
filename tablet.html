@@ -910,6 +910,9 @@
         }
 
         Object.keys(extra || {}).forEach(key => {
+          // fallback 시 extra.action이 tabletEnqueueAttendance로 넘어오면
+          // 기존 실시간 처리(tabletCheck)가 다시 깨지므로 action은 절대 덮어쓰지 않습니다.
+          if (key === "action") return;
           if (extra[key] !== undefined && extra[key] !== null) params[key] = extra[key];
         });
 
