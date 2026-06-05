@@ -2489,13 +2489,8 @@ document.querySelectorAll('.tab').forEach(t => {
 // =========================================================================================
 
 // 페이지 로드 시 학생 이름 및 인증 확인
-async function checkStudentName() {
-    if (!studentName || !phoneLast4 || instructorName === '기본') {
-        await promptAndAuthenticate();
-    }
-    // 페이지 로드 시 파일명을 업데이트
-    updateFilenameConstants();
-}
+/* 정리됨: 중복 함수 checkStudentName (기존 2492행 정의 제거) */
+
 
 // 인증 프롬프트 및 GAS 인증 요청 함수
 async function promptAndAuthenticate() {
@@ -3111,14 +3106,8 @@ function getVocalRecords() {
 // [2-1] 서버 기반 100일 발성훈련 문장 관리
 // - 학생번호/이름+전화번호 기준으로 이전에 완료한 문장을 서버에서 제외합니다.
 // - 100일 주기마다 서버가 새로운 랜덤 100문장을 생성해 내려줍니다.
-function getTrainingStudentIdentity_() {
-    return {
-        studentNo: (typeof studentNo !== 'undefined' ? studentNo : '') || localStorage.getItem('studentNo') || '',
-        studentName: (typeof studentName !== 'undefined' ? studentName : '') || localStorage.getItem('studentName') || '게스트',
-        phoneLast4: (typeof phoneLast4 !== 'undefined' ? phoneLast4 : '') || localStorage.getItem('phoneLast4') || '',
-        deviceKey: (typeof pronGetDeviceKey === 'function' ? pronGetDeviceKey() : (localStorage.getItem('pronEtriDeviceKey') || ''))
-    };
-}
+/* 정리됨: 중복 함수 getTrainingStudentIdentity_ (기존 3114행 정의 제거) */
+
 function getTrainingStudentIdentityCacheKey_() {
     const ident = getTrainingStudentIdentity_();
     return [ident.studentNo || '', ident.studentName || '', ident.phoneLast4 || '', ident.deviceKey || ''].join('|');
@@ -3888,45 +3877,8 @@ function buildTrainingFinalGeneralAnalysisText_(recognized, similarity, metrics)
 표준발음 참고: ${pron || '[문장을 입력하면 표준발음으로 변환합니다.]'}`;
 }
 
-async function checkVocalTrainingTodayCompletedFromServer_(options = {}) {
-    const today = new Date().toISOString().slice(0, 10);
-    const records = getVocalRecords ? getVocalRecords() : new Map();
+/* 정리됨: 중복 함수 checkVocalTrainingTodayCompletedFromServer_ (기존 3891행 정의 제거) */
 
-    if (records && records.has && records.has(today)) {
-        return { completed: true, source: 'local', message: '오늘은 연습을 완료했습니다.' };
-    }
-
-    if (!GET_API_URL || !GET_API_URL.includes('script.google.com/macros/s/')) {
-        return { completed: false, source: 'no_api' };
-    }
-
-    const ident = getTrainingStudentIdentity_ ? getTrainingStudentIdentity_() : {};
-    try {
-        const data = await pronJsonpRequest({
-            action: 'checkVocalTrainingTodayComplete',
-            studentNo: ident.studentNo || studentNo || '',
-            studentName: ident.studentName || studentName || '',
-            phoneLast4: ident.phoneLast4 || phoneLast4 || '',
-            date: today,
-            _: Date.now()
-        }, options.timeoutMs || 10000);
-
-        if (data && data.completed) {
-            return {
-                completed: true,
-                source: 'server',
-                data,
-                message: data.message || '오늘은 연습을 완료했습니다.'
-            };
-        }
-
-        return { completed: false, source: 'server', data };
-    } catch (err) {
-        console.warn('[오늘 발성훈련 완료 여부 확인 실패]', err);
-        if (options.strict) throw err;
-        return { completed: false, source: 'check_failed', error: err };
-    }
-}
 
 function buildTrainingAiAnalysisText_(transcript) {
     const source = currentTrainObj ? String(currentTrainObj.text || '') : '';
@@ -4221,9 +4173,8 @@ async function createTrainingResultVideoBlob_(audioBlob, originalText, analysisT
 let trainingFinalAiPollingTimer = null;
 let trainingFinalAiPollingCount = 0;
 
-function buildTrainingFinalRequestId_() {
-    return "TRAIN_AI_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
-}
+/* 정리됨: 중복 함수 buildTrainingFinalRequestId_ (기존 4224행 정의 제거) */
+
 
 function sanitizeTrainingFinalUserMessage_(msg) {
     let text = String(msg || '').trim();
@@ -4235,206 +4186,21 @@ function sanitizeTrainingFinalUserMessage_(msg) {
     return text.replace(/\s*\/\s*fallback\s*:.+$/i, '').trim();
 }
 
-function getTrainingFinalUserKey_() {
-    const no = (typeof studentNo !== 'undefined' && studentNo) ? studentNo : (localStorage.getItem('studentNo') || '');
-    const name = (typeof studentName !== 'undefined' && studentName) ? studentName : (localStorage.getItem('studentName') || '게스트');
-    const phone = (typeof phoneLast4 !== 'undefined' && phoneLast4) ? phoneLast4 : (localStorage.getItem('phoneLast4') || '0000');
-    if (no && no !== 'GUEST') return 'NO_' + String(no).replace(/[^0-9A-Za-z가-힣_-]/g, '_');
-    if (name && name !== '게스트' && phone && phone !== '0000') return (name + '_' + phone).replace(/[^0-9A-Za-z가-힣_-]/g, '_');
-    return pronGetDeviceKey ? pronGetDeviceKey() : ('DEV_' + Date.now());
-}
+/* 정리됨: 중복 함수 getTrainingFinalUserKey_ (기존 4238행 정의 제거) */
 
-function setTrainingAiLoadingState_(isLoading) {
-    const btn = document.getElementById('trainingAiAnalyzeBtn');
-    const btnLabel = document.getElementById('trainingAiAnalyzeBtnLabel');
-    const titleText = document.getElementById('aiSectionTitleText');
-    const loadingVisual = document.getElementById('aiLoadingVisual');
-    const sttEl = document.getElementById('sttResult');
-    const badge = document.getElementById('accBadge');
 
-    // 5-28: 리미 GIF는 초록 박스가 아니라 보라색 AI 버튼 안에 표시합니다.
-    if (loadingVisual) {
-        loadingVisual.classList.remove('show');
-        loadingVisual.style.display = 'none';
-    }
+/* 정리됨: 중복 함수 setTrainingAiLoadingState_ (기존 4247행 정의 제거) */
 
-    if (btn) {
-        btn.disabled = !!isLoading;
-        btn.style.opacity = isLoading ? '.9' : '1';
-        btn.style.transform = isLoading ? 'scale(0.98)' : 'scale(1)';
 
-        if (isLoading) {
-            btn.classList.add('training-ai-loading');
-            btn.innerHTML = '<img class="training-ai-loading-img" src="assets/rimi_analyzing.gif" alt="리미 분석중">';
-        } else {
-            btn.classList.remove('training-ai-loading');
-            btn.textContent = 'AI';
-        }
-    }
-
-    if (btnLabel) btnLabel.textContent = isLoading ? '분석중..' : 'AI 분석';
-    if (titleText) titleText.textContent = isLoading ? '분석중..' : 'AI 분석결과';
-
-    // 결과 텍스트는 분석중에도 숨기지 않고, 기존처럼 "리미가 분석중입니다." 상태문구를 보여줍니다.
-    if (sttEl) sttEl.classList.remove('hidden-during-loading');
-    if (badge) badge.classList.remove('hidden-during-loading');
-}
-
-async function runTrainingFinalAiAnalysisFromButton() {
-    if (step !== 6 || !currentTrainObj) {
-        return alert('최종녹음 및 AI 분석 단계에서 사용할 수 있습니다.');
-    }
-    if (!lastRecordedBlob) {
-        return alert('먼저 녹음을 완료해주세요.');
-    }
-
-    const todayCheck = await checkVocalTrainingTodayCompletedFromServer_({ timeoutMs: 10000 });
-    if (todayCheck && todayCheck.completed) {
-        return alert('오늘은 연습을 완료했습니다.');
-    }
-
-    if (window.trainingFinalAiResult && window.trainingFinalAiResult.requestSentence === currentTrainObj.text) {
-        return alert('이미 마지막 녹음본의 AI 분석이 완료되었습니다. 다시 분석하려면 새로 녹음 후 실행해주세요.');
-    }
-
-    const ok = confirm('AI분석을 시작하면 오늘연습이 완료됩니다. 진행하시겠습니까?');
-    if (!ok) return;
-
-    const btn = document.getElementById('trainingAiAnalyzeBtn');
-    const prevText = btn ? btn.textContent : '';
-
-    try {
-        if (btn) { btn.disabled = true; btn.textContent = '…'; btn.style.opacity = '.65'; }
-        setTrainingAiLoadingState_(true);
-        document.getElementById('resultBox').style.display = 'block';
-
-        const aiSection = document.getElementById('aiSection');
-        const recSection = document.getElementById('recSection');
-        if (aiSection) aiSection.style.display = 'block';
-        if (recSection) recSection.style.display = 'block';
-
-        const sttEl = document.getElementById('sttResult');
-        const badge = document.getElementById('accBadge');
-        if (sttEl) sttEl.textContent = '리미가 분석중입니다.';
-        if (badge) { badge.className = 'accuracy-badge acc-wait'; badge.textContent = '분석중'; }
-
-        document.getElementById('recStatus').textContent = '리미가 분석중입니다.';
-
-        await runTrainingFinalAiAnalysis_(lastRecordedBlob, { force: true });
-
-        document.getElementById('recStatus').textContent = '리미 분석 완료. 연습완료 버튼을 눌러 결과를 업로드할 수 있습니다.';
-        enableVocalTrainingCompleteButton_();
-    } catch (err) {
-        console.warn('Gemini final training analysis failed. Local general analysis will be used:', err);
-
-        const fallbackResult = await buildTrainingFinalFallbackResult_(lastRecordedBlob, err);
-        renderTrainingFinalAiResult_(fallbackResult);
-        enableVocalTrainingCompleteButton_();
-
-        const recStatusEl = document.getElementById('recStatus');
-        if (recStatusEl) {
-            recStatusEl.textContent = '리미의 간단분석! 연습완료 버튼을 눌러 결과를 업로드할 수 있습니다.';
-        }
-    } finally {
-        setTrainingAiLoadingState_(false);
-        if (btn) { btn.disabled = false; btn.classList.remove('training-ai-loading'); btn.textContent = 'AI'; btn.style.opacity = '1'; }
-    }
-}
+/* 정리됨: 중복 함수 runTrainingFinalAiAnalysisFromButton (기존 4283행 정의 제거) */
 
 
 
-async function runTrainingFinalAiAnalysis_(audioBlob, options = {}) {
-    if (!audioBlob) throw new Error('녹음 파일이 없습니다.');
-    if (!GET_API_URL || !GET_API_URL.includes('script.google.com/macros/s/')) {
-        throw new Error('서비스 연결이 준비되지 않았습니다. 잠시 후 다시 시도해주세요.');
-    }
-    if (!currentTrainObj) throw new Error('연습 문장이 없습니다.');
-    const requestId = buildTrainingFinalRequestId_();
 
-    // 서버 고급분석이 일시적으로 연결되지 않아도 분석이 완전히 실패하지 않도록,
-    // 먼저 기기 안에서 리미 인식결과를 만들어 GAS에 함께 보냅니다.
-    let localRecognized = String(recognitionResult || '').trim();
-    if (!localRecognized && window.UlimLocalWhisper && typeof window.UlimLocalWhisper.transcribe === 'function') {
-        const sttEl = document.getElementById('sttResult');
-        if (sttEl) sttEl.textContent = '리미가 분석중입니다.';
-        const localResult = await window.UlimLocalWhisper.transcribe(audioBlob, {
-            language: 'ko',
-            task: 'transcribe',
-            model: ULIM_LOCAL_WHISPER_MODEL,
-            onStatus: msg => {
-                const el = document.getElementById('sttResult');
-                if (el && msg) el.textContent = '리미가 분석중입니다.';
-            }
-        });
-        localRecognized = String(localResult.text || '').trim();
-        recognitionResult = localRecognized;
-    }
+/* 정리됨: 중복 함수 runTrainingFinalAiAnalysis_ (기존 4346행 정의 제거) */
 
-    const scriptText = String(currentTrainObj.text || '');
-    const cleanTarget = scriptText.replace(/[^가-힣]/g, '');
-    const cleanHeard = localRecognized.replace(/[^가-힣]/g, '');
-    const localMatchScore = cleanTarget && cleanHeard ? Math.round(getSimilarity(cleanTarget, cleanHeard) * 100) : 0;
-    const localScore5 = (1 + (localMatchScore / 100) * 4).toFixed(1);
+/* 정리됨: 중복 함수 pollTrainingFinalAiResult_ (기존 4410행 정의 제거) */
 
-    const audio = await pronBlobToEtriAudioBase64(audioBlob);
-    const sizeMb = pronBase64ToByteSize(audio.base64) / 1024 / 1024;
-    if (sizeMb > 8) throw new Error(`녹음 파일이 너무 큽니다. (${sizeMb.toFixed(1)}MB) 60초 이내로 다시 녹음해주세요.`);
-
-    const payload = {
-        action: 'trainingFinalAnalysis',
-        requestId,
-        userKey: getTrainingFinalUserKey_(),
-        dateKey: pronTodayKey ? pronTodayKey() : new Date().toISOString().slice(0,10).replace(/-/g,''),
-        studentNo: (typeof studentNo !== 'undefined' ? studentNo : '') || localStorage.getItem('studentNo') || '',
-        studentName: (typeof studentName !== 'undefined' ? studentName : '') || '',
-        phoneLast4: (typeof phoneLast4 !== 'undefined' ? phoneLast4 : '') || '',
-        instructor: (typeof instructorName !== 'undefined' ? instructorName : '') || '',
-        script: scriptText,
-        recognized: localRecognized,
-        matchScore: localMatchScore,
-        score5: localScore5,
-        standardPronunciation: currentTrainObj.pron || '',
-        audio: audio.base64,
-        audioMimeType: audio.mimeType,
-        sampleRate: audio.sampleRate,
-        clientTime: new Date().toISOString()
-    };
-    await fetch(GET_API_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload)
-    });
-    return await pollTrainingFinalAiResult_(requestId);
-}
-function pollTrainingFinalAiResult_(requestId) {
-    if (trainingFinalAiPollingTimer) clearTimeout(trainingFinalAiPollingTimer);
-    trainingFinalAiPollingCount = 0;
-    return new Promise((resolve, reject) => {
-        const poll = async () => {
-            trainingFinalAiPollingCount += 1;
-            try {
-                const data = await pronJsonpRequest({ action: 'getTrainingFinalAnalysisResult', requestId, _: Date.now() }, 12000);
-                if (!data || data.status === 'pending' || data.status === 'not_found') {
-                    if (trainingFinalAiPollingCount > 24) return reject(new Error('AI 분석 결과 대기 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.'));
-                    const st = document.getElementById('recStatus');
-                    if (st) st.textContent = '리미가 분석중입니다.';
-                    trainingFinalAiPollingTimer = setTimeout(poll, 2500);
-                    return;
-                }
-                if (data.status === 'limit') return reject(new Error(data.message || '오늘 최종 AI 분석은 이미 사용했습니다.'));
-                if (!data.ok || data.status === 'error') return reject(new Error(sanitizeTrainingFinalUserMessage_(data.message) || 'AI 분석 처리 중 오류가 발생했습니다.'));
-                data.message = sanitizeTrainingFinalUserMessage_(data.message) || data.message;
-                renderTrainingFinalAiResult_(data);
-                resolve(data);
-            } catch (err) {
-                if (trainingFinalAiPollingCount > 24) return reject(err);
-                trainingFinalAiPollingTimer = setTimeout(poll, 2500);
-            }
-        };
-        trainingFinalAiPollingTimer = setTimeout(poll, 1800);
-    });
-}
 function renderTrainingFinalAiResult_(data) {
     data = data || {};
     const recognized = String(data.recognized || '').trim();
@@ -4714,33 +4480,11 @@ window.onload = async function() {
 
     renderCalendar();
 };
-function showLoading(message = "처리 중...") {
-    let el = document.getElementById("loadingOverlay");
-    if (!el) {
-        el = document.createElement("div");
-        el.id = "loadingOverlay";
-        el.style.position = "fixed";
-        el.style.top = "0";
-        el.style.left = "0";
-        el.style.width = "100%";
-        el.style.height = "100%";
-        el.style.background = "rgba(0,0,0,0.6)";
-        el.style.display = "flex";
-        el.style.alignItems = "center";
-        el.style.justifyContent = "center";
-        el.style.zIndex = "99999";
-        el.style.color = "white";
-        el.style.fontSize = "20px";
-        document.body.appendChild(el);
-    }
-    el.textContent = message;
-    el.style.display = "flex";
-}
+/* 정리됨: 중복 함수 showLoading (기존 4717행 정의 제거) */
 
-function hideLoading() {
-    const el = document.getElementById("loadingOverlay");
-    if (el) el.style.display = "none";
-}
+
+/* 정리됨: 중복 함수 hideLoading (기존 4740행 정의 제거) */
+
 
 /* ===========================
    🔄 PWA 업데이트 확인 설정
@@ -5167,75 +4911,14 @@ function showMainContent(isAuthenticated) {
         setTimeout(showNoticeIfNeeded, 0);
     }
 }
-function guestLogin() {
-    studentName = "게스트";
-    instructorName = "기본";
-    phoneLast4 = "0000";
-    localStorage.setItem('studentName', studentName);
-    localStorage.setItem('instructorName', instructorName);
-    localStorage.setItem('phoneLast4', phoneLast4);
-    studentNo = 'GUEST';
-    localStorage.setItem('studentNo', studentNo);
-    updateFilenameConstants();
-    showMainContent(false);
-}
-async function authenticateStudentFromInputs() {
-    const nameInput = document.getElementById('studentNameInput');
-    const phoneInput = document.getElementById('phoneLast4Input');
-    const name = nameInput.value.trim();
-    const phone = phoneInput.value.trim();
-    if (!name || !phone || phone.length !== 4) {
-        alert("학생 이름과 전화번호 뒤 4자리를 정확히 입력해주세요.");
-        return;
-    }
-    await authenticate(name, phone);
-}
-async function authenticate(name, phone) {
-    showLoading("인증 정보 확인 중...");
-    const url = `${GET_API_URL}?name=${encodeURIComponent(name)}&phoneLast4=${phone}`;
-    try {
-        const response = await fetch(url);
-        hideLoading();
-        if (!response.ok) throw new Error(`서버 응답이 원활하지 않습니다. 잠시 후 다시 시도해주세요.`);
-        const result = await response.json();
-        if (result.status === 'success') {
-            studentName = result.name;
-            instructorName = result.instructor;
-            phoneLast4 = result.phoneLast4;
-            studentNo = result.studentNo || result.attendanceNo || result.no || '';
-            instructorFolderId = result.instructorFolderId;
-            localStorage.setItem('studentName', studentName);
-            localStorage.setItem('instructorName', instructorName);
-            localStorage.setItem('phoneLast4', phoneLast4);
-            localStorage.setItem('studentNo', studentNo || '');
-            localStorage.setItem('instructorFolderId', instructorFolderId && instructorFolderId.trim() !== "" ? instructorFolderId : 'ERROR_ID_NOT_FOUND');
-            alert(`인증 성공: ${studentName}님 (${instructorName} 강사)`);
-            updateFilenameConstants();
-            showMainContent(true);
-        } else {
-            alert(`인증 실패: ${result.message}`);
-        }
-    } catch (e) {
-        hideLoading();
-        alert(`인증 시스템 오류 발생: ${e.message}. 관리자에게 문의하세요.`);
-    }
-}
-async function checkStudentName() {
-    const isValidStudent = studentName && phoneLast4 && instructorName !== '기본';
-    const isGuest = studentName === '게스트';
-    if (isValidStudent) {
-        updateFilenameConstants();
-        showMainContent(true);
-    } else if (isGuest) {
-        updateFilenameConstants();
-        showMainContent(false);
-    } else {
-        const overlay = document.getElementById('loginOverlay');
-        if (overlay) overlay.style.display = 'flex';
-        const wrapper = document.querySelector('.wrapper');
-        if (wrapper) wrapper.style.display = 'none';
-    }
-}
+/* 정리됨: 중복 함수 guestLogin (기존 5170행 정의 제거) */
+
+/* 정리됨: 중복 함수 authenticateStudentFromInputs (기존 5182행 정의 제거) */
+
+/* 정리됨: 중복 함수 authenticate (기존 5193행 정의 제거) */
+
+/* 정리됨: 중복 함수 checkStudentName (기존 5223행 정의 제거) */
+
 
 window.onload = async function() {
     preloadNoticesFromSheet();
@@ -5746,32 +5429,8 @@ async function adminPostNoCors(action, params = {}) {
 
 
 
-async function adminLogin() {
-    const id = document.getElementById('adminIdInput').value.trim();
-    const pw = document.getElementById('adminPwInput').value.trim();
-    if (!id || !pw) return alert('관리자 ID와 비밀번호를 입력해주세요.');
-    try {
-        showLoading('관리자 로그인 중...');
-        const data = await adminApi('adminLogin', { adminId: id, adminPw: pw });
-        hideLoading();
-        adminToken = data.adminToken;
-        adminInfo = data.admin || {};
-        localStorage.setItem('adminToken', adminToken);
-        localStorage.setItem('adminInfo', JSON.stringify(adminInfo));
-        localStorage.setItem('ulimLastMode', 'admin');
-        adminModeActive = true;
-        adminEnableAllTabsForAdminMode();
-        setAdminTabVisibility();
-        applyAdminPermissions();
-        document.getElementById('adminLoginBox').style.display = 'none';
-        document.getElementById('adminDashboard').style.display = 'block';
-        await adminLoadInitialData();
-        try { if (window.registerRoomPushTokenAfterAdminLogin) window.registerRoomPushTokenAfterAdminLogin(); } catch (pushErr) { console.warn(pushErr); }
-    } catch (e) {
-        hideLoading();
-        alert(e.message);
-    }
-}
+/* 정리됨: 중복 함수 adminLogin (기존 5749행 정의 제거) */
+
 
 function adminLogout() {
     adminToken = '';
@@ -6207,11 +5866,8 @@ function adminCloseClassCombosOnOutsideClick(event) {
 document.addEventListener('click', adminCloseClassCombosOnOutsideClick);
 
 
-function adminRenderStudentDatalist() {
-    const dl = document.getElementById('adminStudentDatalist');
-    if (!dl) return;
-    dl.innerHTML = adminStudents.map(s => `<option value="${escapeHtml(s.name)}">${escapeHtml(s.instructor || '')} ${escapeHtml(s.studentPhone || '')}</option>`).join('');
-}
+/* 정리됨: 중복 함수 adminRenderStudentDatalist (기존 6210행 정의 제거) */
+
 
 function adminStudentBelongsToCurrentTeacher(student) {
     if (!adminIsTeacherMode()) return true;
@@ -6230,31 +5886,8 @@ function adminFilteredStudents(inputId) {
     return base.filter(s => [s.name, s.studentNo, s.studentPhone, s.parentPhone, s.instructor, s.className, s.memo, adminStudentStatusLabel(s)].join(' ').toLowerCase().includes(keyword));
 }
 
-function adminRenderStudentTable() {
-    const wrap = document.getElementById('adminStudentTableWrap');
-    if (!wrap) return;
-    const list = adminFilteredStudents('adminStudentSearch');
-    adminStudentSearchRows = list;
-    if (!list.length) {
-        wrap.innerHTML = `<div class="notice-empty">표시할 학생이 없습니다.</div>`;
-        return;
-    }
-    let html = `<table class="admin-table"><thead><tr><th>분류</th><th>출결번호</th><th>학생명</th><th>학생전화</th><th>학부모전화</th><th>담당강사</th><th>반/메모</th><th>결석 알림</th></tr></thead><tbody>`;
-    list.forEach((s, idx) => {
-        html += `<tr>
-          <td>${adminStudentStatusBadge(s)}</td>
-          <td>${escapeHtml(s.studentNo)}</td>
-          <td><b>${escapeHtml(s.name)}</b></td>
-          <td>${escapeHtml(s.studentPhone)}</td>
-          <td>${escapeHtml(s.parentPhone)}</td>
-          <td>${escapeHtml(s.instructor)}</td>
-          <td>${escapeHtml(s.className || s.memo || '')}</td>
-          <td><button type="button" class="admin-btn red" style="padding:8px 10px; font-size:12px;" onclick="adminSendAbsenceForStudent(${idx})">결석 알림톡</button></td>
-        </tr>`;
-    });
-    html += `</tbody></table>`;
-    wrap.innerHTML = html;
-}
+/* 정리됨: 중복 함수 adminRenderStudentTable (기존 6233행 정의 제거) */
+
 
 async function adminSendAbsenceForStudent(index) {
     if (!adminIsFullAdmin()) return alert('결석 알림톡 발송은 관리자 권한에서만 가능합니다.');
@@ -6579,52 +6212,8 @@ function adminGetCheckedNoticeTargets() {
     return (adminNoticeTargetRows || []).filter(s => adminNoticeSelectedMap[adminNoticeTargetKey(s)]);
 }
 
-function adminRenderNoticeTargetTable() {
-    const wrap = document.getElementById('noticeTargetTableWrap');
-    if (!wrap) return;
+/* 정리됨: 중복 함수 adminRenderNoticeTargetTable (기존 6582행 정의 제거) */
 
-    const list = adminNoticeTargetRows || [];
-    if (!list.length) {
-        wrap.innerHTML = '<div class="notice-empty">대상 학생이 없습니다. 반 또는 학생명을 검색한 뒤 대상 불러오기를 눌러주세요.</div>';
-        return;
-    }
-
-    let html = `
-        <table class="admin-table">
-          <thead>
-            <tr>
-              <th style="width:42px;"><input type="checkbox" onchange="adminSelectAllNoticeTargets(this.checked)" ${list.every(s => adminNoticeSelectedMap[adminNoticeTargetKey(s)]) ? 'checked' : ''}></th>
-              <th>분류</th>
-              <th>출결번호</th>
-              <th>학생명</th>
-              <th>학생전화</th>
-              <th>학부모전화</th>
-              <th>담당강사</th>
-              <th>반/메모</th>
-            </tr>
-          </thead>
-          <tbody>
-    `;
-
-    list.forEach(s => {
-        const key = adminNoticeTargetKey(s);
-        html += `
-            <tr>
-              <td><input type="checkbox" ${adminNoticeSelectedMap[key] ? 'checked' : ''} onchange="adminToggleNoticeTarget('${escapeJsString(key)}', this.checked)"></td>
-              <td>${adminStudentStatusBadge(s)}</td>
-              <td>${escapeHtml(s.studentNo || '')}</td>
-              <td><b>${escapeHtml(s.name || '')}</b></td>
-              <td>${escapeHtml(s.studentPhone || '')}</td>
-              <td>${escapeHtml(s.parentPhone || '')}</td>
-              <td>${escapeHtml(s.instructor || '')}</td>
-              <td>${escapeHtml(s.className || s.memo || '')}</td>
-            </tr>
-        `;
-    });
-
-    html += '</tbody></table>';
-    wrap.innerHTML = html;
-}
 
 function getNoticeRecipientTypes() {
     const ids = ['noticeRecipientStudent', 'noticeRecipientParent', 'noticeRecipientInstructor', 'noticeRecipientAdmin'];
@@ -7160,39 +6749,14 @@ async function adminLoadAttendanceSnapshot(showAlert = true) {
     }
 }
 
-function adminRenderAttendanceTable() {
-    const wrap = document.getElementById('adminAttendanceTableWrap');
-    if (!wrap) return;
-    if (!adminAttendanceRecords.length) {
-        wrap.innerHTML = `<div class="notice-empty">출석부 데이터를 불러오세요. 날짜와 반명을 선택한 뒤 [출석부 반영]을 누르면 됩니다.</div>`;
-        return;
-    }
-    const isFull = adminIsFullAdmin();
-    let html = `<table class="admin-table"><thead><tr><th><input type="checkbox" id="adminAttendSelectAll" onchange="adminToggleAttendanceAll(this.checked)" checked></th><th>출결상태</th><th>특이사항</th><th>학생명</th><th>반명/수업명</th><th>강의실</th><th>담당강사</th>${isFull ? '<th>학생전화</th><th>학부모전화</th>' : ''}<th>메모</th></tr></thead><tbody>`;
-    adminAttendanceRecords.forEach((r, idx) => {
-        const statusClass = r.status === '출석' ? 'attendance-ok' : (r.status === '결석' ? 'attendance-no' : '');
-        const phoneCells = isFull ? `<td>${escapeHtml(r.studentPhone || '')}</td><td>${escapeHtml(r.parentPhone || '')}</td>` : '';
-        html += `<tr data-att-index="${idx}"><td><input type="checkbox" class="admin-att-check" checked></td><td><span class="admin-status-badge ${statusClass}">${escapeHtml(r.status || '미체크')}</span></td><td>${r.specialStatus ? `<span class="admin-status-badge">${escapeHtml(r.specialStatus)}</span>` : '-'}</td><td><b>${escapeHtml(r.studentName)}</b></td><td>${escapeHtml(r.className || '')}</td><td>${escapeHtml(r.classroom || r.roomName || r.room || '')}</td><td>${escapeHtml(r.instructor || '')}</td>${phoneCells}<td><input class="admin-small-input" data-field="memo" value="${escapeHtml(r.memo || '')}" placeholder="메모"></td></tr>`;
-    });
-    html += `</tbody></table>`;
-    wrap.innerHTML = html;
-}
+/* 정리됨: 중복 함수 adminRenderAttendanceTable (기존 7163행 정의 제거) */
 
-function adminToggleAttendanceAll(checked) {
-    document.querySelectorAll('.admin-att-check').forEach(ch => ch.checked = checked);
-}
 
-function adminGetSelectedAttendanceRecords() {
-    const rows = Array.from(document.querySelectorAll('#adminAttendanceTableWrap tr[data-att-index]'));
-    return rows.map(row => {
-        const idx = Number(row.dataset.attIndex);
-        const checked = row.querySelector('.admin-att-check')?.checked;
-        if (!checked) return null;
-        const r = Object.assign({}, adminAttendanceRecords[idx] || {});
-        r.memo = row.querySelector('input[data-field="memo"]')?.value || r.memo || '';
-        return r;
-    }).filter(Boolean);
-}
+/* 정리됨: 중복 함수 adminToggleAttendanceAll (기존 7181행 정의 제거) */
+
+
+/* 정리됨: 중복 함수 adminGetSelectedAttendanceRecords (기존 7185행 정의 제거) */
+
 
 function buildAttendanceMessageText(record) {
     const roomName = record.classroom || record.roomName || record.room || '';
@@ -7614,28 +7178,8 @@ function adminRenderDailyEvalTable() {
     adminRenderDailyEvalRows();
 }
 
-function adminRenderDailyEvalRows(message = '') {
-    const wrap = document.getElementById('adminDailyEvalTableWrap');
-    if (!wrap) return;
-    const list = adminDailyEvalRows;
-    if (!list.length) {
-        wrap.innerHTML = `<div class="notice-empty">표시할 학생이 없습니다. 반명 또는 검색어를 확인하세요.</div>`;
-        return;
-    }
-    const isFull = adminIsFullAdmin();
-    let html = '';
-    if (message) html += `<div style="font-size:13px; color:#666; margin:8px 0;">${escapeHtml(message)}</div>`;
-    html += `<table class="admin-table"><thead><tr><th><input type="checkbox" onchange="adminToggleDailyAll(this.checked)" checked></th><th>학생명</th><th>담당강사</th><th>반명</th>${isFull ? '<th>학생전화</th><th>학부모전화</th>' : ''}<th>출결/특이사항</th><th>일일평가 작성</th></tr></thead><tbody>`;
-    list.forEach((s, idx) => {
-        const parts = adminExtractDailyEvalParts_(s);
-        const statusText = [s.attendanceStatus, s.specialStatus].filter(Boolean).join(' / ');
-        const savedInfo = s.savedAt ? `<div style="font-size:11px; color:#16a34a; margin-bottom:4px; font-weight:700;">저장됨: ${escapeHtml(s.savedAt)}${s.savedBy ? ' / ' + escapeHtml(s.savedBy) : ''}</div>` : '';
-        const phoneCells = isFull ? `<td>${escapeHtml(s.studentPhone)}</td><td>${escapeHtml(s.parentPhone)}</td>` : '';
-        html += `<tr data-daily-index="${idx}"><td><input type="checkbox" class="admin-daily-check" checked></td><td><b>${escapeHtml(s.studentName || s.name)}</b></td><td>${escapeHtml(s.instructor)}</td><td>${escapeHtml(adminCleanClassNameOnly_(s.className))}</td>${phoneCells}<td>${escapeHtml(statusText || '-')}</td><td>${savedInfo}<div class="daily-eval-parts"><div class="daily-eval-part-label">이번주 수업</div><textarea class="daily-eval-part-textarea admin-eval-lesson" placeholder="이번주 수업 내용을 입력하세요.">${escapeHtml(parts.lessonContent)}</textarea><div class="daily-eval-part-label">수업 활동 및 태도</div><textarea class="daily-eval-part-textarea admin-eval-attitude" placeholder="수업 활동 및 태도를 입력하세요.">${escapeHtml(parts.lessonAttitude)}</textarea><div class="daily-eval-part-label">선생님 전달 사항</div><textarea class="daily-eval-part-textarea admin-eval-comment" placeholder="학부모님께 전달할 사항을 입력하세요.">${escapeHtml(parts.teacherComment)}</textarea><div class="daily-eval-preview-small"></div></div></td></tr>`;
-    });
-    html += `</tbody></table>`;
-    wrap.innerHTML = html;
-}
+/* 정리됨: 중복 함수 adminRenderDailyEvalRows (기존 7617행 정의 제거) */
+
 
 function adminToggleDailyAll(checked) {
     document.querySelectorAll('.admin-daily-check').forEach(ch => ch.checked = checked);
@@ -7865,11 +7409,8 @@ function roomJsonp(params, options = {}) {
         const script = document.createElement('script');
         let timer = null;
 
-        function cleanup() {
-            if (timer) clearTimeout(timer);
-            try { delete window[callbackName]; } catch (e) { window[callbackName] = undefined; }
-            if (script && script.parentNode) script.parentNode.removeChild(script);
-        }
+        /* 정리됨: 중복 함수 cleanup (기존 7868행 정의 제거) */
+
 
         window[callbackName] = function(data) {
             cleanup();
@@ -7943,13 +7484,11 @@ function normalizeHourForMatch(value) {
     return match ? Number(match[1]) : null;
 }
 
-function getRoomCacheKey(year, month) {
-    return `${year}-${String(month).padStart(2, '0')}`;
-}
+/* 정리됨: 중복 함수 getRoomCacheKey (기존 7946행 정의 제거) */
 
-function getRoomLocalStorageKey(cacheKey) {
-    return `ulimRoomReservationCache_${cacheKey}`;
-}
+
+/* 정리됨: 중복 함수 getRoomLocalStorageKey (기존 7950행 정의 제거) */
+
 
 function getRoomSlotKey(date, room, hour) {
     return [
@@ -9442,14 +8981,8 @@ function pronGetDeviceKey() {
     }
     return key;
 }
-function pronGetEtriUserKey() {
-    const name = (typeof studentName !== "undefined" && studentName) ? studentName : (localStorage.getItem("studentName") || "게스트");
-    const phone = (typeof phoneLast4 !== "undefined" && phoneLast4) ? phoneLast4 : (localStorage.getItem("phoneLast4") || "0000");
-    if (name && name !== "게스트" && phone && phone !== "0000") {
-        return `${name}_${phone}`.replace(/[^0-9A-Za-z가-힣_\-]/g, "_");
-    }
-    return pronGetDeviceKey();
-}
+/* 정리됨: 중복 함수 pronGetEtriUserKey (기존 9445행 정의 제거) */
+
 function pronTodayKey() {
     const d = new Date();
     const yyyy = d.getFullYear();
@@ -9595,135 +9128,14 @@ function pronJsonpRequest(params, timeoutMs = 12000) {
         document.head.appendChild(script);
     });
 }
-async function pronRefreshEtriUsage() {
-    try {
-        pronSetAdvancedStatus("고급분석 잔여횟수를 확인하는 중입니다.");
-        const data = await pronJsonpRequest({ action: "getEtriPronunciationUsage", userKey: pronGetEtriUserKey(), dateKey: pronTodayKey(), _: Date.now() }, 10000);
-        if (!data || !data.ok) throw new Error(data && data.message ? data.message : "잔여횟수 확인 실패");
-        pronSetLocalEtriUsed(data.used || 0);
-        pronUpdateEtriUsageBadge(data.used || 0, data.remaining);
-        pronSetAdvancedStatus(`오늘 고급분석 사용량: ${data.used || 0}/${PRON_ETRI_DAILY_LIMIT}회\n잔여횟수: ${data.remaining}회`, "success");
-    } catch (err) {
-        const localUsed = pronGetLocalEtriUsed();
-        pronUpdateEtriUsageBadge(localUsed, PRON_ETRI_DAILY_LIMIT - localUsed);
-        pronSetAdvancedStatus("잔여횟수 서버 확인에 실패했습니다. GAS 배포 주소와 권한을 확인해주세요.\n" + (err.message || err), "error");
-    }
-}
-async function pronRunEtriAdvancedAnalysis() {
-    const source = document.getElementById("pronInputText")?.value.trim() || "";
-    if (!source) {
-        alert("먼저 읽을 문장을 입력해주세요.");
-        return;
-    }
-    if (!pronRecordedBlob) {
-        alert("먼저 녹음을 완료해주세요. 녹음이 끝난 뒤 고급분석을 실행할 수 있습니다.");
-        return;
-    }
-    if (!GET_API_URL || !GET_API_URL.includes("script.google.com/macros/s/")) {
-        pronSetAdvancedStatus("고급분석용 GAS 주소가 설정되지 않았습니다.", "error");
-        return;
-    }
-    try {
-        pronSetAdvancedStatus("리미가 정밀하게 분석중입니다.");
-        if (!pronLastSttText) {
-            await pronRunWhisperTranscription();
-        }
-        const recognized = pronLastSttText || "";
-        const n = pronGetAnalysisNumbers();
-        const converted = source ? pronConvertText(source).converted : "";
-        const ruleSummary = pronGetRuleSummaryForVoice(source);
-        const target = pronNormalizeCompareText(source);
-        const heard = pronNormalizeCompareText(recognized);
-        const matchScore = target && heard ? Math.max(0, Math.round((1 - pronLevenshtein(target, heard) / Math.max(target.length, heard.length, 1)) * 100)) : 0;
-        const score5 = Math.max(1, Math.min(5, 1 + (matchScore / 100) * 4));
-        const requestId = pronBuildRequestId();
-        const payload = {
-            action: "geminiPronunciationComment",
-            requestId,
-            studentNo: (typeof studentNo !== "undefined" ? studentNo : "") || localStorage.getItem('studentNo') || '',
-            studentName: (typeof studentName !== "undefined" ? studentName : "") || '',
-            phoneLast4: (typeof phoneLast4 !== "undefined" ? phoneLast4 : "") || '',
-            script: source,
-            recognized,
-            standardPronunciation: converted,
-            matchScore,
-            score5: score5.toFixed(1),
-            durationSec: n.durationSec ? n.durationSec.toFixed(1) : '',
-            syllablesPerSec: n.syllablesPerSec ? n.syllablesPerSec.toFixed(1) : '',
-            avgVolume: n.avgRms ? pronPercent(n.avgRms * 260) : '',
-            silenceRatio: n.durationSec ? pronPercent(n.silenceRatio * 100) : '',
-            ruleSummary,
-            clientTime: new Date().toISOString()
-        };
-        await fetch(GET_API_URL, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
-            body: JSON.stringify(payload)
-        });
-        pronPollEtriResult(requestId);
-    } catch (err) {
-        console.error(err);
-        pronSetAdvancedStatus("고급분석 요청 실패: " + (err.message || err), "error");
-    }
-}
-function pronPollEtriResult(requestId) {
-    if (pronEtriPollingTimer) {
-        clearTimeout(pronEtriPollingTimer);
-        pronEtriPollingTimer = null;
-    }
-    pronEtriPollingCount = 0;
-    const poll = async () => {
-        pronEtriPollingCount += 1;
-        try {
-            const data = await pronJsonpRequest({ action: "getGeminiPronunciationCommentResult", requestId, _: Date.now() }, 10000);
-            if (!data || data.status === "pending" || data.status === "not_found") {
-                if (pronEtriPollingCount > 20) {
-                    pronSetAdvancedStatus("고급분석 결과 대기 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.", "error");
-                    return;
-                }
-                pronSetAdvancedStatus("리미가 정밀하게 분석중입니다.");
-                pronEtriPollingTimer = setTimeout(poll, 2500);
-                return;
-            }
-            if (!data.ok || data.status === "error") {
-                pronSetAdvancedStatus(data.message || "리미 정밀진단 처리 중 오류가 발생했습니다.", "error");
-                return;
-            }
-            pronRenderEtriResult(data);
-        } catch (err) {
-            if (pronEtriPollingCount > 20) {
-                pronSetAdvancedStatus("고급분석 결과 조회 실패: " + String(err.message || err), "error");
-                return;
-            }
-            pronEtriPollingTimer = setTimeout(poll, 2500);
-        }
-    };
-    pronEtriPollingTimer = setTimeout(poll, 2500);
-}
-function pronRenderEtriResult(data) {
-    const recognized = data.recognized || pronLastSttText || "인식 결과 없음";
-    const rawScore = data.score5 || data.score || "-";
-    const nScore = Number(rawScore);
-    const scoreText = Number.isFinite(nScore) ? nScore.toFixed(1) : String(rawScore || "-");
-    const source = document.getElementById("pronInputText")?.value || "";
-    const converted = source ? pronConvertText(source).converted : "";
-    const ruleSummary = pronGetRuleSummaryForVoice(source);
-    const comment = String(data.comment || '').trim() || '분석 결과를 기준으로 다시 녹음하며 비교해보세요.';
-    pronSetAdvancedStatus(`리미의 정밀진단 완료!
+/* 정리됨: 중복 함수 pronRefreshEtriUsage (기존 9598행 정의 제거) */
 
-발음평가 점수: ${scoreText} / 5
-리미 인식결과: ${recognized}
+/* 정리됨: 중복 함수 pronRunEtriAdvancedAnalysis (기존 9612행 정의 제거) */
 
-표준발음 참고:
-${converted ? "[" + converted + "]" : "먼저 문장을 입력하세요."}
+/* 정리됨: 중복 함수 pronPollEtriResult (기존 9670행 정의 제거) */
 
-리미 코멘트:
-- ${comment}
+/* 정리됨: 중복 함수 pronRenderEtriResult (기존 9704행 정의 제거) */
 
-표준발음 점검 대상:
-${ruleSummary}`, "success");
-}
 
 
 
@@ -11011,37 +10423,8 @@ function getStudentVocalPracticeLogsByDate_(dateKey) {
     return studentVocalPracticeLogMap.get(dateKey) || [];
 }
 
-async function loadStudentVocalPracticeLogsForMonth_(year, month, force = false) {
-    if (!studentName || studentName === '게스트' || !phoneLast4) return;
-    const key = `${year}-${String(month + 1).padStart(2, '0')}`;
-    if (!force && studentVocalPracticeLoadedKey === key) return;
+/* 정리됨: 중복 함수 loadStudentVocalPracticeLogsForMonth_ (기존 11014행 정의 제거) */
 
-    try {
-        const query = new URLSearchParams();
-        query.set('action', 'getStudentVocalPracticeLogs');
-        query.set('name', studentName);
-        query.set('phoneLast4', phoneLast4);
-        query.set('year', String(year));
-        query.set('month', String(month + 1));
-        query.set('_', Date.now());
-
-        const response = await fetch(`${GET_API_URL}?${query.toString()}`);
-        if (!response.ok) throw new Error('연습일지 조회 실패: HTTP ' + response.status);
-        const data = await response.json();
-        if (!data || data.status !== 'success') throw new Error((data && data.message) || '연습일지 응답 오류');
-
-        studentVocalPracticeLogMap = new Map();
-        (data.logs || []).forEach(log => {
-            const dateKey = String(log.practiceDate || '').trim();
-            if (!dateKey) return;
-            if (!studentVocalPracticeLogMap.has(dateKey)) studentVocalPracticeLogMap.set(dateKey, []);
-            studentVocalPracticeLogMap.get(dateKey).push(log);
-        });
-        studentVocalPracticeLoadedKey = key;
-    } catch (err) {
-        console.warn('학생 연습일지 서버 조회 실패:', err);
-    }
-}
 
 function adminInitVocalPracticePanel_() {
     const dateInput = document.getElementById('adminVocalPracticeDate');
@@ -11066,44 +10449,8 @@ async function adminLoadVocalPracticeLogs(showOverlay = true) {
     }
 }
 
-function adminRenderVocalPracticeLogs() {
-    const list = document.getElementById('adminVocalPracticeList');
-    const summary = document.getElementById('adminVocalPracticeSummary');
-    if (!list) return;
+/* 정리됨: 중복 함수 adminRenderVocalPracticeLogs (기존 11069행 정의 제거) */
 
-    if (summary) summary.textContent = `연습기록 ${adminVocalPracticeLogs.length}건`;
-
-    if (!adminVocalPracticeLogs.length) {
-        list.innerHTML = '<div class="admin-message-preview">조회된 발성 연습기록이 없습니다.</div>';
-        return;
-    }
-
-    list.innerHTML = adminVocalPracticeLogs.map((log, idx) => {
-        const hasComment = String(log.teacherComment || '').trim();
-        const audio = log.fileUrl && String(log.fileUrl).indexOf('http') === 0
-            ? `<p><a href="${escapeHtml_(log.fileUrl)}" target="_blank">녹음파일 열기</a></p>`
-            : '<p style="color:#999;">녹음파일 링크 없음</p>';
-
-        return `
-            <div class="practice-log-card ${hasComment ? 'has-comment' : ''}">
-                <div class="practice-log-title">${escapeHtml_(log.studentName)} ${hasComment ? '★' : ''}</div>
-                <div class="practice-log-meta">
-                    ${escapeHtml_(log.practiceDate)} / 담당강사: ${escapeHtml_(log.instructor)} / 문장ID: ${escapeHtml_(log.vocalId || '')}<br>
-                    기록ID: ${escapeHtml_(log.recordId)}
-                </div>
-                <div class="practice-log-text"><b>문장</b><br>${escapeHtml_(log.sentence || '')}</div>
-                ${log.aiComment ? `<div class="practice-log-text" style="margin-top:8px;"><b>AI 코멘트</b><br>${escapeHtml_(log.aiComment)}</div>` : ''}
-                ${audio}
-                <div style="margin-top:10px;">
-                    <label style="font-size:13px; font-weight:900; color:#166534;">강사 코멘트</label>
-                    <textarea class="practice-comment-textarea" id="practiceComment_${idx}" placeholder="학생에게 보여줄 코멘트를 입력하세요.">${escapeHtml_(log.teacherComment || '')}</textarea>
-                    <button type="button" class="admin-btn" style="margin-top:8px;" onclick="adminSaveVocalPracticeComment(${idx})">코멘트 저장</button>
-                    ${log.teacherCommentAt ? `<div class="practice-log-meta">최근 코멘트: ${escapeHtml_(log.teacherCommentAt)} / ${escapeHtml_(log.teacherCommentTeacher || '')}</div>` : ''}
-                </div>
-            </div>
-        `;
-    }).join('');
-}
 
 async function adminSaveVocalPracticeComment(index) {
     const log = adminVocalPracticeLogs[index];
@@ -11208,77 +10555,8 @@ function adminSetAttendanceSaveState_(idx, text, isError = false) {
     }
 }
 
-function adminRenderAttendanceTable() {
-    const wrap = document.getElementById('adminAttendanceTableWrap');
-    if (!wrap) return;
+/* 정리됨: 중복 함수 adminRenderAttendanceTable (기존 11211행 정의 제거) */
 
-    if (!adminAttendanceRecords.length) {
-        wrap.innerHTML = `<div class="notice-empty">출석부 데이터를 불러오세요. 날짜와 반명을 선택한 뒤 [출석부 반영]을 누르면 됩니다.</div>`;
-        return;
-    }
-
-    const isFull = adminIsFullAdmin();
-    let html = `<table class="admin-table">
-        <thead>
-            <tr>
-                <th><input type="checkbox" id="adminAttendSelectAll" onchange="adminToggleAttendanceAll(this.checked)" checked></th>
-                <th>출석체크</th>
-                <th>현재상태</th>
-                <th>특이사항</th>
-                <th>학생명</th>
-                <th>반명/수업명</th>
-                <th>강의실</th>
-                <th>담당강사</th>
-                ${isFull ? '<th>학생전화</th><th>학부모전화</th>' : ''}
-                <th>메모</th>
-            </tr>
-        </thead>
-        <tbody>`;
-
-    adminAttendanceRecords.forEach((r, idx) => {
-        const status = adminNormalizeAttendanceStatusForUi_(r.status || r.attendanceStatus || '');
-        const phoneCells = isFull
-            ? `<td>${adminEscapeAttendanceHtml_(r.studentPhone || '')}</td><td>${adminEscapeAttendanceHtml_(r.parentPhone || '')}</td>`
-            : '';
-
-        html += `<tr data-att-index="${idx}">
-            <td><input type="checkbox" class="admin-att-check" checked></td>
-            <td>
-                <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; min-width:180px;">
-                    <button type="button"
-                        style="border:none; border-radius:8px; padding:7px 10px; font-weight:900; cursor:pointer; background:#16a34a; color:white;"
-                        onclick="adminQuickSetAttendance(${idx}, '출석')">O</button>
-                    <button type="button"
-                        style="border:none; border-radius:8px; padding:7px 10px; font-weight:900; cursor:pointer; background:#dc2626; color:white;"
-                        onclick="adminQuickSetAttendance(${idx}, '결석')">X</button>
-                    <select class="admin-small-input admin-att-status"
-                        data-field="status"
-                        onchange="adminSaveAttendanceStatusChange(${idx})"
-                        style="min-width:90px;">
-                        ${adminAttendanceStatusOptions_(status)}
-                    </select>
-                    <span id="admin-att-save-state-${idx}" style="font-size:12px; font-weight:800;"></span>
-                </div>
-            </td>
-            <td>${adminAttendanceStatusBadgeHtml_(status, idx)}</td>
-            <td>${r.specialStatus ? `<span class="admin-status-badge">${adminEscapeAttendanceHtml_(r.specialStatus)}</span>` : '-'}</td>
-            <td><b>${adminEscapeAttendanceHtml_(r.studentName)}</b></td>
-            <td>${adminEscapeAttendanceHtml_(r.className || '')}</td>
-            <td>${adminEscapeAttendanceHtml_(r.classroom || r.roomName || r.room || '')}</td>
-            <td>${adminEscapeAttendanceHtml_(r.instructor || '')}</td>
-            ${phoneCells}
-            <td><input class="admin-small-input" data-field="memo" value="${adminEscapeAttendanceHtml_(r.memo || '')}" placeholder="메모"></td>
-        </tr>`;
-    });
-
-    html += `</tbody></table>
-        <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px; flex-wrap:wrap;">
-            <button type="button" class="admin-btn" onclick="adminSaveAttendanceFromTable(false)">선택 출석부 저장</button>
-            <button type="button" class="admin-btn gray" onclick="adminLoadAttendanceSnapshot(true)">출석부 다시 불러오기</button>
-        </div>`;
-
-    wrap.innerHTML = html;
-}
 
 function adminToggleAttendanceAll(checked) {
     document.querySelectorAll('.admin-att-check').forEach(ch => ch.checked = checked);
@@ -11820,62 +11098,8 @@ async function authenticate(name, password) {
     }
 }
 
-async function changeStudentPasswordByPrompt(force = false, knownCurrentPassword = '') {
-    const token = getStudentSessionToken_();
+/* 정리됨: 중복 함수 changeStudentPasswordByPrompt (기존 11823행 정의 제거) */
 
-    if (!token) {
-        if (!force) alert("먼저 학생 로그인을 해주세요.");
-        return false;
-    }
-
-    const currentPassword = knownCurrentPassword || prompt("현재 비밀번호를 입력해주세요.");
-    if (!currentPassword) return false;
-
-    const newPassword = prompt("새 비밀번호를 입력해주세요.\n영문/숫자 조합 4자 이상을 권장합니다.");
-    if (!newPassword) return false;
-
-    if (String(newPassword).length < 4) {
-        alert("새 비밀번호는 4자 이상으로 설정해주세요.");
-        return false;
-    }
-
-    const newPassword2 = prompt("새 비밀번호를 한 번 더 입력해주세요.");
-    if (newPassword !== newPassword2) {
-        alert("새 비밀번호가 서로 다릅니다.");
-        return false;
-    }
-
-    try {
-        showLoading("비밀번호 변경 중...");
-
-        const query = new URLSearchParams();
-        query.set('action', 'changeStudentPassword');
-        query.set('studentSessionToken', token);
-        query.set('currentPassword', currentPassword);
-        query.set('newPassword', newPassword);
-        query.set('_', Date.now());
-
-        const response = await fetch(`${GET_API_URL}?${query.toString()}`);
-        hideLoading();
-
-        if (!response.ok) throw new Error('서버 응답이 원활하지 않습니다. 잠시 후 다시 시도해주세요.');
-        const result = await response.json();
-
-        if (result && result.status === 'success') {
-            studentMustChangePassword = false;
-            localStorage.setItem('studentMustChangePassword', 'N');
-            alert("비밀번호가 변경되었습니다.");
-            return true;
-        }
-
-        alert((result && result.message) || "비밀번호를 변경하지 못했습니다.");
-        return false;
-    } catch (err) {
-        hideLoading();
-        alert(err.message || "비밀번호 변경 중 문제가 발생했습니다.");
-        return false;
-    }
-}
 
 async function checkStudentName() {
     const token = getStudentSessionToken_();
@@ -12215,110 +11439,11 @@ async function pronRefreshEtriUsage() {
     }
 }
 
-async function pronRunEtriAdvancedAnalysis() {
-    const source = document.getElementById("pronInputText")?.value.trim() || "";
-    if (!source) {
-        alert("먼저 읽을 문장을 입력해주세요.");
-        return;
-    }
-    if (!pronRecordedBlob) {
-        alert("먼저 녹음을 완료해주세요. 녹음이 끝난 뒤 고급분석을 실행할 수 있습니다.");
-        return;
-    }
-    if (!GET_API_URL || !GET_API_URL.includes("script.google.com/macros/s/")) {
-        pronSetAdvancedStatus("고급분석 서비스를 준비 중입니다. 잠시 후 다시 시도해주세요.", "error");
-        return;
-    }
+/* 정리됨: 중복 함수 pronRunEtriAdvancedAnalysis (기존 12218행 정의 제거) */
 
-    const token = pronGetStudentSessionTokenForUsage_();
-    const currentName = (typeof studentName !== "undefined" && studentName) ? studentName : (localStorage.getItem("studentName") || "게스트");
 
-    if (currentName !== "게스트" && !token) {
-        pronSetAdvancedStatus("학생별 사용량 확인을 위해 다시 로그인해주세요.", "error");
-        return;
-    }
+/* 정리됨: 중복 함수 pronRenderEtriResult (기존 12293행 정의 제거) */
 
-    try {
-        pronSetAdvancedStatus("리미가 조금 더 정확하게 분석중입니다.");
-        if (!pronLastSttText) {
-            await pronRunWhisperTranscription();
-        }
-
-        const recognized = pronLastSttText || "";
-        const n = pronGetAnalysisNumbers();
-        const converted = source ? pronConvertText(source).converted : "";
-        const ruleSummary = pronGetRuleSummaryForVoice(source);
-        const target = pronNormalizeCompareText(source);
-        const heard = pronNormalizeCompareText(recognized);
-        const matchScore = target && heard ? Math.max(0, Math.round((1 - pronLevenshtein(target, heard) / Math.max(target.length, heard.length, 1)) * 100)) : 0;
-        const score5 = Math.max(1, Math.min(5, 1 + (matchScore / 100) * 4));
-        const requestId = pronBuildRequestId();
-
-        const payload = {
-            action: "geminiPronunciationComment",
-            requestId,
-            userKey: pronGetEtriUserKey(),
-            studentSessionToken: token,
-            studentNo: '',
-            studentName: currentName !== "게스트" ? currentName : '',
-            phoneLast4: '',
-            script: source,
-            recognized,
-            standardPronunciation: converted,
-            matchScore,
-            score5: score5.toFixed(1),
-            durationSec: n.durationSec ? n.durationSec.toFixed(1) : '',
-            syllablesPerSec: n.syllablesPerSec ? n.syllablesPerSec.toFixed(1) : '',
-            avgVolume: n.avgRms ? pronPercent(n.avgRms * 260) : '',
-            silenceRatio: n.durationSec ? pronPercent(n.silenceRatio * 100) : '',
-            ruleSummary,
-            dateKey: pronTodayKey(),
-            clientTime: new Date().toISOString()
-        };
-
-        await fetch(GET_API_URL, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
-            body: JSON.stringify(payload)
-        });
-
-        pronPollEtriResult(requestId);
-    } catch (err) {
-        console.error(err);
-        pronSetAdvancedStatus("고급분석 요청 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.", "error");
-    }
-}
-
-function pronRenderEtriResult(data) {
-    const recognized = data.recognized || pronLastSttText || "인식 결과 없음";
-    const rawScore = data.score5 || data.score || "-";
-    const nScore = Number(rawScore);
-    const scoreText = Number.isFinite(nScore) ? nScore.toFixed(1) : String(rawScore || "-");
-    const source = document.getElementById("pronInputText")?.value || "";
-    const converted = source ? pronConvertText(source).converted : "";
-    const ruleSummary = pronGetRuleSummaryForVoice(source);
-    const comment = String(data.comment || '').trim() || '분석 결과를 기준으로 다시 녹음하며 비교해보세요.';
-
-    if (typeof data.used !== 'undefined') {
-        pronSetLocalEtriUsed(data.used || 0);
-        pronUpdateEtriUsageBadge(data.used || 0, data.remaining);
-    }
-
-    pronSetAdvancedStatus(`리미의 정밀진단 완료!
-
-발음평가 점수: ${scoreText} / 5
-리미 인식결과: ${recognized}
-
-표준발음 참고:
-${converted ? "[" + converted + "]" : "먼저 문장을 입력하세요."}
-
-리미 코멘트:
-- ${comment}
-
-표준발음 점검 대상:
-${ruleSummary}`, "success");
-}
 </script>
 
 
@@ -13168,64 +12293,8 @@ function adminRenderNoticeTargetTable() {
     ulimAdminAfterRender_();
 }
 
-function adminRenderAttendanceTable() {
-    const wrap = document.getElementById('adminAttendanceTableWrap');
-    if (!wrap) return;
+/* 정리됨: 중복 함수 adminRenderAttendanceTable (기존 13171행 정의 제거) */
 
-    if (!adminAttendanceRecords.length) {
-        wrap.innerHTML = `<div class="notice-empty">출석부 데이터를 불러오세요. 날짜와 반명을 선택한 뒤 [출석부 반영]을 누르면 됩니다.</div>`;
-        return;
-    }
-
-    const isFull = adminIsFullAdmin();
-    let html = `<table class="admin-table">
-        <thead>
-            <tr>
-                <th><input type="checkbox" id="adminAttendSelectAll" onchange="adminToggleAttendanceAll(this.checked)" checked></th>
-                <th>출석체크</th>
-                <th>현재상태</th>
-                <th>특이사항</th>
-                <th>학생명</th>
-                <th>반명/수업명</th>
-                <th>강의실</th>
-                ${isFull ? '<th>학생전화</th><th>학부모전화</th>' : ''}
-                <th>메모</th>
-            </tr>
-        </thead>
-        <tbody>`;
-
-    adminAttendanceRecords.forEach((r, idx) => {
-        const status = adminNormalizeAttendanceStatusForUi_(r.status || r.attendanceStatus || '');
-        const phoneCells = isFull
-            ? `<td>${ulimAdminEsc_(r.studentPhone || '')}</td><td>${ulimAdminEsc_(r.parentPhone || '')}</td>`
-            : '';
-        const specialCell = r.specialStatus
-            ? `<span class="admin-status-badge">${ulimAdminEsc_(r.specialStatus)}</span>`
-            : '-';
-
-        html += `<tr data-att-index="${idx}">
-            <td><input type="checkbox" class="admin-att-check" checked></td>
-            <td>
-                <button type="button" class="admin-att-mini ok" onclick="adminSetAttendanceRowStatus(${idx}, '출석')">O</button>
-                <button type="button" class="admin-att-mini no" onclick="adminSetAttendanceRowStatus(${idx}, '결석')">X</button>
-                <select class="admin-att-status-select" data-field="status" onchange="adminSyncAttendanceRowStatus(${idx}, this.value)">
-                    ${['미체크','출석','결석','지각','조퇴','보강','휴원'].map(v => `<option value="${v}" ${status === v ? 'selected' : ''}>${v}</option>`).join('')}
-                </select>
-            </td>
-            <td><span class="admin-status-badge ${status === '출석' ? 'attendance-ok' : (status === '결석' ? 'attendance-no' : '')}">${ulimAdminEsc_(status || '미체크')}</span></td>
-            <td>${specialCell}</td>
-            <td><b>${ulimAdminEsc_(r.studentName)}</b></td>
-            <td>${ulimAdminEsc_(r.className || '')}</td>
-            <td>${ulimAdminEsc_(r.classroom || r.roomName || r.room || '')}</td>
-            ${phoneCells}
-            <td><input class="admin-small-input" data-field="memo" value="${ulimAdminEsc_(r.memo || '')}" placeholder="메모"></td>
-        </tr>`;
-    });
-
-    html += `</tbody></table>`;
-    wrap.innerHTML = html;
-    ulimAdminAfterRender_();
-}
 
 function adminRenderDailyEvalRows(message = '') {
     const wrap = document.getElementById('adminDailyEvalTableWrap');
@@ -13825,94 +12894,8 @@ function pollTrainingFinalAiResult_(requestId) {
     });
 }
 
-async function runTrainingFinalAiAnalysisFromButton() {
-    if (window.trainingFinalAiInProgress) {
-        return alert('리미가 이미 분석중입니다. 잠시만 기다려주세요.');
-    }
+/* 정리됨: 중복 함수 runTrainingFinalAiAnalysisFromButton (기존 13828행 정의 제거) */
 
-    if (step !== 6 || !currentTrainObj) {
-        return alert('최종녹음 및 AI 분석 단계에서 사용할 수 있습니다.');
-    }
-    if (!lastRecordedBlob) {
-        return alert('먼저 녹음을 완료해주세요.');
-    }
-
-    const todayCheck = await checkVocalTrainingTodayCompletedFromServer_({ timeoutMs: 10000 });
-    if (todayCheck && todayCheck.completed) {
-        resetTrainingFinalAiRequestState_();
-        return alert('오늘은 연습을 완료했습니다.');
-    }
-
-    if (window.trainingFinalAiResult && window.trainingFinalAiResult.requestSentence === currentTrainObj.text) {
-        resetTrainingFinalAiRequestState_();
-        return alert('이미 마지막 녹음본의 AI 분석이 완료되었습니다. 다시 분석하려면 새로 녹음 후 실행해주세요.');
-    }
-
-    const ok = confirm('AI분석을 시작하면 오늘연습이 완료됩니다. 진행하시겠습니까?');
-    if (!ok) return;
-
-    window.trainingFinalAiInProgress = true;
-    window.trainingFinalAiActiveRequestId = buildTrainingFinalRequestId_();
-
-    const btn = document.getElementById('trainingAiAnalyzeBtn');
-
-    try {
-        setTrainingAiLoadingState_(true);
-
-        const resultBox = document.getElementById('resultBox');
-        if (resultBox) resultBox.style.display = 'block';
-
-        const aiSection = document.getElementById('aiSection');
-        const recSection = document.getElementById('recSection');
-        if (aiSection) aiSection.style.display = 'block';
-        if (recSection) recSection.style.display = 'block';
-
-        const sttEl = document.getElementById('sttResult');
-        const badge = document.getElementById('accBadge');
-        if (sttEl) sttEl.textContent = '리미가 분석중입니다.';
-        if (badge) { badge.className = 'accuracy-badge acc-wait'; badge.textContent = '분석중'; }
-
-        const recStatus = document.getElementById('recStatus');
-        if (recStatus) recStatus.textContent = '리미가 분석중입니다.';
-
-        await Promise.race([
-            runTrainingFinalAiAnalysis_(lastRecordedBlob, { force: true }),
-            trainingAiTimeout_(90000, '리미 분석 시간이 오래 걸리고 있습니다. 잠시 후 다시 시도해주세요.')
-        ]);
-
-        const recStatusDone = document.getElementById('recStatus');
-        if (recStatusDone) recStatusDone.textContent = '리미 분석 완료. 연습완료 버튼을 눌러 결과를 업로드할 수 있습니다.';
-        enableVocalTrainingCompleteButton_();
-    } catch (err) {
-        console.warn('Training final analysis failed:', err);
-
-        if (isTrainingAiLimitError_(err)) {
-            renderTrainingFinalAiLimitState_(err.message || '오늘 최종 AI 분석은 이미 사용했습니다.');
-            return;
-        }
-
-        const fallbackResult = await buildTrainingFinalFallbackResult_(lastRecordedBlob, err);
-        renderTrainingFinalAiResult_(fallbackResult);
-        enableVocalTrainingCompleteButton_();
-
-        const recStatusEl = document.getElementById('recStatus');
-        if (recStatusEl) {
-            recStatusEl.textContent = '리미의 간단분석! 연습완료 버튼을 눌러 결과를 업로드할 수 있습니다.';
-        }
-    } finally {
-        window.__ulimTrainingAiDuplicateFixVersion = "5-29";
-window.trainingFinalAiInProgress = false;
-        window.trainingFinalAiActiveRequestId = '';
-        setTrainingAiLoadingState_(false);
-        if (btn) {
-            btn.disabled = false;
-            btn.classList.remove('training-ai-loading');
-            btn.dataset.loading = '0';
-            btn.textContent = 'AI';
-            btn.style.opacity = '1';
-        }
-    }
-}
 
 /* 새 녹음 시작/완료 이후에도 혹시 남은 분석중 상태 제거 */
 window.addEventListener('DOMContentLoaded', () => {
