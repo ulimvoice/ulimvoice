@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script type="text/javascript" nonce="5878564e64bc424ab28cf8dfbd2" src="//local.adguard.org?ts=1780645719505&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_0000000062587206b7ddc74006c62209%26fn%3D%25EC%259A%25B8%25EB%25A6%25BC%25EC%2595%25B1_index_5_32%25EC%25B0%25A8_Gemini%25EC%25A4%2591%25EB%25B3%25B5%25ED%2583%2580%25EC%259E%2584%25EC%2595%2584%25EC%259B%2583%25EB%25A1%259C%25EC%25BB%25AC%25EB%25B6%2584%25EC%2584%259D%25EC%2599%2584%25EC%2584%25B1.html%26cd%3Dattachment%26ts%3D494623%26p%3Dfs%26cid%3D1%26sig%3D3b6279cc9a400080166d816992945a148f24f276855989543c3440b40ddd4991%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
+<script type="text/javascript" nonce="5878564e64bc424ab28cf8dfbd2" src="//local.adguard.org?ts=1780645786255&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000005d8c720b9b79b029b97bb011%26fn%3D%25EC%259A%25B8%25EB%25A6%25BC%25EC%2595%25B1_index_5_33%25EC%25B0%25A8_%25EA%25B4%2580%25EB%25A6%25AC%25EC%259E%2590%25EA%25B0%2595%25EC%259D%2598%25EC%258B%25A4%25EC%259E%2590%25EC%259C%25A0%25EB%25B0%25B0%25EC%25A0%2595%25EC%2599%2584%25EC%2584%25B1.html%26cd%3Dattachment%26ts%3D494624%26p%3Dfs%26cid%3D1%26sig%3D01c98fbd2126e2b3162120f4e8123a7cb4c5b03b22d9df18caf74e8ba72aad83%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://script.googleusercontent.com">
 <link rel="dns-prefetch" href="//script.google.com">
 <link rel="dns-prefetch" href="//script.googleusercontent.com">
@@ -2174,6 +2174,11 @@ body.admin-mode .admin-only-tab { display:block !important; }
                 <select id="adminClassroomUsageRoom"></select>
               </div>
               <div class="admin-field">
+                <label for="adminClassroomUsageInstructor">배정 강사</label>
+                <input type="text" id="adminClassroomUsageInstructor" list="adminClassroomUsageInstructorList" placeholder="예: 이용우 / 김하은 / 상담">
+                <datalist id="adminClassroomUsageInstructorList"></datalist>
+              </div>
+              <div class="admin-field">
                 <label for="adminClassroomUsageStart">시작</label>
                 <select id="adminClassroomUsageStart"></select>
               </div>
@@ -2193,6 +2198,8 @@ body.admin-mode .admin-only-tab { display:block !important; }
 
             <div class="admin-btn-row">
               <button type="button" class="admin-btn" onclick="adminSaveClassroomUsageFromForm()">사용 체크</button>
+              <button type="button" class="admin-btn orange admin-full-only" onclick="adminSaveClassroomUsageFromForm(false, true)">관리자 배정/용도변경</button>
+              <button type="button" class="admin-btn gray" onclick="adminClearClassroomUsageForm()">입력 초기화</button>
               <button type="button" class="admin-btn blue" onclick="adminLoadClassroomUsage(true)">현황 새로고침</button>
             </div>
 
@@ -2200,9 +2207,10 @@ body.admin-mode .admin-only-tab { display:block !important; }
               <span class="admin-chip" id="adminClassroomUsageSummary">조회 전</span>
               <span class="admin-chip">초록: 사용중</span>
               <span class="admin-chip">빈칸 클릭: 해당 시간 바로 체크</span>
+              <span class="admin-chip admin-full-only">관리자: 사용중 칸 클릭 후 배정/용도변경 가능</span>
             </div>
             <div class="classroom-usage-note">
-              ※ 사용 해제는 해당 칸의 [해제] 버튼을 누르면 됩니다. 해제 시 출석부 안의 강의실 사용일지 해당 칸이 비워집니다.
+              ※ 관리자는 원하는 날짜·시간·강의실에 강사를 직접 배정하거나, 기존 사용칸을 해제/용도변경할 수 있습니다. 강사는 본인이 체크한 기록만 해제할 수 있습니다.
             </div>
             <div id="adminClassroomUsageTableWrap" class="classroom-usage-table-wrap"></div>
           </div>
@@ -11403,6 +11411,7 @@ async function adminSaveAttendanceRecords_(records, silent = false) {
    울림앱 4차 - 강사페이지 강의실 사용체크 시간표 UI
    ========================================================= */
 const ADMIN_CLASSROOM_USAGE_ROOMS = ["2강의실", "3강의실", "녹음실", "4강의실", "5강의실", "신체훈련실"];
+const ADMIN_CLASSROOM_USAGE_INSTRUCTORS = ["이용우", "양슬기", "이눈솔", "박소연", "최봄결", "김아란", "박주광", "최현식", "박송", "강호철", "김하은", "김인형", "안수현", "박성광", "상담", "녹음", "자율연습"];
 let adminClassroomUsageRows = [];
 let adminClassroomUsageLoadedDate = '';
 
@@ -11426,6 +11435,18 @@ function adminInitClassroomUsagePanel() {
     if (roomEl && !roomEl.dataset.ready) {
         roomEl.innerHTML = ADMIN_CLASSROOM_USAGE_ROOMS.map(r => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join('');
         roomEl.dataset.ready = '1';
+    }
+
+    const instructorListEl = document.getElementById('adminClassroomUsageInstructorList');
+    if (instructorListEl && !instructorListEl.dataset.ready) {
+        const names = Array.from(new Set([...(ADMIN_CLASSROOM_USAGE_INSTRUCTORS || []), (adminInfo && (adminInfo.name || adminInfo.id)) || ''].filter(Boolean)));
+        instructorListEl.innerHTML = names.map(n => `<option value="${escapeHtml(n)}"></option>`).join('');
+        instructorListEl.dataset.ready = '1';
+    }
+
+    const instructorEl = document.getElementById('adminClassroomUsageInstructor');
+    if (instructorEl && !instructorEl.value && adminInfo && !adminIsFullAdmin()) {
+        instructorEl.value = adminInfo.name || adminInfo.id || '';
     }
 
     const startEl = document.getElementById('adminClassroomUsageStart');
@@ -11495,11 +11516,12 @@ function adminRenderClassroomUsageTable() {
             const used = adminFindClassroomUsageAt_(room, hour);
             if (used) {
                 const mine = adminClassroomUsageIsMine_(used);
-                html += `<td class="classroom-usage-cell-used ${mine ? 'mine' : ''}">
+                html += `<td class="classroom-usage-cell-used ${mine ? 'mine' : ''}" ${adminIsFullAdmin() ? `onclick="adminSelectClassroomUsageRecord('${escapeHtml(used.recordId || '')}')"` : ''}>
                     <div>${escapeHtml(used.instructor || used.adminName || '-')}</div>
                     <div style="font-size:11px; font-weight:700;">${escapeHtml(used.className || used.purpose || '사용중')}</div>
                     <div style="font-size:11px; color:inherit; opacity:.85;">${adminFormatClassroomHour_(used.startHour)}~${adminFormatClassroomHour_(used.endHour)}</div>
-                    ${mine || adminIsFullAdmin() ? `<button type="button" class="classroom-usage-release-btn" onclick="adminReleaseClassroomUsage('${escapeHtml(used.recordId || '')}')">해제</button>` : ''}
+                    ${mine || adminIsFullAdmin() ? `<button type="button" class="classroom-usage-release-btn" onclick="event.stopPropagation(); adminReleaseClassroomUsage('${escapeHtml(used.recordId || '')}')">해제</button>` : ''}
+                    ${adminIsFullAdmin() ? `<button type="button" class="classroom-usage-release-btn" style="background:#f59e0b;" onclick="event.stopPropagation(); adminSelectClassroomUsageRecord('${escapeHtml(used.recordId || '')}')">수정</button>` : ''}
                 </td>`;
             } else {
                 html += `<td><button type="button" class="classroom-usage-empty-btn" onclick="adminQuickClassroomUsage('${escapeHtml(room)}', ${hour})">사용</button></td>`;
@@ -11512,18 +11534,51 @@ function adminRenderClassroomUsageTable() {
     wrap.innerHTML = html;
 }
 
+function adminSelectClassroomUsageRecord(recordId) {
+    if (!adminIsFullAdmin()) return;
+    const used = (adminClassroomUsageRows || []).find(r => String(r.recordId || '') === String(recordId || ''));
+    if (!used) return alert('수정할 강의실 기록을 찾지 못했습니다.');
+    adminInitClassroomUsagePanel();
+    const roomEl = document.getElementById('adminClassroomUsageRoom');
+    const startEl = document.getElementById('adminClassroomUsageStart');
+    const endEl = document.getElementById('adminClassroomUsageEnd');
+    const instructorEl = document.getElementById('adminClassroomUsageInstructor');
+    const classEl = document.getElementById('adminClassroomUsageClass');
+    const memoEl = document.getElementById('adminClassroomUsageMemo');
+    if (roomEl) roomEl.value = used.room || '';
+    if (startEl) startEl.value = String(used.startHour || 10);
+    if (endEl) endEl.value = String(used.endHour || (Number(used.startHour || 10) + 1));
+    if (instructorEl) instructorEl.value = used.instructor || '';
+    if (classEl) classEl.value = used.className || used.purpose || '';
+    if (memoEl) memoEl.value = used.memo || '';
+    const summary = document.getElementById('adminClassroomUsageSummary');
+    if (summary) summary.textContent = '선택됨: ' + (used.room || '') + ' ' + adminFormatClassroomHour_(used.startHour) + '~' + adminFormatClassroomHour_(used.endHour) + ' / 수정 후 [관리자 배정/용도변경]';
+}
+
+function adminClearClassroomUsageForm() {
+    adminInitClassroomUsagePanel();
+    const instructorEl = document.getElementById('adminClassroomUsageInstructor');
+    const classEl = document.getElementById('adminClassroomUsageClass');
+    const memoEl = document.getElementById('adminClassroomUsageMemo');
+    if (instructorEl) instructorEl.value = adminIsFullAdmin() ? '' : ((adminInfo && (adminInfo.name || adminInfo.id)) || '');
+    if (classEl) classEl.value = '';
+    if (memoEl) memoEl.value = '';
+}
+
 async function adminQuickClassroomUsage(room, hour) {
     adminInitClassroomUsagePanel();
     const roomEl = document.getElementById('adminClassroomUsageRoom');
     const startEl = document.getElementById('adminClassroomUsageStart');
     const endEl = document.getElementById('adminClassroomUsageEnd');
+    const instructorEl = document.getElementById('adminClassroomUsageInstructor');
     if (roomEl) roomEl.value = room;
+    if (instructorEl && !instructorEl.value) instructorEl.value = (adminInfo && (adminInfo.name || adminInfo.id)) || '';
     if (startEl) startEl.value = String(hour);
     if (endEl) endEl.value = String(hour + 1);
     await adminSaveClassroomUsageFromForm(true);
 }
 
-async function adminSaveClassroomUsageFromForm(silentConfirm = false) {
+async function adminSaveClassroomUsageFromForm(silentConfirm = false, forceOverride = false) {
     if (!adminToken) return alert('로그인이 필요합니다.');
     adminInitClassroomUsagePanel();
 
@@ -11531,6 +11586,7 @@ async function adminSaveClassroomUsageFromForm(silentConfirm = false) {
     const room = document.getElementById('adminClassroomUsageRoom')?.value || '';
     const startHour = Number(document.getElementById('adminClassroomUsageStart')?.value || 0);
     const endHour = Number(document.getElementById('adminClassroomUsageEnd')?.value || 0);
+    const assignedInstructor = document.getElementById('adminClassroomUsageInstructor')?.value.trim() || '';
     const className = document.getElementById('adminClassroomUsageClass')?.value.trim() || '';
     const memo = document.getElementById('adminClassroomUsageMemo')?.value.trim() || '';
 
@@ -11543,7 +11599,7 @@ async function adminSaveClassroomUsageFromForm(silentConfirm = false) {
         showLoading('강의실 사용 체크 중...');
 
         await adminPostNoCors('adminSaveClassroomUsage', {
-            adminToken, date, room, startHour, endHour, className, memo
+            adminToken, date, room, startHour, endHour, assignedInstructor, className, memo, override: forceOverride ? '1' : '0'
         });
 
         await new Promise(resolve => setTimeout(resolve, 900));
