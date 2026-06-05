@@ -682,7 +682,7 @@
  * - 보강: 안전 호출, 학생용 문구, 관리자/운영용 화면 문구 숨김
  ****************************************************/
 const API_URL = "https://script.google.com/macros/s/AKfycbx7wQFuw6MqqOijmvuwpeiCWOk3xU3hr41xoKbRltQHLb1kLbr_1RD5Zzy3iuWcrhUD0A/exec";
-const TABLET_APP_VERSION = "2026.06.06.043.6";
+const TABLET_APP_VERSION = "2026.06.06.043.7";
 const TABLET_DEBUG = false;
 
 const URL_PARAMS = new URLSearchParams(location.search);
@@ -1429,12 +1429,14 @@ window.addEventListener("keydown", function (event) {
 });
 
 /****************************************************
- * 43차-6 반응속도/문구 타이밍 재정리
- * - 서버 응답 전 3초 뒤 성공 문구를 미리 띄우던 로직 제거
- * - 로컬 일일캐시가 있으면 학생/수업/강의실을 즉시 표시하고 기록은 백그라운드 대기열로 전송
- * - 로컬 일일캐시가 없을 때만 짧은 확인 문구를 표시한 뒤 기존 API로 처리
+ * 43차-7 로컬 안내 1회 고정 / 백그라운드 응답 화면반영 차단
+ * - 로컬 캐시로 학생/수업/강의실을 찾으면 즉시 1회만 안내
+ * - 그 뒤 tabletEnqueueAttendance 응답은 화면을 다시 바꾸지 않음
+ * - 성공/queued/duplicate/already 모두 백그라운드 처리로 간주
+ * - 실패해도 학생 화면에 두 번째 문구를 띄우지 않고 콘솔에만 남김
+ * - 로컬 캐시에 없을 때만 기존 API 경로가 화면 문구를 담당
  ****************************************************/
-function hasClassSelectionExtra_43_6(extra) {
+function hasClassSelectionExtra_43_7(extra) {
   return !!(extra && (
     extra.selectedClassIndex !== undefined ||
     extra.classIndex !== undefined ||
@@ -1443,7 +1445,7 @@ function hasClassSelectionExtra_43_6(extra) {
   ));
 }
 
-function buildAttendanceParams_43_6(attendanceNo, mode, student, cls, extra) {
+function buildAttendanceParams_43_7(attendanceNo, mode, student, cls, extra) {
   const params = {
     action: "tabletEnqueueAttendance",
     attendanceNo: attendanceNo,
@@ -1466,7 +1468,7 @@ function buildAttendanceParams_43_6(attendanceNo, mode, student, cls, extra) {
   return params;
 }
 
-function showAttendanceSuccess_43_6(mode, name, className, roomName) {
+function showAttendanceSuccess_43_7(mode, name, className, roomName) {
   const safeName = name || "학생";
   if (mode === "out") {
     setStatus(`${safeName}님, 수고하셨습니다.`, "오늘도 수고 많았습니다.", "success");
@@ -1480,7 +1482,7 @@ function showAttendanceSuccess_43_6(mode, name, className, roomName) {
   resetStatusSoon(3500);
 }
 
-function showNeutralWaiting_43_6(seq) {
+function showNeutralWaiting_43_7(seq) {
   clearProcessingFallback();
   tabletProcessingFallbackTimer = setTimeout(function () {
     if (seq !== statusRequestSeq) return;
@@ -1490,43 +1492,25 @@ function showNeutralWaiting_43_6(seq) {
 
 // 기존 3초 후 가짜 성공 문구를 띄우던 fallback은 더 이상 사용하지 않습니다.
 function startProcessingFallback(seq, mode) {
-  showNeutralWaiting_43_6(seq);
+  showNeutralWaiting_43_7(seq);
 }
 
-function enqueueAttendanceBackground_43_6(attendanceNo, mode, student, cls, extra, seq) {
-  const modeText = mode === "out" ? "하원" : "등원";
-  const params = buildAttendanceParams_43_6(attendanceNo, mode, student, cls, extra || {});
+function enqueueAttendanceBackground_43_7(attendanceNo, mode, student, cls, extra, seq) {
+  const params = buildAttendanceParams_43_7(attendanceNo, mode, student, cls, extra || {});
 
+  // 중요:
+  // 로컬 캐시로 이미 안내를 끝낸 뒤에는 서버 응답으로 화면을 다시 바꾸지 않습니다.
+  // 여기서 duplicate/already를 다시 띄우면 "안내문구가 두 번 나오는" 현상이 생깁니다.
   tabletFetchJson(params, 0).then(function (data) {
-    if (seq !== statusRequestSeq) return;
-    clearProcessingFallback();
-
-    if (data && (data.duplicate === true || data.status === "duplicate" || data.status === "already")) {
-      const message = tabletPublicMessage_(data.message || data.popupMessage || ("이미 " + modeText + "처리되었습니다."), "이미 " + modeText + "처리되었습니다.");
-      setStatus(message, "", "warning");
-      resetStatusSoon(4000);
-      return;
-    }
-
-    if (data && (data.status === "queued" || data.status === "success")) {
-      // 빠른 화면 안내가 이미 나갔으므로 성공 응답은 화면을 다시 흔들지 않습니다.
-      return;
-    }
-
-    if (!data || (data.status !== "queued" && data.status !== "success")) {
-      submitCheckLegacy(mode, params, seq);
-    }
+    if (TABLET_DEBUG) console.log("[Tablet Attendance Background]", data);
   }).catch(function (err) {
-    if (seq !== statusRequestSeq) return;
-    clearProcessingFallback();
-    setStatus("처리가 지연되고 있습니다.", "데스크에 문의해주세요.", "warning");
-    resetStatusSoon(4000);
+    if (TABLET_DEBUG) console.warn("[Tablet Attendance Background] 기록 지연:", err);
   });
 }
 
 async function tryHandleWithPreload(attendanceNo, mode, extra, seq) {
   if (!tabletPreload || !tabletPreload.attendanceMap) return false;
-  if (hasClassSelectionExtra_43_6(extra)) return false;
+  if (hasClassSelectionExtra_43_7(extra)) return false;
 
   const candidates = getPreloadedCandidates(attendanceNo);
   if (!candidates || !candidates.length) return false;
@@ -1570,17 +1554,17 @@ async function tryHandleWithPreload(attendanceNo, mode, extra, seq) {
   };
 
   clearProcessingFallback();
-  showAttendanceSuccess_43_6(mode, student.name || student.studentName || "학생", cls.className, cls.roomName);
+  showAttendanceSuccess_43_7(mode, student.name || student.studentName || "학생", cls.className, cls.roomName);
   setBusy(false);
-  enqueueAttendanceBackground_43_6(attendanceNo, mode, student, cls, {}, seq);
+  enqueueAttendanceBackground_43_7(attendanceNo, mode, student, cls, {}, seq);
   return true;
 }
 
 async function enqueueAttendanceFromLocalSnapshot(attendanceNo, mode, student, cls, seq) {
   clearProcessingFallback();
-  showAttendanceSuccess_43_6(mode, student && (student.name || student.studentName) || "학생", cls && cls.className, cls && cls.roomName);
+  showAttendanceSuccess_43_7(mode, student && (student.name || student.studentName) || "학생", cls && cls.className, cls && cls.roomName);
   setBusy(false);
-  enqueueAttendanceBackground_43_6(attendanceNo, mode, student, cls, {}, seq);
+  enqueueAttendanceBackground_43_7(attendanceNo, mode, student, cls, {}, seq);
 }
 
 async function submitCheck(mode, extra = {}) {
@@ -1598,7 +1582,7 @@ async function submitCheck(mode, extra = {}) {
   lastMode = mode;
   lastAttendanceNo = attendanceNo;
 
-  const isChoiceSubmit = hasClassSelectionExtra_43_6(extra);
+  const isChoiceSubmit = hasClassSelectionExtra_43_7(extra);
   if (!isChoiceSubmit) {
     clearPin();
   }
@@ -1618,13 +1602,13 @@ async function submitCheck(mode, extra = {}) {
         roomName: extra.roomName || "데스크문의"
       };
       clearProcessingFallback();
-      showAttendanceSuccess_43_6(mode, studentForChoice.name, classForChoice.className, classForChoice.roomName);
+      showAttendanceSuccess_43_7(mode, studentForChoice.name, classForChoice.className, classForChoice.roomName);
       setBusy(false);
-      enqueueAttendanceBackground_43_6(attendanceNo, mode, studentForChoice, classForChoice, extra, seq);
+      enqueueAttendanceBackground_43_7(attendanceNo, mode, studentForChoice, classForChoice, extra, seq);
       return;
     }
 
-    // 로컬 일일캐시가 있으면 화면은 즉시 처리합니다.
+    // 로컬 일일캐시가 있으면 화면은 즉시 1회만 처리합니다.
     const localSnapshot = tabletPreload || loadDailySnapshotFromLocal();
     if (localSnapshot) {
       const handled = await tryHandleWithPreload(attendanceNo, mode, extra, seq);
@@ -1636,7 +1620,7 @@ async function submitCheck(mode, extra = {}) {
 
     // 캐시에 없거나 선택 정보가 부족한 경우에만 서버 확인 문구를 표시합니다.
     setStatus("확인 중입니다.", "잠시만 기다려주세요.", "success");
-    showNeutralWaiting_43_6(seq);
+    showNeutralWaiting_43_7(seq);
     await submitCheckLegacy(mode, extra, seq);
   } finally {
     setBusy(false);
