@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script type="text/javascript" nonce="5878564e64bc424ab28cf8dfbd2" src="//local.adguard.org?ts=1780645786255&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000005d8c720b9b79b029b97bb011%26fn%3D%25EC%259A%25B8%25EB%25A6%25BC%25EC%2595%25B1_index_5_33%25EC%25B0%25A8_%25EA%25B4%2580%25EB%25A6%25AC%25EC%259E%2590%25EA%25B0%2595%25EC%259D%2598%25EC%258B%25A4%25EC%259E%2590%25EC%259C%25A0%25EB%25B0%25B0%25EC%25A0%2595%25EC%2599%2584%25EC%2584%25B1.html%26cd%3Dattachment%26ts%3D494624%26p%3Dfs%26cid%3D1%26sig%3D01c98fbd2126e2b3162120f4e8123a7cb4c5b03b22d9df18caf74e8ba72aad83%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
+<script type="text/javascript" nonce="5878564e64bc424ab28cf8dfbd2" src="//local.adguard.org?ts=1780645786255&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000001f28720b83a08cf650d7f97a%26fn%3D%25EC%259A%25B8%25EB%25A6%25BC%25EC%2595%25B1_index_5_34%25EC%25B0%25A8_%25EA%25B4%2580%25EB%25A6%25AC%25EC%259E%2590%25EC%258B%259C%25ED%258A%25B8%25EA%25B0%2595%25EC%2582%25AC_%25EA%25B0%2595%25EC%259D%2598%25EC%258B%25A4%25EC%2582%25AC%25EC%259A%25A9%25EC%259D%25BC%25EC%25A7%2580%25EB%25AA%25A9%25EB%25A1%259D%25EC%2597%25B0%25EB%258F%2599.html%26cd%3Dattachment%26ts%3D494624%26p%3Dfs%26cid%3D1%26sig%3D2b79ed444a8d7aa4378e167c3410be5fc702f26213be9d3a3348826689099d38%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://script.googleusercontent.com">
 <link rel="dns-prefetch" href="//script.google.com">
 <link rel="dns-prefetch" href="//script.googleusercontent.com">
@@ -11410,8 +11410,9 @@ async function adminSaveAttendanceRecords_(records, silent = false) {
 /* =========================================================
    울림앱 4차 - 강사페이지 강의실 사용체크 시간표 UI
    ========================================================= */
-const ADMIN_CLASSROOM_USAGE_ROOMS = ["2강의실", "3강의실", "녹음실", "4강의실", "5강의실", "신체훈련실"];
-const ADMIN_CLASSROOM_USAGE_INSTRUCTORS = ["이용우", "양슬기", "이눈솔", "박소연", "최봄결", "김아란", "박주광", "최현식", "박송", "강호철", "김하은", "김인형", "안수현", "박성광", "상담", "녹음", "자율연습"];
+let ADMIN_CLASSROOM_USAGE_ROOMS = ["2강의실", "3강의실", "녹음실", "4강의실", "5강의실", "신체훈련실"];
+let ADMIN_CLASSROOM_USAGE_INSTRUCTORS = [];
+let adminClassroomUsageOptionsLoadedDate = '';
 let adminClassroomUsageRows = [];
 let adminClassroomUsageLoadedDate = '';
 
@@ -11427,22 +11428,46 @@ function adminFormatClassroomHour_(h) {
     return String(n).padStart(2, '0') + ':00';
 }
 
+function adminRenderClassroomUsageOptionControls_() {
+    const roomEl = document.getElementById('adminClassroomUsageRoom');
+    if (roomEl) {
+        const current = roomEl.value;
+        roomEl.innerHTML = (ADMIN_CLASSROOM_USAGE_ROOMS || []).map(r => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join('');
+        if (current && (ADMIN_CLASSROOM_USAGE_ROOMS || []).includes(current)) roomEl.value = current;
+    }
+
+    const instructorListEl = document.getElementById('adminClassroomUsageInstructorList');
+    if (instructorListEl) {
+        const names = Array.from(new Set([
+            ...(ADMIN_CLASSROOM_USAGE_INSTRUCTORS || []),
+            (adminInfo && (adminInfo.name || adminInfo.id)) || ''
+        ].filter(Boolean)));
+        instructorListEl.innerHTML = names.map(n => `<option value="${escapeHtml(n)}"></option>`).join('');
+    }
+}
+
+async function adminLoadClassroomUsageOptions(force = false) {
+    if (!adminToken) return;
+    const date = adminClassroomUsageDate_();
+    if (!force && adminClassroomUsageOptionsLoadedDate === date && ADMIN_CLASSROOM_USAGE_INSTRUCTORS.length && ADMIN_CLASSROOM_USAGE_ROOMS.length) return;
+
+    try {
+        const data = await adminApi('adminGetClassroomUsageOptions', { adminToken, date, noCache: 1 });
+        if (Array.isArray(data.rooms) && data.rooms.length) ADMIN_CLASSROOM_USAGE_ROOMS = data.rooms;
+        if (Array.isArray(data.instructors)) ADMIN_CLASSROOM_USAGE_INSTRUCTORS = data.instructors;
+        adminClassroomUsageOptionsLoadedDate = date;
+        adminRenderClassroomUsageOptionControls_();
+    } catch (e) {
+        console.warn('[adminLoadClassroomUsageOptions] failed:', e);
+        adminRenderClassroomUsageOptionControls_();
+    }
+}
+
 function adminInitClassroomUsagePanel() {
     const dateEl = document.getElementById('adminClassroomUsageDate');
     if (dateEl && !dateEl.value) dateEl.value = getTodayInputValue();
 
-    const roomEl = document.getElementById('adminClassroomUsageRoom');
-    if (roomEl && !roomEl.dataset.ready) {
-        roomEl.innerHTML = ADMIN_CLASSROOM_USAGE_ROOMS.map(r => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join('');
-        roomEl.dataset.ready = '1';
-    }
-
-    const instructorListEl = document.getElementById('adminClassroomUsageInstructorList');
-    if (instructorListEl && !instructorListEl.dataset.ready) {
-        const names = Array.from(new Set([...(ADMIN_CLASSROOM_USAGE_INSTRUCTORS || []), (adminInfo && (adminInfo.name || adminInfo.id)) || ''].filter(Boolean)));
-        instructorListEl.innerHTML = names.map(n => `<option value="${escapeHtml(n)}"></option>`).join('');
-        instructorListEl.dataset.ready = '1';
-    }
+    adminRenderClassroomUsageOptionControls_();
 
     const instructorEl = document.getElementById('adminClassroomUsageInstructor');
     if (instructorEl && !instructorEl.value && adminInfo && !adminIsFullAdmin()) {
@@ -11479,6 +11504,7 @@ async function adminLoadClassroomUsage(showOverlay = true) {
     const date = adminClassroomUsageDate_();
     try {
         if (showOverlay) showLoading('강의실 사용 현황 불러오는 중...');
+        await adminLoadClassroomUsageOptions(true);
         const data = await adminApi('adminGetClassroomUsage', { adminToken, date });
         if (showOverlay) hideLoading();
         adminClassroomUsageRows = Array.isArray(data.records) ? data.records : [];
@@ -11497,7 +11523,7 @@ function adminFindClassroomUsageAt_(room, hour) {
     return (adminClassroomUsageRows || []).find(r => {
         const start = Number(r.startHour);
         const end = Number(r.endHour);
-        return String(r.room || '') === String(room || '') && start <= h && h < end && String(r.status || '') === '사용중';
+        return String(r.room || '').replace(/\s/g, '') === String(room || '').replace(/\s/g, '') && start <= h && h < end && String(r.status || '') === '사용중';
     }) || null;
 }
 
