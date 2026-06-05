@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script type="text/javascript" nonce="5878564e64bc424ab28cf8dfbd2" src="//local.adguard.org?ts=1780645786255&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000001f28720b83a08cf650d7f97a%26fn%3D%25EC%259A%25B8%25EB%25A6%25BC%25EC%2595%25B1_index_5_34%25EC%25B0%25A8_%25EA%25B4%2580%25EB%25A6%25AC%25EC%259E%2590%25EC%258B%259C%25ED%258A%25B8%25EA%25B0%2595%25EC%2582%25AC_%25EA%25B0%2595%25EC%259D%2598%25EC%258B%25A4%25EC%2582%25AC%25EC%259A%25A9%25EC%259D%25BC%25EC%25A7%2580%25EB%25AA%25A9%25EB%25A1%259D%25EC%2597%25B0%25EB%258F%2599.html%26cd%3Dattachment%26ts%3D494624%26p%3Dfs%26cid%3D1%26sig%3D2b79ed444a8d7aa4378e167c3410be5fc702f26213be9d3a3348826689099d38%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
+<script type="text/javascript" nonce="5878564e64bc424ab28cf8dfbd2" src="//local.adguard.org?ts=1780648028262&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000003c14720bb79de5d8ecaa354c%26fn%3D%25EC%259A%25B8%25EB%25A6%25BC%25EC%2595%25B1_index_5_36%25EC%25B0%25A8_%25EB%25A6%25AC%25EB%25AF%25B8%25EC%259C%25A0%25EB%25A8%25B8%25EB%25AC%25B8%25EA%25B5%25AC_%25EA%25B4%2580%25EB%25A6%25AC%25EC%259E%2590%25EC%2583%2581%25EC%2584%25B8%25EC%2598%25A4%25EB%25A5%2598%25EC%2599%2584%25EC%2584%25B1.html%26cd%3Dattachment%26ts%3D494624%26p%3Dfs%26cid%3D1%26sig%3Dae0a3d054999d0630c506f78e648f32658a550322e6eba698c75cc84cc4ef205%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://script.googleusercontent.com">
 <link rel="dns-prefetch" href="//script.google.com">
 <link rel="dns-prefetch" href="//script.googleusercontent.com">
@@ -13754,12 +13754,16 @@ async function runTrainingFinalAiAnalysis_(audioBlob, options = {}) {
         action: 'trainingFinalAnalysis',
         requestId,
         studentSessionToken: (typeof getStudentSessionToken_ === 'function') ? getStudentSessionToken_() : '',
+        adminToken: (typeof adminToken !== 'undefined' ? adminToken : '') || localStorage.getItem('adminToken') || '',
+        adminId: (typeof adminInfo !== 'undefined' && adminInfo ? (adminInfo.id || '') : ''),
+        adminName: (typeof adminInfo !== 'undefined' && adminInfo ? (adminInfo.name || '') : ''),
+        adminRole: (typeof adminInfo !== 'undefined' && adminInfo ? (adminInfo.role || '') : ''),
         userKey: getTrainingFinalUserKey_(),
         dateKey: pronTodayKey ? pronTodayKey() : new Date().toISOString().slice(0,10).replace(/-/g,''),
         studentNo: (typeof studentNo !== 'undefined' ? studentNo : '') || localStorage.getItem('studentNo') || '',
-        studentName: (typeof studentName !== 'undefined' ? studentName : '') || localStorage.getItem('studentName') || '',
-        phoneLast4: (typeof phoneLast4 !== 'undefined' ? phoneLast4 : '') || localStorage.getItem('phoneLast4') || '',
-        instructor: (typeof instructorName !== 'undefined' ? instructorName : '') || localStorage.getItem('instructorName') || '',
+        studentName: (typeof getUlimActiveUserContext_5_35 === 'function' ? getUlimActiveUserContext_5_35().name : ((typeof studentName !== 'undefined' ? studentName : '') || localStorage.getItem('studentName') || '')),
+        phoneLast4: (typeof getUlimActiveUserContext_5_35 === 'function' && getUlimActiveUserContext_5_35().type !== 'student' ? '' : ((typeof phoneLast4 !== 'undefined' ? phoneLast4 : '') || localStorage.getItem('phoneLast4') || '')),
+        instructor: (typeof getUlimActiveUserContext_5_35 === 'function' ? getUlimActiveUserContext_5_35().instructor : ((typeof instructorName !== 'undefined' ? instructorName : '') || localStorage.getItem('instructorName') || '')),
         script: scriptText,
         recognized: localRecognized,
         matchScore: localMatchScore,
@@ -14354,6 +14358,478 @@ ${converted ? "[" + converted + "]" : "먼저 문장을 입력하세요."}
 표준발음 점검 대상:
 ${ruleSummary}`, isFallback ? "success" : "success");
 }
+</script>
+
+
+
+<script>
+/* =========================================================
+   5-35 시스템문구 완전 차단 + 강사/관리자 AI분석 허용 패치
+   - 학생/일반강사 화면에 GAS/API/배포/토큰/코드 등 내부 문구를 노출하지 않음
+   - 학생 로그인 없이 강사/관리자 로그인 상태에서도 발성훈련 AI분석/표준발음 AI분석 사용 가능
+   ========================================================= */
+(function(){
+  window.ULIM_PATCH_5_35_SYSTEM_MESSAGE_AND_ADMIN_AI = true;
+
+  function ulimSafeUserMessage_5_35(message, fallback) {
+    let msg = String(message || '').trim();
+    const fb = fallback || '서비스 연결이 원활하지 않습니다. 잠시 후 다시 시도해주세요.';
+    if (!msg) return fb;
+    const internalPattern = /(GAS|Apps\s*Script|script\.google|googleusercontent|JSONP|라우팅|배포|스크립트|속성|API|API_KEY|API_SECRET|SOLAPI_|KAKAO_|GET_API_URL|ROOM_API_URL|GOOGLE_APP_SCRIPT_URL|ETRI|Gemini|제미나이|Whisper|토큰|token|requestId|callback|function|ReferenceError|TypeError|SyntaxError|Exception|stack|Code:|line\s*\d+|관리자\s*API|서버\s*확인에\s*실패|권한을\s*확인|코드\s*확인)/i;
+    if (internalPattern.test(msg)) return fb;
+    if (msg.length > 180) msg = msg.slice(0, 180) + '...';
+    return msg;
+  }
+  window.ulimSafeUserMessage_5_35 = ulimSafeUserMessage_5_35;
+
+  const oldSanitize = window.sanitizeUlimUserMessage;
+  window.sanitizeUlimUserMessage = function(message) {
+    const first = typeof oldSanitize === 'function' ? oldSanitize(message) : message;
+    return ulimSafeUserMessage_5_35(first);
+  };
+
+  const oldAlert = window.alert;
+  window.alert = function(message) {
+    return oldAlert.call(window, ulimSafeUserMessage_5_35(message));
+  };
+
+  const oldPronSet = window.pronSetAdvancedStatus;
+  window.pronSetAdvancedStatus = function(message, type) {
+    let safe = message || '';
+    if (safe) {
+      safe = ulimSafeUserMessage_5_35(safe, '서비스 연결이 원활하지 않아 로컬분석으로 대체합니다.');
+    }
+    const el = document.getElementById('pronAdvancedStatus');
+    if (!el) return;
+    el.style.display = safe ? 'block' : 'none';
+    el.classList.remove('error', 'success');
+    if (type) el.classList.add(type);
+    el.textContent = safe || '';
+  };
+  // 전역 이름으로 직접 호출되는 경우도 보정
+  try { pronSetAdvancedStatus = window.pronSetAdvancedStatus; } catch(e) {}
+
+  window.getUlimActiveUserContext_5_35 = function() {
+    const aToken = (typeof adminToken !== 'undefined' ? adminToken : '') || localStorage.getItem('adminToken') || '';
+    let aInfo = (typeof adminInfo !== 'undefined' && adminInfo) ? adminInfo : null;
+    if (!aInfo) {
+      try { aInfo = JSON.parse(localStorage.getItem('adminInfo') || '{}'); } catch(e) { aInfo = {}; }
+    }
+    if (aToken && aInfo && (aInfo.name || aInfo.id)) {
+      const role = String(aInfo.role || '강사');
+      const isAdmin = /(전체|관리|관리자|원장|admin)/i.test(role.replace(/\s+/g,''));
+      return {
+        type: isAdmin ? 'admin' : 'teacher',
+        token: aToken,
+        id: String(aInfo.id || ''),
+        name: String(aInfo.name || aInfo.id || (isAdmin ? '관리자' : '강사')),
+        role: role,
+        instructor: role,
+        userKey: ((isAdmin ? 'ADMIN_' : 'TEACHER_') + String(aInfo.id || aInfo.name || aToken.slice(0,12))).replace(/[^0-9A-Za-z가-힣_-]/g, '_')
+      };
+    }
+    const sToken = (typeof getStudentSessionToken_ === 'function') ? getStudentSessionToken_() : ((typeof studentSessionToken !== 'undefined' ? studentSessionToken : '') || localStorage.getItem('studentSessionToken') || '');
+    const sName = (typeof studentName !== 'undefined' && studentName) ? studentName : (localStorage.getItem('studentName') || '게스트');
+    return {
+      type: sToken ? 'student' : 'guest',
+      token: sToken,
+      id: (typeof studentNo !== 'undefined' ? studentNo : '') || localStorage.getItem('studentNo') || '',
+      name: sName,
+      role: '학생',
+      instructor: (typeof instructorName !== 'undefined' ? instructorName : '') || localStorage.getItem('instructorName') || '',
+      userKey: sToken ? ('SESSION_' + sToken.slice(0,16)) : ((sName && sName !== '게스트') ? ('NAME_' + sName).replace(/[^0-9A-Za-z가-힣_-]/g, '_') : (typeof pronGetDeviceKey === 'function' ? pronGetDeviceKey() : 'guest'))
+    };
+  };
+
+  window.pronGetEtriUserKey = function() {
+    const ctx = window.getUlimActiveUserContext_5_35();
+    if (ctx && ctx.userKey) return ctx.userKey;
+    return (typeof pronGetDeviceKey === 'function') ? pronGetDeviceKey() : 'guest';
+  };
+  try { pronGetEtriUserKey = window.pronGetEtriUserKey; } catch(e) {}
+
+  window.getTrainingStudentIdentity_ = function() {
+    const ctx = window.getUlimActiveUserContext_5_35();
+    if (ctx.type === 'admin' || ctx.type === 'teacher') {
+      return {
+        adminToken: ctx.token,
+        adminId: ctx.id,
+        adminName: ctx.name,
+        adminRole: ctx.role,
+        studentSessionToken: '',
+        studentNo: ctx.type === 'admin' ? 'ADMIN' : 'TEACHER',
+        studentName: ctx.name,
+        phoneLast4: '',
+        instructor: ctx.role,
+        deviceKey: typeof pronGetDeviceKey === 'function' ? pronGetDeviceKey() : '',
+        userKey: ctx.userKey
+      };
+    }
+    return {
+      studentSessionToken: (typeof getStudentSessionToken_ === 'function') ? getStudentSessionToken_() : '',
+      studentNo: (typeof studentNo !== 'undefined' ? studentNo : '') || localStorage.getItem('studentNo') || '',
+      studentName: ctx.name || '게스트',
+      phoneLast4: (typeof phoneLast4 !== 'undefined' ? phoneLast4 : '') || localStorage.getItem('phoneLast4') || '',
+      instructor: (typeof instructorName !== 'undefined' ? instructorName : '') || localStorage.getItem('instructorName') || '',
+      deviceKey: typeof pronGetDeviceKey === 'function' ? pronGetDeviceKey() : '',
+      userKey: ctx.userKey
+    };
+  };
+  try { getTrainingStudentIdentity_ = window.getTrainingStudentIdentity_; } catch(e) {}
+
+  window.getTrainingFinalUserKey_ = function() {
+    const ctx = window.getUlimActiveUserContext_5_35();
+    if (ctx && ctx.userKey) return ctx.userKey;
+    return (typeof pronGetDeviceKey === 'function') ? pronGetDeviceKey() : 'guest';
+  };
+  try { getTrainingFinalUserKey_ = window.getTrainingFinalUserKey_; } catch(e) {}
+
+  const oldPronRefresh = window.pronRefreshEtriUsage;
+  window.pronRefreshEtriUsage = async function() {
+    try {
+      const ctx = window.getUlimActiveUserContext_5_35();
+      window.pronSetAdvancedStatus('고급분석 잔여횟수를 확인하는 중입니다.');
+      const data = await pronJsonpRequest({
+        action: 'getEtriPronunciationUsage',
+        userKey: window.pronGetEtriUserKey(),
+        studentSessionToken: ctx.type === 'student' ? ctx.token : '',
+        adminToken: (ctx.type === 'admin' || ctx.type === 'teacher') ? ctx.token : '',
+        dateKey: pronTodayKey(),
+        _: Date.now()
+      }, 10000);
+      if (!data || !data.ok) throw new Error('USAGE_FAILED');
+      pronSetLocalEtriUsed(data.used || 0);
+      pronUpdateEtriUsageBadge(data.used || 0, data.remaining);
+      window.pronSetAdvancedStatus(`오늘 고급분석 사용량: ${data.used || 0}/${PRON_ETRI_DAILY_LIMIT}회\n잔여횟수: ${data.remaining}회`, 'success');
+    } catch(e) {
+      const localUsed = pronGetLocalEtriUsed();
+      pronUpdateEtriUsageBadge(localUsed, PRON_ETRI_DAILY_LIMIT - localUsed);
+      window.pronSetAdvancedStatus('잔여횟수를 확인하지 못했습니다. 분석은 계속 사용할 수 있습니다.', 'error');
+    }
+  };
+  try { pronRefreshEtriUsage = window.pronRefreshEtriUsage; } catch(e) {}
+
+  // 표준발음 고급분석: 학생 세션이 없어도 강사/관리자 세션으로 요청 가능
+  window.pronRunEtriAdvancedAnalysis = async function() {
+    if (typeof pronAdvancedIsRunning_5_32 !== 'undefined' && pronAdvancedIsRunning_5_32) {
+      window.pronSetAdvancedStatus('이미 분석중입니다. 잠시만 기다려주세요. 30초 이상 지연되면 자동으로 로컬분석을 표시합니다.');
+      return;
+    }
+    const source = document.getElementById('pronInputText')?.value.trim() || '';
+    if (!source) return alert('먼저 읽을 문장을 입력해주세요.');
+    if (!pronRecordedBlob) return alert('먼저 녹음을 완료해주세요. 녹음이 끝난 뒤 고급분석을 실행할 수 있습니다.');
+    if (!GET_API_URL || !GET_API_URL.includes('script.google.com/macros/s/')) {
+      pronRenderLocalAdvancedFallback_5_32('고급분석 서비스 연결이 준비되지 않아 로컬분석으로 대체되었습니다.');
+      return;
+    }
+    const ctx = window.getUlimActiveUserContext_5_35();
+    if (ctx.type === 'guest') {
+      window.pronSetAdvancedStatus('로그인 정보를 확인하지 못했습니다. 로그인 후 다시 시도해주세요.', 'error');
+      return;
+    }
+    pronAdvancedIsRunning_5_32 = true;
+    pronAdvancedFallbackShown_5_32 = false;
+    pronSetAdvancedButtonsLocked_5_32(true);
+    window.pronSetAdvancedStatus('리미가 조금 더 정확하게 분석중입니다.');
+    pronAdvancedHardTimer_5_32 = setTimeout(function(){
+      pronRenderLocalAdvancedFallback_5_32('제미나이 분석이 30초 이상 지연되어 로컬분석으로 대체되었습니다.');
+    }, PRON_GEMINI_HARD_TIMEOUT_MS_5_32);
+    try {
+      if (!pronLastSttText) {
+        await Promise.race([
+          pronRunWhisperTranscription(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('LOCAL_STT_TIMEOUT')), 12000))
+        ]).catch(() => {});
+      }
+      const recognized = pronLastSttText || '';
+      const n = pronGetAnalysisNumbers();
+      const converted = source ? pronConvertText(source).converted : '';
+      const ruleSummary = pronGetRuleSummaryForVoice(source);
+      const target = pronNormalizeCompareText(source);
+      const heard = pronNormalizeCompareText(recognized);
+      const matchScore = target && heard ? Math.max(0, Math.round((1 - pronLevenshtein(target, heard) / Math.max(target.length, heard.length, 1)) * 100)) : 0;
+      const score5 = Math.max(1, Math.min(5, 1 + (matchScore / 100) * 4));
+      const requestId = pronBuildRequestId();
+      pronAdvancedActiveRequestId_5_32 = requestId;
+      const payload = {
+        action: 'geminiPronunciationComment',
+        requestId,
+        userKey: window.pronGetEtriUserKey(),
+        studentSessionToken: ctx.type === 'student' ? ctx.token : '',
+        adminToken: (ctx.type === 'admin' || ctx.type === 'teacher') ? ctx.token : '',
+        adminId: ctx.id || '',
+        adminName: ctx.name || '',
+        adminRole: ctx.role || '',
+        studentNo: ctx.type === 'student' ? (ctx.id || '') : '',
+        studentName: ctx.name || '',
+        phoneLast4: ctx.type === 'student' ? ((typeof phoneLast4 !== 'undefined' ? phoneLast4 : '') || localStorage.getItem('phoneLast4') || '') : '',
+        script: source,
+        recognized,
+        standardPronunciation: converted,
+        matchScore,
+        score5: score5.toFixed(1),
+        durationSec: n.durationSec ? n.durationSec.toFixed(1) : '',
+        syllablesPerSec: n.syllablesPerSec ? n.syllablesPerSec.toFixed(1) : '',
+        avgVolume: n.avgRms ? pronPercent(n.avgRms * 260) : '',
+        silenceRatio: n.durationSec ? pronPercent(n.silenceRatio * 100) : '',
+        ruleSummary,
+        dateKey: pronTodayKey(),
+        clientTime: new Date().toISOString()
+      };
+      await fetch(GET_API_URL, { method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(payload) });
+      pronPollEtriResult(requestId);
+    } catch(e) {
+      console.error(e);
+      pronRenderLocalAdvancedFallback_5_32('고급분석 요청 중 문제가 발생하여 로컬분석으로 대체되었습니다.');
+    }
+  };
+  try { pronRunEtriAdvancedAnalysis = window.pronRunEtriAdvancedAnalysis; } catch(e) {}
+})();
+</script>
+
+
+<script>
+/* =========================================================
+   5-36 리미 유머문구 + 관리자 상세오류 분리 패치
+   - 학생/일반강사: GAS/API/Gemini/토큰 등 내부 문구 대신 리미 유머 안내문 표시
+   - 관리자: 오류 원문, errorDetail, requestId, status/source 등 상세 진단 표시
+   ========================================================= */
+(function(){
+  window.ULIM_PATCH_5_36_LIMI_FUNNY_AND_ADMIN_DETAIL = true;
+
+  const LIMI_PUBLIC_FALLBACK_MESSAGES_5_36 = [
+    '리미가 잠시 파업중입니다 😅\n기본 분석 결과를 먼저 보여드릴게요.',
+    '리미가 커피를 마시러 갔습니다 ☕\n기본 분석으로 먼저 확인해볼게요.',
+    '리미가 발음사전을 너무 진지하게 뒤적이고 있습니다 📚\n기본 분석 결과를 표시합니다.',
+    '리미가 녹음실에서 길을 잃었습니다 🎙️\n기본 분석으로 이어서 진행할게요.',
+    '리미가 오늘 너무 열심히 일해서 쉬는 중입니다 😴\n기본 분석 결과를 보여드릴게요.',
+    '리미가 결과지를 들고 오다가 넘어졌습니다 📄\n기본 분석으로 먼저 확인해볼게요.'
+  ];
+
+  function ulimGetActiveRole_5_36() {
+    try {
+      const ctx = (typeof window.getUlimActiveUserContext_5_35 === 'function') ? window.getUlimActiveUserContext_5_35() : null;
+      if (ctx && ctx.type) return ctx;
+    } catch(e) {}
+    try {
+      const info = (typeof adminInfo !== 'undefined' && adminInfo) ? adminInfo : JSON.parse(localStorage.getItem('adminInfo') || '{}');
+      const token = (typeof adminToken !== 'undefined' ? adminToken : '') || localStorage.getItem('adminToken') || '';
+      if (token && info && (info.id || info.name)) {
+        const role = String(info.role || '강사');
+        const isAdmin = /(전체|관리|관리자|원장|admin)/i.test(role.replace(/\s+/g, ''));
+        return { type: isAdmin ? 'admin' : 'teacher', role, name: info.name || info.id || '' };
+      }
+    } catch(e) {}
+    return { type: 'student', role: '학생', name: '' };
+  }
+
+  function ulimIsFullAdmin_5_36() {
+    try {
+      const ctx = ulimGetActiveRole_5_36();
+      if (ctx && ctx.type === 'admin') return true;
+    } catch(e) {}
+    try { return typeof adminIsFullAdmin === 'function' && adminIsFullAdmin(); } catch(e) {}
+    return false;
+  }
+  window.ulimIsFullAdmin_5_36 = ulimIsFullAdmin_5_36;
+
+  function ulimPickLimiMessage_5_36(seed) {
+    const s = String(seed || '') || String(Date.now());
+    let sum = 0;
+    for (let i = 0; i < s.length; i++) sum = (sum + s.charCodeAt(i) * (i + 1)) % 100000;
+    return LIMI_PUBLIC_FALLBACK_MESSAGES_5_36[sum % LIMI_PUBLIC_FALLBACK_MESSAGES_5_36.length];
+  }
+
+  function ulimLooksInternal_5_36(message) {
+    const msg = String(message || '');
+    return /(GAS|Apps\s*Script|script\.google|googleusercontent|JSONP|라우팅|배포|스크립트|속성|API|API_KEY|API_SECRET|SOLAPI_|KAKAO_|GET_API_URL|ROOM_API_URL|GOOGLE_APP_SCRIPT_URL|ETRI|Gemini|제미나이|Whisper|토큰|token|quota|limit|429|500|403|401|requestId|callback|function|ReferenceError|TypeError|SyntaxError|Exception|stack|Code:|line\s*\d+|관리자\s*API|서버\s*확인에\s*실패|권한을\s*확인|코드\s*확인|Failed\s*to\s*fetch|timeout|TIMEOUT|USAGE_FAILED|LOCAL_STT_TIMEOUT)/i.test(msg);
+  }
+
+  function ulimPublicAiMessage_5_36(message, seed) {
+    const msg = String(message || '').trim();
+    if (!msg) return ulimPickLimiMessage_5_36(seed);
+    if (ulimLooksInternal_5_36(msg)) return ulimPickLimiMessage_5_36(seed || msg);
+    // AI/분석 실패 계열은 학생·강사에게 리미 톤으로 통일
+    if (/(고급분석|정밀진단|분석|결과|조회|지연|실패|오류|서비스|연결|로컬분석|기본 분석|사용량|잔여횟수)/i.test(msg)) {
+      if (!/(먼저|녹음|문장|로그인|이미 분석중|읽을 문장)/.test(msg)) return ulimPickLimiMessage_5_36(seed || msg);
+    }
+    return msg.length > 120 ? msg.slice(0, 120) + '...' : msg;
+  }
+  window.ulimPublicAiMessage_5_36 = ulimPublicAiMessage_5_36;
+
+  function ulimAdminErrorDetailText_5_36(dataOrMessage, fallback) {
+    if (typeof dataOrMessage === 'string') {
+      return '[관리자 상세오류]\n' + (dataOrMessage || fallback || '오류 내용 없음');
+    }
+    const d = dataOrMessage || {};
+    const lines = [];
+    lines.push('[관리자 상세오류]');
+    if (d.status) lines.push('status: ' + d.status);
+    if (d.source) lines.push('source: ' + d.source);
+    if (d.requestId) lines.push('requestId: ' + d.requestId);
+    if (d.message) lines.push('message: ' + d.message);
+    if (d.localReason) lines.push('localReason: ' + d.localReason);
+    if (d.errorDetail) lines.push('errorDetail: ' + d.errorDetail);
+    if (d.errorCode) lines.push('errorCode: ' + d.errorCode);
+    if (d.used !== undefined) lines.push('used: ' + d.used);
+    if (d.remaining !== undefined) lines.push('remaining: ' + d.remaining);
+    if (lines.length === 1) lines.push(fallback || '상세 오류 데이터가 없습니다.');
+    return lines.join('\n');
+  }
+  window.ulimAdminErrorDetailText_5_36 = ulimAdminErrorDetailText_5_36;
+
+  // 5-35의 안전문구 함수를 권한별로 재정의: 관리자는 원문 유지, 학생/강사는 리미 문구
+  window.ulimSafeUserMessage_5_35 = function(message, fallback) {
+    if (ulimIsFullAdmin_5_36()) return String(message || fallback || '').trim();
+    return ulimPublicAiMessage_5_36(message, fallback || message);
+  };
+  window.sanitizeUlimUserMessage = function(message) {
+    if (ulimIsFullAdmin_5_36()) return String(message || '');
+    return ulimPublicAiMessage_5_36(message);
+  };
+
+  const nativeAlert_5_36 = window.alert;
+  window.alert = function(message) {
+    if (ulimIsFullAdmin_5_36()) return nativeAlert_5_36.call(window, String(message || ''));
+    return nativeAlert_5_36.call(window, ulimPublicAiMessage_5_36(message));
+  };
+
+  window.pronSetAdvancedStatus = function(message, type) {
+    const el = document.getElementById('pronAdvancedStatus');
+    if (!el) return;
+    let text = String(message || '');
+    if (text && !ulimIsFullAdmin_5_36()) {
+      // 완료 결과 전체는 그대로 둔다. 안내/오류 줄만 리미 문구로 바꾸기 위해 내부문구 포함 시만 치환한다.
+      if (ulimLooksInternal_5_36(text) || (/실패|오류|서비스|연결|지연|대체|로컬분석|잔여횟수.*확인하지 못/i.test(text) && !/리미의 .*완료/.test(text))) {
+        text = ulimPublicAiMessage_5_36(text);
+      }
+    }
+    el.style.display = text ? 'block' : 'none';
+    el.classList.remove('error', 'success');
+    if (type) el.classList.add(type);
+    el.textContent = text;
+  };
+  try { pronSetAdvancedStatus = window.pronSetAdvancedStatus; } catch(e) {}
+
+  // 로컬 fallback 사유를 학생/강사에게는 리미 유머문구로 저장
+  if (typeof window.pronBuildLocalAdvancedFallback_5_32 !== 'function' && typeof pronBuildLocalAdvancedFallback_5_32 === 'function') {
+    window.pronBuildLocalAdvancedFallback_5_32 = pronBuildLocalAdvancedFallback_5_32;
+  }
+  const oldBuildFallback_5_36 = window.pronBuildLocalAdvancedFallback_5_32 || (typeof pronBuildLocalAdvancedFallback_5_32 === 'function' ? pronBuildLocalAdvancedFallback_5_32 : null);
+  window.pronBuildLocalAdvancedFallback_5_32 = function(reason) {
+    const data = oldBuildFallback_5_36 ? oldBuildFallback_5_36(reason) : { ok:true, status:'fallback', source:'local_analysis_5_32', comment:'기본 분석 결과를 참고해 다시 녹음해보세요.' };
+    data.adminReason = String(reason || data.localReason || data.message || '');
+    data.localReason = ulimIsFullAdmin_5_36() ? (data.adminReason || '관리자 상세 사유 없음') : ulimPublicAiMessage_5_36(data.adminReason || reason);
+    data.message = data.localReason;
+    return data;
+  };
+  try { pronBuildLocalAdvancedFallback_5_32 = window.pronBuildLocalAdvancedFallback_5_32; } catch(e) {}
+
+  // 결과 렌더링: fallback일 때 관리자만 상세오류, 학생/강사는 리미 문구
+  window.pronRenderEtriResult = function(data) {
+    data = data || {};
+    const recognized = data.recognized || (typeof pronLastSttText !== 'undefined' ? pronLastSttText : '') || '인식 결과 없음';
+    const rawScore = data.score5 || data.score || '-';
+    const nScore = Number(rawScore);
+    const scoreText = Number.isFinite(nScore) ? nScore.toFixed(1) : String(rawScore || '-');
+    const source = document.getElementById('pronInputText')?.value || '';
+    const converted = data.standardPronunciation || (source && typeof pronConvertText === 'function' ? pronConvertText(source).converted : '');
+    const ruleSummary = data.ruleSummary || (typeof pronGetRuleSummaryForVoice === 'function' ? pronGetRuleSummaryForVoice(source) : '');
+    const comment = String(data.comment || '').trim() || '분석 결과를 기준으로 다시 녹음하며 비교해보세요.';
+    const isFallback = data.status === 'fallback' || data.source === 'local_analysis_5_32';
+
+    try {
+      if (typeof data.used !== 'undefined') {
+        pronSetLocalEtriUsed(data.used || 0);
+        pronUpdateEtriUsageBadge(data.used || 0, data.remaining);
+      }
+    } catch(e) {}
+
+    const title = isFallback ? '리미의 기본분석 완료!' : '리미의 정밀진단 완료!';
+    let reason = '';
+    if (isFallback) {
+      if (ulimIsFullAdmin_5_36()) {
+        reason = '\n' + ulimAdminErrorDetailText_5_36(data, data.adminReason || data.localReason || data.message) + '\n';
+      } else {
+        reason = '\n안내: ' + ulimPublicAiMessage_5_36(data.localReason || data.message || data.adminReason || '', data.requestId) + '\n';
+      }
+    }
+
+    window.pronSetAdvancedStatus(`${title}\n${reason}\n발음평가 점수: ${scoreText} / 5\n문장 일치도: ${typeof data.matchScore !== 'undefined' ? data.matchScore + '%' : '-'}\n리미 인식결과: ${recognized}\n\n표준발음 참고:\n${converted ? '[' + converted + ']' : '먼저 문장을 입력하세요.'}\n\n리미 코멘트:\n- ${comment}\n\n표준발음 점검 대상:\n${ruleSummary}`, 'success');
+  };
+  try { pronRenderEtriResult = window.pronRenderEtriResult; } catch(e) {}
+
+  // 폴링 오류/서버 fallback 사유 처리도 권한별로 분리
+  window.pronPollEtriResult = function(requestId) {
+    if (typeof pronEtriPollingTimer !== 'undefined' && pronEtriPollingTimer) {
+      clearTimeout(pronEtriPollingTimer);
+      pronEtriPollingTimer = null;
+    }
+    pronEtriPollingCount = 0;
+    const startedAt = Date.now();
+    const poll = async () => {
+      if ((typeof pronAdvancedFallbackShown_5_32 !== 'undefined' && pronAdvancedFallbackShown_5_32) || requestId !== pronAdvancedActiveRequestId_5_32) return;
+      pronEtriPollingCount += 1;
+      if (Date.now() - startedAt > PRON_GEMINI_HARD_TIMEOUT_MS_5_32) {
+        pronRenderLocalAdvancedFallback_5_32('Gemini Timeout: 30000ms / requestId=' + requestId);
+        return;
+      }
+      try {
+        const data = await pronJsonpRequest({ action: 'getGeminiPronunciationCommentResult', requestId, _: Date.now() }, 8000);
+        if (!data || data.status === 'pending' || data.status === 'not_found') {
+          window.pronSetAdvancedStatus('리미가 정밀하게 분석중입니다.');
+          pronEtriPollingTimer = setTimeout(poll, 2500);
+          return;
+        }
+        if (data.status === 'fallback' || data.source === 'local_analysis_5_32') {
+          if (typeof pronAdvancedFallbackShown_5_32 !== 'undefined') pronAdvancedFallbackShown_5_32 = true;
+          if (typeof pronClearAdvancedHardTimer_5_32 === 'function') pronClearAdvancedHardTimer_5_32();
+          pronAdvancedIsRunning_5_32 = false;
+          if (typeof pronSetAdvancedButtonsLocked_5_32 === 'function') pronSetAdvancedButtonsLocked_5_32(false);
+          data.adminReason = data.errorDetail || data.message || data.localReason || '';
+          if (!ulimIsFullAdmin_5_36()) {
+            data.localReason = ulimPublicAiMessage_5_36(data.message || data.localReason || data.errorDetail || '', requestId);
+            data.message = data.localReason;
+            delete data.errorDetail;
+          }
+          window.pronRenderEtriResult(data);
+          return;
+        }
+        if (!data.ok || data.status === 'error' || data.status === 'limit') {
+          pronRenderLocalAdvancedFallback_5_32((data && (data.errorDetail || data.message || data.status)) || 'Result Error / requestId=' + requestId);
+          return;
+        }
+        if (typeof pronClearAdvancedHardTimer_5_32 === 'function') pronClearAdvancedHardTimer_5_32();
+        pronAdvancedIsRunning_5_32 = false;
+        if (typeof pronSetAdvancedButtonsLocked_5_32 === 'function') pronSetAdvancedButtonsLocked_5_32(false);
+        window.pronRenderEtriResult(data);
+      } catch (err) {
+        if (Date.now() - startedAt > PRON_GEMINI_HARD_TIMEOUT_MS_5_32 || pronEtriPollingCount >= 10) {
+          pronRenderLocalAdvancedFallback_5_32('Polling Error: ' + (err && err.message ? err.message : String(err)) + ' / requestId=' + requestId);
+          return;
+        }
+        pronEtriPollingTimer = setTimeout(poll, 2500);
+      }
+    };
+    pronEtriPollingTimer = setTimeout(poll, 1200);
+  };
+  try { pronPollEtriResult = window.pronPollEtriResult; } catch(e) {}
+
+  // 5-35에서 덮어쓴 표준발음 시작 함수의 안내문도 유머문구/관리자 상세 사유로 교체
+  const oldPronRun_5_36 = window.pronRunEtriAdvancedAnalysis || (typeof pronRunEtriAdvancedAnalysis === 'function' ? pronRunEtriAdvancedAnalysis : null);
+  if (oldPronRun_5_36) {
+    window.pronRunEtriAdvancedAnalysis = async function() {
+      try {
+        return await oldPronRun_5_36.apply(this, arguments);
+      } catch(err) {
+        const detail = err && err.message ? err.message : String(err);
+        if (ulimIsFullAdmin_5_36()) window.pronSetAdvancedStatus('[관리자 상세오류]\n' + detail, 'error');
+        else pronRenderLocalAdvancedFallback_5_32(detail);
+      }
+    };
+    try { pronRunEtriAdvancedAnalysis = window.pronRunEtriAdvancedAnalysis; } catch(e) {}
+  }
+})();
 </script>
 
 </body>
