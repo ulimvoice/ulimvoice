@@ -16798,5 +16798,29 @@ ${ruleSummary}`, 'success');
 })();
 </script>
 
+
+
+<script id="ulim-training-etri-linked-version-5-62">
+(function(){
+  if (window.__ULIM_TRAINING_ETRI_LINKED_562__) return;
+  window.__ULIM_TRAINING_ETRI_LINKED_562__ = true;
+  window.ULIM_TRAINING_ETRI_VERSION = '2026.06.06.562.01';
+
+  const oldRenderTrainingFinalAiResult562 = window.renderTrainingFinalAiResult_;
+  if (typeof oldRenderTrainingFinalAiResult562 === 'function') {
+    window.renderTrainingFinalAiResult_ = function(data){
+      if (data && data.analysisSource && /etri|advanced/i.test(String(data.analysisSource))) {
+        data.badge = data.badge || 'ETRI 고급 분석';
+        data.message = data.message || 'ETRI 고급 분석과 리미 코멘트 분석이 완료되었습니다.';
+      }
+      return oldRenderTrainingFinalAiResult562.call(this, data);
+    };
+    try { renderTrainingFinalAiResult_ = window.renderTrainingFinalAiResult_; } catch(e) {}
+  }
+
+  console.log('[ULIM 5.62] 발성훈련 ETRI 연동 패치 적용 완료', window.ULIM_TRAINING_ETRI_VERSION);
+})();
+</script>
+
 </body>
 </html>
