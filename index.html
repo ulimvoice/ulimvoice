@@ -17733,5 +17733,173 @@ ${ruleSummary}`, 'success');
 })();
 </script>
 
+
+
+<script id="ulim-rimi-analysis-message-fix-5-69">
+(function(){
+  if (window.__ULIM_RIMI_ANALYSIS_MESSAGE_FIX_569__) return;
+  window.__ULIM_RIMI_ANALYSIS_MESSAGE_FIX_569__ = true;
+  window.ULIM_RIMI_ANALYSIS_MESSAGE_FIX_VERSION = '2026.06.06.569.01';
+
+  function escapeHtml569_(v){
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function isEndMarker569_(v){
+    const s = String(v == null ? '' : v).trim();
+    if (!s) return false;
+    const compact = s.replace(/\s+/g, '').replace(/[.!。]/g, '');
+    return /^\[?끝\]?$/.test(compact) || /^\(?끝\)?$/.test(compact) || /^<끝>$/.test(compact) || /^\[?END\]?$/i.test(compact);
+  }
+
+  function sanitizeRecognized569_(v){
+    const s = String(v == null ? '' : v).trim();
+    if (!s) return '';
+    if (isEndMarker569_(s)) return '';
+    return s;
+  }
+
+  function isInProgressText569_(text){
+    const t = String(text || '').replace(/\s+/g, ' ').trim();
+    if (!t) return false;
+    const hasResult = /(문장\s*일치도|발음평가|녹음\s*길이|읽기\s*속도|평균\s*음량|무음\s*비율|리미\s*코멘트|표준발음\s*참고)/.test(t);
+    if (hasResult) return false;
+    return /(분석\s*중|분석중|정밀\s*진단.*진행|처리\s*중|대기\s*중|pending|리미가.*분석|리미가.*듣고)/i.test(t);
+  }
+
+  function finalNoRecognitionMessage569_(){
+    return '인식된 문장이 없습니다. 녹음 음량과 마이크 권한을 확인해주세요.';
+  }
+
+  function renderProgressCard569_(){
+    const el = document.getElementById('sttResult');
+    if (!el) return;
+    el.innerHTML = '' +
+      '<div class="rimi-eval-card">' +
+        '<div class="rimi-eval-head">' +
+          '<div class="rimi-eval-head-left">' +
+            '<div class="rimi-eval-icon">💡</div>' +
+            '<div class="rimi-eval-title-wrap">' +
+              '<div class="rimi-eval-title">분석 중...</div>' +
+              '<div class="rimi-eval-subtitle">리미가 녹음을 듣고 결과를 정리하고 있어요.</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="rimi-eval-badge">분석 중</div>' +
+        '</div>' +
+        '<div class="rimi-eval-body">' +
+          '<div class="rimi-eval-main">' +
+            '<div class="rimi-eval-panel">' +
+              '<span class="rimi-eval-panel-title">리미 인식 결과</span>' +
+              '<div class="rimi-eval-recognized">리미가 녹음을 듣고 있어요. 잠시만 기다려주세요.</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    el.classList.add('rimi-eval-rendered');
+  }
+
+  function replaceEndMarkerInText569_(text){
+    return String(text || '')
+      .replace(/((?:리미\s*)?인식\s*결과\s*:\s*)\[?\s*끝\s*[.!。]?\s*\]?/gi, '$1' + finalNoRecognitionMessage569_())
+      .replace(/((?:리미\s*)?인식결과\s*:\s*)\[?\s*끝\s*[.!。]?\s*\]?/gi, '$1' + finalNoRecognitionMessage569_())
+      .replace(/((?:리미\s*)?인식\s*결과\s*:\s*)\[?\s*END\s*\]?/gi, '$1' + finalNoRecognitionMessage569_());
+  }
+
+  function sanitizeRimiCardDom569_(){
+    const el = document.getElementById('sttResult');
+    if (!el) return;
+    const rec = el.querySelector('.rimi-eval-recognized');
+    if (rec && isEndMarker569_(rec.textContent)) {
+      rec.textContent = finalNoRecognitionMessage569_();
+    }
+  }
+
+  const oldBuildGeneral569 = window.buildTrainingFinalGeneralAnalysisText_;
+  if (typeof oldBuildGeneral569 === 'function') {
+    window.buildTrainingFinalGeneralAnalysisText_ = function(recognized, similarity, metrics){
+      return oldBuildGeneral569.call(this, sanitizeRecognized569_(recognized), similarity, metrics);
+    };
+    try { buildTrainingFinalGeneralAnalysisText_ = window.buildTrainingFinalGeneralAnalysisText_; } catch(e) {}
+  }
+
+  const oldBuildAiText569 = window.buildTrainingAiAnalysisText_;
+  if (typeof oldBuildAiText569 === 'function') {
+    window.buildTrainingAiAnalysisText_ = function(transcript){
+      return replaceEndMarkerInText569_(oldBuildAiText569.call(this, sanitizeRecognized569_(transcript)));
+    };
+    try { buildTrainingAiAnalysisText_ = window.buildTrainingAiAnalysisText_; } catch(e) {}
+  }
+
+  const oldRenderFinal569 = window.renderTrainingFinalAiResult_;
+  if (typeof oldRenderFinal569 === 'function') {
+    window.renderTrainingFinalAiResult_ = function(data){
+      if (data && typeof data === 'object') {
+        const rawRecognized = String(data.recognized || '').trim();
+        const cleanRecognized = sanitizeRecognized569_(rawRecognized);
+        data = Object.assign({}, data, {
+          recognized: cleanRecognized,
+          generalAnalysisText: data.generalAnalysisText ? replaceEndMarkerInText569_(data.generalAnalysisText) : data.generalAnalysisText,
+          analysisText: data.analysisText ? replaceEndMarkerInText569_(data.analysisText) : data.analysisText
+        });
+        if (rawRecognized && !cleanRecognized && isEndMarker569_(rawRecognized)) {
+          data.message = '종료 신호만 감지되어 인식 문장 없이 분석을 마무리했습니다.';
+          data.comment = data.comment || '녹음 음량과 마이크 위치를 확인한 뒤 다시 녹음해보세요.';
+        }
+      }
+      const result = oldRenderFinal569.call(this, data);
+      setTimeout(sanitizeRimiCardDom569_, 0);
+      return result;
+    };
+    try { renderTrainingFinalAiResult_ = window.renderTrainingFinalAiResult_; } catch(e) {}
+  }
+
+  const oldCard569 = window.renderRimiTrainingEvaluationCard_;
+  if (typeof oldCard569 === 'function') {
+    window.renderRimiTrainingEvaluationCard_ = function(input){
+      const el = document.getElementById('sttResult');
+      const raw = typeof input === 'string' ? input : (el ? (el.textContent || '') : '');
+      if (isInProgressText569_(raw)) {
+        renderProgressCard569_();
+        return;
+      }
+      const fixed = replaceEndMarkerInText569_(raw);
+      const result = oldCard569.call(this, fixed);
+      setTimeout(sanitizeRimiCardDom569_, 0);
+      return result;
+    };
+  }
+
+  function installCardObserverFix569_(){
+    const el = document.getElementById('sttResult');
+    if (!el || el.__rimiEvalObserver569) return;
+    el.__rimiEvalObserver569 = true;
+    const obs = new MutationObserver(function(){
+      const text = el.textContent || '';
+      if (isInProgressText569_(text) && !el.querySelector('.rimi-eval-card')) {
+        renderProgressCard569_();
+      } else {
+        sanitizeRimiCardDom569_();
+      }
+    });
+    obs.observe(el, { childList: true, characterData: true, subtree: true });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', installCardObserverFix569_);
+  } else {
+    installCardObserverFix569_();
+  }
+
+  if (window.ULIM_DEBUG === true) {
+    console.log('[ULIM 5.69] 리미 분석중/끝표시 문구 보정 패치 적용 완료', window.ULIM_RIMI_ANALYSIS_MESSAGE_FIX_VERSION);
+  }
+})();
+</script>
+
 </body>
 </html>
