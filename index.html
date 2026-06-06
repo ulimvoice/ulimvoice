@@ -1511,6 +1511,240 @@ body.admin-mode .admin-only-tab { display:block !important; }
 }
 </style>
 
+
+
+<style id="rimi-training-eval-card-style-5-61">
+/* =========================================================
+   5.61 발성훈련 리미 평가창 카드 UI
+   - PC/모바일 모두 보기 좋은 구조화 평가창
+   - 기존 textContent 결과도 자동 카드화
+   ========================================================= */
+#sttResult.rimi-eval-rendered {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    min-height: 0 !important;
+}
+.rimi-eval-card {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #dbeafe;
+    border-radius: 22px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    box-shadow: 0 10px 28px rgba(15, 23, 42, .08);
+    overflow: hidden;
+    text-align: left;
+}
+.rimi-eval-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 18px 20px;
+    background: linear-gradient(135deg, #f0fdf4, #eef2ff);
+    border-bottom: 1px solid #e5e7eb;
+}
+.rimi-eval-head-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+.rimi-eval-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, .08);
+    font-size: 24px;
+    flex: 0 0 auto;
+}
+.rimi-eval-title-wrap {
+    min-width: 0;
+}
+.rimi-eval-title {
+    font-size: 19px;
+    font-weight: 900;
+    color: #14532d;
+    letter-spacing: -0.03em;
+    line-height: 1.25;
+}
+.rimi-eval-subtitle {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 800;
+    line-height: 1.35;
+}
+.rimi-eval-badge {
+    flex: 0 0 auto;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: #16a34a;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 900;
+    white-space: nowrap;
+}
+.rimi-eval-body {
+    padding: 18px 20px 20px;
+}
+.rimi-eval-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(230px, .8fr);
+    gap: 14px;
+    align-items: stretch;
+}
+.rimi-eval-panel {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    padding: 15px;
+    box-sizing: border-box;
+}
+.rimi-eval-panel-title {
+    display: block;
+    margin-bottom: 8px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+}
+.rimi-eval-recognized {
+    color: #111827;
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.55;
+    word-break: keep-all;
+    white-space: pre-wrap;
+}
+.rimi-eval-pron {
+    color: #166534;
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1.55;
+    word-break: keep-all;
+    white-space: pre-wrap;
+}
+.rimi-eval-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.rimi-eval-metric {
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 12px 11px;
+    min-height: 70px;
+    box-sizing: border-box;
+}
+.rimi-eval-metric-label {
+    display: block;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 900;
+    margin-bottom: 5px;
+}
+.rimi-eval-metric-value {
+    display: block;
+    color: #111827;
+    font-size: 19px;
+    line-height: 1.15;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+}
+.rimi-eval-metric.good .rimi-eval-metric-value { color: #16a34a; }
+.rimi-eval-metric.warn .rimi-eval-metric-value { color: #d97706; }
+.rimi-eval-metric.bad .rimi-eval-metric-value { color: #dc2626; }
+.rimi-eval-comment {
+    margin-top: 14px;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 18px;
+    padding: 16px;
+}
+.rimi-eval-comment-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 8px;
+    color: #9a3412;
+    font-size: 13px;
+    font-weight: 900;
+}
+.rimi-eval-comment-text {
+    color: #431407;
+    font-size: 15px;
+    line-height: 1.65;
+    font-weight: 700;
+    word-break: keep-all;
+    white-space: pre-wrap;
+}
+.rimi-eval-raw {
+    color: #374151;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    word-break: keep-all;
+    font-size: 15px;
+}
+@media (max-width: 760px) {
+    .rimi-eval-head {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 16px;
+    }
+    .rimi-eval-badge {
+        align-self: flex-start;
+    }
+    .rimi-eval-body {
+        padding: 14px;
+    }
+    .rimi-eval-main {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    .rimi-eval-metrics {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    .rimi-eval-panel {
+        padding: 13px;
+        border-radius: 16px;
+    }
+    .rimi-eval-title {
+        font-size: 17px;
+    }
+    .rimi-eval-recognized {
+        font-size: 16px;
+    }
+    .rimi-eval-pron,
+    .rimi-eval-comment-text {
+        font-size: 14px;
+    }
+    .rimi-eval-metric {
+        min-height: 62px;
+        padding: 10px;
+    }
+    .rimi-eval-metric-value {
+        font-size: 17px;
+    }
+}
+@media (max-width: 420px) {
+    .rimi-eval-metrics {
+        grid-template-columns: 1fr;
+    }
+    .rimi-eval-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 14px;
+    }
+}
+</style>
+
 </head>
 <body>
 
@@ -13112,10 +13346,10 @@ async function runTrainingFinalAiAnalysisFromButton() {
 
     if (window.trainingFinalAiResult && window.trainingFinalAiResult.requestSentence === currentTrainObj.text) {
         resetTrainingFinalAiRequestState_();
-        return alert('이미 마지막 녹음본의 분석이 완료되었습니다. 다시 분석하려면 새로 녹음 후 실행해주세요.');
+        return alert('이미 마지막 녹음본의 AI 분석이 완료되었습니다. 다시 분석하려면 새로 녹음 후 실행해주세요.');
     }
 
-    const ok = confirm('리미의 분석은 하루 1회만 사용할 수 있습니다. 이미 사용했다면 리미가 간단한 분석만 진행합니다. 진행할까요?');
+    const ok = confirm('AI 분석은 하루 1회만 사용할 수 있습니다. 이미 사용했다면 리미의 간단 분석으로 전환됩니다. 진행할까요?');
     if (!ok) return;
 
     window.trainingFinalAiInProgress = true;
@@ -16309,6 +16543,258 @@ ${ruleSummary}`, 'success');
   try { renderTrainingFinalAiLimitState_ = window.renderTrainingFinalAiLimitState_; } catch(e) {}
 
   console.log('[ULIM 5.60] 발성훈련 랜덤 구간/문구 정리 패치 적용 완료', window.ULIM_VOCAL_PATCH_VERSION);
+})();
+</script>
+
+
+
+<script id="ulim-rimi-training-eval-card-patch-5-61">
+(function(){
+  if (window.__ULIM_RIMI_TRAINING_EVAL_CARD_561__) return;
+  window.__ULIM_RIMI_TRAINING_EVAL_CARD_561__ = true;
+  window.ULIM_RIMI_EVAL_UI_VERSION = '2026.06.06.561.01';
+
+  function escapeHtml561_(v){
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function normalizeRimiEvalText561_(text){
+    return String(text || '')
+      .replace(/\r\n/g, '\n')
+      .replace(/분석결과/g, '분석 결과')
+      .replace(/문장일치도/g, '문장 일치도')
+      .replace(/인식결과/g, '인식 결과')
+      .replace(/간단분석/g, '간단 분석')
+      .replace(/로컬분석/g, '로컬 분석')
+      .replace(/일반분석/g, '일반 분석')
+      .replace(/정밀진단/g, '정밀 진단')
+      .replace(/분석중/g, '분석 중')
+      .replace(/녹음중/g, '녹음 중')
+      .replace(/리미가 졸음을 이겨내는중/g, '리미가 졸음을 이겨내는 중이에요.')
+      .replace(/리미는 최선을 다했어요\.\./g, '리미는 최선을 다했어요.')
+      .trim();
+  }
+
+  function getMetricClass561_(label, value){
+    const text = String(value || '');
+    if (/문장\s*일치도/.test(label)) {
+      const n = Number((text.match(/[0-9]+/) || [])[0]);
+      if (Number.isFinite(n)) {
+        if (n >= 80) return 'good';
+        if (n >= 50) return 'warn';
+        return 'bad';
+      }
+    }
+    if (/발음평가/.test(label)) {
+      const n = Number((text.match(/[0-9]+(?:\.[0-9]+)?/) || [])[0]);
+      if (Number.isFinite(n)) {
+        if (n >= 4.3) return 'good';
+        if (n >= 3.5) return 'warn';
+        return 'bad';
+      }
+    }
+    return '';
+  }
+
+  function parseRimiEvalText561_(text){
+    const raw = normalizeRimiEvalText561_(text);
+    const lines = raw.split('\n').map(function(line){ return line.trim(); });
+    const data = {
+      title: '',
+      badge: '',
+      recognized: '',
+      pron: '',
+      comment: '',
+      metrics: [],
+      raw: raw
+    };
+
+    let mode = '';
+    const titleCandidates = ['리미의 간단 분석!', 'AI 분석 결과', '리미의 정밀 진단 완료!', '리미가 확인했어요!', '리미가 분석을 끝냈습니다'];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line) {
+        if (mode === 'comment') data.comment += '\n';
+        continue;
+      }
+
+      const cleanLine = line.replace(/^[-•]\s*/, '').trim();
+
+      if (!data.title && titleCandidates.some(function(t){ return cleanLine.indexOf(t) >= 0; })) {
+        data.title = cleanLine;
+        continue;
+      }
+
+      if (/^리미\s*코멘트\s*:?$/.test(cleanLine)) {
+        mode = 'comment';
+        continue;
+      }
+
+      if (/^표준발음\s*참고\s*:?$/.test(cleanLine)) {
+        mode = 'pron';
+        continue;
+      }
+
+      const colonIndex = cleanLine.indexOf(':');
+      if (colonIndex > -1 && mode !== 'comment') {
+        const key = cleanLine.slice(0, colonIndex).replace(/^[-•]\s*/, '').trim();
+        const value = cleanLine.slice(colonIndex + 1).trim();
+        const normalizedKey = key.replace(/\s+/g, '');
+        if (/^(리미)?인식결과$/.test(normalizedKey)) {
+          data.recognized = value;
+          continue;
+        }
+        if (/^표준발음참고$/.test(normalizedKey)) {
+          data.pron = value;
+          continue;
+        }
+        if (/^리미코멘트$/.test(normalizedKey)) {
+          data.comment = value;
+          mode = 'comment';
+          continue;
+        }
+        if (/^(문장일치도|녹음길이|읽기속도|평균음량|무음비율|발음평가점수)$/.test(normalizedKey)) {
+          data.metrics.push({ label: key, value: value });
+          continue;
+        }
+      }
+
+      if (mode === 'comment') {
+        data.comment += (data.comment ? '\n' : '') + cleanLine;
+      } else if (mode === 'pron') {
+        data.pron += (data.pron ? '\n' : '') + cleanLine;
+      }
+    }
+
+    if (!data.title) {
+      if (data.metrics.some(function(m){ return /발음평가/.test(m.label); })) data.title = '리미의 정밀 진단 완료!';
+      else if (data.metrics.length || data.recognized || data.pron || data.comment) data.title = '리미의 간단 분석!';
+      else data.title = '리미 평가 결과';
+    }
+
+    if (!data.badge) {
+      data.badge = /간단/.test(data.title) || /로컬|일반/.test(raw) ? '간단 분석' : '정밀 진단';
+    }
+
+    data.recognized = data.recognized || '인식 결과 없음';
+    data.comment = data.comment.trim();
+    data.pron = data.pron.trim();
+    return data;
+  }
+
+  function renderRimiEvalCardHtml561_(data){
+    const metricsHtml = data.metrics.map(function(item){
+      const cls = getMetricClass561_(item.label, item.value);
+      return '<div class="rimi-eval-metric ' + cls + '">' +
+        '<span class="rimi-eval-metric-label">' + escapeHtml561_(item.label) + '</span>' +
+        '<span class="rimi-eval-metric-value">' + escapeHtml561_(item.value || '-') + '</span>' +
+      '</div>';
+    }).join('');
+
+    const pronHtml = data.pron ?
+      '<div class="rimi-eval-panel">' +
+        '<span class="rimi-eval-panel-title">표준발음 참고</span>' +
+        '<div class="rimi-eval-pron">' + escapeHtml561_(data.pron) + '</div>' +
+      '</div>' : '';
+
+    const commentHtml = data.comment ?
+      '<div class="rimi-eval-comment">' +
+        '<div class="rimi-eval-comment-title">💬 리미 코멘트</div>' +
+        '<div class="rimi-eval-comment-text">' + escapeHtml561_(data.comment) + '</div>' +
+      '</div>' : '';
+
+    const metricsPanel = metricsHtml ?
+      '<div class="rimi-eval-panel"><span class="rimi-eval-panel-title">평가 지표</span><div class="rimi-eval-metrics">' + metricsHtml + '</div></div>' : '';
+
+    return '<div class="rimi-eval-card">' +
+      '<div class="rimi-eval-head">' +
+        '<div class="rimi-eval-head-left">' +
+          '<div class="rimi-eval-icon">💡</div>' +
+          '<div class="rimi-eval-title-wrap">' +
+            '<div class="rimi-eval-title">' + escapeHtml561_(data.title) + '</div>' +
+            '<div class="rimi-eval-subtitle">녹음 결과를 리미가 보기 쉽게 정리했어요.</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="rimi-eval-badge">' + escapeHtml561_(data.badge) + '</div>' +
+      '</div>' +
+      '<div class="rimi-eval-body">' +
+        '<div class="rimi-eval-main">' +
+          '<div class="rimi-eval-panel">' +
+            '<span class="rimi-eval-panel-title">리미 인식 결과</span>' +
+            '<div class="rimi-eval-recognized">' + escapeHtml561_(data.recognized) + '</div>' +
+          '</div>' +
+          metricsPanel +
+        '</div>' +
+        pronHtml +
+        commentHtml +
+      '</div>' +
+    '</div>';
+  }
+
+  window.renderRimiTrainingEvaluationCard_ = function(input){
+    const el = document.getElementById('sttResult');
+    if (!el) return;
+    const raw = typeof input === 'string' ? input : (el.textContent || '');
+    const clean = normalizeRimiEvalText561_(raw);
+    if (!clean) return;
+
+    const shouldCard = /(리미|인식\s*결과|문장\s*일치도|발음평가|녹음\s*길이|읽기\s*속도|평균\s*음량|무음\s*비율|표준발음\s*참고)/.test(clean);
+    if (!shouldCard || clean.length < 10) return;
+
+    const parsed = parseRimiEvalText561_(clean);
+    el.dataset.rimiRawText = clean;
+    el.innerHTML = renderRimiEvalCardHtml561_(parsed);
+    el.classList.add('rimi-eval-rendered');
+  };
+
+  let rendering = false;
+  function observeSttResult561_(){
+    const el = document.getElementById('sttResult');
+    if (!el || el.__rimiEvalObserver561) return;
+    el.__rimiEvalObserver561 = true;
+    const obs = new MutationObserver(function(){
+      if (rendering) return;
+      const hasCard = !!el.querySelector('.rimi-eval-card');
+      if (hasCard) return;
+      const text = el.textContent || '';
+      if (!text.trim()) return;
+      rendering = true;
+      try { window.renderRimiTrainingEvaluationCard_(text); }
+      finally { setTimeout(function(){ rendering = false; }, 0); }
+    });
+    obs.observe(el, { childList: true, characterData: true, subtree: true });
+    setTimeout(function(){
+      const text = el.textContent || '';
+      if (text && !el.querySelector('.rimi-eval-card')) window.renderRimiTrainingEvaluationCard_(text);
+    }, 300);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', observeSttResult561_);
+  } else {
+    observeSttResult561_();
+  }
+
+  const oldRenderFinal561 = window.renderTrainingFinalAiResult_;
+  if (typeof oldRenderFinal561 === 'function') {
+    window.renderTrainingFinalAiResult_ = function(data){
+      const result = oldRenderFinal561.apply(this, arguments);
+      setTimeout(function(){
+        const el = document.getElementById('sttResult');
+        if (el && !el.querySelector('.rimi-eval-card')) window.renderRimiTrainingEvaluationCard_(el.textContent || '');
+      }, 0);
+      return result;
+    };
+    try { renderTrainingFinalAiResult_ = window.renderTrainingFinalAiResult_; } catch(e) {}
+  }
+
+  console.log('[ULIM 5.61] 리미 평가창 카드 UI 패치 적용 완료', window.ULIM_RIMI_EVAL_UI_VERSION);
 })();
 </script>
 
