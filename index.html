@@ -16860,5 +16860,402 @@ ${ruleSummary}`, 'success');
 })();
 </script>
 
+
+
+<style id="ulim-pron-rimi-card-ui-5-65-style">
+#pronAdvancedStatus.rimi-eval-rendered {
+    display: block !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    color: inherit !important;
+}
+#pronAdvancedStatus.rimi-eval-rendered.error,
+#pronAdvancedStatus.rimi-eval-rendered.success {
+    background: transparent !important;
+    border: none !important;
+    color: inherit !important;
+}
+#pronAdvancedStatus .rimi-eval-card {
+    margin-top: 0;
+}
+#pronAdvancedStatus .rimi-eval-note {
+    margin-top: 14px;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    padding: 14px 16px;
+}
+#pronAdvancedStatus .rimi-eval-note-title {
+    display: block;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 900;
+    margin-bottom: 7px;
+}
+#pronAdvancedStatus .rimi-eval-note-text {
+    color: #334155;
+    font-size: 14px;
+    line-height: 1.6;
+    font-weight: 700;
+    white-space: pre-wrap;
+    word-break: keep-all;
+}
+.pron-analysis-mode-card .pron-actions button {
+    min-height: 48px;
+}
+@media (max-width: 700px) {
+    #pronAdvancedStatus .rimi-eval-card {
+        border-radius: 18px;
+    }
+    #pronAdvancedStatus .rimi-eval-note {
+        padding: 12px;
+        border-radius: 16px;
+    }
+}
+</style>
+
+<script id="ulim-pron-card-and-tab-persist-5-65">
+(function(){
+  if (window.__ULIM_PRON_CARD_AND_TAB_PERSIST_565__) return;
+  window.__ULIM_PRON_CARD_AND_TAB_PERSIST_565__ = true;
+  window.ULIM_PRON_CARD_UI_VERSION = '2026.06.06.565.01';
+  window.ULIM_TAB_PERSIST_VERSION = '2026.06.06.565.01';
+
+  function escapeHtml565_(value) {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function normalizePronEvalText565_(text) {
+    return String(text || '')
+      .replace(/\r\n/g, '\n')
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
+  function metricClass565_(label, value) {
+    const l = String(label || '');
+    const n = Number(String(value || '').replace(/[^0-9.\-]/g, ''));
+    if (/일치도/.test(l)) {
+      if (n >= 85) return 'good';
+      if (n >= 60) return 'warn';
+      return 'bad';
+    }
+    if (/발음평가/.test(l)) {
+      if (n >= 4) return 'good';
+      if (n >= 3) return 'warn';
+      return 'bad';
+    }
+    if (/무음/.test(l)) {
+      if (n <= 25) return 'good';
+      if (n <= 45) return 'warn';
+      return 'bad';
+    }
+    return '';
+  }
+
+  function parsePronEvalText565_(raw) {
+    const clean = normalizePronEvalText565_(raw);
+    const lines = clean.split('\n').map(function(line){ return line.trim(); }).filter(function(line){
+      return line && !/^=+$/.test(line);
+    });
+    const data = {
+      title: '',
+      badge: '',
+      recognized: '',
+      pron: '',
+      comment: '',
+      noteTitle: '',
+      note: '',
+      metrics: []
+    };
+    let mode = '';
+
+    function addMetric(label, value) {
+      if (!label) return;
+      const exists = data.metrics.some(function(m){ return m.label === label; });
+      if (!exists) data.metrics.push({ label: label, value: value || '-' });
+    }
+
+    lines.forEach(function(line, idx){
+      const normalized = line.replace(/\s+/g, '');
+
+      if (!data.title && /(리미의\s*간단\s*분석|리미의\s*정밀\s*진단|리미가\s*확인했어요|분석\s*완료)/.test(line)) {
+        data.title = line.replace(/!+$/, '!');
+        data.badge = /간단|일반|로컬/.test(line) ? '일반 분석' : (/확인/.test(line) ? '대체 분석' : '고급 분석');
+        mode = '';
+        return;
+      }
+
+      if (/^안내\s*:/.test(line)) {
+        data.noteTitle = '안내';
+        data.note = line.replace(/^안내\s*:\s*/, '');
+        mode = 'note';
+        return;
+      }
+
+      const colonIndex = line.indexOf(':');
+      if (colonIndex > -1) {
+        const key = line.slice(0, colonIndex).replace(/^[-•]\s*/, '').trim();
+        const value = line.slice(colonIndex + 1).trim();
+        const nk = key.replace(/\s+/g, '');
+
+        if (/^(리미)?인식결과$/.test(nk)) {
+          data.recognized = value;
+          mode = '';
+          return;
+        }
+        if (/^표준발음참고$/.test(nk)) {
+          data.pron = value.replace(/^\[/, '').replace(/\]$/, '');
+          mode = 'pron';
+          return;
+        }
+        if (/^리미코멘트$/.test(nk)) {
+          data.comment = value.replace(/^[-•]\s*/, '');
+          mode = 'comment';
+          return;
+        }
+        if (/^표준발음점검대상$/.test(nk)) {
+          data.noteTitle = '표준발음 점검 대상';
+          data.note = value;
+          mode = 'note';
+          return;
+        }
+        if (/^(문장일치도|발음평가점수|녹음길이|읽기속도|평균음량|무음비율)$/.test(nk)) {
+          addMetric(key, value);
+          mode = '';
+          return;
+        }
+      }
+
+      if (/^[-•]\s*/.test(line) && mode === 'comment') {
+        data.comment += (data.comment ? '\n' : '') + line.replace(/^[-•]\s*/, '');
+        return;
+      }
+
+      if (mode === 'comment') {
+        data.comment += (data.comment ? '\n' : '') + line.replace(/^[-•]\s*/, '');
+      } else if (mode === 'pron') {
+        data.pron += (data.pron ? '\n' : '') + line.replace(/^\[/, '').replace(/\]$/, '');
+      } else if (mode === 'note') {
+        data.note += (data.note ? '\n' : '') + line;
+      } else if (!data.title && idx === 0 && /리미|분석/.test(line)) {
+        data.title = line;
+      }
+    });
+
+    if (!data.title) {
+      if (data.metrics.some(function(m){ return /발음평가/.test(m.label); })) data.title = '리미의 정밀 진단 완료!';
+      else if (data.metrics.length || data.recognized || data.pron || data.comment) data.title = '리미의 간단 분석!';
+      else data.title = '리미 평가 결과';
+    }
+    if (!data.badge) {
+      data.badge = /간단|일반|로컬/.test(clean) ? '일반 분석' : '고급 분석';
+    }
+    data.recognized = data.recognized || '인식 결과 없음';
+    data.pron = String(data.pron || '').trim();
+    data.comment = String(data.comment || '').trim();
+    data.note = String(data.note || '').trim();
+    return data;
+  }
+
+  function renderPronEvalCardHtml565_(data) {
+    const metricsHtml = data.metrics.map(function(item){
+      const cls = metricClass565_(item.label, item.value);
+      return '<div class="rimi-eval-metric ' + cls + '">' +
+        '<span class="rimi-eval-metric-label">' + escapeHtml565_(item.label) + '</span>' +
+        '<span class="rimi-eval-metric-value">' + escapeHtml565_(item.value || '-') + '</span>' +
+      '</div>';
+    }).join('');
+
+    const metricsPanel = metricsHtml ?
+      '<div class="rimi-eval-panel"><span class="rimi-eval-panel-title">평가 지표</span><div class="rimi-eval-metrics">' + metricsHtml + '</div></div>' : '';
+
+    const pronPanel = data.pron ?
+      '<div class="rimi-eval-panel" style="margin-top:14px;">' +
+        '<span class="rimi-eval-panel-title">표준발음 참고</span>' +
+        '<div class="rimi-eval-pron">' + escapeHtml565_(data.pron) + '</div>' +
+      '</div>' : '';
+
+    const notePanel = data.note ?
+      '<div class="rimi-eval-note">' +
+        '<span class="rimi-eval-note-title">' + escapeHtml565_(data.noteTitle || '안내') + '</span>' +
+        '<div class="rimi-eval-note-text">' + escapeHtml565_(data.note) + '</div>' +
+      '</div>' : '';
+
+    const commentPanel = data.comment ?
+      '<div class="rimi-eval-comment">' +
+        '<div class="rimi-eval-comment-title">💬 리미 코멘트</div>' +
+        '<div class="rimi-eval-comment-text">' + escapeHtml565_(data.comment) + '</div>' +
+      '</div>' : '';
+
+    return '<div class="rimi-eval-card">' +
+      '<div class="rimi-eval-head">' +
+        '<div class="rimi-eval-head-left">' +
+          '<div class="rimi-eval-icon">💡</div>' +
+          '<div class="rimi-eval-title-wrap">' +
+            '<div class="rimi-eval-title">' + escapeHtml565_(data.title) + '</div>' +
+            '<div class="rimi-eval-subtitle">표준발음 분석 결과를 리미가 보기 쉽게 정리했어요.</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="rimi-eval-badge">' + escapeHtml565_(data.badge) + '</div>' +
+      '</div>' +
+      '<div class="rimi-eval-body">' +
+        '<div class="rimi-eval-main">' +
+          '<div class="rimi-eval-panel">' +
+            '<span class="rimi-eval-panel-title">리미 인식 결과</span>' +
+            '<div class="rimi-eval-recognized">' + escapeHtml565_(data.recognized) + '</div>' +
+          '</div>' +
+          metricsPanel +
+        '</div>' +
+        pronPanel + notePanel + commentPanel +
+      '</div>' +
+    '</div>';
+  }
+
+  function shouldRenderPronCard565_(message) {
+    const text = normalizePronEvalText565_(message);
+    if (!text || text.length < 10) return false;
+    return /(리미의\s*간단\s*분석|리미의\s*정밀\s*진단|리미가\s*확인했어요|문장\s*일치도|발음평가\s*점수|녹음\s*길이|읽기\s*속도|평균\s*음량|무음\s*비율|리미\s*인식결과|표준발음\s*참고|리미\s*코멘트)/.test(text);
+  }
+
+  function renderPronCard565_(message, type) {
+    const el = document.getElementById('pronAdvancedStatus');
+    if (!el) return;
+    const parsed = parsePronEvalText565_(message);
+    el.style.display = 'block';
+    el.classList.remove('error', 'success');
+    if (type) el.classList.add(type);
+    el.classList.add('rimi-eval-rendered');
+    el.dataset.rimiRawText = normalizePronEvalText565_(message);
+    el.innerHTML = renderPronEvalCardHtml565_(parsed);
+  }
+
+  const basePronSetStatus565 = window.pronSetAdvancedStatus;
+  window.pronSetAdvancedStatus = function(message, type) {
+    const raw = String(message || '');
+    const el = document.getElementById('pronAdvancedStatus');
+
+    // 고급 분석 실행 중에는 내부 STT 단계에서 만들어지는 일반 분석 결과를 화면에 먼저 띄우지 않는다.
+    if (window.__ulimPronRequestedMode565 === 'advanced' && /리미의\s*간단\s*분석/i.test(raw) && !/정밀|발음평가|리미가\s*확인/.test(raw)) {
+      if (el) {
+        el.classList.remove('rimi-eval-rendered', 'error', 'success');
+        el.style.display = 'block';
+        el.textContent = '리미가 정밀하게 분석 중입니다.';
+      }
+      return;
+    }
+
+    if (shouldRenderPronCard565_(raw)) {
+      renderPronCard565_(raw, type || 'success');
+      return;
+    }
+
+    if (el) {
+      el.classList.remove('rimi-eval-rendered');
+      delete el.dataset.rimiRawText;
+    }
+    if (typeof basePronSetStatus565 === 'function') {
+      return basePronSetStatus565.apply(this, arguments);
+    }
+    if (!el) return;
+    el.style.display = raw ? 'block' : 'none';
+    el.classList.remove('error', 'success');
+    if (type) el.classList.add(type);
+    el.textContent = raw;
+  };
+  try { pronSetAdvancedStatus = window.pronSetAdvancedStatus; } catch(e) {}
+
+  const oldGeneral565 = window.pronRunGeneralAnalysis || (typeof pronRunGeneralAnalysis === 'function' ? pronRunGeneralAnalysis : null);
+  if (typeof oldGeneral565 === 'function') {
+    window.pronRunGeneralAnalysis = function() {
+      window.__ulimPronRequestedMode565 = 'general';
+      return oldGeneral565.apply(this, arguments);
+    };
+    try { pronRunGeneralAnalysis = window.pronRunGeneralAnalysis; } catch(e) {}
+  }
+
+  const oldAdvanced565 = window.pronRunEtriAdvancedAnalysis || (typeof pronRunEtriAdvancedAnalysis === 'function' ? pronRunEtriAdvancedAnalysis : null);
+  if (typeof oldAdvanced565 === 'function') {
+    window.pronRunEtriAdvancedAnalysis = function() {
+      window.__ulimPronRequestedMode565 = 'advanced';
+      try { if (typeof pronHideGeneralAnalysisUi === 'function') pronHideGeneralAnalysisUi(); } catch(e) {}
+      try { window.pronSetAdvancedStatus('리미가 조금 더 정확하게 분석 중입니다.'); } catch(e) {}
+      return oldAdvanced565.apply(this, arguments);
+    };
+    try { pronRunEtriAdvancedAnalysis = window.pronRunEtriAdvancedAnalysis; } catch(e) {}
+  }
+
+  function isAdminTabAllowed565_() {
+    if (document.body && document.body.classList.contains('admin-mode')) return true;
+    if (document.body && document.body.classList.contains('full-admin-mode')) return true;
+    try { if (localStorage.getItem('adminToken') || localStorage.getItem('adminInfo')) return true; } catch(e) {}
+    return false;
+  }
+
+  function canUseTab565_(tabId) {
+    if (!tabId) return false;
+    const content = document.getElementById(tabId);
+    const tab = document.querySelector('.tab[data-tab="' + tabId + '"]');
+    if (!content || !tab) return false;
+    if (tab.classList.contains('admin-only-tab') && !isAdminTabAllowed565_()) return false;
+    return true;
+  }
+
+  window.ulimActivateTab565_ = function(tabId, save) {
+    let targetId = canUseTab565_(tabId) ? tabId : 'tab1';
+    const targetTab = document.querySelector('.tab[data-tab="' + targetId + '"]');
+    const targetContent = document.getElementById(targetId);
+    if (!targetTab || !targetContent) return;
+    document.querySelectorAll('.tab').forEach(function(x){ x.classList.remove('active'); });
+    document.querySelectorAll('.tab-content').forEach(function(x){ x.classList.remove('active'); });
+    targetTab.classList.add('active');
+    targetContent.classList.add('active');
+    if (save !== false) {
+      try { localStorage.setItem('ulimActiveTabId', targetId); } catch(e) {}
+    }
+  };
+
+  function installTabPersistence565_() {
+    document.querySelectorAll('.tab[data-tab]').forEach(function(t){
+      t.onclick = function(ev) {
+        if (ev) ev.preventDefault();
+        window.ulimActivateTab565_(t.dataset.tab, true);
+        return false;
+      };
+    });
+    let saved = '';
+    try { saved = localStorage.getItem('ulimActiveTabId') || ''; } catch(e) {}
+    if (saved) window.ulimActivateTab565_(saved, false);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', installTabPersistence565_);
+  } else {
+    installTabPersistence565_();
+  }
+  window.addEventListener('pageshow', function(){
+    let saved = '';
+    try { saved = localStorage.getItem('ulimActiveTabId') || ''; } catch(e) {}
+    if (saved) setTimeout(function(){ window.ulimActivateTab565_(saved, false); }, 0);
+  });
+  setTimeout(installTabPersistence565_, 500);
+  setTimeout(function(){
+    let saved = '';
+    try { saved = localStorage.getItem('ulimActiveTabId') || ''; } catch(e) {}
+    if (saved) window.ulimActivateTab565_(saved, false);
+  }, 1200);
+
+  console.log('[ULIM 5.65] 표준발음 카드 UI/탭 유지 패치 적용 완료', window.ULIM_PRON_CARD_UI_VERSION);
+})();
+</script>
+
 </body>
 </html>
