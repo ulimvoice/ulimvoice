@@ -3450,9 +3450,9 @@ async function trainNew(){
 
         if (availableData.length === 0) {
             if (trainDataList.length > 0) {
-                return alert('모든 로컬 문장(' + trainDataList.length + '개)을 연습했습니다. 오늘 사용할 문장을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
+                return alert('모든 문장(' + trainDataList.length + '개)을 연습했습니다. 잠시 후 다시 시도해주세요.');
             }
-            return alert('문장 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
+            return alert('리미가 서류를 찾지 못했습니다. 잠시 후 다시 시도해주세요.');
         }
         currentTrainObj = buildTrainingObjectFromSentence_(pick(availableData));
     }
@@ -4366,7 +4366,7 @@ if (isSpeechSupported) { recognition.onend = function() { isRecording = false; r
 // 발성훈련 녹음 파일 공유 함수 (드라이브 업로드 포함)
 async function shareVocalResult() {
     if (!lastRecordedBlob || !currentTrainObj) {
-        return alert("먼저 STEP 7에서 녹음을 완료하고 문장을 뽑아야 공유할 수 있습니다.");
+        return alert("최종녹음을 완료한 뒤 공유할 수 있습니다.");
     }
     
     // 인증 확인 및 파일명 베이스 업데이트
@@ -11529,7 +11529,7 @@ function pronGetEtriUserKey() {
 async function pronRefreshEtriUsage() {
     try {
         const token = pronGetStudentSessionTokenForUsage_();
-        pronSetAdvancedStatus("AI 잔여횟수를 확인하는 중입니다.");
+        pronSetAdvancedStatus("리미가 퇴근시간을 확인중입니다.");
 
         const data = await pronJsonpRequest({
             action: "getEtriPronunciationUsage",
@@ -11539,7 +11539,7 @@ async function pronRefreshEtriUsage() {
             _: Date.now()
         }, 10000);
 
-        if (!data || !data.ok) throw new Error(data && data.message ? data.message : "잔여횟수 확인 실패");
+        if (!data || !data.ok) throw new Error(data && data.message ? data.message : "리미가 퇴근했습니다.");
 
         pronSetLocalEtriUsed(data.used || 0);
         pronUpdateEtriUsageBadge(data.used || 0, data.remaining);
@@ -11547,7 +11547,7 @@ async function pronRefreshEtriUsage() {
     } catch (err) {
         const localUsed = pronGetLocalEtriUsed();
         pronUpdateEtriUsageBadge(localUsed, PRON_ETRI_DAILY_LIMIT - localUsed);
-        pronSetAdvancedStatus("잔여횟수를 확인하지 못했습니다. 잠시 후 다시 시도해주세요.", "error");
+        pronSetAdvancedStatus("연결이 원할하지 않습니다. 잠시 후 다시 시도해주세요.", "error");
     }
 }
 
@@ -12915,7 +12915,7 @@ async function runTrainingFinalAiAnalysis_(audioBlob, options = {}) {
                     if (el && msg) el.textContent = '리미가 분석중입니다.';
                 }
             }),
-            trainingAiTimeout_(25000, '리미가 졸음을 이겨내는중')
+            trainingAiTimeout_(25000, '리미가 졸음을 이겨내는 중이에요')
         ]);
         localRecognized = String(localResult.text || '').trim();
         recognitionResult = localRecognized;
@@ -13583,7 +13583,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
   window.pronRefreshEtriUsage = async function() {
     try {
       const ctx = window.getUlimActiveUserContext_5_35();
-      window.pronSetAdvancedStatus('AI 잔여횟수를 확인하는 중입니다.');
+      window.pronSetAdvancedStatus('리미가 퇴근시간을 확인중입니다.');
       const data = await pronJsonpRequest({
         action: 'getEtriPronunciationUsage',
         userKey: window.pronGetEtriUserKey(),
