@@ -13112,10 +13112,10 @@ async function runTrainingFinalAiAnalysisFromButton() {
 
     if (window.trainingFinalAiResult && window.trainingFinalAiResult.requestSentence === currentTrainObj.text) {
         resetTrainingFinalAiRequestState_();
-        return alert('이미 마지막 녹음본의 AI 분석이 완료되었습니다. 다시 분석하려면 새로 녹음 후 실행해주세요.');
+        return alert('이미 마지막 녹음본의 분석이 완료되었습니다. 다시 분석하려면 새로 녹음 후 실행해주세요.');
     }
 
-    const ok = confirm('AI 분석은 하루 1회만 사용할 수 있습니다. 이미 사용했다면 리미의 간단 분석으로 전환됩니다. 진행할까요?');
+    const ok = confirm('리미의 분석은 하루 1회만 사용할 수 있습니다. 이미 사용했다면 리미가 간단한 분석만 진행합니다. 진행할까요?');
     if (!ok) return;
 
     window.trainingFinalAiInProgress = true;
