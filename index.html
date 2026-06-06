@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
+<title>울림 성우·스피치·연기학원 통합 연습 프로그램 5.47</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://script.google.com">
 <link rel="dns-prefetch" href="//script.google.com">
@@ -2884,7 +2884,7 @@ async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeT
         throw new Error("서비스 연결이 준비되지 않았습니다. 잠시 후 다시 시도해주세요.");
     }
 
-    const safeMimeType = String(mimeType || 'audio/webm').split(';')[0].trim() || 'audio/webm';
+    const safeMimeType = String(mimeType || getBestAudioMimeType_() || 'audio/mp4').split(';')[0].trim() || 'audio/mp4';
     const safeMediaKind = extraMeta.mediaKind || (safeMimeType.indexOf('video/') === 0 ? 'video' : 'audio');
     const requestId = createVocalUploadRequestId_();
 
@@ -2911,7 +2911,7 @@ async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeT
         localWhisperText: extraMeta.localWhisperText || '',
         aiSource: extraMeta.aiSource || (window.trainingFinalAiResult && (window.trainingFinalAiResult.source || window.trainingFinalAiResult.status || window.trainingFinalAiResult.badge)) || '',
         aiComment: extraMeta.aiComment || (window.trainingFinalAiResult && (window.trainingFinalAiResult.comment || window.trainingFinalAiResult.analysisText)) || '',
-        preferredExtension: getExtensionFromMime_(safeMimeType, 'webm'),
+        preferredExtension: getExtensionFromMime_(safeMimeType, safeMediaKind === 'video' ? 'mp4' : 'm4a'),
         clientTime: new Date().toISOString(),
         studentSessionToken: extraMeta.studentSessionToken || (typeof getStudentSessionToken_ === 'function' ? getStudentSessionToken_() : '')
     };
@@ -3960,7 +3960,7 @@ async function startTrainingLocalWhisperCheck() {
         document.getElementById('accBadge').textContent = '녹음 중';
         mediaRecorder.addEventListener("dataavailable", e => { if (e.data && e.data.size) audioChunks.push(e.data); });
         mediaRecorder.addEventListener("stop", async () => {
-            const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || options.mimeType || 'audio/webm' });
+            const audioBlob = new Blob(audioChunks, { type: getActualRecorderMimeType_(mediaRecorder, options, 'audio/mp4') });
             stream.getTracks().forEach(track => track.stop());
             document.getElementById('sttResult').textContent = "리미가 분석 중입니다. 첫 실행은 시간이 걸릴 수 있습니다.";
             try {
@@ -4027,19 +4027,40 @@ function resetBtn() {
     }
 }
 
-function pickSupportedAudioRecorderOptions_() {
+function getBestAudioMimeType_() {
+    if (!window.MediaRecorder || !MediaRecorder.isTypeSupported) return '';
+
+    // iPhone/Safari 호환을 위해 MP4 계열을 우선하고,
+    // Chrome/Android에서는 지원 가능한 WebM/Opus로 자동 전환합니다.
     const candidates = [
-        'audio/webm;codecs=opus',
         'audio/mp4',
+        'audio/aac',
+        'audio/webm;codecs=opus',
         'audio/webm',
         'audio/ogg;codecs=opus'
     ];
+
     for (const mimeType of candidates) {
-        if (!window.MediaRecorder || !MediaRecorder.isTypeSupported || MediaRecorder.isTypeSupported(mimeType)) {
-            return { mimeType };
-        }
+        try {
+            if (MediaRecorder.isTypeSupported(mimeType)) return mimeType;
+        } catch (e) {}
     }
-    return {};
+    return '';
+}
+
+function pickSupportedAudioRecorderOptions_() {
+    const mimeType = getBestAudioMimeType_();
+    return mimeType ? { mimeType } : {};
+}
+
+function getActualRecorderMimeType_(recorder, options, fallback = 'audio/mp4') {
+    return String(
+        (recorder && recorder.mimeType) ||
+        (options && options.mimeType) ||
+        (typeof getBestAudioMimeType_ === 'function' && getBestAudioMimeType_()) ||
+        fallback ||
+        'audio/mp4'
+    ).trim();
 }
 
 function pickSupportedVideoRecorderOptions_() {
@@ -4058,14 +4079,18 @@ function pickSupportedVideoRecorderOptions_() {
     return {};
 }
 
-function getExtensionFromMime_(mimeType, fallback = 'webm') {
+function getExtensionFromMime_(mimeType, fallback = 'm4a') {
     const mt = String(mimeType || '').toLowerCase();
-    if (mt.includes('mp4')) return 'mp4';
+    const isVideo = mt.indexOf('video/') === 0;
+    const isAudio = mt.indexOf('audio/') === 0;
+
+    if (mt.includes('mp4')) return isVideo ? 'mp4' : 'm4a';
+    if (mt.includes('aac')) return 'aac';
     if (mt.includes('webm')) return 'webm';
     if (mt.includes('ogg')) return 'ogg';
     if (mt.includes('wav')) return 'wav';
     if (mt.includes('mpeg') || mt.includes('mp3')) return 'mp3';
-    return fallback;
+    return fallback || (isAudio ? 'm4a' : 'mp4');
 }
 
 /****************************************************
@@ -4566,7 +4591,7 @@ async function toggleRecord() {
             if (badge) { badge.className = 'accuracy-badge acc-wait'; badge.textContent = '녹음 중'; }
             mediaRecorder.addEventListener("dataavailable", e => { if (e.data && e.data.size) audioChunks.push(e.data); });
             mediaRecorder.addEventListener("stop", async () => {
-                const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || options.mimeType || 'audio/webm' });
+                const audioBlob = new Blob(audioChunks, { type: getActualRecorderMimeType_(mediaRecorder, options, 'audio/mp4') });
                 lastRecordedBlob = audioBlob; 
                 const audioUrl = URL.createObjectURL(audioBlob);
                 const audio = document.getElementById('myAudio');
@@ -4611,7 +4636,7 @@ async function shareVocalResult() {
 
     const originalText = document.getElementById('train_origin').textContent;
     const mimeType = lastRecordedBlob.type;
-    let extension = mimeType.split('/')[1] || 'mp4'; // 1차 추출
+    let extension = getExtensionFromMime_(mimeType, 'm4a'); // 실제 녹음 MIME 기준 확장자
     // 부가 정보(예: ;codecs=opus)가 포함되어 있다면 해당 부분만 제거
     if (extension.includes(';')) {
         extension = extension.split(';')[0].trim();
@@ -4700,10 +4725,7 @@ async function togglePastRecord() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             
-            const options = { mimeType: 'audio/mp4' };
-            if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-                 options.mimeType = 'audio/webm'; 
-            }
+            const options = pickSupportedAudioRecorderOptions_();
             pastMediaRecorder = new MediaRecorder(stream, options);
 
             pastAudioChunks = [];
@@ -4720,7 +4742,7 @@ async function togglePastRecord() {
             pastMediaRecorder.addEventListener("dataavailable", e => pastAudioChunks.push(e.data));
 
             pastMediaRecorder.addEventListener("stop", () => {
-                const audioBlob = new Blob(pastAudioChunks, { type: pastMediaRecorder.mimeType });
+                const audioBlob = new Blob(pastAudioChunks, { type: getActualRecorderMimeType_(pastMediaRecorder, options, 'audio/mp4') });
                 const audioUrl = URL.createObjectURL(audioBlob);
                 audioEl.src = audioUrl;
 
@@ -9553,20 +9575,15 @@ async function pronStartVoiceCheck() {
         pronStartFreeAudioAnalysis(pronVoiceStream);
         pronAudioChunks = [];
 
-        let options = {};
-        if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
-            options.mimeType = "audio/webm;codecs=opus";
-        } else if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported("audio/mp4")) {
-            options.mimeType = "audio/mp4";
-        }
+        const options = pickSupportedAudioRecorderOptions_();
 
         pronMediaRecorder = new MediaRecorder(pronVoiceStream, options);
         pronMediaRecorder.ondataavailable = e => { if (e.data && e.data.size) pronAudioChunks.push(e.data); };
         pronMediaRecorder.onstop = () => {
-            let blobType = pronMediaRecorder && pronMediaRecorder.mimeType ? pronMediaRecorder.mimeType : (pronAudioChunks[0] ? pronAudioChunks[0].type : "audio/webm");
+            let blobType = getActualRecorderMimeType_(pronMediaRecorder, options, (pronAudioChunks[0] ? pronAudioChunks[0].type : 'audio/mp4'));
             const audio = document.getElementById("pronRecordedAudio");
             if (audio && pronAudioChunks.length) {
-                const blob = new Blob(pronAudioChunks, { type: blobType || "audio/webm" });
+                const blob = new Blob(pronAudioChunks, { type: blobType || 'audio/mp4' });
                 pronRecordedBlob = blob;
                 audio.src = URL.createObjectURL(blob);
                 audio.style.display = "block";
