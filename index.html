@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>울림 성우·스피치·연기학원 통합 연습 프로그램</title>
+<title>울림 성우·스피치·연기학원 통합 연습 프로그램 5.47</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://script.googleusercontent.com">
@@ -13843,6 +13843,571 @@ ${ruleSummary}`, isFallback ? "success" : "success");
     };
     try { pronRunEtriAdvancedAnalysis = window.pronRunEtriAdvancedAnalysis; } catch(e) {}
   }
+})();
+</script>
+
+
+<script>
+/* =========================================================
+   5-47 발성훈련/표준발음 분석 제한·오류문구 운영 패치
+   - 발성훈련: AI분석 없이도 연습완료 가능
+   - 발성훈련: AI/ETRI 제한·실패 시 일반분석으로 표시하고 연습완료 허용
+   - 학생/일반강사: STT/ETRI 내부 오류문구 숨김
+   - 관리자: 상세오류 보존
+   ========================================================= */
+(function(){
+  window.__ULIM_PATCH_5_47_TRAINING_PRON_LIMIT_SAFE = true;
+
+  const ULIM_STT_PUBLIC_MSG_5_47 = '리미가 졸음을 이겨내는중';
+  const ULIM_ETRI_PUBLIC_MSG_5_47 = '리미는 최선을 다했어요..';
+  const ULIM_GEMINI_LIMIT_PUBLIC_MSG_5_47 = '리미는 휴가를 떠났어요.';
+
+  function isFullAdmin_5_47() {
+    try {
+      if (typeof window.ulimIsFullAdmin_5_36 === 'function') return !!window.ulimIsFullAdmin_5_36();
+    } catch(e) {}
+    try {
+      if (typeof adminIsFullAdmin === 'function') return !!adminIsFullAdmin();
+    } catch(e) {}
+    try {
+      const info = (typeof adminInfo !== 'undefined' && adminInfo) ? adminInfo : JSON.parse(localStorage.getItem('adminInfo') || '{}');
+      const token = (typeof adminToken !== 'undefined' ? adminToken : '') || localStorage.getItem('adminToken') || '';
+      return !!(token && info && /(전체|관리|관리자|원장|admin)/i.test(String(info.role || '').replace(/\s+/g, '')));
+    } catch(e) {}
+    return false;
+  }
+
+  function appendOnce_5_47(text, line) {
+    text = String(text || '').trim();
+    if (!line) return text;
+    if (text.indexOf(line) !== -1) return text;
+    return text ? (text + '\n\n' + line) : line;
+  }
+
+  function looksSttMissing_5_47(value) {
+    const v = String(value || '').trim();
+    return !v || /인식\s*결과\s*없음|인식\s*실패|인식\s*대기|문장이\s*없|STT|Whisper|LOCAL_STT/i.test(v);
+  }
+
+  function looksLimit_5_47(value) {
+    return /limit|quota|429|사용량|잔여횟수|모두\s*사용|초과|오늘.*사용|이미\s*사용|MAX_TOKENS|토큰/i.test(String(value || ''));
+  }
+
+  function looksEtriFail_5_47(value) {
+    return /ETRI|epretx|WiseASR|정밀진단|고급분석|Gemini|제미나이|API|HTTP|timeout|타임아웃|지연|fallback|서버|오류|실패|MAX_TOKENS|토큰/i.test(String(value || ''));
+  }
+
+  function getTrainingText_5_47() {
+    try { return currentTrainObj ? String(currentTrainObj.text || '') : ''; } catch(e) { return ''; }
+  }
+
+  function getTrainingPron_5_47() {
+    try { return currentTrainObj ? String(currentTrainObj.pron || '') : ''; } catch(e) { return ''; }
+  }
+
+  function buildFastTrainingGeneralResult_5_47(reason) {
+    if (typeof buildTrainingFinalFastLocalFallbackResult_5_30_ === 'function') {
+      const r = buildTrainingFinalFastLocalFallbackResult_5_30_(reason || '일반분석 전환');
+      r.status = 'fallback';
+      r.source = 'local_general';
+      r.analysisSource = 'local_general';
+      r.badge = '일반분석';
+      r.message = '리미의 간단분석!';
+      r.requestSentence = getTrainingText_5_47();
+      if (!isFullAdmin_5_47() && looksEtriFail_5_47(reason)) {
+        r.generalAnalysisText = appendOnce_5_47(r.generalAnalysisText || r.analysisText || r.comment || '', ULIM_ETRI_PUBLIC_MSG_5_47);
+        r.analysisText = r.generalAnalysisText;
+        r.comment = r.generalAnalysisText;
+      }
+      return r;
+    }
+
+    const scriptText = getTrainingText_5_47();
+    const pron = getTrainingPron_5_47();
+    const recognized = String(typeof recognitionResult !== 'undefined' ? recognitionResult || '' : '').trim();
+    const cleanTarget = scriptText.replace(/[^가-힣]/g, '');
+    const cleanHeard = recognized.replace(/[^가-힣]/g, '');
+    const similarity = cleanTarget && cleanHeard && typeof getSimilarity === 'function'
+      ? Math.round(getSimilarity(cleanTarget, cleanHeard) * 100)
+      : 0;
+    const durationSec = (typeof getTrainingRecordedDurationSec_ === 'function') ? getTrainingRecordedDurationSec_() : 0;
+    let general = `리미의 간단분석!
+
+인식결과: ${recognized || '인식 결과 없음'}
+문장 일치도: ${similarity || 0}%
+녹음 길이: ${durationSec ? durationSec.toFixed(1) : '0.0'}초
+읽기 속도: 0.0음절/s
+평균 음량: 0%
+무음 비율: 0%
+표준발음 참고: ${pron || '[문장을 입력하면 표준발음으로 변환합니다.]'}`;
+    if (!isFullAdmin_5_47() && !recognized) general = appendOnce_5_47(general, ULIM_STT_PUBLIC_MSG_5_47);
+    if (!isFullAdmin_5_47() && looksEtriFail_5_47(reason)) general = appendOnce_5_47(general, ULIM_ETRI_PUBLIC_MSG_5_47);
+
+    return {
+      ok: true,
+      status: 'fallback',
+      source: 'local_general',
+      analysisSource: 'local_general',
+      badge: '일반분석',
+      recognized,
+      score: '',
+      scoreText: '-',
+      comment: general,
+      analysisText: general,
+      generalAnalysisText: general,
+      message: '리미의 간단분석!',
+      originalError: String(reason || ''),
+      requestSentence: scriptText
+    };
+  }
+
+  function markTrainingGeneralUi_5_47(result, reason) {
+    result = result || buildFastTrainingGeneralResult_5_47(reason);
+
+    try {
+      const resultBox = document.getElementById('resultBox');
+      const aiSection = document.getElementById('aiSection');
+      const recSection = document.getElementById('recSection');
+      if (resultBox) resultBox.style.display = 'block';
+      if (aiSection) aiSection.style.display = 'block';
+      if (recSection) recSection.style.display = 'block';
+
+      if (typeof renderTrainingFinalAiResult_ === 'function') {
+        renderTrainingFinalAiResult_(result);
+      }
+
+      const badge = document.getElementById('accBadge');
+      if (badge) {
+        badge.className = 'accuracy-badge acc-wait';
+        badge.textContent = '일반분석';
+      }
+
+      const titleText = document.getElementById('aiSectionTitleText');
+      if (titleText) titleText.textContent = 'AI 분석결과';
+
+      const sttEl = document.getElementById('sttResult');
+      if (sttEl && !isFullAdmin_5_47()) {
+        let publicText = String(sttEl.textContent || result.generalAnalysisText || result.analysisText || result.comment || '');
+        if (looksSttMissing_5_47(result.recognized || publicText)) publicText = appendOnce_5_47(publicText, ULIM_STT_PUBLIC_MSG_5_47);
+        if (looksEtriFail_5_47(reason || result.originalError || result.errorDetail || result.message)) publicText = appendOnce_5_47(publicText, ULIM_ETRI_PUBLIC_MSG_5_47);
+        sttEl.textContent = publicText;
+      }
+
+      const recStatus = document.getElementById('recStatus');
+      if (recStatus) recStatus.textContent = '리미의 간단분석! 연습완료 버튼을 눌러 결과를 업로드할 수 있습니다.';
+
+      window.trainingFinalAiResult = Object.assign({}, result, {
+        requestSentence: getTrainingText_5_47(),
+        badge: '일반분석',
+        analysisSource: 'local_general'
+      });
+
+      if (typeof enableVocalTrainingCompleteButton_ === 'function') enableVocalTrainingCompleteButton_();
+    } catch(e) {
+      console.warn('[5-47 일반분석 UI 표시 실패]', e);
+    }
+    return result;
+  }
+
+  const oldBuildTrainingGeneral_5_47 = window.buildTrainingFinalGeneralAnalysisText_ || (typeof buildTrainingFinalGeneralAnalysisText_ === 'function' ? buildTrainingFinalGeneralAnalysisText_ : null);
+  window.buildTrainingFinalGeneralAnalysisText_ = function(recognized, similarity, metrics) {
+    let text = oldBuildTrainingGeneral_5_47
+      ? oldBuildTrainingGeneral_5_47.apply(this, arguments)
+      : '';
+    if (!isFullAdmin_5_47() && looksSttMissing_5_47(recognized)) {
+      text = appendOnce_5_47(text, ULIM_STT_PUBLIC_MSG_5_47);
+    }
+    return text;
+  };
+  try { buildTrainingFinalGeneralAnalysisText_ = window.buildTrainingFinalGeneralAnalysisText_; } catch(e) {}
+
+  const oldBuildTrainingAiText_5_47 = window.buildTrainingAiAnalysisText_ || (typeof buildTrainingAiAnalysisText_ === 'function' ? buildTrainingAiAnalysisText_ : null);
+  window.buildTrainingAiAnalysisText_ = function(transcript) {
+    let text = oldBuildTrainingAiText_5_47 ? oldBuildTrainingAiText_5_47.apply(this, arguments) : '';
+    const result = window.trainingFinalAiResult || {};
+    if (!isFullAdmin_5_47()) {
+      if (looksSttMissing_5_47(result.recognized || transcript)) text = appendOnce_5_47(text, ULIM_STT_PUBLIC_MSG_5_47);
+      if (looksEtriFail_5_47(result.originalError || result.errorDetail || result.adminReason || '')) text = appendOnce_5_47(text, ULIM_ETRI_PUBLIC_MSG_5_47);
+    } else if (result && (result.originalError || result.errorDetail || result.adminReason)) {
+      text = appendOnce_5_47(text, '[관리자 상세오류]\n' + String(result.originalError || result.errorDetail || result.adminReason));
+    }
+    return text;
+  };
+  try { buildTrainingAiAnalysisText_ = window.buildTrainingAiAnalysisText_; } catch(e) {}
+
+  const oldRenderTrainingResult_5_47 = window.renderTrainingFinalAiResult_ || (typeof renderTrainingFinalAiResult_ === 'function' ? renderTrainingFinalAiResult_ : null);
+  window.renderTrainingFinalAiResult_ = function(data) {
+    data = data || {};
+    const fallbackLike = data.status === 'fallback' || data.source === 'local_ai' || data.source === 'local_general' || data.analysisSource === 'fallback' || data.analysisSource === 'local_general';
+    if (fallbackLike) {
+      data.badge = '일반분석';
+      data.analysisSource = 'local_general';
+    }
+
+    if (!isFullAdmin_5_47()) {
+      if (looksSttMissing_5_47(data.recognized)) {
+        data.generalAnalysisText = appendOnce_5_47(data.generalAnalysisText || data.analysisText || data.comment || '', ULIM_STT_PUBLIC_MSG_5_47);
+        data.analysisText = data.generalAnalysisText;
+        data.comment = data.generalAnalysisText || data.comment;
+      }
+      if (fallbackLike && looksEtriFail_5_47(data.originalError || data.errorDetail || data.adminReason || data.message || data.localReason)) {
+        data.generalAnalysisText = appendOnce_5_47(data.generalAnalysisText || data.analysisText || data.comment || '', ULIM_ETRI_PUBLIC_MSG_5_47);
+        data.analysisText = data.generalAnalysisText;
+        data.comment = data.generalAnalysisText || data.comment;
+      }
+      if (looksLimit_5_47(data.message || data.errorDetail || data.originalError)) {
+        data.message = '리미의 간단분석!';
+      }
+    } else if (fallbackLike && (data.originalError || data.errorDetail || data.adminReason)) {
+      data.comment = appendOnce_5_47(data.comment || data.analysisText || data.generalAnalysisText || '', '[관리자 상세오류]\n' + String(data.originalError || data.errorDetail || data.adminReason));
+    }
+
+    const out = oldRenderTrainingResult_5_47 ? oldRenderTrainingResult_5_47.call(this, data) : undefined;
+
+    try {
+      const badge = document.getElementById('accBadge');
+      if (badge && fallbackLike) {
+        badge.className = 'accuracy-badge acc-wait';
+        badge.textContent = '일반분석';
+      }
+    } catch(e) {}
+    return out;
+  };
+  try { renderTrainingFinalAiResult_ = window.renderTrainingFinalAiResult_; } catch(e) {}
+
+  window.renderTrainingFinalAiLimitState_ = function(message) {
+    try { if (typeof setTrainingAiLoadingState_ === 'function') setTrainingAiLoadingState_(false); } catch(e) {}
+    const fallback = buildFastTrainingGeneralResult_5_47(message || '오늘 최종 AI 분석은 이미 사용했습니다.');
+    fallback.originalError = String(message || 'training_final_limit');
+    fallback.message = '리미의 간단분석!';
+    markTrainingGeneralUi_5_47(fallback, message);
+    return fallback;
+  };
+  try { renderTrainingFinalAiLimitState_ = window.renderTrainingFinalAiLimitState_; } catch(e) {}
+
+  window.completeTraining = async function completeTraining() {
+    const btnComplete = document.getElementById('btnComplete');
+
+    if (typeof step !== 'undefined' && (step !== 6 || !currentTrainObj)) {
+      return alert("최종녹음 단계에서 녹음을 완료해야 연습완료가 가능합니다.");
+    }
+
+    if (!lastRecordedBlob) {
+      return alert("녹음 파일이 없습니다. 최종녹음 단계에서 녹음 후 다시 눌러주세요.");
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const savedIds = getSavedVocalIds();
+    const records = getVocalRecords();
+    const truncatedText = currentTrainObj.text.substring(0, 30) + "...";
+
+    if (records.has(today)) {
+      return alert("오늘은 연습을 완료했습니다.");
+    }
+
+    const todayCheck = await checkVocalTrainingTodayCompletedFromServer_({ timeoutMs: 10000 });
+    if (todayCheck && todayCheck.completed) {
+      records.set(today, {
+        id: currentTrainObj.id,
+        text: truncatedText,
+        completed: true,
+        aiComment: '',
+        fileUrl: ''
+      });
+      localStorage.setItem('vocalRecords', JSON.stringify(Array.from(records.entries())));
+      return alert("오늘은 연습을 완료했습니다.");
+    }
+
+    let analysisText = "";
+    const hasAiResult = !!(window.trainingFinalAiResult && window.trainingFinalAiResult.requestSentence === currentTrainObj.text);
+
+    if (!hasAiResult) {
+      const ok = confirm("AI분석을 완료하지 않았습니다. 이대로 오늘 연습을 완료하시겠습니까?");
+      if (!ok) return;
+
+      try {
+        let fallbackResult = null;
+        if (typeof buildTrainingFinalFallbackResult_5_30_ === 'function') {
+          fallbackResult = await Promise.race([
+            buildTrainingFinalFallbackResult_5_30_(lastRecordedBlob, 'AI분석 없이 연습완료'),
+            new Promise(resolve => setTimeout(() => resolve(buildFastTrainingGeneralResult_5_47('AI분석 없이 연습완료')), 6000))
+          ]);
+        } else {
+          fallbackResult = buildFastTrainingGeneralResult_5_47('AI분석 없이 연습완료');
+        }
+        fallbackResult = markTrainingGeneralUi_5_47(fallbackResult, 'AI분석 없이 연습완료');
+        analysisText = buildTrainingAiAnalysisText_(recognitionResult);
+      } catch (analysisErr) {
+        const fallbackResult = markTrainingGeneralUi_5_47(buildFastTrainingGeneralResult_5_47(analysisErr), analysisErr);
+        analysisText = fallbackResult.generalAnalysisText || fallbackResult.analysisText || fallbackResult.comment || '리미의 간단분석!';
+      }
+    } else {
+      try {
+        analysisText = buildTrainingAiAnalysisText_(recognitionResult);
+      } catch (analysisErr) {
+        const fallbackResult = markTrainingGeneralUi_5_47(buildFastTrainingGeneralResult_5_47(analysisErr), analysisErr);
+        analysisText = fallbackResult.generalAnalysisText || fallbackResult.analysisText || fallbackResult.comment || '리미의 간단분석!';
+      }
+    }
+
+    let uploadBlob = lastRecordedBlob;
+    let uploadMimeType = lastRecordedBlob.type || 'audio/webm';
+    let uploadAction = "녹음 파일 업로드 및 링크 기록";
+
+    showLoading("녹음 파일을 변환하는 중입니다...");
+    const base64Data = await blobToBase64(uploadBlob).catch(err => {
+      hideLoading();
+      console.error("Base64 Encoding Error:", err);
+      alert("결과 파일 인코딩 실패: " + (err.message || err));
+      return null;
+    });
+    if (!base64Data) return;
+
+    let uploadResult = null;
+    try {
+      showLoading("녹음 파일 업로드 요청을 보내는 중입니다...");
+      uploadResult = await uploadAudioToDriveAndLog(
+        currentTrainObj.id,
+        truncatedText,
+        base64Data,
+        uploadMimeType,
+        uploadAction,
+        {
+          mediaKind: uploadMimeType.indexOf('video/') === 0 ? 'video' : 'audio',
+          fileSize: uploadBlob.size || 0,
+          analysisText: analysisText,
+          originalSentence: currentTrainObj.text,
+          localWhisperText: (typeof recognitionResult !== 'undefined' ? recognitionResult : '') || '',
+          aiSource: (window.trainingFinalAiResult && (window.trainingFinalAiResult.source || window.trainingFinalAiResult.status || window.trainingFinalAiResult.badge)) || '일반분석',
+          aiComment: (window.trainingFinalAiResult && (window.trainingFinalAiResult.generalAnalysisText || window.trainingFinalAiResult.comment || window.trainingFinalAiResult.analysisText)) || analysisText
+        }
+      );
+    } catch (uploadErr) {
+      hideLoading();
+      console.error('업로드 확인 실패:', uploadErr);
+      if (/오늘은 연습을 완료했습니다/.test(String(uploadErr && uploadErr.message || uploadErr || ''))) {
+        return alert("오늘은 연습을 완료했습니다.");
+      }
+      return alert("녹음 파일 업로드가 확인되지 않았습니다.\n\n잠시 후 다시 시도해주세요.");
+    }
+
+    savedIds.add(currentTrainObj.id);
+    localStorage.setItem('savedVocalIds', JSON.stringify(Array.from(savedIds)));
+
+    records.set(today, {
+      id: currentTrainObj.id,
+      text: truncatedText,
+      completed: true,
+      aiComment: (window.trainingFinalAiResult && (window.trainingFinalAiResult.generalAnalysisText || window.trainingFinalAiResult.comment)) || analysisText || '',
+      fileUrl: uploadResult && uploadResult.fileUrl ? uploadResult.fileUrl : ''
+    });
+    localStorage.setItem('vocalRecords', JSON.stringify(Array.from(records.entries())));
+
+    await recordServerTrainingSentenceComplete_();
+
+    hideLoading();
+    if (uploadResult && uploadResult.status === 'submitted') {
+      alert("연습완료 처리되었습니다.\n녹음 파일 업로드와 연습일지 기록은 서버에서 계속 처리됩니다.");
+    } else {
+      alert("업로드 확인 완료! 연습 기록이 저장되었습니다.");
+    }
+
+    const calendarArea = document.getElementById('calendarDisplayArea');
+    if (calendarArea && calendarArea.style.display === 'none') {
+      toggleCalendar();
+    } else {
+      renderCalendar();
+    }
+
+    if (btnComplete) btnComplete.style.display = 'none';
+  };
+  try { completeTraining = window.completeTraining; } catch(e) {}
+
+  /* ---------- 표준발음 탭: STT/고급분석 문구 운영 처리 ---------- */
+
+  const oldPronUpdateVoiceScore_5_47 = window.pronUpdateVoiceScore || (typeof pronUpdateVoiceScore === 'function' ? pronUpdateVoiceScore : null);
+  window.pronUpdateVoiceScore = function() {
+    const out = oldPronUpdateVoiceScore_5_47 ? oldPronUpdateVoiceScore_5_47.apply(this, arguments) : undefined;
+    try {
+      if (!isFullAdmin_5_47() && looksSttMissing_5_47(pronLastSttText)) {
+        const el = document.getElementById('pronAdvancedStatus');
+        if (el) el.textContent = appendOnce_5_47(el.textContent || '', ULIM_STT_PUBLIC_MSG_5_47);
+      }
+    } catch(e) {}
+    return out;
+  };
+  try { pronUpdateVoiceScore = window.pronUpdateVoiceScore; } catch(e) {}
+
+  const oldPronRunWhisper_5_47 = window.pronRunWhisperTranscription || (typeof pronRunWhisperTranscription === 'function' ? pronRunWhisperTranscription : null);
+  if (oldPronRunWhisper_5_47) {
+    window.pronRunWhisperTranscription = async function() {
+      try {
+        const text = await oldPronRunWhisper_5_47.apply(this, arguments);
+        if (!text && !isFullAdmin_5_47()) {
+          pronShowGeneralAnalysisUi && pronShowGeneralAnalysisUi();
+          pronSetAdvancedStatus(ULIM_STT_PUBLIC_MSG_5_47, 'success');
+        }
+        return text || '';
+      } catch(err) {
+        if (isFullAdmin_5_47()) {
+          pronSetAdvancedStatus('[관리자 상세오류]\n' + (err && err.message ? err.message : String(err)), 'error');
+        } else {
+          pronSetAdvancedStatus(ULIM_STT_PUBLIC_MSG_5_47, 'success');
+        }
+        return '';
+      }
+    };
+    try { pronRunWhisperTranscription = window.pronRunWhisperTranscription; } catch(e) {}
+  }
+
+  const oldPronRenderWhisper_5_47 = window.pronRenderWhisperResult || (typeof pronRenderWhisperResult === 'function' ? pronRenderWhisperResult : null);
+  window.pronRenderWhisperResult = function(data) {
+    data = data || {};
+    const text = String(data.text || data.transcript || (data.whisper && data.whisper.text) || '').trim();
+    if (!text && !isFullAdmin_5_47()) {
+      try { pronLastSttText = ''; } catch(e) {}
+      try { pronShowGeneralAnalysisUi && pronShowGeneralAnalysisUi(); } catch(e) {}
+      pronSetAdvancedStatus(ULIM_STT_PUBLIC_MSG_5_47, 'success');
+      return;
+    }
+    return oldPronRenderWhisper_5_47 ? oldPronRenderWhisper_5_47.apply(this, arguments) : undefined;
+  };
+  try { pronRenderWhisperResult = window.pronRenderWhisperResult; } catch(e) {}
+
+  const oldPronBuildFallback_5_47 = window.pronBuildLocalAdvancedFallback_5_32 || (typeof pronBuildLocalAdvancedFallback_5_32 === 'function' ? pronBuildLocalAdvancedFallback_5_32 : null);
+  if (oldPronBuildFallback_5_47) {
+    window.pronBuildLocalAdvancedFallback_5_32 = function(reason) {
+      const data = oldPronBuildFallback_5_47.apply(this, arguments) || {};
+      data.adminReason = data.adminReason || String(reason || data.localReason || data.message || '');
+      if (!isFullAdmin_5_47()) {
+        if (looksLimit_5_47(data.adminReason)) {
+          data.localReason = ULIM_GEMINI_LIMIT_PUBLIC_MSG_5_47;
+          data.message = ULIM_GEMINI_LIMIT_PUBLIC_MSG_5_47;
+        } else if (looksEtriFail_5_47(data.adminReason)) {
+          data.localReason = ULIM_ETRI_PUBLIC_MSG_5_47;
+          data.message = ULIM_ETRI_PUBLIC_MSG_5_47;
+        }
+        if (looksSttMissing_5_47(data.recognized)) {
+          data.comment = appendOnce_5_47(data.comment || '', ULIM_STT_PUBLIC_MSG_5_47);
+        }
+      }
+      return data;
+    };
+    try { pronBuildLocalAdvancedFallback_5_32 = window.pronBuildLocalAdvancedFallback_5_32; } catch(e) {}
+  }
+
+  window.pronRenderEtriResult = function(data) {
+    data = data || {};
+    const recognized = data.recognized || (typeof pronLastSttText !== 'undefined' ? pronLastSttText : '') || '인식 결과 없음';
+    const rawScore = data.score5 || data.score || '-';
+    const nScore = Number(rawScore);
+    const scoreText = Number.isFinite(nScore) ? nScore.toFixed(1) : String(rawScore || '-');
+    const source = document.getElementById('pronInputText')?.value || '';
+    const converted = data.standardPronunciation || (source && typeof pronConvertText === 'function' ? pronConvertText(source).converted : '');
+    const ruleSummary = data.ruleSummary || (typeof pronGetRuleSummaryForVoice === 'function' ? pronGetRuleSummaryForVoice(source) : '');
+    const isFallback = data.status === 'fallback' || data.source === 'local_analysis_5_32';
+    let comment = String(data.comment || '').trim() || '분석 결과를 기준으로 다시 녹음하며 비교해보세요.';
+
+    try {
+      if (typeof data.used !== 'undefined') {
+        pronSetLocalEtriUsed(data.used || 0);
+        pronUpdateEtriUsageBadge(data.used || 0, data.remaining);
+      }
+    } catch(e) {}
+
+    const adminDetail = data.errorDetail || data.adminReason || data.localReason || data.message || '';
+    let title = isFallback ? '리미의 기본분석 완료!' : '리미의 정밀진단 완료!';
+    let reason = '';
+
+    if (isFallback) {
+      if (isFullAdmin_5_47()) {
+        reason = '\n[관리자 상세오류]\n' + (adminDetail || '상세 오류 데이터가 없습니다.') + '\n';
+      } else {
+        const publicReason = looksLimit_5_47(adminDetail) ? ULIM_GEMINI_LIMIT_PUBLIC_MSG_5_47 : ULIM_ETRI_PUBLIC_MSG_5_47;
+        reason = '\n안내: ' + publicReason + '\n';
+        if (looksSttMissing_5_47(recognized)) comment = appendOnce_5_47(comment, ULIM_STT_PUBLIC_MSG_5_47);
+        comment = appendOnce_5_47(comment, publicReason === ULIM_GEMINI_LIMIT_PUBLIC_MSG_5_47 ? ULIM_GEMINI_LIMIT_PUBLIC_MSG_5_47 : ULIM_ETRI_PUBLIC_MSG_5_47);
+      }
+    } else if (!isFullAdmin_5_47() && looksSttMissing_5_47(recognized)) {
+      comment = appendOnce_5_47(comment, ULIM_STT_PUBLIC_MSG_5_47);
+    }
+
+    pronSetAdvancedStatus(`${title}
+${reason}
+발음평가 점수: ${scoreText} / 5
+문장 일치도: ${typeof data.matchScore !== 'undefined' ? data.matchScore + '%' : '-'}
+리미 인식결과: ${recognized}
+
+표준발음 참고:
+${converted ? '[' + converted + ']' : '먼저 문장을 입력하세요.'}
+
+리미 코멘트:
+- ${comment}
+
+표준발음 점검 대상:
+${ruleSummary}`, 'success');
+  };
+  try { pronRenderEtriResult = window.pronRenderEtriResult; } catch(e) {}
+
+  window.pronPollEtriResult = function(requestId) {
+    if (typeof pronEtriPollingTimer !== 'undefined' && pronEtriPollingTimer) {
+      clearTimeout(pronEtriPollingTimer);
+      pronEtriPollingTimer = null;
+    }
+    pronEtriPollingCount = 0;
+    const startedAt = Date.now();
+    const poll = async () => {
+      if ((typeof pronAdvancedFallbackShown_5_32 !== 'undefined' && pronAdvancedFallbackShown_5_32) || requestId !== pronAdvancedActiveRequestId_5_32) return;
+      pronEtriPollingCount += 1;
+      if (Date.now() - startedAt > PRON_GEMINI_HARD_TIMEOUT_MS_5_32) {
+        pronRenderLocalAdvancedFallback_5_32('Gemini Timeout: 30000ms / requestId=' + requestId);
+        return;
+      }
+      try {
+        const data = await pronJsonpRequest({ action: 'getGeminiPronunciationCommentResult', requestId, _: Date.now() }, 8000);
+        if (!data || data.status === 'pending' || data.status === 'not_found') {
+          pronSetAdvancedStatus('리미가 정밀하게 분석중입니다.');
+          pronEtriPollingTimer = setTimeout(poll, 2500);
+          return;
+        }
+        if (data.status === 'limit' || looksLimit_5_47((data && (data.errorDetail || data.message || data.status)) || '')) {
+          pronRenderLocalAdvancedFallback_5_32(ULIM_GEMINI_LIMIT_PUBLIC_MSG_5_47 + ' / ' + ((data && (data.errorDetail || data.message || data.status)) || 'limit'));
+          return;
+        }
+        if (data.status === 'fallback' || data.source === 'local_analysis_5_32') {
+          if (typeof pronAdvancedFallbackShown_5_32 !== 'undefined') pronAdvancedFallbackShown_5_32 = true;
+          if (typeof pronClearAdvancedHardTimer_5_32 === 'function') pronClearAdvancedHardTimer_5_32();
+          pronAdvancedIsRunning_5_32 = false;
+          if (typeof pronSetAdvancedButtonsLocked_5_32 === 'function') pronSetAdvancedButtonsLocked_5_32(false);
+          data.adminReason = data.errorDetail || data.message || data.localReason || '';
+          if (!isFullAdmin_5_47()) {
+            data.localReason = looksLimit_5_47(data.adminReason) ? ULIM_GEMINI_LIMIT_PUBLIC_MSG_5_47 : ULIM_ETRI_PUBLIC_MSG_5_47;
+            data.message = data.localReason;
+            delete data.errorDetail;
+          }
+          pronRenderEtriResult(data);
+          return;
+        }
+        if (!data.ok || data.status === 'error') {
+          pronRenderLocalAdvancedFallback_5_32((data && (data.errorDetail || data.message || data.status)) || 'Result Error / requestId=' + requestId);
+          return;
+        }
+        if (typeof pronClearAdvancedHardTimer_5_32 === 'function') pronClearAdvancedHardTimer_5_32();
+        pronAdvancedIsRunning_5_32 = false;
+        if (typeof pronSetAdvancedButtonsLocked_5_32 === 'function') pronSetAdvancedButtonsLocked_5_32(false);
+        pronRenderEtriResult(data);
+      } catch (err) {
+        if (Date.now() - startedAt > PRON_GEMINI_HARD_TIMEOUT_MS_5_32 || pronEtriPollingCount >= 10) {
+          pronRenderLocalAdvancedFallback_5_32('Polling Error: ' + (err && err.message ? err.message : String(err)) + ' / requestId=' + requestId);
+          return;
+        }
+        pronEtriPollingTimer = setTimeout(poll, 2500);
+      }
+    };
+    pronEtriPollingTimer = setTimeout(poll, 1200);
+  };
+  try { pronPollEtriResult = window.pronPollEtriResult; } catch(e) {}
+
 })();
 </script>
 
