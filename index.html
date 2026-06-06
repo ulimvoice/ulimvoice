@@ -15583,5 +15583,383 @@ ${ruleSummary}`, 'success');
 })();
 </script>
 
+
+
+<script id="ulim-session-final-guard-5-58">
+(function(){
+  if (window.__ULIM_SESSION_FINAL_GUARD_558__) return;
+  window.__ULIM_SESSION_FINAL_GUARD_558__ = true;
+  const PATCH_VERSION = '2026.06.06.558.01';
+  window.ULIM_SESSION_PATCH_VERSION = PATCH_VERSION;
+
+  function log(){ try { console.log.apply(console, ['[ULIM session 5.58]'].concat([].slice.call(arguments))); } catch(e) {} }
+  function getLocal(k){ try { return localStorage.getItem(k) || ''; } catch(e) { return ''; } }
+  function setLocal(k,v){ try { if (v !== undefined && v !== null && String(v) !== '') localStorage.setItem(k, String(v)); } catch(e) {} }
+  function removeLocal(k){ try { localStorage.removeItem(k); } catch(e) {} }
+
+  function markExplicitLogout(){
+    try { sessionStorage.setItem('ULIM_EXPLICIT_LOGOUT_IN_PROGRESS', 'Y'); } catch(e) {}
+    window.__ulimExplicitLogoutUntil = Date.now() + 4000;
+  }
+  function isExplicitLogout(){
+    let flag = false;
+    try { flag = sessionStorage.getItem('ULIM_EXPLICIT_LOGOUT_IN_PROGRESS') === 'Y'; } catch(e) {}
+    return flag || (Number(window.__ulimExplicitLogoutUntil || 0) > Date.now());
+  }
+  function clearExplicitLogoutLater(){
+    setTimeout(function(){ try { sessionStorage.removeItem('ULIM_EXPLICIT_LOGOUT_IN_PROGRESS'); } catch(e) {} }, 1200);
+  }
+  function looksLikeLogoutClick(ev){
+    const t = ev && ev.target ? ev.target.closest('button,a,[onclick]') : null;
+    if (!t) return false;
+    const txt = String(t.textContent || '').replace(/\s+/g, '');
+    const on = String(t.getAttribute && t.getAttribute('onclick') || '');
+    return txt.indexOf('로그아웃') !== -1 || /logout|studentSecureLogout|adminLogout/i.test(on);
+  }
+  document.addEventListener('click', function(ev){
+    if (looksLikeLogoutClick(ev)) markExplicitLogout();
+  }, true);
+
+  function readStudentSession(){
+    return {
+      token: getLocal('studentSessionToken'),
+      uid: getLocal('studentUid') || getLocal('uid'),
+      no: getLocal('studentNo'),
+      name: getLocal('studentName'),
+      instructor: getLocal('instructorName'),
+      mustChange: getLocal('studentMustChangePassword')
+    };
+  }
+  function hasStudentSession(){
+    const s = readStudentSession();
+    return !!(s.token && s.name && s.name !== '게스트');
+  }
+  function applyStudentGlobals(){
+    const s = readStudentSession();
+    try { studentSessionToken = s.token || studentSessionToken || ''; } catch(e) {}
+    try { studentName = s.name || studentName || ''; } catch(e) {}
+    try { instructorName = s.instructor || instructorName || ''; } catch(e) {}
+    try { studentNo = s.no || studentNo || ''; } catch(e) {}
+    try { window.studentUid = s.uid || window.studentUid || ''; } catch(e) {}
+    try { studentMustChangePassword = s.mustChange === 'Y'; } catch(e) {}
+    try { phoneLast4 = ''; } catch(e) {}
+    try { if (typeof updateFilenameConstants === 'function') updateFilenameConstants(); } catch(e) {}
+  }
+  function showStudentFromLocal(){
+    applyStudentGlobals();
+    try { if (typeof showMainContent === 'function') showMainContent(true); } catch(e) {}
+    try { if (typeof renderStudentAccountBar_ === 'function') renderStudentAccountBar_(); } catch(e) {}
+    try { if (typeof setAdminTabVisibility === 'function') setAdminTabVisibility(); } catch(e) {}
+    try { if (typeof renderCalendar === 'function') renderCalendar(); } catch(e) {}
+  }
+  function saveStudentSession(result, opts){
+    result = result || {}; opts = opts || {};
+    const old = readStudentSession();
+    const nextUid = String(result.studentUid || result.uid || old.uid || '').trim();
+    const nextNo = String(result.studentNo || result.attendanceNo || old.no || '').trim();
+    const token = String(result.sessionToken || old.token || '').trim();
+
+    // 서버 세션 확인 중 UID/출결번호가 다른 응답이 오면, 현재 로그인 학생명을 덮어쓰지 않습니다.
+    if (!opts.forceLogin) {
+      if (old.uid && nextUid && old.uid !== nextUid) {
+        console.warn('[ULIM session 5.58] 학생UID 불일치 응답 차단', old.uid, nextUid);
+        return false;
+      }
+      if (old.no && nextNo && old.no !== nextNo) {
+        console.warn('[ULIM session 5.58] 출결번호 불일치 응답 차단', old.no, nextNo);
+        return false;
+      }
+    }
+
+    const name = String(result.name || result.studentName || old.name || '').trim();
+    const instructor = String(result.instructor || old.instructor || '').trim();
+    if (token) setLocal('studentSessionToken', token);
+    if (nextUid) { setLocal('studentUid', nextUid); setLocal('uid', nextUid); }
+    if (nextNo) setLocal('studentNo', nextNo);
+    if (name) setLocal('studentName', name);
+    if (instructor || result.instructor !== undefined) setLocal('instructorName', instructor);
+    setLocal('studentMustChangePassword', result.mustChangePassword ? 'Y' : 'N');
+    setLocal('ulimLastMode', 'student');
+    removeLocal('phoneLast4');
+    removeLocal('instructorFolderId');
+    applyStudentGlobals();
+    return true;
+  }
+  async function verifyStudentInBackground(){
+    const s = readStudentSession();
+    if (!s.token || typeof GET_API_URL === 'undefined' || !GET_API_URL) return null;
+    try {
+      const q = new URLSearchParams();
+      q.set('action', 'getStudentSession');
+      q.set('studentSessionToken', s.token);
+      q.set('_', Date.now());
+      const res = await fetch(`${GET_API_URL}?${q.toString()}`, { method:'GET', cache:'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      if (data && data.status === 'success') {
+        saveStudentSession(Object.assign({}, data, { sessionToken: s.token }), { forceLogin:false });
+        try { if (typeof renderStudentAccountBar_ === 'function') renderStudentAccountBar_(); } catch(e) {}
+      }
+      return data;
+    } catch(e) {
+      log('학생 서버 세션 확인 실패 → 로컬 세션 유지', e && e.message ? e.message : e);
+      return null;
+    }
+  }
+
+  window.getStudentSessionToken_ = function(){
+    try { if (studentSessionToken) return studentSessionToken; } catch(e) {}
+    return getLocal('studentSessionToken');
+  };
+  try { getStudentSessionToken_ = window.getStudentSessionToken_; } catch(e) {}
+  window.ulimIsStudentLoggedIn_ = function(){ return hasStudentSession(); };
+  try { ulimIsStudentLoggedIn_ = window.ulimIsStudentLoggedIn_; } catch(e) {}
+
+  const originalClearStudent = window.clearStudentSecureSession_;
+  window.clearStudentSecureSession_ = function(force){
+    if (force === true || isExplicitLogout()) {
+      if (typeof originalClearStudent === 'function') return originalClearStudent.apply(this, arguments);
+      ['studentSessionToken','studentUid','uid','studentNo','studentName','instructorName','studentMustChangePassword','phoneLast4','instructorFolderId'].forEach(removeLocal);
+      return true;
+    }
+    if (hasStudentSession()) showStudentFromLocal();
+    log('학생 자동 로그아웃 차단');
+    return false;
+  };
+  try { clearStudentSecureSession_ = window.clearStudentSecureSession_; } catch(e) {}
+
+  window.studentSecureLogout = function(){
+    if (!confirm('학생 로그아웃할까요?')) return;
+    const token = getLocal('studentSessionToken');
+    markExplicitLogout();
+    try {
+      if (typeof GET_API_URL !== 'undefined' && GET_API_URL && token) {
+        const q = new URLSearchParams();
+        q.set('action','logoutStudentSession'); q.set('studentSessionToken', token); q.set('_', Date.now());
+        fetch(`${GET_API_URL}?${q.toString()}`, { method:'GET', cache:'no-store' }).catch(function(){});
+      }
+    } catch(e) {}
+    ['studentSessionToken','studentUid','uid','studentNo','studentName','instructorName','studentMustChangePassword','phoneLast4','instructorFolderId','savedVocalIds','vocalRecords','ulimLastMode'].forEach(removeLocal);
+    try { studentSessionToken = ''; } catch(e) {}
+    try { window.studentUid = ''; } catch(e) {}
+    try { studentNo = ''; } catch(e) {}
+    try { studentName = ''; } catch(e) {}
+    try { instructorName = ''; } catch(e) {}
+    try { studentMustChangePassword = false; } catch(e) {}
+    try { if (typeof renderStudentAccountBar_ === 'function') renderStudentAccountBar_(); } catch(e) {}
+    try { if (typeof showStudentLoginPanel === 'function') showStudentLoginPanel(); } catch(e) {}
+    clearExplicitLogoutLater();
+  };
+  try { studentSecureLogout = window.studentSecureLogout; } catch(e) {}
+
+  window.authenticate = async function(name, password){
+    name = String(name || '').trim(); password = String(password || '').trim();
+    if (!name || !password) return alert('학생 이름과 비밀번호를 입력해주세요.');
+    try { if (typeof showLoading === 'function') showLoading('로그인 정보 확인 중...'); } catch(e) {}
+    try {
+      const q = new URLSearchParams();
+      q.set('action','secureStudentLogin'); q.set('name', name); q.set('password', password); q.set('_', Date.now());
+      const res = await fetch(`${GET_API_URL}?${q.toString()}`, { method:'GET', cache:'no-store' });
+      const text = await res.text();
+      let data = null; try { data = JSON.parse(text); } catch(err) { throw new Error('로그인 응답을 확인하지 못했습니다.'); }
+      if (!res.ok) throw new Error((data && data.message) || '로그인 연결이 지연되고 있습니다.');
+      if (data && data.status === 'success' && data.sessionToken) {
+        saveStudentSession(data, { forceLogin:true });
+        try { if (typeof hideLoading === 'function') hideLoading(); } catch(e) {}
+        alert(`${getLocal('studentName') || name}님 로그인되었습니다.`);
+        if ((data.mustChangePassword || getLocal('studentMustChangePassword') === 'Y') && typeof changeStudentPasswordByPrompt === 'function') {
+          setTimeout(function(){ changeStudentPasswordByPrompt(true, password); }, 250);
+        }
+        showStudentFromLocal();
+        return;
+      }
+      try { if (typeof hideLoading === 'function') hideLoading(); } catch(e) {}
+      alert((data && data.message) || '학생 이름 또는 비밀번호가 일치하지 않습니다.');
+    } catch(e) {
+      try { if (typeof hideLoading === 'function') hideLoading(); } catch(ignore) {}
+      alert(e && e.message ? e.message : '로그인 처리 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    }
+  };
+  try { authenticate = window.authenticate; } catch(e) {}
+
+  window.authenticateStudentFromInputs = async function(){
+    const nameEl = document.getElementById('studentNameInput');
+    const pwEl = document.getElementById('phoneLast4Input');
+    return window.authenticate(nameEl ? nameEl.value.trim() : '', pwEl ? pwEl.value : '');
+  };
+  try { authenticateStudentFromInputs = window.authenticateStudentFromInputs; } catch(e) {}
+
+  window.checkStudentName = async function(){
+    if (hasStudentSession()) {
+      showStudentFromLocal();
+      verifyStudentInBackground();
+      return;
+    }
+    const isGuest = (function(){ try { return studentName === '게스트'; } catch(e) { return getLocal('studentName') === '게스트'; } })();
+    if (isGuest) {
+      try { if (typeof updateFilenameConstants === 'function') updateFilenameConstants(); } catch(e) {}
+      try { if (typeof showMainContent === 'function') showMainContent(false); } catch(e) {}
+      return;
+    }
+    const overlay = document.getElementById('loginOverlay');
+    const wrapper = document.querySelector('.wrapper');
+    if (overlay) overlay.style.display = 'flex';
+    if (wrapper) wrapper.style.display = 'none';
+  };
+  try { checkStudentName = window.checkStudentName; } catch(e) {}
+
+  function readAdminSession(){
+    let info = null;
+    try { info = JSON.parse(getLocal('adminInfo') || 'null'); } catch(e) { info = null; }
+    return { token: getLocal('adminToken'), info: info };
+  }
+  function hasAdminSession(){
+    const a = readAdminSession();
+    return !!(a.token && a.info && (a.info.id || a.info.name));
+  }
+  function applyAdminGlobals(){
+    const a = readAdminSession();
+    try { adminToken = a.token || adminToken || ''; } catch(e) {}
+    try { adminInfo = a.info || adminInfo || null; } catch(e) {}
+    try { adminModeActive = !!(adminToken && adminInfo); } catch(e) {}
+    if (a.token && a.info) {
+      try { document.body.classList.add('admin-mode'); } catch(e) {}
+      try { if (typeof setAdminTabVisibility === 'function') setAdminTabVisibility(); } catch(e) {}
+      try { if (typeof applyAdminPermissions === 'function') applyAdminPermissions(); } catch(e) {}
+    }
+  }
+  function showAdminFromLocal(){
+    applyAdminGlobals();
+    const loginBox = document.getElementById('adminLoginBox');
+    const dashboard = document.getElementById('adminDashboard');
+    if (loginBox) loginBox.style.display = 'none';
+    if (dashboard) dashboard.style.display = 'block';
+  }
+  function saveAdminSession(data){
+    data = data || {};
+    const token = String(data.adminToken || getLocal('adminToken') || '').trim();
+    const info = data.admin || readAdminSession().info || null;
+    if (token) setLocal('adminToken', token);
+    if (info) setLocal('adminInfo', JSON.stringify(info));
+    setLocal('ulimLastMode', 'admin');
+    applyAdminGlobals();
+  }
+  window.setAdminSecureSession_ = function(data){ saveAdminSession(data); };
+  try { setAdminSecureSession_ = window.setAdminSecureSession_; } catch(e) {}
+
+  async function verifyAdminInBackground(){
+    const a = readAdminSession();
+    if (!a.token || typeof GET_API_URL === 'undefined' || !GET_API_URL) return null;
+    try {
+      const q = new URLSearchParams();
+      q.set('action','adminGetSession'); q.set('adminToken', a.token); q.set('_', Date.now());
+      const res = await fetch(`${GET_API_URL}?${q.toString()}`, { method:'GET', cache:'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      if (data && data.status === 'success') saveAdminSession(Object.assign({}, data, { adminToken: a.token }));
+      return data;
+    } catch(e) {
+      log('관리자/강사 서버 세션 확인 실패 → 로컬 세션 유지', e && e.message ? e.message : e);
+      return null;
+    }
+  }
+
+  const originalAdminLogout558 = window.adminLogout;
+  window.adminLogout = function(force){
+    const explicit = force === true || isExplicitLogout();
+    if (!explicit) {
+      if (hasAdminSession()) showAdminFromLocal();
+      log('관리자/강사 자동 로그아웃 차단');
+      return false;
+    }
+    const token = getLocal('adminToken');
+    try {
+      if (typeof GET_API_URL !== 'undefined' && GET_API_URL && token) {
+        const q = new URLSearchParams();
+        q.set('action','logoutAdminSession'); q.set('adminToken', token); q.set('_', Date.now());
+        fetch(`${GET_API_URL}?${q.toString()}`, { method:'GET', cache:'no-store' }).catch(function(){});
+      }
+    } catch(e) {}
+    if (typeof originalAdminLogout558 === 'function') {
+      markExplicitLogout();
+      const ret = originalAdminLogout558.apply(this, arguments);
+      clearExplicitLogoutLater();
+      return ret;
+    }
+    ['adminToken','adminInfo','ulimLastMode'].forEach(removeLocal);
+    try { adminToken = ''; adminInfo = null; adminModeActive = false; } catch(e) {}
+    clearExplicitLogoutLater();
+    return true;
+  };
+  try { adminLogout = window.adminLogout; } catch(e) {}
+
+  const originalAdminLoadInitialData558 = window.adminLoadInitialData;
+  window.adminLoadInitialData = async function(){
+    if (hasAdminSession()) showAdminFromLocal();
+    try {
+      const result = await verifyAdminInBackground();
+      if (result && result.status === 'success') {
+        showAdminFromLocal();
+        try { if (typeof adminInitDates === 'function') adminInitDates(); } catch(e) {}
+        try { if (typeof applyAdminPermissions === 'function') applyAdminPermissions(); } catch(e) {}
+        try { if (typeof adminIsTeacherMode === 'function' && adminIsTeacherMode() && typeof showAdminPanel === 'function') showAdminPanel('adminPanelAttendance'); } catch(e) {}
+        return result;
+      }
+    } catch(e) {}
+
+    if (hasAdminSession()) {
+      showAdminFromLocal();
+      return null;
+    }
+
+    if (typeof originalAdminLoadInitialData558 === 'function') {
+      return originalAdminLoadInitialData558.apply(this, arguments);
+    }
+  };
+  try { adminLoadInitialData = window.adminLoadInitialData; } catch(e) {}
+
+  const originalAdminLogin558 = window.adminLogin;
+  window.adminLogin = async function(){
+    const idEl = document.getElementById('adminIdInput');
+    const pwEl = document.getElementById('adminPwInput');
+    const id = idEl ? idEl.value.trim() : '';
+    const pw = pwEl ? pwEl.value.trim() : '';
+    if (!id || !pw) return alert('강사 ID와 비밀번호를 입력해주세요.');
+    try {
+      if (typeof showLoading === 'function') showLoading('로그인 정보 확인 중...');
+      const data = await adminApi('adminLogin', { adminId:id, adminPw:pw });
+      try { if (typeof hideLoading === 'function') hideLoading(); } catch(e) {}
+      saveAdminSession(data);
+      showAdminFromLocal();
+      try { if (typeof promptAdminPasswordChangeIfNeeded_ === 'function') await promptAdminPasswordChangeIfNeeded_(pw); } catch(e) {}
+      await window.adminLoadInitialData();
+      try { if (window.registerRoomPushTokenAfterAdminLogin) window.registerRoomPushTokenAfterAdminLogin(); } catch(e) {}
+    } catch(e) {
+      try { if (typeof hideLoading === 'function') hideLoading(); } catch(ignore) {}
+      alert(e && e.message ? e.message : '로그인 처리 중 문제가 발생했습니다.');
+    }
+  };
+  try { adminLogin = window.adminLogin; } catch(e) {}
+
+  window.addEventListener('pageshow', function(){
+    setTimeout(function(){
+      if (hasStudentSession()) { showStudentFromLocal(); verifyStudentInBackground(); }
+      if (hasAdminSession()) { showAdminFromLocal(); verifyAdminInBackground(); }
+    }, 80);
+  });
+  document.addEventListener('visibilitychange', function(){
+    if (document.visibilityState === 'visible') {
+      if (hasStudentSession()) showStudentFromLocal();
+      if (hasAdminSession()) showAdminFromLocal();
+    }
+  });
+
+  if (hasStudentSession()) { showStudentFromLocal(); verifyStudentInBackground(); }
+  if (hasAdminSession()) { showAdminFromLocal(); verifyAdminInBackground(); }
+
+  log('전계정 세션 고정 패치 설치 완료', PATCH_VERSION);
+})();
+</script>
+
 </body>
 </html>
