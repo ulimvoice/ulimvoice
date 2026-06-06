@@ -15589,7 +15589,7 @@ ${ruleSummary}`, 'success');
 (function(){
   if (window.__ULIM_SESSION_FINAL_GUARD_558__) return;
   window.__ULIM_SESSION_FINAL_GUARD_558__ = true;
-  const PATCH_VERSION = '2026.06.06.558.01';
+  const PATCH_VERSION = '2026.06.06.559.01';
   window.ULIM_SESSION_PATCH_VERSION = PATCH_VERSION;
 
   function log(){ try { console.log.apply(console, ['[ULIM session 5.58]'].concat([].slice.call(arguments))); } catch(e) {} }
@@ -15958,6 +15958,254 @@ ${ruleSummary}`, 'success');
   if (hasAdminSession()) { showAdminFromLocal(); verifyAdminInBackground(); }
 
   log('전계정 세션 고정 패치 설치 완료', PATCH_VERSION);
+})();
+</script>
+
+
+
+<style id="ulim-attendance-ui-5-59">
+/* =========================================================
+   5.59 학생부 출석체크 UI 정리
+   - PC: 선택 / 학생명 / 출석체크 / 현재상태 / 특이사항 / 메모
+   - 모바일: 스크린샷처럼 카드형 세로 배치
+   ========================================================= */
+#adminAttendanceTableWrap .ulim-attendance-table-559 {
+  min-width: 720px;
+  table-layout: auto;
+}
+#adminAttendanceTableWrap .ulim-attendance-table-559 th,
+#adminAttendanceTableWrap .ulim-attendance-table-559 td {
+  vertical-align: middle;
+}
+#adminAttendanceTableWrap .ulim-attendance-table-559 th:nth-child(1),
+#adminAttendanceTableWrap .ulim-attendance-table-559 td:nth-child(1) {
+  width: 46px;
+  text-align: center;
+}
+#adminAttendanceTableWrap .ulim-attendance-table-559 th:nth-child(2),
+#adminAttendanceTableWrap .ulim-attendance-table-559 td:nth-child(2) {
+  width: 120px;
+  white-space: nowrap;
+}
+#adminAttendanceTableWrap .ulim-attendance-table-559 th:nth-child(3),
+#adminAttendanceTableWrap .ulim-attendance-table-559 td:nth-child(3) {
+  min-width: 210px;
+}
+#adminAttendanceTableWrap .ulim-attendance-table-559 th:nth-child(4),
+#adminAttendanceTableWrap .ulim-attendance-table-559 td:nth-child(4) {
+  width: 120px;
+  text-align: center;
+}
+#adminAttendanceTableWrap .ulim-attendance-table-559 th:nth-child(5),
+#adminAttendanceTableWrap .ulim-attendance-table-559 td:nth-child(5) {
+  width: 120px;
+  text-align: center;
+}
+#adminAttendanceTableWrap .ulim-attendance-table-559 th:nth-child(6),
+#adminAttendanceTableWrap .ulim-attendance-table-559 td:nth-child(6) {
+  min-width: 180px;
+}
+#adminAttendanceTableWrap .ulim-attendance-table-559 .admin-small-input {
+  width: 100%;
+  min-width: 160px;
+  box-sizing: border-box;
+}
+#adminAttendanceTableWrap .ulim-attendance-actions-559 {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 700px) {
+  #adminAttendanceTableWrap.admin-table-wrap {
+    border: 0;
+    overflow: visible;
+  }
+  #adminAttendanceTableWrap .ulim-attendance-table-559 {
+    min-width: 0 !important;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 14px;
+  }
+  #adminAttendanceTableWrap .ulim-attendance-table-559 thead {
+    display: none;
+  }
+  #adminAttendanceTableWrap .ulim-attendance-table-559,
+  #adminAttendanceTableWrap .ulim-attendance-table-559 tbody,
+  #adminAttendanceTableWrap .ulim-attendance-table-559 tr,
+  #adminAttendanceTableWrap .ulim-attendance-table-559 td {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  #adminAttendanceTableWrap .ulim-attendance-table-559 tr {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    padding: 12px 12px 10px;
+    box-shadow: 0 8px 24px rgba(15,23,42,.06);
+    overflow: hidden;
+  }
+  #adminAttendanceTableWrap .ulim-attendance-table-559 td {
+    border: 0 !important;
+    border-bottom: 1px solid #eef2f7 !important;
+    padding: 12px 4px !important;
+    min-width: 0 !important;
+    text-align: left !important;
+    display: grid;
+    grid-template-columns: 104px minmax(0, 1fr);
+    align-items: center;
+    column-gap: 12px;
+  }
+  #adminAttendanceTableWrap .ulim-attendance-table-559 td:last-child {
+    border-bottom: 0 !important;
+  }
+  #adminAttendanceTableWrap .ulim-attendance-table-559 td::before {
+    content: attr(data-label);
+    color: #64748b;
+    font-weight: 950;
+    font-size: 15px;
+    letter-spacing: -0.03em;
+  }
+  #adminAttendanceTableWrap .ulim-attendance-table-559 td[data-label="선택"] {
+    grid-template-columns: 104px 1fr;
+  }
+  #adminAttendanceTableWrap .ulim-attendance-table-559 td[data-label="선택"] input {
+    justify-self: end;
+    width: 20px;
+    height: 20px;
+  }
+  #adminAttendanceTableWrap .ulim-attendance-table-559 td[data-label="학생명"] b {
+    justify-self: end;
+    font-size: 17px;
+  }
+  #adminAttendanceTableWrap .ulim-attendance-table-559 .admin-att-action-wrap {
+    justify-content: flex-end;
+    width: 100%;
+  }
+  #adminAttendanceTableWrap .ulim-attendance-table-559 .admin-att-status-select {
+    flex: 1 1 110px;
+    max-width: 150px;
+    min-height: 48px;
+    font-size: 15px;
+    border-radius: 14px;
+  }
+  #adminAttendanceTableWrap .ulim-attendance-table-559 .admin-att-mini {
+    min-width: 50px;
+    min-height: 44px;
+    border-radius: 13px;
+    font-size: 16px;
+  }
+  #adminAttendanceTableWrap .ulim-attendance-table-559 .admin-status-badge {
+    justify-self: end;
+    min-width: 74px;
+    text-align: center;
+    padding: 8px 12px;
+  }
+  #adminAttendanceTableWrap .ulim-attendance-table-559 .admin-small-input {
+    width: 100%;
+    min-width: 0;
+    min-height: 46px;
+    font-size: 16px;
+    border-radius: 12px;
+  }
+  #adminAttendanceTableWrap .ulim-attendance-actions-559 {
+    justify-content: stretch;
+  }
+  #adminAttendanceTableWrap .ulim-attendance-actions-559 .admin-btn {
+    flex: 1 1 100%;
+  }
+}
+</style>
+
+<script id="ulim-attendance-ui-5-59-script">
+(function () {
+  if (window.__ULIM_ATTENDANCE_UI_559__) return;
+  window.__ULIM_ATTENDANCE_UI_559__ = true;
+
+  function esc559_(value) {
+    if (typeof ulimAdminEsc_ === 'function') return ulimAdminEsc_(value);
+    if (typeof adminEscapeAttendanceHtml_ === 'function') return adminEscapeAttendanceHtml_(value);
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  window.adminRenderAttendanceTable = function () {
+    const wrap = document.getElementById('adminAttendanceTableWrap');
+    if (!wrap) return;
+
+    if (!Array.isArray(adminAttendanceRecords) || !adminAttendanceRecords.length) {
+      wrap.innerHTML = `<div class="notice-empty">출석부 데이터를 불러오세요. 날짜와 반명을 선택한 뒤 출석체크를 진행하면 됩니다.</div>`;
+      return;
+    }
+
+    let html = `<table class="admin-table ulim-attendance-table-559">
+      <thead>
+        <tr>
+          <th><input type="checkbox" id="adminAttendSelectAll" onchange="adminToggleAttendanceAll(this.checked)" checked></th>
+          <th>학생명</th>
+          <th>출석체크</th>
+          <th>현재상태</th>
+          <th>특이사항</th>
+          <th>메모</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+    adminAttendanceRecords.forEach((r, idx) => {
+      const status = typeof adminNormalizeAttendanceStatusForUi_ === 'function'
+        ? adminNormalizeAttendanceStatusForUi_(r.status || r.attendanceStatus || '')
+        : (r.status || r.attendanceStatus || '미체크');
+      const specialCell = r.specialStatus
+        ? `<span class="admin-status-badge">${esc559_(r.specialStatus)}</span>`
+        : '-';
+      const badgeClass = status === '출석' ? 'attendance-ok' : (status === '결석' ? 'attendance-no' : '');
+      const optionsHtml = typeof adminAttendanceStatusOptions_ === 'function'
+        ? adminAttendanceStatusOptions_(status)
+        : ['미체크','출석','결석','지각','휴원'].map(v => `<option value="${esc559_(v)}" ${status === v ? 'selected' : ''}>${v === '출석' ? 'O 출석' : (v === '결석' ? 'X 결석' : v)}</option>`).join('');
+      const selectedOk = typeof adminAttendanceButtonSelectedClass_ === 'function'
+        ? adminAttendanceButtonSelectedClass_(status, '출석')
+        : (status === '출석' ? ' selected' : '');
+      const selectedNo = typeof adminAttendanceButtonSelectedClass_ === 'function'
+        ? adminAttendanceButtonSelectedClass_(status, '결석')
+        : (status === '결석' ? ' selected' : '');
+
+      html += `<tr data-att-index="${idx}">
+        <td data-label="선택"><input type="checkbox" class="admin-att-check" checked></td>
+        <td data-label="학생명"><b>${esc559_(r.studentName)}</b></td>
+        <td data-label="출석체크">
+          <div class="admin-att-action-wrap">
+            <button type="button" class="admin-att-mini ok${selectedOk}" onclick="adminSetAttendanceRowStatus(${idx}, '출석')" title="출석 처리">O</button>
+            <button type="button" class="admin-att-mini no${selectedNo}" onclick="adminSetAttendanceRowStatus(${idx}, '결석')" title="결석 처리">X</button>
+            <select class="admin-att-status-select" data-field="status" onchange="adminSyncAttendanceRowStatus(${idx}, this.value)">
+              ${optionsHtml}
+            </select>
+            <span id="admin-att-save-state-${idx}" class="admin-att-save-state"></span>
+          </div>
+        </td>
+        <td data-label="현재상태"><span id="admin-att-badge-${idx}" class="admin-status-badge ${badgeClass}">${esc559_(status || '미체크')}</span></td>
+        <td data-label="특이사항">${specialCell}</td>
+        <td data-label="메모"><input class="admin-small-input" data-field="memo" value="${esc559_(r.memo || '')}" placeholder="메모"></td>
+      </tr>`;
+    });
+
+    html += `</tbody></table>
+      <div class="ulim-attendance-actions-559">
+        <button type="button" class="admin-btn" onclick="adminSaveAttendanceFromTable(false)">선택 출석부 저장</button>
+        <button type="button" class="admin-btn gray" onclick="adminLoadAttendanceSnapshot(true)">출석부 다시 불러오기</button>
+      </div>`;
+
+    wrap.innerHTML = html;
+    if (typeof ulimAdminAfterRender_ === 'function') ulimAdminAfterRender_();
+  };
+
+  console.log('[ULIM attendance UI 5.59] 출석체크 UI 패치 적용 완료');
 })();
 </script>
 
