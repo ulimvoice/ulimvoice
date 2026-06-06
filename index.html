@@ -1773,7 +1773,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
                 <input type="password" id="phoneLast4Input" placeholder="초기 비밀번호는 전화번호 뒤 4자리" autocomplete="current-password" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px;">
             </div>
             <button onclick="authenticateStudentFromInputs()" style="width: 100%; padding: 14px; background: #2ecc71; color: white; border: none; border-radius: 8px; font-size: 17px; font-weight: bold; cursor: pointer; transition: background 0.2s;">로그인</button>
-            <button onclick="findStudentPasswordByPrompt()" style="width: 100%; padding: 12px; background: #f97316; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 10px;">비밀번호 찾기 / 초기화</button>
+            <button onclick="findStudentPasswordByPrompt()" style="width: 100%; padding: 12px; background: #f97316; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 10px;">비밀번호 재설정 요청</button>
             <button onclick="guestLogin()" style="width: 100%; padding: 14px; background: #aaa; color: white; border: none; border-radius: 8px; font-size: 17px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: background 0.2s;">게스트 로그인 (상황극 탭만 사용)</button>
             <button onclick="openAdminPage()" style="width: 100%; padding: 14px; background: #111827; color: white; border: none; border-radius: 8px; font-size: 17px; font-weight: bold; cursor: pointer; margin-top: 10px;">강사 페이지</button>
         </div>
@@ -5516,7 +5516,8 @@ const ULIM_ADMIN_WRITE_ACTIONS = new Set([
     'adminSaveVocalPracticeComment',
     'adminSaveClassroomUsage',
     'adminReleaseClassroomUsage',
-    'adminSendRoomReservationMessage'
+    'adminSendRoomReservationMessage',
+    'adminResetStudentPassword'
 ]);
 
 window.__ulimAdminApiMemoryCache = window.__ulimAdminApiMemoryCache || {};
@@ -6205,6 +6206,46 @@ async function adminSendAbsenceForStudent(index) {
     } catch (e) {
         hideLoading();
         alert(e.message);
+    }
+}
+
+
+async function adminResetStudentPasswordForStudent(index) {
+    if (!adminIsFullAdmin()) return alert('비밀번호 초기화는 관리자 권한에서만 가능합니다.');
+    const s = adminStudentSearchRows[index];
+    if (!s) return alert('학생 정보를 찾지 못했습니다. 학생목록을 다시 불러와주세요.');
+
+    const studentName = s.name || s.studentName || '';
+    const studentNo = s.studentNo || s.attendanceNo || '';
+    const custom = prompt(`${studentName} 학생의 비밀번호를 임시 비밀번호로 초기화합니다.\n\n직접 지정하려면 4자 이상 입력하고, 자동 발급하려면 비워둔 채 확인을 누르세요.`, '');
+    if (custom === null) return;
+    const tempPassword = String(custom || '').trim();
+    if (tempPassword && tempPassword.length < 4) {
+        alert('임시 비밀번호를 직접 지정하려면 4자 이상 입력해주세요.');
+        return;
+    }
+
+    if (!confirm(`${studentName} 학생의 기존 로그인 세션을 무효화하고 임시 비밀번호로 초기화할까요?\n\n초기화 후 학생은 로그인하면 새 비밀번호로 변경해야 합니다.`)) return;
+
+    try {
+        showLoading('비밀번호 초기화 중...');
+        const data = await adminApi('adminResetStudentPassword', {
+            adminToken,
+            studentUid: s.studentUid || s.uid || '',
+            studentNo,
+            studentName,
+            tempPassword,
+            noCache: '1'
+        });
+        hideLoading();
+
+        const issued = data.tempPassword || tempPassword || '';
+        alert(`${studentName} 학생의 비밀번호가 초기화되었습니다.\n\n임시 비밀번호: ${issued}\n\n학생에게 임시 비밀번호를 안내하고, 로그인 후 새 비밀번호로 변경하도록 안내해주세요.`);
+        await adminLoadStudents(true);
+        if (typeof adminRenderStudentTable === 'function') adminRenderStudentTable();
+    } catch (e) {
+        hideLoading();
+        alert(e.message || '비밀번호 초기화 중 문제가 발생했습니다.');
     }
 }
 
@@ -11960,7 +12001,7 @@ async function changeStudentPasswordByPrompt(force = false, knownCurrentPassword
 /* =========================================================
    5-14 학생 계정 버튼 UI + 비밀번호 찾기
    - 우측 상단: 학생 로그인/로그아웃/비밀번호 찾기/비밀번호 변경
-   - 비밀번호 찾기는 현재 비밀번호를 보여주지 않고, 등록된 전화번호 뒤4자리 확인 후 초기비밀번호로 재설정
+   - 비밀번호 찾기는 학생 셀프 초기화를 하지 않고 관리자 승인 요청만 접수
    ========================================================= */
 
 function ulimIsStudentLoggedIn_() {
@@ -12056,15 +12097,15 @@ async function findStudentPasswordByPrompt() {
         return false;
     }
 
-    if (!confirm('확인되면 비밀번호가 전화번호 뒤 4자리로 재설정됩니다.\n계속할까요?')) {
+    if (!confirm('비밀번호 재설정 요청을 접수할까요?\n\n보안을 위해 학생 화면에서는 직접 초기화되지 않습니다.\n관리자 확인 후 임시 비밀번호를 안내받아주세요.')) {
         return false;
     }
 
     try {
-        showLoading('비밀번호 재설정 중...');
+        showLoading('비밀번호 재설정 요청 접수 중...');
 
         const query = new URLSearchParams();
-        query.set('action', 'resetStudentPassword');
+        query.set('action', 'requestStudentPasswordReset');
         query.set('studentName', name.trim());
         query.set('phoneLast4', cleanPhone4);
         query.set('_', Date.now());
@@ -12076,21 +12117,15 @@ async function findStudentPasswordByPrompt() {
         const result = await response.json();
 
         if (result && result.status === 'success') {
-            alert('비밀번호가 초기 비밀번호로 재설정되었습니다.\n초기 비밀번호: 등록된 전화번호 뒤 4자리\n\n로그인 후 새 비밀번호로 변경해주세요.');
-            showStudentLoginPanel();
-
-            const nameInput = document.getElementById('studentNameInput');
-            const pwInput = document.getElementById('phoneLast4Input');
-            if (nameInput) nameInput.value = name.trim();
-            if (pwInput) pwInput.value = cleanPhone4;
+            alert((result && result.message) || '비밀번호 재설정 요청이 접수되었습니다. 학원 관리자 확인 후 임시 비밀번호를 안내받아주세요.');
             return true;
         }
 
-        alert((result && result.message) || '비밀번호를 재설정하지 못했습니다.');
+        alert((result && result.message) || '비밀번호 재설정 요청을 접수하지 못했습니다.');
         return false;
     } catch (err) {
         hideLoading();
-        alert(err.message || '비밀번호 찾기 처리 중 문제가 발생했습니다.');
+        alert(err.message || '비밀번호 재설정 요청 중 문제가 발생했습니다.');
         return false;
     }
 }
@@ -12123,7 +12158,7 @@ window.addEventListener('DOMContentLoaded', function() {
 /* =========================================================
    5-15 비밀번호 찾기 위치 조정
    - 우측 상단 미로그인 버튼: 학생 로그인만 표시
-   - 첫 로그인 화면: 비밀번호 찾기 / 초기화 버튼 표시
+   - 첫 로그인 화면: 비밀번호 재설정 요청 버튼 표시
    ========================================================= */
 window.__ulimPasswordFindMovedToLoginScreen = true;
 </script>
@@ -12566,6 +12601,7 @@ function adminRenderStudentTable() {
         return;
     }
 
+    const isFull = adminIsFullAdmin();
     let html = `<table class="admin-table"><thead><tr>
         <th>분류</th>
         <th>출결번호</th>
@@ -12574,6 +12610,7 @@ function adminRenderStudentTable() {
         <th>학부모전화</th>
         <th>반/메모</th>
         <th>결석 알림</th>
+        ${isFull ? '<th>비밀번호</th>' : ''}
     </tr></thead><tbody>`;
 
     list.forEach((s, idx) => {
@@ -12585,6 +12622,7 @@ function adminRenderStudentTable() {
           <td>${ulimAdminEsc_(s.parentPhone)}</td>
           <td>${ulimAdminEsc_(s.className || s.memo || '')}</td>
           <td><button type="button" class="admin-btn red" style="padding:8px 10px; font-size:12px;" onclick="adminSendAbsenceForStudent(${idx})">결석 알림톡</button></td>
+          ${isFull ? `<td><button type="button" class="admin-btn orange" style="padding:8px 10px; font-size:12px;" onclick="adminResetStudentPasswordForStudent(${idx})">초기화</button></td>` : ''}
         </tr>`;
     });
 
@@ -16810,15 +16848,15 @@ ${ruleSummary}`, 'success');
   if (typeof oldRenderTrainingFinalAiResult562 === 'function') {
     window.renderTrainingFinalAiResult_ = function(data){
       if (data && data.analysisSource && /etri|advanced/i.test(String(data.analysisSource))) {
-        data.badge = data.badge || '고급 분석';
-        data.message = data.message || '리미의 분석이 완료되었습니다.';
+        data.badge = data.badge || 'ETRI 고급 분석';
+        data.message = data.message || 'ETRI 고급 분석과 리미 코멘트 분석이 완료되었습니다.';
       }
       return oldRenderTrainingFinalAiResult562.call(this, data);
     };
     try { renderTrainingFinalAiResult_ = window.renderTrainingFinalAiResult_; } catch(e) {}
   }
 
-  console.log('[ULIM 5.62] 발성훈련 연동 패치 적용 완료', window.ULIM_TRAINING_VERSION);
+  console.log('[ULIM 5.62] 발성훈련 ETRI 연동 패치 적용 완료', window.ULIM_TRAINING_ETRI_VERSION);
 })();
 </script>
 
