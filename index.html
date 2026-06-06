@@ -17257,5 +17257,189 @@ ${ruleSummary}`, 'success');
 })();
 </script>
 
+
+
+<script id="ulim-tab-persist-no-flicker-5-66">
+(function(){
+  if (window.__ULIM_TAB_PERSIST_NO_FLICKER_566__) return;
+  window.__ULIM_TAB_PERSIST_NO_FLICKER_566__ = true;
+  window.ULIM_TAB_PERSIST_VERSION = '2026.06.06.566.01';
+
+  function isAdminMode566_() {
+    try {
+      return !!(
+        (document.body && (document.body.classList.contains('admin-mode') || document.body.classList.contains('full-admin-mode'))) ||
+        localStorage.getItem('adminToken') ||
+        localStorage.getItem('adminInfo')
+      );
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function isTabUsable566_(tabId) {
+    if (!tabId) return false;
+    const tab = document.querySelector('.tab[data-tab="' + tabId + '"]');
+    const content = document.getElementById(tabId);
+    if (!tab || !content) return false;
+    if (tabId === 'tabAdmin' && !isAdminMode566_()) return false;
+    if (tab.style.display === 'none') return false;
+    if (tab.style.pointerEvents === 'none') return false;
+    return true;
+  }
+
+  function getSavedTab566_(isAuthenticated) {
+    let saved = '';
+    try { saved = localStorage.getItem('ulimActiveTabId') || ''; } catch (e) {}
+    if (!saved) saved = 'tab1';
+    if (!isAuthenticated && saved !== 'tab1') return 'tab1';
+    if (!isTabUsable566_(saved)) return 'tab1';
+    return saved;
+  }
+
+  window.ulimActivateTab566_ = function(tabId, save) {
+    let targetId = tabId || 'tab1';
+
+    if (targetId === 'tabAdmin' && !isAdminMode566_()) {
+      try { if (typeof openAdminPage === 'function') openAdminPage(); } catch (e) {}
+      return false;
+    }
+
+    if (!isTabUsable566_(targetId)) targetId = 'tab1';
+
+    const targetTab = document.querySelector('.tab[data-tab="' + targetId + '"]');
+    const targetContent = document.getElementById(targetId);
+    if (!targetTab || !targetContent) return false;
+
+    document.querySelectorAll('.tab').forEach(function(x){ x.classList.remove('active'); });
+    document.querySelectorAll('.tab-content').forEach(function(x){ x.classList.remove('active'); });
+
+    targetTab.classList.add('active');
+    targetContent.classList.add('active');
+
+    if (save !== false) {
+      try { localStorage.setItem('ulimActiveTabId', targetId); } catch (e) {}
+    }
+    return true;
+  };
+
+  // 5.65 패치의 지연 실행 setTimeout이 호출하더라도 새 방식으로 동작하게 연결합니다.
+  window.ulimActivateTab565_ = window.ulimActivateTab566_;
+
+  function installTabClickHandlers566_() {
+    document.querySelectorAll('.tab[data-tab]').forEach(function(tab){
+      tab.onclick = function(ev) {
+        if (ev) ev.preventDefault();
+        const targetTab = tab.dataset.tab || 'tab1';
+        if (targetTab === 'tabAdmin' && !isAdminMode566_()) {
+          try { if (typeof openAdminPage === 'function') openAdminPage(); } catch (e) {}
+          return false;
+        }
+        window.ulimActivateTab566_(targetTab, true);
+        return false;
+      };
+    });
+  }
+
+  window.showMainContent = function(isAuthenticated) {
+    if (!window.adminModeActive) {
+      try { localStorage.setItem('ulimLastMode', isAuthenticated ? 'student' : 'guest'); } catch (e) {}
+    }
+
+    try { window.adminModeActive = false; } catch (e) {}
+    try { adminModeActive = false; } catch (e) {}
+    if (document.body) document.body.classList.remove('admin-mode');
+    try { if (typeof setAdminTabVisibility === 'function') setAdminTabVisibility(); } catch (e) {}
+
+    const loginOverlay = document.getElementById('loginOverlay');
+    if (loginOverlay) loginOverlay.style.display = 'none';
+
+    const wrapper = document.querySelector('.wrapper');
+    if (wrapper) {
+      // 탭을 먼저 결정한 뒤 화면을 보이게 해서 새로고침 때 상황극 탭이 잠깐 보이는 현상을 막습니다.
+      wrapper.style.visibility = 'hidden';
+      wrapper.style.display = 'flex';
+      wrapper.style.flexDirection = 'column';
+      wrapper.style.width = '95%';
+      wrapper.style.maxWidth = '1200px';
+      wrapper.style.margin = '0 auto';
+      wrapper.style.padding = '20px 0';
+    }
+
+    const tabs = document.querySelectorAll('.tab');
+    document.querySelectorAll('.tab').forEach(function(x){ x.classList.remove('active'); });
+    document.querySelectorAll('.tab-content').forEach(function(x){ x.classList.remove('active'); });
+
+    tabs.forEach(function(tab, i){
+      const targetTab = tab.dataset ? tab.dataset.tab : '';
+      const tabContent = targetTab ? document.getElementById(targetTab) : null;
+      const isAdminTab = targetTab === 'tabAdmin';
+
+      tab.onclick = null;
+
+      if (isAdminTab) {
+        tab.style.display = isAdminMode566_() ? '' : 'none';
+        tab.onclick = function(ev) {
+          if (ev) ev.preventDefault();
+          if (!isAdminMode566_()) {
+            try { if (typeof openAdminPage === 'function') openAdminPage(); } catch (e) {}
+            return false;
+          }
+          window.ulimActivateTab566_('tabAdmin', true);
+          return false;
+        };
+        if (tabContent) tabContent.style.display = '';
+        return;
+      }
+
+      if (!isAuthenticated && i !== 0) {
+        tab.onclick = function(){ alert('학생 인증 후 이용 가능한 기능입니다.'); return false; };
+        tab.style.opacity = '0.5';
+        tab.style.pointerEvents = 'none';
+        if (tabContent) tabContent.style.display = 'none';
+      } else {
+        tab.onclick = function(ev) {
+          if (ev) ev.preventDefault();
+          window.ulimActivateTab566_(targetTab, true);
+          return false;
+        };
+        tab.style.opacity = '1';
+        tab.style.pointerEvents = 'auto';
+        tab.style.display = '';
+        if (tabContent) tabContent.style.display = '';
+      }
+    });
+
+    const targetId = getSavedTab566_(!!isAuthenticated);
+    window.ulimActivateTab566_(targetId, false);
+    installTabClickHandlers566_();
+
+    if (wrapper) wrapper.style.visibility = 'visible';
+
+    if (isAuthenticated) {
+      try { setTimeout(showNoticeIfNeeded, 0); } catch (e) {}
+    }
+  };
+
+  try { showMainContent = window.showMainContent; } catch (e) {}
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', installTabClickHandlers566_);
+  } else {
+    installTabClickHandlers566_();
+  }
+
+  window.addEventListener('pageshow', function(){
+    let saved = '';
+    try { saved = localStorage.getItem('ulimActiveTabId') || ''; } catch (e) {}
+    if (saved) {
+      setTimeout(function(){ window.ulimActivateTab566_(saved, false); }, 0);
+    }
+  });
+
+  console.log('[ULIM 5.66] 새로고침 탭 깜빡임 방지 패치 적용 완료', window.ULIM_TAB_PERSIST_VERSION);
+})();
+</script>
+
 </body>
 </html>
