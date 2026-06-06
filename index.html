@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램 5.47</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="preconnect" href="https://script.google.com">
+<script type="text/javascript" nonce="468f15160414438fb97edf15eb8" src="//local.adguard.org?ts=1780758004156&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000bde072078c7b2cdefc82bba2%26fn%3D%25EC%259A%25B8%25EB%25A6%25BC%25EC%2595%25B1_index_5_56_%25EB%25B0%259C%25EC%2584%25B1%25ED%259B%2588%25EB%25A0%25A8100%25EB%25AC%25B8%25EC%259E%25A5_%25EB%25A1%259C%25EC%25BB%25AC%25EB%258C%2580%25EC%25B2%25B4%25EB%25B3%25B5%25EA%25B5%25AC.html%26cd%3Dattachment%26ts%3D494655%26p%3Dfs%26cid%3D1%26sig%3D8046bd6f620cba6f376c8f34f46e7a188dc56250989c62f3101fcb94b87e68f1%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://script.googleusercontent.com">
 <link rel="dns-prefetch" href="//script.google.com">
 <link rel="dns-prefetch" href="//script.googleusercontent.com">
@@ -3375,6 +3375,58 @@ async function completeTraining() {
 
 
 
+function resetTrainingProAudioUi_(message) {
+    const proAudio = document.getElementById("proAudio");
+    const proTime = document.getElementById("proTime");
+    if (proAudio) {
+        try { proAudio.pause(); } catch (e) {}
+        proAudio.removeAttribute("src");
+        proAudio.load();
+        proAudio.style.display = "none";
+        proAudio.onerror = null;
+        proAudio.onloadedmetadata = null;
+    }
+    if (proTime) proTime.textContent = message || "준비중";
+}
+
+async function safeSetTrainingProAudio_(audioUrl) {
+    const proAudio = document.getElementById("proAudio");
+    const proTime = document.getElementById("proTime");
+    const url = String(audioUrl || "").trim();
+
+    if (!proAudio) return;
+
+    resetTrainingProAudioUi_(url ? "확인중" : "예시 없음");
+    if (!url) return;
+
+    // GitHub Pages에서 없는 mp3를 audio.src에 바로 넣으면 콘솔 404와 오류 안내가 같이 튀는 문제가 있어
+    // 먼저 fetch로 존재 여부만 확인한 뒤, 실제 audio 태그에 넣습니다.
+    try {
+        const res = await fetch(url, { method: "GET", cache: "no-store" });
+        if (!res || !res.ok) {
+            console.warn("[ULIM vocal audio] 프로 예시 음성 파일 없음:", url);
+            resetTrainingProAudioUi_("예시 없음");
+            return;
+        }
+    } catch (e) {
+        console.warn("[ULIM vocal audio] 프로 예시 음성 확인 실패:", e);
+        resetTrainingProAudioUi_("예시 없음");
+        return;
+    }
+
+    proAudio.style.display = "block";
+    proAudio.onerror = function() {
+        console.warn("[ULIM vocal audio] 프로 예시 음성 로드 실패:", url);
+        resetTrainingProAudioUi_("예시 없음");
+    };
+    proAudio.onloadedmetadata = function() {
+        if (proTime && isFinite(proAudio.duration)) {
+            proTime.textContent = proAudio.duration.toFixed(1) + "s";
+        }
+    };
+    proAudio.src = url;
+    try { proAudio.load(); } catch (e) {}
+}
 
 async function trainNew(){
     if(typeof vocalData !== 'undefined') trainDataList = vocalData;
@@ -3412,11 +3464,7 @@ async function trainNew(){
     document.getElementById("btn_next").disabled = false;
     document.getElementById("train_origin").textContent = currentTrainObj.text; 
     document.getElementById("recordBox").style.display = 'none';
-    const proAudio = document.getElementById("proAudio");
-    proAudio.src = currentTrainObj.audio || ""; 
-    proAudio.onloadedmetadata = function() {
-        document.getElementById("proTime").textContent = proAudio.duration.toFixed(1) + "s";
-    };
+    safeSetTrainingProAudio_(currentTrainObj.audio || "");
     lastRecordedBlob = null;
     recognitionResult = '';
     window.trainingFinalAiResult = null;
@@ -9125,40 +9173,75 @@ async function pronBlobToEtriAudioBase64(blob) {
     }
 }
 function pronJsonpRequest(params, timeoutMs = 12000) {
-    return new Promise((resolve, reject) => {
-        if (!PRON_ETRI_GAS_URL) return reject(new Error("서비스 연결이 준비되지 않았습니다. 잠시 후 다시 시도해주세요."));
-        const callbackName = "pronEtriCb_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2);
-        const query = new URLSearchParams(params || {});
-        query.set("callback", callbackName);
-        const script = document.createElement("script");
-        let done = false;
-        const timer = setTimeout(() => {
-            if (done) return;
-            done = true;
-            cleanup();
-            reject(new Error("예약 정보를 불러오는 데 시간이 오래 걸리고 있습니다."));
-        }, timeoutMs);
-        function cleanup() {
-            clearTimeout(timer);
-            try { delete window[callbackName]; } catch (e) { window[callbackName] = undefined; }
-            if (script.parentNode) script.parentNode.removeChild(script);
-        }
-        window[callbackName] = data => {
-            if (done) return;
-            done = true;
-            cleanup();
-            resolve(data);
-        };
-        script.onerror = () => {
-            if (done) return;
-            done = true;
-            cleanup();
-            reject(new Error("서비스 연결이 원활하지 않습니다."));
-        };
-        script.src = PRON_ETRI_GAS_URL + "?" + query.toString();
-        document.head.appendChild(script);
+    if (!PRON_ETRI_GAS_URL) {
+        return Promise.reject(new Error("서비스 연결을 준비 중입니다. 잠시 후 다시 시도해주세요."));
+    }
+
+    const baseParams = params || {};
+    const limit = Math.max(3000, Number(timeoutMs) || 12000);
+
+    async function fetchJsonFirst_() {
+        if (typeof fetch !== 'function') throw new Error('fetch 미지원');
+        const query = new URLSearchParams(baseParams);
+        query.delete('callback');
+        query.set('_', Date.now());
+        const url = PRON_ETRI_GAS_URL + "?" + query.toString();
+        const fetchPromise = fetch(url, { method: 'GET', cache: 'no-store' }).then(async function(res) {
+            const text = await res.text();
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            if (/^\s*</.test(text || '')) throw new Error('HTML response');
+            const data = JSON.parse(text);
+            if (!data || typeof data !== 'object') throw new Error('invalid JSON');
+            return data;
+        });
+        const timeoutPromise = new Promise(function(_, reject) {
+            setTimeout(function() { reject(new Error('timeout')); }, limit);
+        });
+        return Promise.race([fetchPromise, timeoutPromise]);
+    }
+
+    function jsonpFallback_() {
+        return new Promise((resolve, reject) => {
+            const callbackName = "pronEtriCb_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2);
+            const query = new URLSearchParams(baseParams);
+            query.set("callback", callbackName);
+            query.set("_", Date.now());
+            const script = document.createElement("script");
+            let done = false;
+            const timer = setTimeout(() => {
+                if (done) return;
+                done = true;
+                cleanup();
+                reject(new Error("연결이 지연되고 있습니다. 잠시 후 다시 시도해주세요."));
+            }, limit);
+            function cleanup() {
+                clearTimeout(timer);
+                try { delete window[callbackName]; } catch (e) { window[callbackName] = undefined; }
+                if (script.parentNode) script.parentNode.removeChild(script);
+            }
+            window[callbackName] = data => {
+                if (done) return;
+                done = true;
+                cleanup();
+                resolve(data);
+            };
+            script.onerror = () => {
+                if (done) return;
+                done = true;
+                cleanup();
+                reject(new Error("연결이 지연되고 있습니다. 잠시 후 다시 시도해주세요."));
+            };
+            script.src = PRON_ETRI_GAS_URL + "?" + query.toString();
+            document.head.appendChild(script);
+        });
+    }
+
+    return fetchJsonFirst_().catch(function(err) {
+        window.__ulimLastPronFetchError = err && err.message ? err.message : String(err || '');
+        return jsonpFallback_();
     });
 }
+
 /* 정리됨: 중복 함수 pronRefreshEtriUsage (기존 9598행 정의 제거) */
 
 /* 정리됨: 중복 함수 pronRunEtriAdvancedAnalysis (기존 9612행 정의 제거) */
@@ -14925,8 +15008,8 @@ ${ruleSummary}`, 'success');
    - 학생 세션 토큰은 유지하고, 로그아웃은 로그아웃 버튼 클릭 시에만 처리
    ========================================================= */
 (function(){
-  const ROOM_PATCH_VERSION_5_53 = '2026.06.06.053.01';
-  console.log('[ULIM room 5.53] fetch-first room reservation patch loaded', ROOM_PATCH_VERSION_5_53);
+  const ROOM_PATCH_VERSION_5_53 = '2026.06.06.054.01';
+  console.log('[ULIM 5.54] room/audio/session patch loaded', ROOM_PATCH_VERSION_5_53);
 
   const __ulimPreviousRoomJsonp_5_53 = (typeof roomJsonp === 'function') ? roomJsonp : null;
   const __roomInflight_5_53 = {};
@@ -15031,6 +15114,155 @@ ${ruleSummary}`, 'success');
       }
     } catch(e) {}
   });
+})();
+</script>
+
+
+
+<script>
+/* =========================================================
+   5-56 발성훈련 100일 문장 조회 + 로컬 fallback 복구 패치
+   - 구글시트 100일 문장 조회를 먼저 시도
+   - 실패/지연/배포 미반영/시트 미생성 시 로컬 appdata/vocalization/data.js 문장으로 즉시 대체
+   - 학생 화면을 막지 않고, 원인은 console에 남김
+   ========================================================= */
+(function(){
+  const ULIM_VOCAL_FALLBACK_PATCH_VERSION = '2026.06.06.056.01';
+  console.log('[ULIM 5.56] 발성훈련 100일 문장 조회 + 로컬 fallback 복구 적용', ULIM_VOCAL_FALLBACK_PATCH_VERSION);
+
+  function getVocalStudentIdentity_5_56() {
+    if (typeof getTrainingStudentIdentity_ === 'function') {
+      try { return getTrainingStudentIdentity_() || {}; } catch(e) {}
+    }
+    return {
+      studentNo: (typeof studentNo !== 'undefined' ? studentNo : '') || localStorage.getItem('studentNo') || '',
+      studentName: (typeof studentName !== 'undefined' ? studentName : '') || localStorage.getItem('studentName') || '',
+      phoneLast4: (typeof phoneLast4 !== 'undefined' ? phoneLast4 : '') || localStorage.getItem('phoneLast4') || '',
+      studentSessionToken: (typeof studentSessionToken !== 'undefined' ? studentSessionToken : '') || localStorage.getItem('studentSessionToken') || '',
+      deviceKey: localStorage.getItem('ulimDeviceKey') || localStorage.getItem('ULIM_DEVICE_KEY') || ''
+    };
+  }
+
+  async function fetchVocalSheetSentence_5_56(options) {
+    options = options || {};
+
+    if (!options.forceRefresh && typeof readVocalTrainingClientCache_ === 'function') {
+      const cached = readVocalTrainingClientCache_();
+      if (cached && cached.status === 'success' && cached.text) return cached;
+    }
+
+    if (typeof GET_API_URL === 'undefined' || !GET_API_URL || !String(GET_API_URL).includes('script.google.com/macros/s/')) {
+      throw new Error('발성훈련 문장 서버 주소가 준비되지 않았습니다.');
+    }
+    if (typeof pronJsonpRequest !== 'function') {
+      throw new Error('문장 조회 통신 함수가 준비되지 않았습니다.');
+    }
+
+    const ident = getVocalStudentIdentity_5_56();
+    const data = await pronJsonpRequest({
+      action: 'getVocalTrainingSentence',
+      studentNo: ident.studentNo || '',
+      studentName: ident.studentName || '',
+      phoneLast4: ident.phoneLast4 || '',
+      studentSessionToken: ident.studentSessionToken || '',
+      deviceKey: ident.deviceKey || '',
+      _: Date.now()
+    }, options.timeoutMs || 14000);
+
+    if (!data || data.ok !== true || (!data.text && data.status !== 'exhausted')) {
+      throw new Error((data && data.message) || '구글시트 문장 응답이 비어 있습니다.');
+    }
+    if (data.status === 'success' && typeof saveVocalTrainingClientCache_ === 'function') {
+      saveVocalTrainingClientCache_(data);
+    }
+    return data;
+  }
+
+  function pickLocalVocalSentence_5_56() {
+    if (typeof vocalData !== 'undefined') trainDataList = vocalData;
+    const list = Array.isArray(trainDataList) ? trainDataList : [];
+    const savedIds = typeof getSavedVocalIds === 'function' ? getSavedVocalIds() : new Set();
+    let availableData = list.filter(function(item){ return item && !savedIds.has(item.id); });
+    if (!availableData.length) availableData = list.slice();
+    if (!availableData.length) return null;
+    const raw = (typeof pick === 'function') ? pick(availableData) : availableData[Math.floor(Math.random() * availableData.length)];
+    return typeof buildTrainingObjectFromSentence_ === 'function' ? buildTrainingObjectFromSentence_(raw) : raw;
+  }
+
+  function resetTrainingStateForNewSentence_5_56() {
+    step = 1;
+    const btnPrev = document.getElementById('btn_prev');
+    const btnNext = document.getElementById('btn_next');
+    if (btnPrev) btnPrev.disabled = true;
+    if (btnNext) btnNext.disabled = false;
+    const origin = document.getElementById('train_origin');
+    if (origin && currentTrainObj) origin.textContent = currentTrainObj.text || '';
+    const recordBox = document.getElementById('recordBox');
+    if (recordBox) recordBox.style.display = 'none';
+    const resultBox = document.getElementById('resultBox');
+    if (resultBox) resultBox.style.display = 'none';
+    const aiSection = document.getElementById('aiSection');
+    if (aiSection) aiSection.style.display = 'none';
+    const proAudio = document.getElementById('proAudio');
+    if (proAudio) {
+      try { proAudio.pause(); } catch(e) {}
+      proAudio.removeAttribute('src');
+      try { proAudio.load(); } catch(e) {}
+    }
+    lastRecordedBlob = null;
+    recognitionResult = '';
+    window.trainingFinalAiResult = null;
+    if (typeof renderTrain === 'function') renderTrain();
+  }
+
+  window.fetchServerTrainingSentence_ = fetchVocalSheetSentence_5_56;
+  try { fetchServerTrainingSentence_ = window.fetchServerTrainingSentence_; } catch(e) {}
+
+  window.trainNew = async function(){
+    const calendar = document.getElementById('calendarDisplayArea');
+    if (calendar) calendar.style.display = 'none';
+
+    let serverErr = null;
+    try {
+      if (typeof showLoading === 'function') showLoading('오늘의 발성훈련 문장을 불러오는 중입니다...');
+      const serverItem = await fetchVocalSheetSentence_5_56({ forceRefresh: true, timeoutMs: 14000 });
+      if (typeof hideLoading === 'function') hideLoading();
+
+      if (serverItem.status === 'exhausted') {
+        alert(serverItem.message || '이번 100일 훈련 문장을 모두 완료했습니다. 다음 100일 주기에서 새 문장이 제공됩니다.');
+        return;
+      }
+
+      currentTrainObj = buildTrainingObjectFromSentence_(serverItem);
+      resetTrainingStateForNewSentence_5_56();
+      return;
+    } catch(err) {
+      serverErr = err;
+      if (typeof hideLoading === 'function') hideLoading();
+      console.warn('[ULIM 5.56] 구글시트 100일 문장 조회 실패 → 로컬 문장으로 대체', err);
+    }
+
+    const localObj = pickLocalVocalSentence_5_56();
+    if (!localObj || !localObj.text) {
+      alert('문장 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
+      return;
+    }
+
+    currentTrainObj = localObj;
+    currentTrainObj.source = currentTrainObj.source || 'local_fallback';
+    resetTrainingStateForNewSentence_5_56();
+
+    const recStatus = document.getElementById('recStatus');
+    if (recStatus) {
+      recStatus.textContent = '구글시트 연결이 지연되어 로컬 문장으로 진행합니다.';
+      setTimeout(function(){
+        if (recStatus && recStatus.textContent === '구글시트 연결이 지연되어 로컬 문장으로 진행합니다.') {
+          recStatus.textContent = '녹음 대기';
+        }
+      }, 3200);
+    }
+  };
+  try { trainNew = window.trainNew; } catch(e) {}
 })();
 </script>
 
