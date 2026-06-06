@@ -4181,8 +4181,7 @@ function sanitizeTrainingFinalUserMessage_(msg) {
     if (!text) return '';
     // 학생 화면에는 ETRI 주소, HTTP 코드, fallback 상세 오류를 노출하지 않습니다.
     if (/fallback\s*:|epretx\.etri\.re\.kr|WiseASR|HTTP\s*\d+|ETRI|AI 분석 서버에 연결하지 못했습니다|사용할 수 없는 주소|응답 JSON 파싱 실패/i.test(text)) {
-        return '리미가 잠시 확인 중이에요.
-리미는 최선을 다했어요..';
+        return '리미가 잠시 확인 중이에요.\n리미는 최선을 다했어요..';
     }
     return text.replace(/\s*\/\s*fallback\s*:.+$/i, '').trim();
 }
@@ -13219,8 +13218,7 @@ async function pronRunEtriAdvancedAnalysis() {
         return;
     }
     if (!GET_API_URL || !GET_API_URL.includes("script.google.com/macros/s/")) {
-        pronRenderLocalAdvancedFallback_5_32('리미가 잠시 확인 중이에요.
-리미는 최선을 다했어요..');
+        pronRenderLocalAdvancedFallback_5_32('리미가 잠시 확인 중이에요.\n리미는 최선을 다했어요..');
         return;
     }
 
@@ -13291,8 +13289,7 @@ async function pronRunEtriAdvancedAnalysis() {
         pronPollEtriResult(requestId);
     } catch (err) {
         console.error(err);
-        pronRenderLocalAdvancedFallback_5_32('리미가 잠시 확인 중이에요.
-리미는 최선을 다했어요..');
+        pronRenderLocalAdvancedFallback_5_32('리미가 잠시 확인 중이에요.\n리미는 최선을 다했어요..');
     }
 }
 
@@ -13318,13 +13315,11 @@ function pronPollEtriResult(requestId) {
                 return;
             }
             if (data.status === 'fallback' || data.source === 'local_analysis_5_32') {
-                pronRenderLocalAdvancedFallback_5_32(data.message || data.localReason || '리미가 잠시 확인 중이에요.
-리미는 최선을 다했어요..');
+                pronRenderLocalAdvancedFallback_5_32(data.message || data.localReason || '리미가 잠시 확인 중이에요.\n리미는 최선을 다했어요..');
                 return;
             }
             if (!data.ok || data.status === "error" || data.status === 'limit') {
-                pronRenderLocalAdvancedFallback_5_32(data.message || "리미가 잠시 확인 중이에요.
-리미는 최선을 다했어요..");
+                pronRenderLocalAdvancedFallback_5_32(data.message || "리미가 잠시 확인 중이에요.\n리미는 최선을 다했어요..");
                 return;
             }
             pronClearAdvancedHardTimer_5_32();
@@ -13333,8 +13328,7 @@ function pronPollEtriResult(requestId) {
             pronRenderEtriResult(data);
         } catch (err) {
             if (Date.now() - startedAt > PRON_GEMINI_HARD_TIMEOUT_MS_5_32 || pronEtriPollingCount >= 10) {
-                pronRenderLocalAdvancedFallback_5_32('리미가 잠시 확인 중이에요.
-리미는 최선을 다했어요..');
+                pronRenderLocalAdvancedFallback_5_32('리미가 잠시 확인 중이에요.\n리미는 최선을 다했어요..');
                 return;
             }
             pronEtriPollingTimer = setTimeout(poll, 2500);
@@ -13539,8 +13533,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
     if (!source) return alert('먼저 읽을 문장을 입력해주세요.');
     if (!pronRecordedBlob) return alert('먼저 녹음을 완료해주세요. 녹음이 끝난 뒤 AI 분석을 실행할 수 있습니다.');
     if (!GET_API_URL || !GET_API_URL.includes('script.google.com/macros/s/')) {
-      pronRenderLocalAdvancedFallback_5_32('리미가 잠시 확인 중이에요.
-리미는 최선을 다했어요..');
+      pronRenderLocalAdvancedFallback_5_32('리미가 잠시 확인 중이에요.\n리미는 최선을 다했어요..');
       return;
     }
     const ctx = window.getUlimActiveUserContext_5_35();
@@ -13601,8 +13594,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
       pronPollEtriResult(requestId);
     } catch(e) {
       console.error(e);
-      pronRenderLocalAdvancedFallback_5_32('리미가 잠시 확인 중이에요.
-리미는 최선을 다했어요..');
+      pronRenderLocalAdvancedFallback_5_32('리미가 잠시 확인 중이에요.\n리미는 최선을 다했어요..');
     }
   };
   try { pronRunEtriAdvancedAnalysis = window.pronRunEtriAdvancedAnalysis; } catch(e) {}
@@ -14758,5 +14750,171 @@ ${ruleSummary}`, 'success');
   }
 })();
 </script>
+
+
+<script>
+/* =========================================================
+   5-52 로그인 복구 패치
+   - 로그인/인증 문구는 AI 오류문구 필터를 타지 않게 분리
+   - 학생/강사/관리자 세션은 로그아웃 버튼 클릭 전까지 보존
+   - 5.51의 AI 안내문구 정리는 유지하되 로그인 실패를 리미 문구로 바꾸지 않음
+   ========================================================= */
+(function(){
+  window.__ULIM_PATCH_5_52_LOGIN_RECOVERY = true;
+
+  function plainText_(value) {
+    return String(value == null ? '' : value)
+      .replace(/<[^>]*>/g, '')
+      .replace(/\s+$/g, '')
+      .trim();
+  }
+
+  function loginSafeMessage_(message, fallback) {
+    const raw = plainText_(message);
+    if (!raw) return fallback || '로그인 정보를 확인하지 못했습니다. 다시 시도해주세요.';
+    if (/리미가\s*(커피|잠시|발음사전|녹음실|오늘|결과지|파업)/.test(raw)) {
+      return fallback || '로그인 정보를 확인하지 못했습니다. 이름과 비밀번호를 다시 확인해주세요.';
+    }
+    if (/(GAS|Apps\s*Script|script\.google|googleusercontent|JSON|JSONP|SyntaxError|ReferenceError|TypeError|Exception|Failed\s*to\s*fetch|NetworkError|HTTP\s*\d+|API|토큰|token|callback|Code:|line\s*\d+)/i.test(raw)) {
+      return fallback || '로그인 연결이 잠시 지연되고 있습니다. 다시 시도해주세요.';
+    }
+    return raw.length > 160 ? raw.slice(0, 160) + '...' : raw;
+  }
+
+  function showLoginNotice_5_52(message, title) {
+    const text = loginSafeMessage_(message);
+    let overlay = document.getElementById('ulimLoginNoticeOverlay_5_52');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'ulimLoginNoticeOverlay_5_52';
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:40000;background:rgba(0,0,0,.52);display:none;align-items:center;justify-content:center;padding:18px;box-sizing:border-box;';
+      overlay.innerHTML = [
+        '<div style="width:min(520px,94vw);background:#fff;border-radius:22px;box-shadow:0 24px 80px rgba(0,0,0,.28);padding:28px 26px;text-align:left;box-sizing:border-box;">',
+          '<div id="ulimLoginNoticeTitle_5_52" style="font-size:22px;font-weight:900;color:#166534;margin-bottom:14px;line-height:1.35;">안내</div>',
+          '<div id="ulimLoginNoticeText_5_52" style="font-size:17px;font-weight:700;color:#374151;line-height:1.65;white-space:pre-wrap;word-break:keep-all;"></div>',
+          '<button type="button" id="ulimLoginNoticeOk_5_52" style="margin-top:22px;width:100%;border:none;border-radius:14px;background:#16a34a;color:#fff;font-size:17px;font-weight:900;padding:14px 16px;cursor:pointer;">확인</button>',
+        '</div>'
+      ].join('');
+      document.body.appendChild(overlay);
+      overlay.querySelector('#ulimLoginNoticeOk_5_52').onclick = function(){ overlay.style.display = 'none'; };
+      overlay.addEventListener('click', function(e){ if (e.target === overlay) overlay.style.display = 'none'; });
+    }
+    const titleEl = document.getElementById('ulimLoginNoticeTitle_5_52');
+    const textEl = document.getElementById('ulimLoginNoticeText_5_52');
+    if (titleEl) titleEl.textContent = title || '안내';
+    if (textEl) textEl.textContent = text;
+    overlay.style.display = 'flex';
+  }
+  window.showLoginNotice_5_52 = showLoginNotice_5_52;
+
+  function restoreStudentGlobalsFromStorage_5_52() {
+    try { if (!studentName) studentName = localStorage.getItem('studentName') || ''; } catch(e) {}
+    try { if (!instructorName) instructorName = localStorage.getItem('instructorName') || ''; } catch(e) {}
+    try { if (!studentSessionToken) studentSessionToken = localStorage.getItem('studentSessionToken') || ''; } catch(e) {}
+    try { studentMustChangePassword = localStorage.getItem('studentMustChangePassword') === 'Y'; } catch(e) {}
+    try { if (typeof updateFilenameConstants === 'function') updateFilenameConstants(); } catch(e) {}
+  }
+
+  const originalClearStudentSecureSession_5_52 = window.clearStudentSecureSession_;
+  window.clearStudentSecureSession_ = function(force) {
+    const logoutFlag = sessionStorage.getItem('ULIM_EXPLICIT_LOGOUT_IN_PROGRESS') === 'Y';
+    if (force === true || logoutFlag) {
+      if (typeof originalClearStudentSecureSession_5_52 === 'function') {
+        return originalClearStudentSecureSession_5_52.apply(this, arguments);
+      }
+      return true;
+    }
+    restoreStudentGlobalsFromStorage_5_52();
+    return false;
+  };
+  try { clearStudentSecureSession_ = window.clearStudentSecureSession_; } catch(e) {}
+
+  function saveStudentSecureSessionFromResult_5_52(result) {
+    result = result || {};
+    studentName = result.name || result.studentName || studentName || '';
+    instructorName = result.instructor || instructorName || '';
+    studentSessionToken = result.sessionToken || studentSessionToken || '';
+    studentMustChangePassword = !!result.mustChangePassword;
+    phoneLast4 = '';
+    studentNo = '';
+    localStorage.setItem('studentName', studentName);
+    localStorage.setItem('instructorName', instructorName);
+    if (studentSessionToken) localStorage.setItem('studentSessionToken', studentSessionToken);
+    localStorage.setItem('studentMustChangePassword', studentMustChangePassword ? 'Y' : 'N');
+    localStorage.removeItem('phoneLast4');
+    localStorage.removeItem('studentNo');
+    localStorage.removeItem('instructorFolderId');
+    localStorage.setItem('ulimLastMode', 'student');
+    try { if (typeof updateFilenameConstants === 'function') updateFilenameConstants(); } catch(e) {}
+  }
+
+  window.authenticate = async function(name, password) {
+    name = String(name || '').trim();
+    password = String(password || '').trim();
+    if (!name || !password) {
+      showLoginNotice_5_52('학생 이름과 비밀번호를 입력해주세요.', '로그인 확인');
+      return;
+    }
+
+    try { if (typeof showLoading === 'function') showLoading('로그인 정보 확인 중...'); } catch(e) {}
+    try {
+      const query = new URLSearchParams();
+      query.set('action', 'secureStudentLogin');
+      query.set('name', name);
+      query.set('password', password);
+      query.set('_', Date.now());
+
+      const response = await fetch(`${GET_API_URL}?${query.toString()}`, { method: 'GET', cache: 'no-store' });
+      const text = await response.text();
+      let result = null;
+      try { result = JSON.parse(text); } catch(jsonErr) {
+        throw new Error('로그인 응답을 확인하지 못했습니다. Apps Script 배포가 최신인지 확인해주세요.');
+      }
+      if (!response.ok) throw new Error((result && result.message) || '로그인 연결이 잠시 지연되고 있습니다.');
+
+      if (result && result.status === 'success' && result.sessionToken) {
+        saveStudentSecureSessionFromResult_5_52(result);
+        try { if (typeof hideLoading === 'function') hideLoading(); } catch(e) {}
+        showLoginNotice_5_52(`${studentName}님 로그인되었습니다.`, '로그인 완료');
+        if (studentMustChangePassword && typeof changeStudentPasswordByPrompt === 'function') {
+          setTimeout(function(){ changeStudentPasswordByPrompt(true, password); }, 250);
+        }
+        try { if (typeof showMainContent === 'function') showMainContent(true); } catch(e) {}
+        return;
+      }
+
+      const msg = (result && result.message) || '학생 이름 또는 비밀번호가 일치하지 않습니다.';
+      try { if (typeof hideLoading === 'function') hideLoading(); } catch(e) {}
+      showLoginNotice_5_52(msg, result && result.status === 'forbidden' ? '로그인 권한 확인' : '로그인 실패');
+    } catch(e) {
+      try { if (typeof hideLoading === 'function') hideLoading(); } catch(ignore) {}
+      showLoginNotice_5_52(e && e.message ? e.message : e, '로그인 오류');
+    }
+  };
+  try { authenticate = window.authenticate; } catch(e) {}
+
+  window.authenticateStudentFromInputs = async function() {
+    const nameInput = document.getElementById('studentNameInput');
+    const pwInput = document.getElementById('phoneLast4Input');
+    const name = nameInput ? nameInput.value.trim() : '';
+    const password = pwInput ? pwInput.value : '';
+    return window.authenticate(name, password);
+  };
+  try { authenticateStudentFromInputs = window.authenticateStudentFromInputs; } catch(e) {}
+
+  const originalStudentSecureLogout_5_52 = window.studentSecureLogout;
+  window.studentSecureLogout = function() {
+    sessionStorage.setItem('ULIM_EXPLICIT_LOGOUT_IN_PROGRESS', 'Y');
+    try {
+      if (typeof originalStudentSecureLogout_5_52 === 'function') return originalStudentSecureLogout_5_52.apply(this, arguments);
+    } finally {
+      setTimeout(function(){ sessionStorage.removeItem('ULIM_EXPLICIT_LOGOUT_IN_PROGRESS'); }, 1000);
+    }
+  };
+
+  window.addEventListener('pageshow', function(){ restoreStudentGlobalsFromStorage_5_52(); });
+})();
+</script>
+
 </body>
 </html>
