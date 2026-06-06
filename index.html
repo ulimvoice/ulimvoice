@@ -1478,9 +1478,9 @@ body.admin-mode .admin-only-tab { display:block !important; }
 
 <style id="rimi-ai-button-loading-style">
 /* =========================================================
-   5-28 리미 분석중 GIF를 보라색 AI 버튼 안에 표시
-   - 기존 초록 분석중 박스 숨김
-   - 분석중일 때 보라색 버튼 내부에 rimi_analyzing.gif 표시
+   5-28 리미 분석 중 GIF를 보라색 AI 버튼 안에 표시
+   - 기존 초록 분석 중 박스 숨김
+   - 분석 중일 때 보라색 버튼 내부에 rimi_analyzing.gif 표시
    ========================================================= */
 #aiLoadingVisual {
     display: none !important;
@@ -1685,11 +1685,11 @@ body.admin-mode .admin-only-tab { display:block !important; }
 
         <div class="result-box" id="resultBox">
             <div class="result-section" id="aiSection" style="display:none;">
-                <span class="section-title rimi-ai-title" id="aiSectionTitle"><img class="rimi-aiicon" src="data:image/png;base64,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" alt="리미"> <span id="aiSectionTitleText">AI 분석결과</span></span>
+                <span class="section-title rimi-ai-title" id="aiSectionTitle"><img class="rimi-aiicon" src="data:image/png;base64,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" alt="리미"> <span id="aiSectionTitleText">AI 분석 결과</span></span>
                 <div id="aiLoadingVisual" class="ai-loading-visual">
-                    <img class="ai-loading-gif" src="assets/rimi_analyzing.gif" alt="리미 분석중 애니메이션">
+                    <img class="ai-loading-gif" src="assets/rimi_analyzing.gif" alt="리미 분석 중 애니메이션">
                     <div class="ai-loading-copy">
-                        <div class="ai-loading-title">분석중..</div>
+                        <div class="ai-loading-title">분석 중...</div>
                         <div class="ai-loading-desc">리미가 대본을 넘기며 꼼꼼하게 분석하고 있어요<span class="ai-bulb">💡</span></div>
                     </div>
                 </div>
@@ -1830,8 +1830,8 @@ body.admin-mode .admin-only-tab { display:block !important; }
           <div class="pron-analysis-mode-card">
             <div class="pron-mode-title">분석 모드</div>
             <div class="pron-actions" style="margin-top:12px;">
-              <button type="button" class="pron-blue" onclick="pronRunGeneralAnalysis()">일반분석</button>
-              <button type="button" class="pron-orange" onclick="pronRunEtriAdvancedAnalysis()">고급분석</button>
+              <button type="button" class="pron-blue" onclick="pronRunGeneralAnalysis()">일반 분석</button>
+              <button type="button" class="pron-orange" onclick="pronRunEtriAdvancedAnalysis()">고급 분석</button>
             </div>
             <div id="pronAdvancedStatus" class="pron-advanced-status" style="display:none;"></div>
           </div>
@@ -3259,7 +3259,7 @@ async function completeTraining() {
     const btnComplete = document.getElementById('btnComplete');
 
     if (step !== 6 || !currentTrainObj) {
-        return alert("최종녹음 및 AI 분석 단계에서 녹음을 완료해야 연습완료가 가능합니다.");
+        return alert("최종녹음 단계에서 녹음을 완료해야 연습완료가 가능합니다.");
     }
 
     if (!lastRecordedBlob) {
@@ -3291,7 +3291,7 @@ async function completeTraining() {
     let analysisText = "";
     try {
         if (!window.trainingFinalAiResult || window.trainingFinalAiResult.requestSentence !== currentTrainObj.text) {
-            return alert("AI 분석을 먼저 완료한 뒤 연습완료를 눌러주세요.");
+            return alert("AI 분석 없이도 연습완료가 가능합니다. 연습완료 버튼을 다시 눌러 진행해주세요.");
         }
         analysisText = buildTrainingAiAnalysisText_(recognitionResult);
     } catch (analysisErr) {
@@ -3444,7 +3444,7 @@ async function trainNew(){
         currentTrainObj = buildTrainingObjectFromSentence_(serverItem);
     } catch (serverErr) {
         hideLoading();
-        console.warn('서버 100일 문장 조회 실패, 로컬 문장으로 대체:', serverErr);
+        console.warn('리미가 서류를 급하게 들고오느라 실수가 있었습니다.', serverErr);
         const savedIds = getSavedVocalIds();
         const availableData = trainDataList.filter(item => !savedIds.has(item.id));
 
@@ -3723,12 +3723,12 @@ async function startTrainingLocalWhisperCheck() {
         document.getElementById('resultBox').style.display='block';
         document.getElementById('sttResult').textContent = "녹음 중입니다.";
         document.getElementById('accBadge').className = 'accuracy-badge acc-wait';
-        document.getElementById('accBadge').textContent = '녹음중';
+        document.getElementById('accBadge').textContent = '녹음 중';
         mediaRecorder.addEventListener("dataavailable", e => { if (e.data && e.data.size) audioChunks.push(e.data); });
         mediaRecorder.addEventListener("stop", async () => {
             const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || options.mimeType || 'audio/webm' });
             stream.getTracks().forEach(track => track.stop());
-            document.getElementById('sttResult').textContent = "리미가 분석중입니다. 첫 실행은 시간이 걸릴 수 있습니다.";
+            document.getElementById('sttResult').textContent = "리미가 분석 중입니다. 첫 실행은 시간이 걸릴 수 있습니다.";
             try {
                 await runLocalWhisperForTraining(audioBlob, {
                     targetText: currentTrainObj ? currentTrainObj.text : '',
@@ -3835,7 +3835,7 @@ function getExtensionFromMime_(mimeType, fallback = 'webm') {
 }
 
 /****************************************************
- * 5-5 발성훈련 안정화: 로컬 일반분석 + 1일 1회 완료 제한
+ * 5-5 발성훈련 안정화: 로컬 일반 분석 + 1일 1회 완료 제한
  ****************************************************/
 async function analyzeTrainingAudioBlobLocal_(audioBlob) {
     const fallbackDuration = getTrainingRecordedDurationSec_();
@@ -3894,7 +3894,7 @@ async function analyzeTrainingAudioBlobLocal_(audioBlob) {
             syllablesPerSec: durationSec ? syllables / durationSec : 0
         };
     } catch (err) {
-        console.warn('[발성훈련 로컬 음성수치 분석 실패]', err);
+        console.warn('[발성훈련 음성수치 분석 실패]', err);
         const durationSec = base.durationSec || 0;
         return Object.assign(base, {
             syllablesPerSec: durationSec ? syllables / durationSec : 0
@@ -3912,7 +3912,7 @@ function buildTrainingFinalGeneralAnalysisText_(recognized, similarity, metrics)
     const silenceRatio = Math.max(0, Math.min(100, Math.round(Number(m.silenceRatio || 0) * 100)));
     const sim = Math.max(0, Math.min(100, Math.round(Number(similarity || 0))));
 
-    return `리미의 간단분석!
+    return `리미의 간단 분석!
 
 인식결과: ${safeRecognized}
 문장 일치도: ${sim}%
@@ -3932,7 +3932,7 @@ function buildTrainingAiAnalysisText_(transcript) {
     const result = window.trainingFinalAiResult || {};
 
     if (result.generalAnalysisText || result.analysisSource === 'local_general') {
-        return String(result.generalAnalysisText || result.analysisText || result.comment || '').trim() || '리미의 간단분석!';
+        return String(result.generalAnalysisText || result.analysisText || result.comment || '').trim() || '리미의 간단 분석!';
     }
 
     const heard = String(result.recognized || transcript || '').trim();
@@ -3943,7 +3943,7 @@ function buildTrainingAiAnalysisText_(transcript) {
     const scoreText = Number.isFinite(rawScore) ? rawScore.toFixed(1) + ' / 5' : (result.scoreText || '-');
     const comment = String(result.comment || '').trim() || '리미 코멘트가 아직 생성되지 않았습니다.';
 
-    return `AI 분석결과
+    return `AI 분석 결과
 - 리미 인식결과: ${heard || '인식 실패'}
 - 문장 일치도: ${similarity}%
 - 발음평가 점수: ${scoreText}
@@ -4018,7 +4018,7 @@ async function buildTrainingFinalLocalAiFallbackResult_(audioBlob, originalError
 
     if (!recognized && audioBlob && window.UlimLocalWhisper && typeof window.UlimLocalWhisper.transcribe === 'function') {
         const sttEl = document.getElementById('sttResult');
-        if (sttEl) sttEl.textContent = '일반분석을 준비하고 있습니다.';
+        if (sttEl) sttEl.textContent = '분석을 준비하고 있습니다.';
         try {
             const localResult = await window.UlimLocalWhisper.transcribe(audioBlob, {
                 language: 'ko',
@@ -4026,13 +4026,13 @@ async function buildTrainingFinalLocalAiFallbackResult_(audioBlob, originalError
                 model: ULIM_LOCAL_WHISPER_MODEL,
                 onStatus: function(msg) {
                     const el = document.getElementById('sttResult');
-                    if (el && msg) el.textContent = '일반분석을 준비하고 있습니다.';
+                    if (el && msg) el.textContent = '분석을 준비하고 있습니다.';
                 }
             });
             recognized = String(localResult && localResult.text ? localResult.text : '').trim();
             recognitionResult = recognized;
         } catch (localErr) {
-            console.warn('[로컬 음성인식 실패 - 일반분석 수치만 표시]', localErr);
+            console.warn('[음성인식 실패 - 분석 수치만 표시]', localErr);
         }
     }
 
@@ -4048,14 +4048,14 @@ async function buildTrainingFinalLocalAiFallbackResult_(audioBlob, originalError
         status: 'fallback',
         source: 'local_ai',
         analysisSource: 'local_general',
-        badge: '일반분석',
+        badge: '일반 분석',
         recognized: recognized,
         score: '',
         scoreText: '-',
         comment: generalAnalysisText,
         analysisText: generalAnalysisText,
         generalAnalysisText: generalAnalysisText,
-        message: '리미의 간단분석!',
+        message: '리미의 간단 분석!',
         originalError: errorMessage,
         requestSentence: scriptText,
         metrics: metrics
@@ -4087,14 +4087,14 @@ function buildTrainingFinalSafeFallbackResult_(originalError) {
         status: 'fallback',
         source: 'local_ai',
         analysisSource: 'local_general',
-        badge: '일반분석',
+        badge: '일반 분석',
         recognized: recognized,
         score: '',
         scoreText: '-',
         comment: generalAnalysisText,
         analysisText: generalAnalysisText,
         generalAnalysisText: generalAnalysisText,
-        message: '리미의 간단분석!',
+        message: '리미의 간단 분석!',
         originalError: errorMessage,
         requestSentence: scriptText,
         metrics: metrics
@@ -4108,7 +4108,7 @@ async function buildTrainingFinalFallbackResult_(audioBlob, originalError) {
         const localResult = await buildTrainingFinalLocalAiFallbackResult_(audioBlob, originalError);
         if (localResult && localResult.comment) return localResult;
     } catch (localErr) {
-        console.warn('[로컬 AI 분석 대체 실패]', localErr);
+        console.warn('[분석 대체 실패]', localErr);
     }
     return buildTrainingFinalSafeFallbackResult_(originalError);
 }
@@ -4168,7 +4168,7 @@ async function createTrainingResultVideoBlob_(audioBlob, originalText, analysisT
         y += 30;
         ctx.fillStyle = '#86efac';
         ctx.font = 'bold 32px system-ui, -apple-system, Segoe UI, sans-serif';
-        ctx.fillText('AI 분석결과', 60, y);
+        ctx.fillText('AI 분석 결과', 60, y);
         y += 48;
         ctx.fillStyle = '#ffffff';
         ctx.font = '25px system-ui, -apple-system, Segoe UI, sans-serif';
@@ -4227,7 +4227,7 @@ function sanitizeTrainingFinalUserMessage_(msg) {
     if (!text) return '';
     // 학생 화면에는 ETRI 주소, HTTP 코드, fallback 상세 오류를 노출하지 않습니다.
     if (/fallback\s*:|epretx\.etri\.re\.kr|WiseASR|HTTP\s*\d+|ETRI|AI 분석 서버에 연결하지 못했습니다|사용할 수 없는 주소|응답 JSON 파싱 실패/i.test(text)) {
-        return '리미가 잠시 확인 중이에요.\n리미는 최선을 다했어요..';
+        return '리미가 잠시 확인 중이에요.\n리미는 최선을 다했어요.';
     }
     return text.replace(/\s*\/\s*fallback\s*:.+$/i, '').trim();
 }
@@ -4275,7 +4275,7 @@ function renderTrainingFinalAiResult_(data) {
         if (data.generalAnalysisText) {
             stt.textContent = data.generalAnalysisText;
         } else if (isFallback) {
-            stt.textContent = `리미의 간단분석!
+            stt.textContent = `리미의 간단 분석!
 
 인식결과: ${recognized || '인식 결과 없음'}
 문장 일치도: ${similarity || 0}%
@@ -4290,7 +4290,7 @@ function renderTrainingFinalAiResult_(data) {
     if (badge) {
         if (isFallback) {
             badge.className = 'accuracy-badge acc-soso';
-            badge.textContent = data.badge || '일반분석';
+            badge.textContent = data.badge || '일반 분석';
         } else if (Number.isFinite(rawScore) && rawScore >= 4.3) {
             badge.className = 'accuracy-badge acc-good';
             badge.textContent = '매우 좋음';
@@ -4329,7 +4329,7 @@ async function toggleRecord() {
             const sttEl = document.getElementById('sttResult');
             const badge = document.getElementById('accBadge');
             if (sttEl) sttEl.textContent = '녹음 중입니다.';
-            if (badge) { badge.className = 'accuracy-badge acc-wait'; badge.textContent = '녹음중'; }
+            if (badge) { badge.className = 'accuracy-badge acc-wait'; badge.textContent = '녹음 중'; }
             mediaRecorder.addEventListener("dataavailable", e => { if (e.data && e.data.size) audioChunks.push(e.data); });
             mediaRecorder.addEventListener("stop", async () => {
                 const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || options.mimeType || 'audio/webm' });
@@ -8973,7 +8973,7 @@ function pronUpdateVoiceScore() {
     const sttLine = pronLastSttText || "인식 대기/실패";
 
     pronShowGeneralAnalysisUi();
-    pronSetAdvancedStatus(`리미의 간단분석!
+    pronSetAdvancedStatus(`리미의 간단 분석!
 
 인식결과: ${sttLine}
 문장 일치도: ${score}%
@@ -9017,19 +9017,19 @@ async function pronRunWhisperTranscription() {
             throw new Error("리미 분석 모듈이 아직 준비되지 않았습니다. 인터넷 연결 상태에서 한 번 새로고침 후 다시 시도해주세요.");
         }
         pronShowGeneralAnalysisUi();
-        pronSetAdvancedStatus("리미가 분석중입니다.");
+        pronSetAdvancedStatus("리미가 분석 중입니다.");
         const result = await window.UlimLocalWhisper.transcribe(pronRecordedBlob, {
             language: "ko",
             task: "transcribe",
             model: ULIM_LOCAL_WHISPER_MODEL,
-            onStatus: () => pronSetAdvancedStatus("리미가 분석중입니다.")
+            onStatus: () => pronSetAdvancedStatus("리미가 분석 중입니다.")
         });
         const text = pronCleanExtractedText(result.text || "");
         pronRenderWhisperResult({ ok: true, status: "success", text, local: true, model: result.model || ULIM_LOCAL_WHISPER_MODEL });
         return text;
     } catch (err) {
         console.error(err);
-        pronSetAdvancedStatus("리미 간단분석 실패: " + String(err.message || err).replace(/Whisper/gi, "AI").replace(/ETRI/gi, "AI"), "error");
+        pronSetAdvancedStatus("리미 간단 분석 실패: " + String(err.message || err).replace(/Whisper/gi, "AI").replace(/ETRI/gi, "AI"), "error");
         return "";
     }
 }
@@ -9457,7 +9457,7 @@ async function getUlimWhisperPipeline_(model, onStatus) {
       onStatus && onStatus('AI 분석 모듈을 불러오는 중입니다.');
       const { pipeline } = await importUlimWhisperLib_();
       const modelId = model || window.ULIM_LOCAL_WHISPER_MODEL || 'Xenova/whisper-tiny';
-      onStatus && onStatus('리미가 분석중입니다.');
+      onStatus && onStatus('리미가 분석 중입니다.');
       try {
         if (navigator.gpu) {
           return await pipeline('automatic-speech-recognition', modelId, { device: 'webgpu' });
@@ -9506,9 +9506,9 @@ window.UlimLocalWhisper = {
     const onStatus = typeof options.onStatus === 'function' ? options.onStatus : null;
     const model = options.model || window.ULIM_LOCAL_WHISPER_MODEL || 'Xenova/whisper-tiny';
     const pipe = await getUlimWhisperPipeline_(model, onStatus);
-    onStatus && onStatus('리미가 분석중입니다.');
+    onStatus && onStatus('리미가 분석 중입니다.');
     const audio = await blobToMonoFloat32_(blob, 16000);
-    onStatus && onStatus('리미가 분석중입니다. 기기 성능에 따라 시간이 걸릴 수 있습니다.');
+    onStatus && onStatus('리미가 분석 중입니다. 기기 성능에 따라 시간이 걸릴 수 있습니다.');
     const result = await pipe(audio, {
       language: options.language || 'ko',
       task: options.task || 'transcribe',
@@ -12707,8 +12707,8 @@ function adminRenderAttendanceTable() {
 /* =========================================================
    5-19 표준발음 분석 멘트 리미 명칭 정리
    - 우리미 → 리미
-   - 일반분석 완료 → 리미의 간단분석!
-   - 리미 AI 분석 완료 → 리미의 정밀진단 완료!
+   - 일반 분석 완료 → 리미의 간단 분석!
+   - 리미 AI 분석 완료 → 리미의 정밀 진단 완료!
    - 첨부된 불필요 문구 제거 버전 index를 기준으로 반영
    ========================================================= */
 window.__ulimRimiPronunciationMentTextPatch = true;
@@ -12717,7 +12717,7 @@ window.__ulimRimiPronunciationMentTextPatch = true;
 
 <script>
 /* =========================================================
-   5-27 리미 분석중 GIF 외부 asset 적용
+   5-27 리미 분석 중 GIF 외부 asset 적용
    - GIF 내장 base64 제거
    - 사용 경로: assets/rimi_analyzing.gif
    - GitHub Pages에서는 index.html 옆 assets 폴더에 rimi_analyzing.gif 업로드
@@ -12728,9 +12728,9 @@ window.__ulimRimiAnalyzingAssetVersion = "5-27";
 
 <script>
 /* =========================================================
-   5-28 리미 분석중 버튼 내부 표시 보정
+   5-28 리미 분석 중 버튼 내부 표시 보정
    - 보라색 AI 버튼 안에 assets/rimi_analyzing.gif 표시
-   - 하단 초록 분석중 박스는 숨김 처리
+   - 하단 초록 분석 중 박스는 숨김 처리
    ========================================================= */
 window.__ulimRimiAnalyzingInsideButtonVersion = "5-28";
 </script>
@@ -12738,11 +12738,11 @@ window.__ulimRimiAnalyzingInsideButtonVersion = "5-28";
 
 <script>
 /* =========================================================
-   5-29 리미 분석중 중복등록/무한분석 방지 패치
+   5-29 리미 분석 중 중복등록/무한분석 방지 패치
    - 분석 실행 중 재클릭 방지
    - 학생 세션토큰을 분석/완료확인 API에 전달
    - 캐시 삭제 후에도 DEV 키가 아니라 서버에서 학생UID/출결번호 기준으로 처리 가능하게 보정
-   - limit / timeout / error 시 분석중 UI 확실히 해제
+   - limit / timeout / error 시 분석 중 UI 확실히 해제
    - 리미 GIF는 보라색 AI 버튼 안에만 표시
    ========================================================= */
 window.__ulimTrainingAiDuplicateFixVersion = "5-29";
@@ -12802,7 +12802,7 @@ function setTrainingAiLoadingState_(isLoading) {
     const sttEl = document.getElementById('sttResult');
     const badge = document.getElementById('accBadge');
 
-    // 5-29: 아래쪽 초록 분석중 박스는 쓰지 않고, 보라색 AI 버튼 안에만 GIF를 표시합니다.
+    // 5-29: 아래쪽 초록 분석 중 박스는 쓰지 않고, 보라색 AI 버튼 안에만 GIF를 표시합니다.
     if (loadingVisual) {
         loadingVisual.classList.remove('show');
         loadingVisual.style.display = 'none';
@@ -12816,15 +12816,15 @@ function setTrainingAiLoadingState_(isLoading) {
 
         if (isLoading) {
             btn.classList.add('training-ai-loading');
-            btn.innerHTML = '<img class="training-ai-loading-img" src="assets/rimi_analyzing.gif" alt="리미 분석중">';
+            btn.innerHTML = '<img class="training-ai-loading-img" src="assets/rimi_analyzing.gif" alt="리미 분석 중">';
         } else {
             btn.classList.remove('training-ai-loading');
             btn.textContent = 'AI';
         }
     }
 
-    if (btnLabel) btnLabel.textContent = isLoading ? '분석중..' : 'AI 분석';
-    if (titleText) titleText.textContent = isLoading ? '분석중..' : 'AI 분석결과';
+    if (btnLabel) btnLabel.textContent = isLoading ? '분석 중...' : 'AI 분석';
+    if (titleText) titleText.textContent = isLoading ? '분석 중...' : 'AI 분석 결과';
     if (sttEl) sttEl.classList.remove('hidden-during-loading');
     if (badge) badge.classList.remove('hidden-during-loading');
 }
@@ -12904,7 +12904,7 @@ async function runTrainingFinalAiAnalysis_(audioBlob, options = {}) {
     let localRecognized = String(recognitionResult || '').trim();
     if (!localRecognized && window.UlimLocalWhisper && typeof window.UlimLocalWhisper.transcribe === 'function') {
         const sttEl = document.getElementById('sttResult');
-        if (sttEl) sttEl.textContent = '리미가 분석중입니다.';
+        if (sttEl) sttEl.textContent = '리미가 분석 중입니다.';
         const localResult = await Promise.race([
             window.UlimLocalWhisper.transcribe(audioBlob, {
                 language: 'ko',
@@ -12912,10 +12912,10 @@ async function runTrainingFinalAiAnalysis_(audioBlob, options = {}) {
                 model: ULIM_LOCAL_WHISPER_MODEL,
                 onStatus: msg => {
                     const el = document.getElementById('sttResult');
-                    if (el && msg) el.textContent = '리미가 분석중입니다.';
+                    if (el && msg) el.textContent = '리미가 분석 중입니다.';
                 }
             }),
-            trainingAiTimeout_(25000, '리미가 졸음을 이겨내는 중이에요')
+            trainingAiTimeout_(25000, '리미가 졸음을 이겨내는 중이에요.')
         ]);
         localRecognized = String(localResult.text || '').trim();
         recognitionResult = localRecognized;
@@ -12981,7 +12981,7 @@ function pollTrainingFinalAiResult_(requestId) {
                         return reject(new Error('리미 분석 결과 대기 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.'));
                     }
                     const st = document.getElementById('recStatus');
-                    if (st) st.textContent = '리미가 분석중입니다.';
+                    if (st) st.textContent = '리미가 분석 중입니다.';
                     trainingFinalAiPollingTimer = setTimeout(poll, 2200);
                     return;
                 }
@@ -13009,7 +13009,7 @@ function pollTrainingFinalAiResult_(requestId) {
 /* 정리됨: 중복 함수 runTrainingFinalAiAnalysisFromButton (기존 13828행 정의 제거) */
 
 
-/* 새 녹음 시작/완료 이후에도 혹시 남은 분석중 상태 제거 */
+/* 새 녹음 시작/완료 이후에도 혹시 남은 분석 중 상태 제거 */
 window.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('click', (ev) => {
         const target = ev.target;
@@ -13024,10 +13024,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
 <script>
 /* =========================================================
-   5-30 리미 정밀진단 30초 타임아웃 → 로컬 간단분석 전환
-   - 제미나이/서버 정밀진단이 30초 이상 걸리면 즉시 로컬 분석 표시
+   5-30 리미 정밀 진단 30초 타임아웃 → 로컬 간단 분석 전환
+   - 제미나이/서버 정밀 진단이 30초 이상 걸리면 즉시 로컬 분석 표시
    - 로컬 분석 생성도 지연되지 않도록 6초 안전 타임아웃 적용
-   - 분석중 GIF/버튼 상태는 로컬 분석 표시 후 반드시 해제
+   - 분석 중 GIF/버튼 상태는 로컬 분석 표시 후 반드시 해제
    ========================================================= */
 window.__ulimTrainingAi30SecFallbackVersion = "5-30";
 const TRAINING_AI_ADVANCED_TIMEOUT_MS_5_30 = 30000;
@@ -13035,7 +13035,7 @@ const TRAINING_AI_LOCAL_FALLBACK_TIMEOUT_MS_5_30 = 6000;
 
 function isTrainingAiAdvancedTimeout_5_30_(err) {
     const msg = String((err && err.message) || err || '');
-    return /30초|정밀진단|시간이 오래|timeout|타임아웃|지연/i.test(msg);
+    return /30초|정밀 진단|시간이 오래|timeout|타임아웃|지연/i.test(msg);
 }
 
 function buildTrainingFinalFastLocalFallbackResult_5_30_(originalError) {
@@ -13061,14 +13061,14 @@ function buildTrainingFinalFastLocalFallbackResult_5_30_(originalError) {
         status: 'fallback',
         source: 'local_ai',
         analysisSource: 'local_general',
-        badge: '일반분석',
+        badge: '일반 분석',
         recognized: recognized,
         score: '',
         scoreText: '-',
         comment: generalAnalysisText,
         analysisText: generalAnalysisText,
         generalAnalysisText: generalAnalysisText,
-        message: '리미의 간단분석!',
+        message: '리미의 간단 분석!',
         originalError: errorMessage,
         requestSentence: scriptText,
         standardPronunciation: pron,
@@ -13083,7 +13083,7 @@ async function buildTrainingFinalFallbackResult_5_30_(audioBlob, originalError) 
             localPromise,
             trainingAiTimeout_(
                 TRAINING_AI_LOCAL_FALLBACK_TIMEOUT_MS_5_30,
-                '리미가 출근하지 않아 결과가 이상할수도 있습니다.'
+                '리미가 출근하지 않아 결과가 이상할 수도 있습니다.'
             )
         ]);
     } catch (localErr) {
@@ -13094,7 +13094,7 @@ async function buildTrainingFinalFallbackResult_5_30_(audioBlob, originalError) 
 
 async function runTrainingFinalAiAnalysisFromButton() {
     if (window.trainingFinalAiInProgress) {
-        return alert('리미가 이미 분석중입니다. 잠시만 기다려주세요.');
+        return alert('리미가 이미 분석 중입니다. 잠시만 기다려주세요.');
     }
 
     if (step !== 6 || !currentTrainObj) {
@@ -13115,7 +13115,7 @@ async function runTrainingFinalAiAnalysisFromButton() {
         return alert('이미 마지막 녹음본의 AI 분석이 완료되었습니다. 다시 분석하려면 새로 녹음 후 실행해주세요.');
     }
 
-    const ok = confirm('AI 분석을 시작하면 오늘연습이 완료됩니다. 진행하시겠습니까?');
+    const ok = confirm('AI 분석은 하루 1회만 사용할 수 있습니다. 이미 사용했다면 리미의 간단 분석으로 전환됩니다. 진행할까요?');
     if (!ok) return;
 
     window.trainingFinalAiInProgress = true;
@@ -13137,10 +13137,10 @@ async function runTrainingFinalAiAnalysisFromButton() {
         const sttEl = document.getElementById('sttResult');
         const badge = document.getElementById('accBadge');
         if (sttEl) sttEl.textContent = '리미가 대본 분석을 시작했습니다.';
-        if (badge) { badge.className = 'accuracy-badge acc-wait'; badge.textContent = '분석중'; }
+        if (badge) { badge.className = 'accuracy-badge acc-wait'; badge.textContent = '분석 중'; }
 
         const recStatus = document.getElementById('recStatus');
-        if (recStatus) recStatus.textContent = '리미가 꼼꼼하게 들어보고 분석중입니다.';
+        if (recStatus) recStatus.textContent = '리미가 꼼꼼하게 들어보고 분석 중입니다.';
 
         await Promise.race([
             runTrainingFinalAiAnalysis_(lastRecordedBlob, { force: true }),
@@ -13195,7 +13195,7 @@ async function runTrainingFinalAiAnalysisFromButton() {
 <script>
 /* =========================================================
    5-31 안내
-   - 30초 후 로컬분석 전환은 5-30 index 로직 유지
+   - 30초 후 로컬 분석 전환은 5-30 index 로직 유지
    - 로그인/조회 막힘은 5-31 GAS의 잠금 분리로 해결
    ========================================================= */
 window.__ulimTrainingAiLockFixVersion = "5-31";
@@ -13206,7 +13206,7 @@ window.__ulimTrainingAiLockFixVersion = "5-31";
 <script>
 /* =========================================================
    5-32 표준발음/발성훈련 Gemini 지연·중복신청 안전패치
-   - AI 분석 30초 초과 시 로컬분석 자동 표시
+   - AI 분석 30초 초과 시 로컬 분석 자동 표시
    - 캐시삭제/중복클릭/중복요청 시 무한로딩 방지
    - Gemini limit/error/not_found/pending 장기화 시 버튼과 화면 상태 무조건 복구
    ========================================================= */
@@ -13285,7 +13285,7 @@ function pronRenderLocalAdvancedFallback_5_32(reason) {
 
 async function pronRunEtriAdvancedAnalysis() {
     if (pronAdvancedIsRunning_5_32) {
-        pronSetAdvancedStatus('이미 분석중입니다. 잠시만 기다려주세요.');
+        pronSetAdvancedStatus('이미 분석 중입니다. 잠시만 기다려주세요.');
         return;
     }
 
@@ -13299,7 +13299,7 @@ async function pronRunEtriAdvancedAnalysis() {
         return;
     }
     if (!GET_API_URL || !GET_API_URL.includes("script.google.com/macros/s/")) {
-        pronRenderLocalAdvancedFallback_5_32('리미가 잠시 확인 중이에요.\n리미는 최선을 다했어요..');
+        pronRenderLocalAdvancedFallback_5_32('리미가 잠시 확인 중이에요.\n리미는 최선을 다했어요.');
         return;
     }
 
@@ -13313,7 +13313,7 @@ async function pronRunEtriAdvancedAnalysis() {
     pronAdvancedIsRunning_5_32 = true;
     pronAdvancedFallbackShown_5_32 = false;
     pronSetAdvancedButtonsLocked_5_32(true);
-    pronSetAdvancedStatus("리미가 조금 더 정확하게 분석중입니다.");
+    pronSetAdvancedStatus("리미가 조금 더 정확하게 분석 중입니다.");
 
     pronAdvancedHardTimer_5_32 = setTimeout(() => {
         pronRenderLocalAdvancedFallback_5_32('리미는 재택근무 중입니다.');
@@ -13370,7 +13370,7 @@ async function pronRunEtriAdvancedAnalysis() {
         pronPollEtriResult(requestId);
     } catch (err) {
         console.error(err);
-        pronRenderLocalAdvancedFallback_5_32('리미가 잠시 확인 중이에요.\n리미는 최선을 다했어요..');
+        pronRenderLocalAdvancedFallback_5_32('리미가 잠시 확인 중이에요.\n리미는 최선을 다했어요.');
     }
 }
 
@@ -13391,16 +13391,16 @@ function pronPollEtriResult(requestId) {
         try {
             const data = await pronJsonpRequest({ action: "getGeminiPronunciationCommentResult", requestId, _: Date.now() }, 8000);
             if (!data || data.status === "pending" || data.status === "not_found") {
-                pronSetAdvancedStatus("리미가 정밀하게 분석중입니다.");
+                pronSetAdvancedStatus("리미가 정밀하게 분석 중입니다.");
                 pronEtriPollingTimer = setTimeout(poll, 2500);
                 return;
             }
             if (data.status === 'fallback' || data.source === 'local_analysis_5_32') {
-                pronRenderLocalAdvancedFallback_5_32(data.message || data.localReason || '리미가 잠시 확인 중이에요.\n리미는 최선을 다했어요..');
+                pronRenderLocalAdvancedFallback_5_32(data.message || data.localReason || '리미가 잠시 확인 중이에요.\n리미는 최선을 다했어요.');
                 return;
             }
             if (!data.ok || data.status === "error" || data.status === 'limit') {
-                pronRenderLocalAdvancedFallback_5_32(data.message || "리미가 잠시 확인 중이에요.\n리미는 최선을 다했어요..");
+                pronRenderLocalAdvancedFallback_5_32(data.message || "리미가 잠시 확인 중이에요.\n리미는 최선을 다했어요.");
                 return;
             }
             pronClearAdvancedHardTimer_5_32();
@@ -13409,7 +13409,7 @@ function pronPollEtriResult(requestId) {
             pronRenderEtriResult(data);
         } catch (err) {
             if (Date.now() - startedAt > PRON_GEMINI_HARD_TIMEOUT_MS_5_32 || pronEtriPollingCount >= 10) {
-                pronRenderLocalAdvancedFallback_5_32('리미가 잠시 확인 중이에요.\n리미는 최선을 다했어요..');
+                pronRenderLocalAdvancedFallback_5_32('리미가 잠시 확인 중이에요.\n리미는 최선을 다했어요.');
                 return;
             }
             pronEtriPollingTimer = setTimeout(poll, 2500);
@@ -13435,7 +13435,7 @@ function pronRenderEtriResult(data) {
         pronUpdateEtriUsageBadge(data.used || 0, data.remaining);
     }
 
-    const title = isFallback ? '리미가 분석을 끝냈습니다' : '리미의 정밀진단 완료!';
+    const title = isFallback ? '리미가 분석을 끝냈습니다' : '리미의 정밀 진단 완료!';
     const reason = isFallback ? `\n안내: ${data.localReason || data.message || '리미는 재택근무중'}\n` : '';
 
     pronSetAdvancedStatus(`${title}
@@ -13607,14 +13607,14 @@ ${ruleSummary}`, isFallback ? "success" : "success");
   // 표준발음 AI 분석: 학생 세션이 없어도 강사/관리자 세션으로 요청 가능
   window.pronRunEtriAdvancedAnalysis = async function() {
     if (typeof pronAdvancedIsRunning_5_32 !== 'undefined' && pronAdvancedIsRunning_5_32) {
-      window.pronSetAdvancedStatus('이미 분석중입니다. 잠시만 기다려주세요.');
+      window.pronSetAdvancedStatus('이미 분석 중입니다. 잠시만 기다려주세요.');
       return;
     }
     const source = document.getElementById('pronInputText')?.value.trim() || '';
     if (!source) return alert('먼저 읽을 문장을 입력해주세요.');
     if (!pronRecordedBlob) return alert('먼저 녹음을 완료해주세요. 녹음이 끝난 뒤 AI 분석을 실행할 수 있습니다.');
     if (!GET_API_URL || !GET_API_URL.includes('script.google.com/macros/s/')) {
-      pronRenderLocalAdvancedFallback_5_32('리미가 잠시 확인 중이에요.\n리미는 최선을 다했어요..');
+      pronRenderLocalAdvancedFallback_5_32('리미가 잠시 확인 중이에요.\n리미는 최선을 다했어요.');
       return;
     }
     const ctx = window.getUlimActiveUserContext_5_35();
@@ -13625,7 +13625,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
     pronAdvancedIsRunning_5_32 = true;
     pronAdvancedFallbackShown_5_32 = false;
     pronSetAdvancedButtonsLocked_5_32(true);
-    window.pronSetAdvancedStatus('리미가 조금 더 정확하게 분석중입니다.');
+    window.pronSetAdvancedStatus('리미가 조금 더 정확하게 분석 중입니다.');
     pronAdvancedHardTimer_5_32 = setTimeout(function(){
       pronRenderLocalAdvancedFallback_5_32('리미는 재택근무 중입니다.');
     }, PRON_GEMINI_HARD_TIMEOUT_MS_5_32);
@@ -13675,7 +13675,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
       pronPollEtriResult(requestId);
     } catch(e) {
       console.error(e);
-      pronRenderLocalAdvancedFallback_5_32('리미가 잠시 확인 중이에요.\n리미는 최선을 다했어요..');
+      pronRenderLocalAdvancedFallback_5_32('리미가 잠시 확인 중이에요.\n리미는 최선을 다했어요.');
     }
   };
   try { pronRunEtriAdvancedAnalysis = window.pronRunEtriAdvancedAnalysis; } catch(e) {}
@@ -13745,8 +13745,8 @@ ${ruleSummary}`, isFallback ? "success" : "success");
     if (!msg) return ulimPickLimiMessage_5_36(seed);
     if (ulimLooksInternal_5_36(msg)) return ulimPickLimiMessage_5_36(seed || msg);
     // AI/분석 실패 계열은 학생·강사에게 리미 톤으로 통일
-    if (/(AI 분석|정밀진단|분석|결과|조회|지연|실패|오류|서비스|연결|로컬분석|간단 확인|사용량|잔여횟수)/i.test(msg)) {
-      if (!/(먼저|녹음|문장|로그인|이미 분석중|읽을 문장)/.test(msg)) return ulimPickLimiMessage_5_36(seed || msg);
+    if (/(AI 분석|정밀 진단|분석|결과|조회|지연|실패|오류|서비스|연결|로컬 분석|간단 확인|사용량|잔여횟수)/i.test(msg)) {
+      if (!/(먼저|녹음|문장|로그인|이미 분석 중|읽을 문장)/.test(msg)) return ulimPickLimiMessage_5_36(seed || msg);
     }
     return msg.length > 120 ? msg.slice(0, 120) + '...' : msg;
   }
@@ -13795,7 +13795,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
     let text = String(message || '');
     if (text && !ulimIsFullAdmin_5_36()) {
       // 완료 결과 전체는 그대로 둔다. 안내/오류 줄만 리미 문구로 바꾸기 위해 내부문구 포함 시만 치환한다.
-      if (ulimLooksInternal_5_36(text) || (/실패|오류|서비스|연결|지연|대체|로컬분석|잔여횟수.*확인하지 못/i.test(text) && !/리미의 .*완료/.test(text))) {
+      if (ulimLooksInternal_5_36(text) || (/실패|오류|서비스|연결|지연|대체|로컬 분석|잔여횟수.*확인하지 못/i.test(text) && !/리미의 .*완료/.test(text))) {
         text = ulimPublicAiMessage_5_36(text);
       }
     }
@@ -13840,7 +13840,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
       }
     } catch(e) {}
 
-    const title = isFallback ? '리미가 확인했어요!' : '리미의 정밀진단 완료!';
+    const title = isFallback ? '리미가 확인했어요!' : '리미의 정밀 진단 완료!';
     let reason = '';
     if (isFallback) {
       if (ulimIsFullAdmin_5_36()) {
@@ -13872,7 +13872,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
       try {
         const data = await pronJsonpRequest({ action: 'getGeminiPronunciationCommentResult', requestId, _: Date.now() }, 8000);
         if (!data || data.status === 'pending' || data.status === 'not_found') {
-          window.pronSetAdvancedStatus('리미가 정밀하게 분석중입니다.');
+          window.pronSetAdvancedStatus('리미가 정밀하게 분석 중입니다.');
           pronEtriPollingTimer = setTimeout(poll, 2500);
           return;
         }
@@ -13932,15 +13932,15 @@ ${ruleSummary}`, isFallback ? "success" : "success");
 /* =========================================================
    5-47 발성훈련/표준발음 분석 제한·오류문구 운영 패치
    - 발성훈련: AI 분석 없이도 연습완료 가능
-   - 발성훈련: AI/ETRI 제한·실패 시 일반분석으로 표시하고 연습완료 허용
+   - 발성훈련: AI/ETRI 제한·실패 시 일반 분석으로 표시하고 연습완료 허용
    - 학생/일반강사: STT/ETRI 내부 오류문구 숨김
    - 관리자: 상세오류 보존
    ========================================================= */
 (function(){
   window.__ULIM_PATCH_5_47_TRAINING_PRON_LIMIT_SAFE = true;
 
-  const ULIM_STT_PUBLIC_MSG_5_47 = '리미가 졸음을 이겨내는중';
-  const ULIM_ETRI_PUBLIC_MSG_5_47 = '리미는 최선을 다했어요..';
+  const ULIM_STT_PUBLIC_MSG_5_47 = '리미가 졸음을 이겨내는 중이에요.';
+  const ULIM_ETRI_PUBLIC_MSG_5_47 = '리미는 최선을 다했어요.';
   const ULIM_GEMINI_LIMIT_PUBLIC_MSG_5_47 = '리미는 휴가를 떠났어요.';
 
   function isFullAdmin_5_47() {
@@ -13975,7 +13975,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
   }
 
   function looksEtriFail_5_47(value) {
-    return /ETRI|epretx|WiseASR|정밀진단|AI 분석|Gemini|제미나이|API|HTTP|timeout|타임아웃|지연|fallback|서버|오류|실패|MAX_TOKENS|토큰/i.test(String(value || ''));
+    return /ETRI|epretx|WiseASR|정밀 진단|AI 분석|Gemini|제미나이|API|HTTP|timeout|타임아웃|지연|fallback|서버|오류|실패|MAX_TOKENS|토큰/i.test(String(value || ''));
   }
 
   function getTrainingText_5_47() {
@@ -13988,12 +13988,12 @@ ${ruleSummary}`, isFallback ? "success" : "success");
 
   function buildFastTrainingGeneralResult_5_47(reason) {
     if (typeof buildTrainingFinalFastLocalFallbackResult_5_30_ === 'function') {
-      const r = buildTrainingFinalFastLocalFallbackResult_5_30_(reason || '일반분석 전환');
+      const r = buildTrainingFinalFastLocalFallbackResult_5_30_(reason || '일반 분석 전환');
       r.status = 'fallback';
       r.source = 'local_general';
       r.analysisSource = 'local_general';
-      r.badge = '일반분석';
-      r.message = '리미의 간단분석!';
+      r.badge = '일반 분석';
+      r.message = '리미의 간단 분석!';
       r.requestSentence = getTrainingText_5_47();
       if (!isFullAdmin_5_47() && looksEtriFail_5_47(reason)) {
         r.generalAnalysisText = appendOnce_5_47(r.generalAnalysisText || r.analysisText || r.comment || '', ULIM_ETRI_PUBLIC_MSG_5_47);
@@ -14012,7 +14012,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
       ? Math.round(getSimilarity(cleanTarget, cleanHeard) * 100)
       : 0;
     const durationSec = (typeof getTrainingRecordedDurationSec_ === 'function') ? getTrainingRecordedDurationSec_() : 0;
-    let general = `리미의 간단분석!
+    let general = `리미의 간단 분석!
 
 인식결과: ${recognized || '인식 결과 없음'}
 문장 일치도: ${similarity || 0}%
@@ -14029,14 +14029,14 @@ ${ruleSummary}`, isFallback ? "success" : "success");
       status: 'fallback',
       source: 'local_general',
       analysisSource: 'local_general',
-      badge: '일반분석',
+      badge: '일반 분석',
       recognized,
       score: '',
       scoreText: '-',
       comment: general,
       analysisText: general,
       generalAnalysisText: general,
-      message: '리미의 간단분석!',
+      message: '리미의 간단 분석!',
       originalError: String(reason || ''),
       requestSentence: scriptText
     };
@@ -14060,11 +14060,11 @@ ${ruleSummary}`, isFallback ? "success" : "success");
       const badge = document.getElementById('accBadge');
       if (badge) {
         badge.className = 'accuracy-badge acc-wait';
-        badge.textContent = '일반분석';
+        badge.textContent = '일반 분석';
       }
 
       const titleText = document.getElementById('aiSectionTitleText');
-      if (titleText) titleText.textContent = 'AI 분석결과';
+      if (titleText) titleText.textContent = 'AI 분석 결과';
 
       const sttEl = document.getElementById('sttResult');
       if (sttEl && !isFullAdmin_5_47()) {
@@ -14075,17 +14075,17 @@ ${ruleSummary}`, isFallback ? "success" : "success");
       }
 
       const recStatus = document.getElementById('recStatus');
-      if (recStatus) recStatus.textContent = '리미의 간단분석! 연습완료 버튼을 눌러 결과를 업로드할 수 있습니다.';
+      if (recStatus) recStatus.textContent = '리미의 간단 분석! 연습완료 버튼을 눌러 결과를 업로드할 수 있습니다.';
 
       window.trainingFinalAiResult = Object.assign({}, result, {
         requestSentence: getTrainingText_5_47(),
-        badge: '일반분석',
+        badge: '일반 분석',
         analysisSource: 'local_general'
       });
 
       if (typeof enableVocalTrainingCompleteButton_ === 'function') enableVocalTrainingCompleteButton_();
     } catch(e) {
-      console.warn('[5-47 일반분석 UI 표시 실패]', e);
+      console.warn('[5-47 일반 분석 UI 표시 실패]', e);
     }
     return result;
   }
@@ -14121,7 +14121,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
     data = data || {};
     const fallbackLike = data.status === 'fallback' || data.source === 'local_ai' || data.source === 'local_general' || data.analysisSource === 'fallback' || data.analysisSource === 'local_general';
     if (fallbackLike) {
-      data.badge = '일반분석';
+      data.badge = '일반 분석';
       data.analysisSource = 'local_general';
     }
 
@@ -14137,7 +14137,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
         data.comment = data.generalAnalysisText || data.comment;
       }
       if (looksLimit_5_47(data.message || data.errorDetail || data.originalError)) {
-        data.message = '리미의 간단분석!';
+        data.message = '리미의 간단 분석!';
       }
     } else if (fallbackLike && (data.originalError || data.errorDetail || data.adminReason)) {
       data.comment = appendOnce_5_47(data.comment || data.analysisText || data.generalAnalysisText || '', '[관리자 상세오류]\n' + String(data.originalError || data.errorDetail || data.adminReason));
@@ -14149,7 +14149,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
       const badge = document.getElementById('accBadge');
       if (badge && fallbackLike) {
         badge.className = 'accuracy-badge acc-wait';
-        badge.textContent = '일반분석';
+        badge.textContent = '일반 분석';
       }
     } catch(e) {}
     return out;
@@ -14160,7 +14160,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
     try { if (typeof setTrainingAiLoadingState_ === 'function') setTrainingAiLoadingState_(false); } catch(e) {}
     const fallback = buildFastTrainingGeneralResult_5_47(message || '오늘 최종 AI 분석은 이미 사용했습니다.');
     fallback.originalError = String(message || 'training_final_limit');
-    fallback.message = '리미의 간단분석!';
+    fallback.message = '리미의 간단 분석!';
     markTrainingGeneralUi_5_47(fallback, message);
     return fallback;
   };
@@ -14203,7 +14203,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
     const hasAiResult = !!(window.trainingFinalAiResult && window.trainingFinalAiResult.requestSentence === currentTrainObj.text);
 
     if (!hasAiResult) {
-      const ok = confirm("AI 분석을 완료하지 않았습니다. 이대로 오늘 연습을 완료하시겠습니까?");
+      const ok = confirm("AI 분석을 완료하지 않았습니다. AI 분석 없이 연습을 완료하면 리미의 간단 분석으로 기록됩니다. 그래도 오늘 연습을 완료할까요?");
       if (!ok) return;
 
       try {
@@ -14220,14 +14220,14 @@ ${ruleSummary}`, isFallback ? "success" : "success");
         analysisText = buildTrainingAiAnalysisText_(recognitionResult);
       } catch (analysisErr) {
         const fallbackResult = markTrainingGeneralUi_5_47(buildFastTrainingGeneralResult_5_47(analysisErr), analysisErr);
-        analysisText = fallbackResult.generalAnalysisText || fallbackResult.analysisText || fallbackResult.comment || '리미의 간단분석!';
+        analysisText = fallbackResult.generalAnalysisText || fallbackResult.analysisText || fallbackResult.comment || '리미의 간단 분석!';
       }
     } else {
       try {
         analysisText = buildTrainingAiAnalysisText_(recognitionResult);
       } catch (analysisErr) {
         const fallbackResult = markTrainingGeneralUi_5_47(buildFastTrainingGeneralResult_5_47(analysisErr), analysisErr);
-        analysisText = fallbackResult.generalAnalysisText || fallbackResult.analysisText || fallbackResult.comment || '리미의 간단분석!';
+        analysisText = fallbackResult.generalAnalysisText || fallbackResult.analysisText || fallbackResult.comment || '리미의 간단 분석!';
       }
     }
 
@@ -14259,7 +14259,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
           analysisText: analysisText,
           originalSentence: currentTrainObj.text,
           localWhisperText: (typeof recognitionResult !== 'undefined' ? recognitionResult : '') || '',
-          aiSource: (window.trainingFinalAiResult && (window.trainingFinalAiResult.source || window.trainingFinalAiResult.status || window.trainingFinalAiResult.badge)) || '일반분석',
+          aiSource: (window.trainingFinalAiResult && (window.trainingFinalAiResult.source || window.trainingFinalAiResult.status || window.trainingFinalAiResult.badge)) || '일반 분석',
           aiComment: (window.trainingFinalAiResult && (window.trainingFinalAiResult.generalAnalysisText || window.trainingFinalAiResult.comment || window.trainingFinalAiResult.analysisText)) || analysisText
         }
       );
@@ -14397,7 +14397,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
     } catch(e) {}
 
     const adminDetail = data.errorDetail || data.adminReason || data.localReason || data.message || '';
-    let title = isFallback ? '리미가 확인했어요!' : '리미의 정밀진단 완료!';
+    let title = isFallback ? '리미가 확인했어요!' : '리미의 정밀 진단 완료!';
     let reason = '';
 
     if (isFallback) {
@@ -14447,7 +14447,7 @@ ${ruleSummary}`, 'success');
       try {
         const data = await pronJsonpRequest({ action: 'getGeminiPronunciationCommentResult', requestId, _: Date.now() }, 8000);
         if (!data || data.status === 'pending' || data.status === 'not_found') {
-          pronSetAdvancedStatus('리미가 정밀하게 분석중입니다.');
+          pronSetAdvancedStatus('리미가 정밀하게 분석 중입니다.');
           pronEtriPollingTimer = setTimeout(poll, 2500);
           return;
         }
@@ -14767,7 +14767,7 @@ ${ruleSummary}`, 'success');
 <script>
 /* =========================================================
    5-51 표준발음 탭 버튼명 복구
-   - 표준발음 탭 버튼은 사용자 요청대로 일반분석/고급분석 유지
+   - 표준발음 탭 버튼은 사용자 요청대로 일반 분석/고급 분석 유지
    - 공개 오류 안내 문구 정리 안전망은 유지
    ========================================================= */
 (function(){
@@ -14775,8 +14775,8 @@ ${ruleSummary}`, 'success');
     document.addEventListener('DOMContentLoaded', function(){
       try {
         document.querySelectorAll('button').forEach(function(btn){
-          if (btn && btn.getAttribute('onclick') === 'pronRunGeneralAnalysis()') btn.textContent = '일반분석';
-          if (btn && btn.getAttribute('onclick') === 'pronRunEtriAdvancedAnalysis()') btn.textContent = '고급분석';
+          if (btn && btn.getAttribute('onclick') === 'pronRunGeneralAnalysis()') btn.textContent = '일반 분석';
+          if (btn && btn.getAttribute('onclick') === 'pronRunEtriAdvancedAnalysis()') btn.textContent = '고급 분석';
         });
       } catch(e) {}
     });
@@ -15252,9 +15252,9 @@ ${ruleSummary}`, 'success');
 
     const recStatus = document.getElementById('recStatus');
     if (recStatus) {
-      recStatus.textContent = '연결이 불안정해 리미가 서류를 제대로 들고오지 못했습니다.';
+      recStatus.textContent = '연결이 불안정해 리미가 서류를 제대로 가져오지 못했습니다.';
       setTimeout(function(){
-        if (recStatus && recStatus.textContent === '연결이 불안정해 리미가 서류를 다들고오지 못했습니다..') {
+        if (recStatus && recStatus.textContent === '연결이 불안정해 리미가 서류를 제대로 가져오지 못했습니다.') {
           recStatus.textContent = '녹음 대기';
         }
       }, 3200);
@@ -16206,6 +16206,109 @@ ${ruleSummary}`, 'success');
   };
 
   console.log('[ULIM attendance UI 5.59] 출석체크 UI 패치 적용 완료');
+})();
+</script>
+
+
+
+<script id="ulim-vocal-training-5-60-random-window-and-message-patch">
+/* =========================================================
+   5.60 발성훈련 문장구간 랜덤 / 안내문구 정리 / AI 1회 제한 처리
+   - 문장 구간 산정은 GAS에서 처리합니다.
+   - AI 1회 사용 완료 시 버튼 클릭은 리미의 간단 분석으로 전환합니다.
+   - 연습완료는 하루 1회만 허용하며, AI 분석 없이도 경고 후 진행 가능합니다.
+   ========================================================= */
+(function(){
+  if (window.__ULIM_VOCAL_560_PATCH__) return;
+  window.__ULIM_VOCAL_560_PATCH__ = true;
+  window.ULIM_VOCAL_PATCH_VERSION = '2026.06.06.560.01';
+
+  function normalizePublicText560_(text){
+    return String(text || '')
+      .replace(/STEP\s*7/g, '최종녹음 단계')
+      .replace(/분석중/g, '분석 중')
+      .replace(/녹음중/g, '녹음 중')
+      .replace(/AI 분석결과/g, 'AI 분석 결과')
+      .replace(/간단분석/g, '간단 분석')
+      .replace(/로컬분석/g, '로컬 분석')
+      .replace(/일반분석/g, '일반 분석')
+      .replace(/정밀진단/g, '정밀 진단')
+      .replace(/고급분석/g, '고급 분석')
+      .replace(/오늘연습/g, '오늘 연습')
+      .replace(/이상할수도/g, '이상할 수도')
+      .replace(/졸음을 이겨내는중/g, '졸음을 이겨내는 중이에요')
+      .replace(/최선을 다했어요\.\./g, '최선을 다했어요.')
+      .replace(/제대로 들고오지/g, '제대로 가져오지');
+  }
+
+  const nativeAlert560 = window.alert;
+  window.alert = function(message){
+    return nativeAlert560.call(window, normalizePublicText560_(message));
+  };
+
+  const nativeConfirm560 = window.confirm;
+  window.confirm = function(message){
+    return nativeConfirm560.call(window, normalizePublicText560_(message));
+  };
+
+  function isAiLimitMessage560_(value){
+    return /(오늘.*AI 분석.*사용|최종 AI 분석.*이미 사용|1회|토큰|limit|quota|429|사용량|초과)/i.test(String(value || ''));
+  }
+
+  function renderLocalAnalysisForAiLimit560_(message){
+    try { if (typeof setTrainingAiLoadingState_ === 'function') setTrainingAiLoadingState_(false); } catch(e) {}
+    const reason = message || '오늘 AI 분석 1회 사용이 완료되어 리미의 간단 분석으로 전환합니다.';
+    if (typeof renderTrainingFinalAiLimitState_ === 'function') {
+      return renderTrainingFinalAiLimitState_(reason);
+    }
+    try {
+      const resultBox = document.getElementById('resultBox');
+      const aiSection = document.getElementById('aiSection');
+      const sttEl = document.getElementById('sttResult');
+      const badge = document.getElementById('accBadge');
+      const recStatus = document.getElementById('recStatus');
+      if (resultBox) resultBox.style.display = 'block';
+      if (aiSection) aiSection.style.display = 'block';
+      if (sttEl) sttEl.textContent = '리미의 간단 분석!\nAI 분석 1회 사용이 완료되어 로컬 분석으로 전환했습니다.';
+      if (badge) { badge.className = 'accuracy-badge acc-wait'; badge.textContent = '로컬 분석'; }
+      if (recStatus) recStatus.textContent = '리미의 간단 분석이 완료되었습니다. 연습완료 버튼을 눌러 결과를 업로드할 수 있습니다.';
+      window.trainingFinalAiResult = {
+        ok: true,
+        status: 'fallback',
+        source: 'local_general',
+        analysisSource: 'local_general',
+        badge: '로컬 분석',
+        requestSentence: currentTrainObj && currentTrainObj.text ? currentTrainObj.text : '',
+        comment: sttEl ? sttEl.textContent : reason,
+        generalAnalysisText: sttEl ? sttEl.textContent : reason
+      };
+      if (typeof enableVocalTrainingCompleteButton_ === 'function') enableVocalTrainingCompleteButton_();
+    } catch(e) {}
+  }
+
+  const oldRunButton560 = window.runTrainingFinalAiAnalysisFromButton;
+  if (typeof oldRunButton560 === 'function') {
+    window.runTrainingFinalAiAnalysisFromButton = async function(){
+      try {
+        return await oldRunButton560.apply(this, arguments);
+      } catch(err) {
+        const msg = err && err.message ? err.message : String(err || '');
+        if (isAiLimitMessage560_(msg)) return renderLocalAnalysisForAiLimit560_(msg);
+        throw err;
+      }
+    };
+    try { runTrainingFinalAiAnalysisFromButton = window.runTrainingFinalAiAnalysisFromButton; } catch(e) {}
+  }
+
+  const oldLimitRender560 = window.renderTrainingFinalAiLimitState_;
+  window.renderTrainingFinalAiLimitState_ = function(message){
+    const publicMsg = '오늘 AI 분석 1회 사용이 완료되어 리미의 간단 분석으로 전환합니다.';
+    if (typeof oldLimitRender560 === 'function') return oldLimitRender560.call(this, publicMsg);
+    return renderLocalAnalysisForAiLimit560_(publicMsg);
+  };
+  try { renderTrainingFinalAiLimitState_ = window.renderTrainingFinalAiLimitState_; } catch(e) {}
+
+  console.log('[ULIM 5.60] 발성훈련 랜덤 구간/문구 정리 패치 적용 완료', window.ULIM_VOCAL_PATCH_VERSION);
 })();
 </script>
 
