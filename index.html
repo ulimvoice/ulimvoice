@@ -15264,5 +15264,324 @@ ${ruleSummary}`, 'success');
 })();
 </script>
 
+
+<script id="ulim-student-session-final-guard-5-57">
+/* =========================================================
+   5-57 학생 세션 최종 보호 패치
+   - 학생 로그인은 localStorage 기준으로 즉시 복구
+   - 새로고침 / iOS 백그라운드 복귀 / AI분석 / 서버 일시 오류로 로그아웃 금지
+   - 로그아웃 버튼 클릭 시에만 학생 세션 삭제
+   - 서버 세션 확인은 백그라운드로만 수행하고, 실패해도 localStorage를 지우지 않음
+   ========================================================= */
+(function () {
+  if (window.__ULIM_STUDENT_SESSION_FINAL_GUARD_557__) return;
+  window.__ULIM_STUDENT_SESSION_FINAL_GUARD_557__ = true;
+
+  const PATCH_VERSION = '2026.06.06.557.01';
+  window.ULIM_SESSION_PATCH_VERSION = PATCH_VERSION;
+  window.__ulimExplicitLogoutUntil = window.__ulimExplicitLogoutUntil || 0;
+
+  const STUDENT_KEYS_557 = [
+    'studentSessionToken',
+    'studentName',
+    'instructorName',
+    'studentMustChangePassword'
+  ];
+
+  function now_557() { return Date.now(); }
+
+  function markExplicitLogout_557() {
+    window.__ulimExplicitLogoutUntil = now_557() + 5000;
+    try { sessionStorage.setItem('ULIM_EXPLICIT_LOGOUT_IN_PROGRESS', 'Y'); } catch (e) {}
+  }
+
+  function clearExplicitLogoutFlagLater_557() {
+    setTimeout(function () {
+      try { sessionStorage.removeItem('ULIM_EXPLICIT_LOGOUT_IN_PROGRESS'); } catch (e) {}
+      window.__ulimExplicitLogoutUntil = 0;
+    }, 1200);
+  }
+
+  function isExplicitLogout_557() {
+    let flag = false;
+    try { flag = sessionStorage.getItem('ULIM_EXPLICIT_LOGOUT_IN_PROGRESS') === 'Y'; } catch (e) {}
+    return flag || now_557() < Number(window.__ulimExplicitLogoutUntil || 0);
+  }
+
+  function log_557() {
+    try { console.log.apply(console, ['[ULIM session 5.57]'].concat(Array.from(arguments))); } catch (e) {}
+  }
+
+  function getLocal_557(key) {
+    try { return localStorage.getItem(key) || ''; } catch (e) { return ''; }
+  }
+
+  function setLocal_557(key, value) {
+    try {
+      if (value == null || value === '') return;
+      localStorage.setItem(key, String(value));
+    } catch (e) {}
+  }
+
+  function removeLocal_557(key) {
+    try { localStorage.removeItem(key); } catch (e) {}
+  }
+
+  function readLocalStudentSession_557() {
+    return {
+      token: getLocal_557('studentSessionToken'),
+      name: getLocal_557('studentName'),
+      instructor: getLocal_557('instructorName'),
+      mustChange: getLocal_557('studentMustChangePassword')
+    };
+  }
+
+  function hasUsableStudentSession_557() {
+    const s = readLocalStudentSession_557();
+    return !!(s.token && s.name && s.name !== '게스트');
+  }
+
+  function applyLocalStudentSessionToGlobals_557() {
+    const s = readLocalStudentSession_557();
+    try { studentSessionToken = s.token || studentSessionToken || ''; } catch (e) {}
+    try { studentName = s.name || studentName || ''; } catch (e) {}
+    try { instructorName = s.instructor || instructorName || ''; } catch (e) {}
+    try { studentMustChangePassword = s.mustChange === 'Y'; } catch (e) {}
+    try { phoneLast4 = ''; } catch (e) {}
+    try { studentNo = ''; } catch (e) {}
+    try { if (typeof updateFilenameConstants === 'function') updateFilenameConstants(); } catch (e) {}
+  }
+
+  function showLoggedInScreenFromLocal_557() {
+    applyLocalStudentSessionToGlobals_557();
+    try { if (typeof showMainContent === 'function') showMainContent(true); } catch (e) {}
+    try { if (typeof renderStudentAccountBar_ === 'function') renderStudentAccountBar_(); } catch (e) {}
+    try { if (typeof setAdminTabVisibility === 'function') setAdminTabVisibility(); } catch (e) {}
+    try { if (typeof renderCalendar === 'function') renderCalendar(); } catch (e) {}
+  }
+
+  function saveStudentSessionResult_557(result) {
+    result = result || {};
+    const token = result.sessionToken || getLocal_557('studentSessionToken') || '';
+    const name = result.name || result.studentName || getLocal_557('studentName') || '';
+    const instructor = result.instructor || getLocal_557('instructorName') || '';
+    if (token) setLocal_557('studentSessionToken', token);
+    if (name) setLocal_557('studentName', name);
+    if (instructor) setLocal_557('instructorName', instructor);
+    setLocal_557('studentMustChangePassword', result.mustChangePassword ? 'Y' : 'N');
+    try { localStorage.setItem('ulimLastMode', 'student'); } catch (e) {}
+    removeLocal_557('phoneLast4');
+    removeLocal_557('studentNo');
+    removeLocal_557('instructorFolderId');
+    applyLocalStudentSessionToGlobals_557();
+  }
+
+  async function verifyStudentSessionInBackground_557() {
+    const s = readLocalStudentSession_557();
+    if (!s.token || typeof GET_API_URL === 'undefined' || !GET_API_URL) return null;
+    try {
+      const query = new URLSearchParams();
+      query.set('action', 'getStudentSession');
+      query.set('studentSessionToken', s.token);
+      query.set('_', Date.now());
+      const response = await fetch(`${GET_API_URL}?${query.toString()}`, { method: 'GET', cache: 'no-store' });
+      if (!response.ok) throw new Error('session check http ' + response.status);
+      const result = await response.json();
+      if (result && result.status === 'success') {
+        saveStudentSessionResult_557(Object.assign({}, result, { sessionToken: s.token }));
+        try { if (typeof renderStudentAccountBar_ === 'function') renderStudentAccountBar_(); } catch (e) {}
+        return result;
+      }
+      return result || null;
+    } catch (e) {
+      log_557('서버 세션 확인 실패 → 로컬 세션 유지', e && e.message ? e.message : e);
+      return null;
+    }
+  }
+
+  // 학생 세션 getter는 항상 localStorage를 우선 확인합니다.
+  window.getStudentSessionToken_ = function () {
+    try { if (studentSessionToken) return studentSessionToken; } catch (e) {}
+    return getLocal_557('studentSessionToken');
+  };
+  try { getStudentSessionToken_ = window.getStudentSessionToken_; } catch (e) {}
+
+  window.ulimIsStudentLoggedIn_ = function () {
+    return hasUsableStudentSession_557();
+  };
+  try { ulimIsStudentLoggedIn_ = window.ulimIsStudentLoggedIn_; } catch (e) {}
+
+  // 자동 clear 방지. force=true 또는 명시적 로그아웃 플래그에서만 실제 삭제를 허용합니다.
+  const originalClearStudentSecureSession_557 = window.clearStudentSecureSession_;
+  window.clearStudentSecureSession_ = function (force) {
+    if (force === true || isExplicitLogout_557()) {
+      if (typeof originalClearStudentSecureSession_557 === 'function') {
+        return originalClearStudentSecureSession_557.apply(this, arguments);
+      }
+      STUDENT_KEYS_557.concat(['phoneLast4', 'studentNo', 'instructorFolderId']).forEach(removeLocal_557);
+      return true;
+    }
+    if (hasUsableStudentSession_557()) {
+      showLoggedInScreenFromLocal_557();
+      log_557('자동 로그아웃 차단: localStorage 학생 세션 보존');
+      return false;
+    }
+    return false;
+  };
+  try { clearStudentSecureSession_ = window.clearStudentSecureSession_; } catch (e) {}
+
+  // 학생 로그아웃은 이 함수에서만 실제 삭제합니다.
+  const originalStudentSecureLogout_557 = window.studentSecureLogout;
+  window.studentSecureLogout = function () {
+    if (!confirm('학생 로그아웃할까요?')) return;
+
+    const tokenBeforeLogout = getLocal_557('studentSessionToken');
+    markExplicitLogout_557();
+
+    try {
+      if (typeof GET_API_URL !== 'undefined' && GET_API_URL && tokenBeforeLogout) {
+        const q = new URLSearchParams();
+        q.set('action', 'logoutStudentSession');
+        q.set('studentSessionToken', tokenBeforeLogout);
+        q.set('_', Date.now());
+        fetch(`${GET_API_URL}?${q.toString()}`, { method: 'GET', cache: 'no-store' }).catch(function () {});
+      }
+    } catch (e) {}
+
+    try {
+      if (typeof originalClearStudentSecureSession_557 === 'function') {
+        originalClearStudentSecureSession_557(true);
+      }
+    } catch (e) {}
+
+    [
+      'studentSessionToken',
+      'studentName',
+      'instructorName',
+      'studentMustChangePassword',
+      'phoneLast4',
+      'studentNo',
+      'instructorFolderId',
+      'savedVocalIds',
+      'vocalRecords',
+      'ulimLastMode'
+    ].forEach(removeLocal_557);
+
+    try { studentSessionToken = ''; } catch (e) {}
+    try { studentName = ''; } catch (e) {}
+    try { instructorName = ''; } catch (e) {}
+    try { studentMustChangePassword = false; } catch (e) {}
+    try { phoneLast4 = ''; } catch (e) {}
+    try { studentNo = ''; } catch (e) {}
+
+    try { if (typeof renderStudentAccountBar_ === 'function') renderStudentAccountBar_(); } catch (e) {}
+    try { if (typeof showStudentLoginPanel === 'function') showStudentLoginPanel(); } catch (e) {}
+
+    clearExplicitLogoutFlagLater_557();
+  };
+  try { studentSecureLogout = window.studentSecureLogout; } catch (e) {}
+
+  // 로그인 함수도 실패 시 세션을 삭제하지 않도록 최종 고정합니다.
+  window.authenticate = async function (name, password) {
+    name = String(name || '').trim();
+    password = String(password || '').trim();
+    if (!name || !password) {
+      alert('학생 이름과 비밀번호를 입력해주세요.');
+      return;
+    }
+
+    try { if (typeof showLoading === 'function') showLoading('로그인 정보 확인 중...'); } catch (e) {}
+    try {
+      const query = new URLSearchParams();
+      query.set('action', 'secureStudentLogin');
+      query.set('name', name);
+      query.set('password', password);
+      query.set('_', Date.now());
+
+      const response = await fetch(`${GET_API_URL}?${query.toString()}`, { method: 'GET', cache: 'no-store' });
+      const text = await response.text();
+      let result = null;
+      try { result = JSON.parse(text); } catch (jsonErr) { throw new Error('로그인 응답을 확인하지 못했습니다.'); }
+      if (!response.ok) throw new Error((result && result.message) || '로그인 연결이 잠시 지연되고 있습니다.');
+
+      if (result && result.status === 'success' && result.sessionToken) {
+        saveStudentSessionResult_557(result);
+        try { if (typeof hideLoading === 'function') hideLoading(); } catch (e) {}
+        alert(`${getLocal_557('studentName') || name}님 로그인되었습니다.`);
+        if ((result.mustChangePassword || getLocal_557('studentMustChangePassword') === 'Y') && typeof changeStudentPasswordByPrompt === 'function') {
+          setTimeout(function () { changeStudentPasswordByPrompt(true, password); }, 250);
+        }
+        showLoggedInScreenFromLocal_557();
+        return;
+      }
+
+      try { if (typeof hideLoading === 'function') hideLoading(); } catch (e) {}
+      alert((result && result.message) || '학생 이름 또는 비밀번호가 일치하지 않습니다.');
+    } catch (e) {
+      try { if (typeof hideLoading === 'function') hideLoading(); } catch (ignore) {}
+      alert(e && e.message ? e.message : '로그인 처리 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    }
+  };
+  try { authenticate = window.authenticate; } catch (e) {}
+
+  window.authenticateStudentFromInputs = async function () {
+    const nameInput = document.getElementById('studentNameInput');
+    const pwInput = document.getElementById('phoneLast4Input');
+    const name = nameInput ? nameInput.value.trim() : '';
+    const password = pwInput ? pwInput.value : '';
+    return window.authenticate(name, password);
+  };
+  try { authenticateStudentFromInputs = window.authenticateStudentFromInputs; } catch (e) {}
+
+  // 페이지 진입 시 localStorage에 토큰이 있으면 먼저 로그인 화면으로 복구하고, 서버 확인은 뒤에서만 합니다.
+  window.checkStudentName = async function () {
+    if (hasUsableStudentSession_557()) {
+      showLoggedInScreenFromLocal_557();
+      verifyStudentSessionInBackground_557();
+      return;
+    }
+
+    const isGuest = (function () {
+      try { return studentName === '게스트'; } catch (e) { return getLocal_557('studentName') === '게스트'; }
+    })();
+
+    if (isGuest) {
+      try { if (typeof updateFilenameConstants === 'function') updateFilenameConstants(); } catch (e) {}
+      try { if (typeof showMainContent === 'function') showMainContent(false); } catch (e) {}
+      return;
+    }
+
+    const overlay = document.getElementById('loginOverlay');
+    if (overlay) overlay.style.display = 'flex';
+    const wrapper = document.querySelector('.wrapper');
+    if (wrapper) wrapper.style.display = 'none';
+  };
+  try { checkStudentName = window.checkStudentName; } catch (e) {}
+
+  window.addEventListener('pageshow', function () {
+    if (hasUsableStudentSession_557()) {
+      setTimeout(function () {
+        showLoggedInScreenFromLocal_557();
+        verifyStudentSessionInBackground_557();
+      }, 60);
+    }
+  });
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible' && hasUsableStudentSession_557()) {
+      showLoggedInScreenFromLocal_557();
+    }
+  });
+
+  // 설치 직후 이미 localStorage 세션이 있으면 즉시 화면 반영
+  if (hasUsableStudentSession_557()) {
+    showLoggedInScreenFromLocal_557();
+    verifyStudentSessionInBackground_557();
+  }
+
+  log_557('최종 세션 보호 패치 설치 완료', PATCH_VERSION);
+})();
+</script>
+
 </body>
 </html>
