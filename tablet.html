@@ -125,6 +125,181 @@
     .ad-title { font-size: 24px; }
     .ad-box img, .ad-box video { max-height: 68vh; }
   }
+  <!-- tablet.html의 </style> 바로 위에 추가 -->
+
+/* =========================================================
+   5-46 태블릿 하단 안내문구 잘림 방지 패치
+   - Android/Chrome/Samsung Internet 하단 네비게이션바 때문에 100vh가 실제 표시 높이와 어긋나는 문제 보정
+   - 왼쪽 출결 영역의 카드/키패드/상태문구가 화면 안에서 자동 압축되도록 조정
+   ========================================================= */
+html,
+body {
+  height: 100%;
+  min-height: 100%;
+}
+
+@supports (height: 100dvh) {
+  html,
+  body {
+    height: 100dvh;
+    min-height: 100dvh;
+  }
+}
+
+body {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.left {
+  min-height: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  padding-bottom: max(18px, env(safe-area-inset-bottom));
+}
+
+.card {
+  flex: 0 0 auto;
+}
+
+.status-card {
+  flex: 1 1 0;
+  min-height: 0;
+  max-height: none;
+  overflow: hidden;
+  padding: clamp(14px, 2vw, 24px);
+}
+
+.status-card h2 {
+  font-size: clamp(20px, 2.2vw, 25px);
+  margin-bottom: 8px;
+}
+
+.status-card p {
+  font-size: clamp(13px, 1.5vw, 16px);
+  line-height: 1.35;
+}
+
+@media (orientation: landscape) and (max-height: 760px) {
+  .left {
+    padding: 20px 28px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+    gap: 12px;
+  }
+
+  .title {
+    font-size: 24px;
+  }
+
+  .clock-date {
+    font-size: 13px;
+  }
+
+  .clock-time {
+    font-size: 22px;
+  }
+
+  .card {
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .input-title {
+    font-size: 19px;
+    margin-bottom: 12px;
+  }
+
+  .pin-display {
+    height: 52px;
+    margin-bottom: 10px;
+    font-size: 29px;
+  }
+
+  .pin-placeholder {
+    font-size: 20px;
+  }
+
+  .keypad {
+    gap: 8px;
+  }
+
+  .num-btn {
+    height: 46px;
+    font-size: 22px;
+  }
+
+  .action-row {
+    margin-top: 10px;
+  }
+
+  .action-btn {
+    height: 56px;
+    font-size: 21px;
+  }
+
+  .status-card {
+    min-height: 118px;
+    padding: 16px 18px;
+  }
+
+  .status-card h2 {
+    font-size: 22px;
+    margin-bottom: 6px;
+  }
+
+  .status-card p {
+    font-size: 15px;
+    line-height: 1.32;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 650px) {
+  .left {
+    padding: 14px 22px;
+    padding-bottom: max(14px, env(safe-area-inset-bottom));
+    gap: 9px;
+  }
+
+  .card {
+    padding: 14px;
+  }
+
+  .input-title {
+    margin-bottom: 9px;
+    font-size: 18px;
+  }
+
+  .pin-display {
+    height: 46px;
+    margin-bottom: 8px;
+  }
+
+  .num-btn {
+    height: 40px;
+    font-size: 20px;
+  }
+
+  .action-btn {
+    height: 50px;
+    font-size: 20px;
+  }
+
+  .status-card {
+    min-height: 96px;
+    padding: 12px 16px;
+  }
+
+  .status-card h2 {
+    font-size: 20px;
+  }
+
+  .status-card p {
+    font-size: 14px;
+  }
+}
+
 </style>
 </head>
 <body>
