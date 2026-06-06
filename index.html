@@ -4372,7 +4372,7 @@ async function shareVocalResult() {
     // 인증 확인 및 파일명 베이스 업데이트
     if (!currentFilenameBase || instructorName === '기본') {
          await promptAndAuthenticate();
-         if (instructorName === '기본') return alert("인증 후 다시 시도해주세요. 인증 없이는 드라이브 업로드가 제한됩니다.");
+         if (instructorName === '기본') return alert("인증 후 다시 시도해주세요.");
     }
 
     const originalText = document.getElementById('train_origin').textContent;
@@ -4403,7 +4403,7 @@ async function shareVocalResult() {
         "녹음 파일 업로드 및 링크 기록"
     ); 
 
-    alert("녹음 파일 업로드 요청을 보냈습니다. 잠시 후 연습기록에서 확인해주세요.");
+    alert("녹음 파일 업로드 요청을 보냈습니다.");
     
     // 3. (기존) 웹 공유 또는 다운로드 로직
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([], filename, {type: mimeType})] })) {
@@ -4425,7 +4425,7 @@ async function shareVocalResult() {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            alert(`Web Share API 공유에 실패했습니다. 파일을 다운로드합니다: ${filename}`);
+            alert(`공유에 실패했습니다. 파일을 다운로드합니다: ${filename}`);
         });
     } else {
         const audioUrl = URL.createObjectURL(lastRecordedBlob);
@@ -13083,7 +13083,7 @@ async function buildTrainingFinalFallbackResult_5_30_(audioBlob, originalError) 
             localPromise,
             trainingAiTimeout_(
                 TRAINING_AI_LOCAL_FALLBACK_TIMEOUT_MS_5_30,
-                '로컬 분석 준비가 지연되어 빠른 간단분석으로 전환합니다.'
+                '리미가 출근하지 않아 결과가 이상할수도 있습니다.'
             )
         ]);
     } catch (localErr) {
@@ -13136,36 +13136,36 @@ async function runTrainingFinalAiAnalysisFromButton() {
 
         const sttEl = document.getElementById('sttResult');
         const badge = document.getElementById('accBadge');
-        if (sttEl) sttEl.textContent = '리미가 정밀진단을 진행중입니다. 30초 이상 지연되면 간단분석으로 자동 전환됩니다.';
+        if (sttEl) sttEl.textContent = '리미가 대본 분석을 시작했습니다.';
         if (badge) { badge.className = 'accuracy-badge acc-wait'; badge.textContent = '분석중'; }
 
         const recStatus = document.getElementById('recStatus');
-        if (recStatus) recStatus.textContent = '리미가 정밀진단을 진행중입니다.';
+        if (recStatus) recStatus.textContent = '리미가 꼼꼼하게 들어보고 분석중입니다.';
 
         await Promise.race([
             runTrainingFinalAiAnalysis_(lastRecordedBlob, { force: true }),
             trainingAiTimeout_(
                 TRAINING_AI_ADVANCED_TIMEOUT_MS_5_30,
-                '리미 정밀진단이 30초 이상 지연되어 간단분석으로 전환합니다.'
+                '리미가 지쳐서 간단한 보고만 진행합니다.'
             )
         ]);
 
         const recStatusDone = document.getElementById('recStatus');
-        if (recStatusDone) recStatusDone.textContent = '리미 정밀진단 완료. 연습완료 버튼을 눌러 결과를 업로드할 수 있습니다.';
+        if (recStatusDone) recStatusDone.textContent = '분석 완료! 연습완료 버튼을 눌러 결과를 업로드할 수 있습니다.';
         enableVocalTrainingCompleteButton_();
     } catch (err) {
         console.warn('Training final advanced analysis failed or timed out:', err);
 
         if (isTrainingAiLimitError_(err)) {
-            renderTrainingFinalAiLimitState_(err.message || '오늘 최종 AI 분석은 이미 사용했습니다.');
+            renderTrainingFinalAiLimitState_(err.message || '오늘 리미는 퇴근했습니다.');
             return;
         }
 
         const recStatusFallback = document.getElementById('recStatus');
         if (recStatusFallback) {
             recStatusFallback.textContent = isTrainingAiAdvancedTimeout_5_30_(err)
-                ? '리미 정밀진단이 지연되어 간단분석으로 전환합니다.'
-                : '리미 간단분석으로 전환합니다.';
+                ? '리미가 지쳐서 분석을 간단하게 마쳤습니다.'
+                : '리미는 50%만 힘을 썼습니다.';
         }
 
         const fallbackResult = await buildTrainingFinalFallbackResult_5_30_(lastRecordedBlob, err);
@@ -13174,7 +13174,7 @@ async function runTrainingFinalAiAnalysisFromButton() {
 
         const recStatusEl = document.getElementById('recStatus');
         if (recStatusEl) {
-            recStatusEl.textContent = '리미의 간단분석! 연습완료 버튼을 눌러 결과를 업로드할 수 있습니다.';
+            recStatusEl.textContent = '분석 완료! 연습완료 버튼을 눌러 결과를 업로드할 수 있습니다.';
         }
     } finally {
         window.trainingFinalAiInProgress = false;
@@ -13262,7 +13262,7 @@ function pronBuildLocalAdvancedFallback_5_32(reason) {
         score: score5.toFixed(1),
         matchScore,
         comment,
-        localReason: reason || '제미나이 분석이 지연되어 로컬분석으로 대체되었습니다.',
+        localReason: reason || '리미가 재택근무 중입니다.',
         durationSec: n.durationSec ? n.durationSec.toFixed(1) : '',
         syllablesPerSec: n.syllablesPerSec ? n.syllablesPerSec.toFixed(1) : '',
         standardPronunciation: converted,
@@ -13285,7 +13285,7 @@ function pronRenderLocalAdvancedFallback_5_32(reason) {
 
 async function pronRunEtriAdvancedAnalysis() {
     if (pronAdvancedIsRunning_5_32) {
-        pronSetAdvancedStatus('이미 분석중입니다. 잠시만 기다려주세요. 30초 이상 지연되면 자동으로 로컬분석을 표시합니다.');
+        pronSetAdvancedStatus('이미 분석중입니다. 잠시만 기다려주세요.');
         return;
     }
 
@@ -13306,7 +13306,7 @@ async function pronRunEtriAdvancedAnalysis() {
     const token = pronGetStudentSessionTokenForUsage_ ? pronGetStudentSessionTokenForUsage_() : '';
     const currentName = (typeof studentName !== "undefined" && studentName) ? studentName : (localStorage.getItem("studentName") || "게스트");
     if (currentName !== "게스트" && !token) {
-        pronSetAdvancedStatus("학생별 사용량 확인을 위해 다시 로그인해주세요.", "error");
+        pronSetAdvancedStatus("다시 로그인해주세요.", "error");
         return;
     }
 
@@ -13316,7 +13316,7 @@ async function pronRunEtriAdvancedAnalysis() {
     pronSetAdvancedStatus("리미가 조금 더 정확하게 분석중입니다.");
 
     pronAdvancedHardTimer_5_32 = setTimeout(() => {
-        pronRenderLocalAdvancedFallback_5_32('제미나이 분석이 30초 이상 지연되어 로컬분석으로 대체되었습니다.');
+        pronRenderLocalAdvancedFallback_5_32('리미는 재택근무 중입니다.');
     }, PRON_GEMINI_HARD_TIMEOUT_MS_5_32);
 
     try {
@@ -13385,13 +13385,13 @@ function pronPollEtriResult(requestId) {
         if (pronAdvancedFallbackShown_5_32 || requestId !== pronAdvancedActiveRequestId_5_32) return;
         pronEtriPollingCount += 1;
         if (Date.now() - startedAt > PRON_GEMINI_HARD_TIMEOUT_MS_5_32) {
-            pronRenderLocalAdvancedFallback_5_32('제미나이 분석이 30초 이상 지연되어 로컬분석으로 대체되었습니다.');
+            pronRenderLocalAdvancedFallback_5_32('리미가 급하게 일을 마무리지었습니다.');
             return;
         }
         try {
             const data = await pronJsonpRequest({ action: "getGeminiPronunciationCommentResult", requestId, _: Date.now() }, 8000);
             if (!data || data.status === "pending" || data.status === "not_found") {
-                pronSetAdvancedStatus("리미가 정밀하게 분석중입니다. 30초 이상 지연되면 로컬분석으로 전환됩니다.");
+                pronSetAdvancedStatus("리미가 정밀하게 분석중입니다.");
                 pronEtriPollingTimer = setTimeout(poll, 2500);
                 return;
             }
@@ -13435,8 +13435,8 @@ function pronRenderEtriResult(data) {
         pronUpdateEtriUsageBadge(data.used || 0, data.remaining);
     }
 
-    const title = isFallback ? '리미의 로컬분석 완료!' : '리미의 정밀진단 완료!';
-    const reason = isFallback ? `\n안내: ${data.localReason || data.message || '제미나이 분석 대신 로컬분석을 표시했습니다.'}\n` : '';
+    const title = isFallback ? '리미가 분석을 끝냈습니다' : '리미의 정밀진단 완료!';
+    const reason = isFallback ? `\n안내: ${data.localReason || data.message || '리미는 재택근무중'}\n` : '';
 
     pronSetAdvancedStatus(`${title}
 ${reason}
@@ -13492,7 +13492,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
   window.pronSetAdvancedStatus = function(message, type) {
     let safe = message || '';
     if (safe) {
-      safe = ulimSafeUserMessage_5_35(safe, '서비스 연결이 원활하지 않아 로컬분석으로 대체합니다.');
+      safe = ulimSafeUserMessage_5_35(safe, '서비스 연결이 원활하지 않아 리미가 제대로 처리하지 못했습니다.');
     }
     const el = document.getElementById('pronAdvancedStatus');
     if (!el) return;
@@ -13599,7 +13599,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
     } catch(e) {
       const localUsed = pronGetLocalEtriUsed();
       pronUpdateEtriUsageBadge(localUsed, PRON_ETRI_DAILY_LIMIT - localUsed);
-      window.pronSetAdvancedStatus('잔여횟수를 확인하지 못했습니다. 분석은 계속 사용할 수 있습니다.', 'error');
+      window.pronSetAdvancedStatus('리미는 오늘 힘을 다썼습니다. 살펴보는 것 정도는 가능합니다.', 'error');
     }
   };
   try { pronRefreshEtriUsage = window.pronRefreshEtriUsage; } catch(e) {}
@@ -13607,7 +13607,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
   // 표준발음 AI 분석: 학생 세션이 없어도 강사/관리자 세션으로 요청 가능
   window.pronRunEtriAdvancedAnalysis = async function() {
     if (typeof pronAdvancedIsRunning_5_32 !== 'undefined' && pronAdvancedIsRunning_5_32) {
-      window.pronSetAdvancedStatus('이미 분석중입니다. 잠시만 기다려주세요. 30초 이상 지연되면 자동으로 로컬분석을 표시합니다.');
+      window.pronSetAdvancedStatus('이미 분석중입니다. 잠시만 기다려주세요.');
       return;
     }
     const source = document.getElementById('pronInputText')?.value.trim() || '';
@@ -13627,7 +13627,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
     pronSetAdvancedButtonsLocked_5_32(true);
     window.pronSetAdvancedStatus('리미가 조금 더 정확하게 분석중입니다.');
     pronAdvancedHardTimer_5_32 = setTimeout(function(){
-      pronRenderLocalAdvancedFallback_5_32('제미나이 분석이 30초 이상 지연되어 로컬분석으로 대체되었습니다.');
+      pronRenderLocalAdvancedFallback_5_32('리미는 재택근무 중입니다.');
     }, PRON_GEMINI_HARD_TIMEOUT_MS_5_32);
     try {
       if (!pronLastSttText) {
@@ -13693,12 +13693,12 @@ ${ruleSummary}`, isFallback ? "success" : "success");
   window.ULIM_PATCH_5_36_LIMI_FUNNY_AND_ADMIN_DETAIL = true;
 
   const LIMI_PUBLIC_FALLBACK_MESSAGES_5_36 = [
-    '리미가 잠시 파업중입니다 😅\n간단 확인 결과를 먼저 보여드릴게요.',
-    '리미가 커피를 마시러 갔습니다 ☕\n간단 확인으로 먼저 확인해볼게요.',
-    '리미가 발음사전을 너무 진지하게 뒤적이고 있습니다 📚\n간단 확인 결과를 표시합니다.',
-    '리미가 녹음실에서 길을 잃었습니다 🎙️\n간단 확인으로 이어서 진행할게요.',
-    '리미가 오늘 너무 열심히 일해서 쉬는 중입니다 😴\n간단 확인 결과를 보여드릴게요.',
-    '리미가 결과지를 들고 오다가 넘어졌습니다 📄\n간단 확인으로 먼저 확인해볼게요.'
+    '리미가 잠시 파업중입니다 😅',
+    '리미가 커피를 마시러 갔습니다 ☕',
+    '리미가 발음사전을 너무 진지하게 뒤적이고 있습니다 📚',
+    '리미가 녹음실에서 길을 잃었습니다 🎙️',
+    '리미가 오늘 너무 열심히 일해서 쉬는 중입니다 😴',
+    '리미가 결과지를 들고 오다가 넘어졌습니다 📄'
   ];
 
   function ulimGetActiveRole_5_36() {
@@ -15242,7 +15242,7 @@ ${ruleSummary}`, 'success');
 
     const localObj = pickLocalVocalSentence_5_56();
     if (!localObj || !localObj.text) {
-      alert('문장 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
+      alert('네트워크 문제. 잠시 후 다시 시도해주세요.');
       return;
     }
 
@@ -15252,9 +15252,9 @@ ${ruleSummary}`, 'success');
 
     const recStatus = document.getElementById('recStatus');
     if (recStatus) {
-      recStatus.textContent = '구글시트 연결이 지연되어 로컬 문장으로 진행합니다.';
+      recStatus.textContent = '연결이 불안정해 리미가 서류를 제대로 들고오지 못했습니다.';
       setTimeout(function(){
-        if (recStatus && recStatus.textContent === '구글시트 연결이 지연되어 로컬 문장으로 진행합니다.') {
+        if (recStatus && recStatus.textContent === '연결이 불안정해 리미가 서류를 다들고오지 못했습니다..') {
           recStatus.textContent = '녹음 대기';
         }
       }, 3200);
