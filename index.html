@@ -3444,7 +3444,7 @@ async function trainNew(){
         currentTrainObj = buildTrainingObjectFromSentence_(serverItem);
     } catch (serverErr) {
         hideLoading();
-        console.warn('리미가 서류를 급하게 들고오느라 실수가 있었습니다.', serverErr);
+        console.warn('서버 100일 문장 조회 실패, 로컬 문장으로 대체:', serverErr);
         const savedIds = getSavedVocalIds();
         const availableData = trainDataList.filter(item => !savedIds.has(item.id));
 
@@ -3894,7 +3894,7 @@ async function analyzeTrainingAudioBlobLocal_(audioBlob) {
             syllablesPerSec: durationSec ? syllables / durationSec : 0
         };
     } catch (err) {
-        console.warn('[발성훈련 음성수치 분석 실패]', err);
+        console.warn('[발성훈련 로컬 음성수치 분석 실패]', err);
         const durationSec = base.durationSec || 0;
         return Object.assign(base, {
             syllablesPerSec: durationSec ? syllables / durationSec : 0
@@ -4018,7 +4018,7 @@ async function buildTrainingFinalLocalAiFallbackResult_(audioBlob, originalError
 
     if (!recognized && audioBlob && window.UlimLocalWhisper && typeof window.UlimLocalWhisper.transcribe === 'function') {
         const sttEl = document.getElementById('sttResult');
-        if (sttEl) sttEl.textContent = '분석을 준비하고 있습니다.';
+        if (sttEl) sttEl.textContent = '일반 분석을 준비하고 있습니다.';
         try {
             const localResult = await window.UlimLocalWhisper.transcribe(audioBlob, {
                 language: 'ko',
@@ -4026,13 +4026,13 @@ async function buildTrainingFinalLocalAiFallbackResult_(audioBlob, originalError
                 model: ULIM_LOCAL_WHISPER_MODEL,
                 onStatus: function(msg) {
                     const el = document.getElementById('sttResult');
-                    if (el && msg) el.textContent = '분석을 준비하고 있습니다.';
+                    if (el && msg) el.textContent = '일반 분석을 준비하고 있습니다.';
                 }
             });
             recognized = String(localResult && localResult.text ? localResult.text : '').trim();
             recognitionResult = recognized;
         } catch (localErr) {
-            console.warn('[음성인식 실패 - 분석 수치만 표시]', localErr);
+            console.warn('[로컬 음성인식 실패 - 일반 분석 수치만 표시]', localErr);
         }
     }
 
@@ -4108,7 +4108,7 @@ async function buildTrainingFinalFallbackResult_(audioBlob, originalError) {
         const localResult = await buildTrainingFinalLocalAiFallbackResult_(audioBlob, originalError);
         if (localResult && localResult.comment) return localResult;
     } catch (localErr) {
-        console.warn('[분석 대체 실패]', localErr);
+        console.warn('[로컬 AI 분석 대체 실패]', localErr);
     }
     return buildTrainingFinalSafeFallbackResult_(originalError);
 }
