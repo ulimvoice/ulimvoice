@@ -14916,5 +14916,123 @@ ${ruleSummary}`, 'success');
 })();
 </script>
 
+
+<script>
+/* =========================================================
+   5-53 연습실 예약 로딩 복구 패치
+   - Chrome/모바일에서 JSONP <script> 로딩이 막히는 경우를 방지
+   - 연습실 예약 API는 fetch(JSON) 우선, 실패 시 기존 JSONP로 보조 시도
+   - 학생 세션 토큰은 유지하고, 로그아웃은 로그아웃 버튼 클릭 시에만 처리
+   ========================================================= */
+(function(){
+  const ROOM_PATCH_VERSION_5_53 = '2026.06.06.053.01';
+  console.log('[ULIM room 5.53] fetch-first room reservation patch loaded', ROOM_PATCH_VERSION_5_53);
+
+  const __ulimPreviousRoomJsonp_5_53 = (typeof roomJsonp === 'function') ? roomJsonp : null;
+  const __roomInflight_5_53 = {};
+
+  function buildRoomStableKey_5_53(params) {
+    try {
+      const copy = Object.assign({}, params || {});
+      delete copy.callback;
+      delete copy._;
+      return JSON.stringify(Object.keys(copy).sort().reduce(function(acc, key){
+        acc[key] = copy[key];
+        return acc;
+      }, {}));
+    } catch(e) {
+      return '';
+    }
+  }
+
+  function normalizeRoomParams_5_53(params) {
+    const p = Object.assign({}, params || {});
+    if (p.action === 'getRoomReservations' || p.action === 'reserveRoom' || p.action === 'cancelRoom') {
+      try {
+        if (typeof getStudentSessionToken_ === 'function') {
+          const token = getStudentSessionToken_();
+          if (token) p.studentSessionToken = token;
+        }
+      } catch(e) {}
+      delete p.phoneLast4;
+    }
+    return p;
+  }
+
+  function parseRoomResponseText_5_53(text) {
+    const raw = String(text || '').trim();
+    if (!raw) throw new Error('예약 응답이 비어 있습니다.');
+    if (/^</.test(raw)) throw new Error('예약 응답을 확인하지 못했습니다.');
+    try { return JSON.parse(raw); } catch(jsonErr) {}
+
+    // 혹시 JSONP 문자열로 돌아온 경우도 안전하게 파싱합니다.
+    const m = raw.match(/^[\w.$]+\((.*)\);?$/s);
+    if (m && m[1]) {
+      try { return JSON.parse(m[1]); } catch(e) {}
+    }
+    throw new Error('예약 응답을 확인하지 못했습니다.');
+  }
+
+  async function roomFetchJson_5_53(params, options) {
+    if (typeof GET_API_URL === 'undefined' || !GET_API_URL || !String(GET_API_URL).includes('script.google.com/macros/s/')) {
+      throw new Error('예약 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
+    }
+
+    const query = new URLSearchParams();
+    Object.keys(params || {}).forEach(function(key){
+      if (params[key] !== undefined && params[key] !== null) query.set(key, params[key]);
+    });
+    if (!options || options.cacheBust !== false) query.set('_', String(Date.now()));
+
+    const res = await fetch(GET_API_URL + '?' + query.toString(), {
+      method: 'GET',
+      cache: 'no-store',
+      redirect: 'follow'
+    });
+    const text = await res.text();
+    const data = parseRoomResponseText_5_53(text);
+    if (!res.ok) throw new Error((data && data.message) || '예약 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
+    return data;
+  }
+
+  window.roomJsonp = function(params, options) {
+    options = options || {};
+    const normalized = normalizeRoomParams_5_53(params);
+    const stableKey = buildRoomStableKey_5_53(normalized);
+    const canReuseInflight = options.cacheBust === false && stableKey;
+    if (canReuseInflight && __roomInflight_5_53[stableKey]) return __roomInflight_5_53[stableKey];
+
+    const task = roomFetchJson_5_53(normalized, options).catch(function(fetchErr){
+      // fetch가 CORS/브라우저 정책으로 막히는 환경에서는 기존 JSONP를 보조로 사용합니다.
+      if (typeof __ulimPreviousRoomJsonp_5_53 === 'function') {
+        return __ulimPreviousRoomJsonp_5_53(normalized, options).catch(function(jsonpErr){
+          console.warn('[ULIM room 5.53] fetch/jsonp both failed', fetchErr, jsonpErr);
+          throw new Error('예약 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
+        });
+      }
+      console.warn('[ULIM room 5.53] fetch failed', fetchErr);
+      throw new Error('예약 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
+    });
+
+    if (canReuseInflight) {
+      __roomInflight_5_53[stableKey] = task;
+      task.finally(function(){ delete __roomInflight_5_53[stableKey]; });
+    }
+    return task;
+  };
+  try { roomJsonp = window.roomJsonp; } catch(e) {}
+
+  // 연습실 탭 진입 시 캐시된 실패 상태를 다시 읽지 않도록 한 번 더 새로고침합니다.
+  window.addEventListener('pageshow', function(){
+    try {
+      const activeRoom = document.querySelector && document.querySelector('#tabRoom.active');
+      if (activeRoom && typeof loadRoomReservations === 'function') {
+        setTimeout(function(){ loadRoomReservations(true); }, 250);
+      }
+    } catch(e) {}
+  });
+})();
+</script>
+
 </body>
 </html>
