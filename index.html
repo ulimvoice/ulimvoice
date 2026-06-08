@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램 5.70</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script type="text/javascript" nonce="4533f71c6ab948c0b228e6eebe6" src="//local.adguard.org?ts=1780906312775&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000005ac871fbb8c197835937259d%26fn%3Dindex_5_70_%25EB%25B0%259C%25EC%2584%25B1%25ED%259B%2588%25EB%25A0%25A8_%25EB%25A1%259C%25EC%25BB%25ACSTT_Gemini_%25EB%25B6%2584%25EC%2584%259D%25EB%25B6%2584%25EB%25A6%25AC_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D494696%26p%3Dfs%26cid%3D1%26sig%3D6efc2386cb1fb9ea434e68f0e36e7665af89a233a63a6263180a5e928640e4c7%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
+<script type="text/javascript" nonce="4533f71c6ab948c0b228e6eebe6" src="//local.adguard.org?ts=1780906312775&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000005dc471fbb55669f92233ced9%26fn%3Dindex_5_71_%25EB%25B0%259C%25EC%2584%25B1%25ED%259B%2588%25EB%25A0%25A8_AI%25EB%258B%25A8%25EC%259D%25BC_%25EB%25A1%259C%25EC%25BB%25ACSTT_Gemini_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D494697%26p%3Dfs%26cid%3D1%26sig%3D6d33f5cbfc1a3965053fda8fb24e7b31b983c5ad8b7f70bcda02856e9155d585%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
 <link rel="dns-prefetch" href="//script.google.com">
 <link rel="dns-prefetch" href="//script.googleusercontent.com">
 
@@ -17920,38 +17920,39 @@ ${ruleSummary}`, 'success');
 
 
 
-<script id="ulim-vocal-training-5-70-local-gemini-split-and-step6-upload">
+<script id="ulim-vocal-training-5-71-local-stt-gemini-ai-only-step6-upload">
 /* =========================================================
-   5.70 발성훈련 분석 구조 변경
-   - 발성훈련 고급분석은 ETRI 호출 없이 로컬 STT + Gemini 코멘트 조합으로 처리합니다.
-   - 발성훈련 분석 버튼을 일반분석 / 고급분석으로 분리합니다.
-   - 고급분석 안내는 팝업 confirm 대신 분석창 안에 표시합니다.
+   5.71 발성훈련 AI 분석 단일화
+   - 발성훈련 탭은 기존처럼 [AI 분석] 버튼 하나만 사용합니다.
+   - 발성훈련 AI 분석은 ETRI를 호출하지 않고 로컬 STT + Gemini 조합으로만 처리합니다.
+   - Gemini 호출 실패/지연/제한 시에는 로컬 분석만 화면에 표시합니다.
+   - 분석 진행 중에는 인식결과없음 대신 "분석중..."을 표시합니다.
    - 별도 연습완료 버튼은 숨기고, STEP6에서 [다음] 클릭 시 연습완료/업로드를 진행합니다.
    ========================================================= */
 (function(){
-  if (window.__ULIM_VOCAL_570_LOCAL_GEMINI_SPLIT__) return;
-  window.__ULIM_VOCAL_570_LOCAL_GEMINI_SPLIT__ = true;
-  window.ULIM_VOCAL_ANALYSIS_VERSION = '2026.06.08.570.local-gemini-split-step6-upload';
+  if (window.__ULIM_VOCAL_571_AI_ONLY__) return;
+  window.__ULIM_VOCAL_571_AI_ONLY__ = true;
+  window.ULIM_VOCAL_ANALYSIS_VERSION = '2026.06.08.571.local-stt-gemini-ai-only-step6-upload';
 
-  function byId570_(id){ return document.getElementById(id); }
-  function safeText570_(value){ return String(value || '').trim(); }
+  function byId571_(id){ return document.getElementById(id); }
+  function safeText571_(value){ return String(value || '').trim(); }
 
-  function showTrainingSections570_(){
-    const resultBox = byId570_('resultBox');
-    const aiSection = byId570_('aiSection');
-    const recSection = byId570_('recSection');
+  function showTrainingSections571_(){
+    const resultBox = byId571_('resultBox');
+    const aiSection = byId571_('aiSection');
+    const recSection = byId571_('recSection');
     if (resultBox) resultBox.style.display = 'block';
     if (aiSection) aiSection.style.display = 'block';
     if (recSection) recSection.style.display = 'block';
   }
 
-  function setStatus570_(text){
-    const recStatus = byId570_('recStatus');
+  function setStatus571_(text){
+    const recStatus = byId571_('recStatus');
     if (recStatus) recStatus.textContent = text;
   }
 
-  function setSttText570_(text){
-    const stt = byId570_('sttResult');
+  function setSttText571_(text){
+    const stt = byId571_('sttResult');
     if (stt) {
       stt.classList.remove('rimi-eval-rendered');
       delete stt.dataset.rimiRawText;
@@ -17959,15 +17960,15 @@ ${ruleSummary}`, 'success');
     }
   }
 
-  function setBadge570_(text, className){
-    const badge = byId570_('accBadge');
+  function setBadge571_(text, className){
+    const badge = byId571_('accBadge');
     if (!badge) return;
     badge.className = 'accuracy-badge ' + (className || 'acc-wait');
     badge.textContent = text;
   }
 
-  function hideLegacyCompleteButton570_(){
-    const btn = byId570_('btnComplete');
+  function hideLegacyCompleteButton571_(){
+    const btn = byId571_('btnComplete');
     if (!btn) return;
     btn.style.display = 'none';
     btn.disabled = true;
@@ -17975,8 +17976,8 @@ ${ruleSummary}`, 'success');
     btn.style.pointerEvents = 'none';
   }
 
-  function setStep6NextButton570_(){
-    const next = byId570_('btn_next');
+  function setStep6NextButton571_(){
+    const next = byId571_('btn_next');
     if (!next) return;
     if (typeof step !== 'undefined' && step === 6) {
       next.textContent = '연습완료/업로드 ➡';
@@ -17988,193 +17989,161 @@ ${ruleSummary}`, 'success');
     }
   }
 
-  function installTrainingAnalysisButtons570_(){
-    const advancedBtn = byId570_('trainingAiAnalyzeBtn');
-    if (!advancedBtn) return;
+  function restoreSingleAiButton571_(){
+    const generalWrap = byId571_('trainingGeneralAnalyzeWrap');
+    if (generalWrap && generalWrap.parentElement) generalWrap.parentElement.removeChild(generalWrap);
 
-    const advancedWrap = advancedBtn.parentElement;
-    if (!advancedWrap) return;
+    const aiBtn = byId571_('trainingAiAnalyzeBtn');
+    const aiLabel = byId571_('trainingAiAnalyzeBtnLabel');
+    if (!aiBtn) return;
 
-    const advancedLabel = byId570_('trainingAiAnalyzeBtnLabel');
-    advancedBtn.textContent = '고급';
-    advancedBtn.title = '로컬 STT 결과를 바탕으로 Gemini가 코멘트를 작성합니다.';
-    advancedBtn.style.background = '#7c3aed';
-    advancedBtn.onclick = function(){ return window.runTrainingFinalAiAnalysisFromButton(); };
-    if (advancedLabel) advancedLabel.textContent = '고급분석';
+    aiBtn.textContent = 'AI';
+    aiBtn.title = '로컬 STT 인식 결과를 바탕으로 리미가 AI 분석을 진행합니다.';
+    aiBtn.style.background = '#7c3aed';
+    aiBtn.style.fontSize = '32px';
+    aiBtn.disabled = false;
+    aiBtn.style.opacity = '1';
+    aiBtn.onclick = function(){ return window.runTrainingFinalAiAnalysisFromButton(); };
+    if (aiLabel) aiLabel.textContent = 'AI 분석';
 
-    let generalBtn = byId570_('trainingGeneralAnalyzeBtn');
-    if (!generalBtn) {
-      const generalWrap = document.createElement('div');
-      generalWrap.id = 'trainingGeneralAnalyzeWrap';
-      generalWrap.style.textAlign = 'center';
-      generalWrap.style.minWidth = '180px';
-      generalWrap.innerHTML = [
-        '<button id="trainingGeneralAnalyzeBtn" type="button" style="width:92px; height:92px; border-radius:24px; border:none; background:#16a34a; color:#fff; font-size:24px; font-weight:900; cursor:pointer; box-shadow:0 6px 18px rgba(22,163,74,.35);">일반</button>',
-        '<p id="trainingGeneralAnalyzeBtnLabel" style="font-size:13px; color:#555; margin-top:10px; font-weight:bold;">일반분석</p>'
-      ].join('');
-      advancedWrap.parentElement.insertBefore(generalWrap, advancedWrap);
-      generalBtn = byId570_('trainingGeneralAnalyzeBtn');
-    }
-
-    if (generalBtn) {
-      generalBtn.onclick = function(){ return window.runTrainingFinalGeneralAnalysisFromButton(); };
-      generalBtn.title = '기기에서 빠르게 로컬 STT와 문장 일치도를 확인합니다.';
-    }
+    const titleText = byId571_('aiSectionTitleText');
+    if (titleText && !window.trainingFinalAiInProgress) titleText.textContent = 'AI 분석 결과';
   }
 
-  async function ensureTrainingLocalRecognized570_(audioBlob, statusText){
-    let localRecognized = safeText570_(typeof recognitionResult !== 'undefined' ? recognitionResult : '');
+  async function ensureTrainingLocalRecognized571_(audioBlob){
+    let localRecognized = safeText571_(typeof recognitionResult !== 'undefined' ? recognitionResult : '');
     if (localRecognized) return localRecognized;
-
     if (!audioBlob) return '';
 
     if (window.UlimLocalWhisper && typeof window.UlimLocalWhisper.transcribe === 'function') {
-      if (statusText) setSttText570_(statusText);
       try {
         const result = await Promise.race([
           window.UlimLocalWhisper.transcribe(audioBlob, {
             language: 'ko',
             task: 'transcribe',
             model: (typeof ULIM_LOCAL_WHISPER_MODEL !== 'undefined' ? ULIM_LOCAL_WHISPER_MODEL : undefined),
-            onStatus: function(){ if (statusText) setSttText570_(statusText); }
+            onStatus: function(){ setSttText571_('분석중...'); }
           }),
           new Promise(function(resolve){ setTimeout(function(){ resolve({ text: '' }); }, 25000); })
         ]);
-        localRecognized = safeText570_(result && result.text);
+        localRecognized = safeText571_(result && result.text);
         try { recognitionResult = localRecognized; } catch(e) {}
       } catch (err) {
-        console.warn('[5.70 발성훈련 로컬 STT 실패]', err);
+        console.warn('[5.71 발성훈련 로컬 STT 실패]', err);
         localRecognized = '';
       }
     }
-
     return localRecognized;
   }
 
-  function buildTrainingGeneralResult570_(recognized, metrics, reason){
-    const scriptText = currentTrainObj ? safeText570_(currentTrainObj.text) : '';
-    const pron = currentTrainObj ? safeText570_(currentTrainObj.pron) : '';
-    const cleanTarget = scriptText.replace(/[^가-힣]/g, '');
-    const cleanHeard = safeText570_(recognized).replace(/[^가-힣]/g, '');
-    const similarity = cleanTarget && cleanHeard && typeof getSimilarity === 'function'
-      ? Math.round(getSimilarity(cleanTarget, cleanHeard) * 100)
-      : 0;
-    const safeMetrics = metrics || {
+  function getTrainingLocalMetrics571_(){
+    return {
       durationSec: (typeof getTrainingRecordedDurationSec_ === 'function' ? getTrainingRecordedDurationSec_() : 0),
       avgRms: 0,
       silenceRatio: 0,
       syllablesPerSec: 0
     };
+  }
+
+  async function analyzeTrainingAudioMetrics571_(){
+    try {
+      if (typeof analyzeTrainingAudioBlobLocal_ === 'function' && lastRecordedBlob) {
+        const metrics = await Promise.race([
+          analyzeTrainingAudioBlobLocal_(lastRecordedBlob),
+          new Promise(function(resolve){ setTimeout(function(){ resolve(null); }, 3500); })
+        ]);
+        if (metrics) return metrics;
+      }
+    } catch(e) {}
+    return getTrainingLocalMetrics571_();
+  }
+
+  function getTrainingSimilarity571_(recognized){
+    const scriptText = currentTrainObj ? safeText571_(currentTrainObj.text) : '';
+    const cleanTarget = scriptText.replace(/[^가-힣]/g, '');
+    const cleanHeard = safeText571_(recognized).replace(/[^가-힣]/g, '');
+    if (cleanTarget && cleanHeard && typeof getSimilarity === 'function') {
+      return Math.round(getSimilarity(cleanTarget, cleanHeard) * 100);
+    }
+    return 0;
+  }
+
+  function buildTrainingLocalOnlyResult571_(recognized, metrics, reason){
+    const scriptText = currentTrainObj ? safeText571_(currentTrainObj.text) : '';
+    const pron = currentTrainObj ? safeText571_(currentTrainObj.pron) : '';
+    const similarity = getTrainingSimilarity571_(recognized);
+    const safeMetrics = metrics || getTrainingLocalMetrics571_();
     let text = '';
     if (typeof buildTrainingFinalGeneralAnalysisText_ === 'function') {
       text = buildTrainingFinalGeneralAnalysisText_(recognized || '', similarity, safeMetrics);
     }
     if (!text) {
-      text = '리미의 간단 분석!\n\n' +
-        '인식결과: ' + (recognized || '인식 결과 없음') + '\n' +
+      text = '리미의 로컬 분석!\n\n' +
+        '인식 결과: ' + (recognized || '인식 결과 없음') + '\n' +
         '문장 일치도: ' + similarity + '%\n' +
         '녹음 길이: ' + (Number(safeMetrics.durationSec || 0).toFixed(1)) + '초\n' +
         '표준발음 참고: ' + (pron || '[문장을 입력하면 표준발음으로 변환합니다.]');
     }
-
     return {
       ok: true,
       status: 'fallback',
-      source: 'local_general',
+      source: 'local_only',
       analysisSource: 'local_general',
-      badge: '일반 분석',
+      badge: '로컬 분석',
       recognized: recognized || '',
       score: '',
       scoreText: '-',
+      matchScore: similarity,
       comment: text,
       analysisText: text,
       generalAnalysisText: text,
-      message: '리미의 간단 분석!',
-      originalError: safeText570_(reason),
+      message: 'AI 분석 연결이 원활하지 않아 로컬 분석만 표시했습니다.',
+      originalError: safeText571_(reason),
       requestSentence: scriptText,
       standardPronunciation: pron,
       metrics: safeMetrics
     };
   }
 
-  window.runTrainingFinalGeneralAnalysisFromButton = async function(options){
-    options = options || {};
-    if (window.trainingGeneralAnalysisInProgress) return null;
-
-    if (typeof step !== 'undefined' && (step !== 6 || !currentTrainObj)) {
-      if (!options.silent) alert('STEP6 최종녹음 단계에서 사용할 수 있습니다.');
-      return null;
-    }
-    if (!lastRecordedBlob) {
-      if (!options.silent) alert('먼저 녹음을 완료해주세요.');
-      return null;
-    }
-
-    window.trainingGeneralAnalysisInProgress = true;
-    try {
-      showTrainingSections570_();
-      setBadge570_('일반분석 중', 'acc-wait');
-      setSttText570_('일반분석 중입니다. 리미가 녹음과 문장 일치도를 빠르게 확인하고 있어요.');
-      setStatus570_('일반분석 중입니다.');
-
-      const recognized = await ensureTrainingLocalRecognized570_(lastRecordedBlob, '일반분석 중입니다. 리미가 녹음과 문장 일치도를 빠르게 확인하고 있어요.');
-      let metrics = null;
-      try {
-        if (typeof analyzeTrainingAudioBlobLocal_ === 'function') {
-          metrics = await Promise.race([
-            analyzeTrainingAudioBlobLocal_(lastRecordedBlob),
-            new Promise(function(resolve){ setTimeout(function(){ resolve(null); }, 3500); })
-          ]);
-        }
-      } catch(e) { metrics = null; }
-
-      const result = buildTrainingGeneralResult570_(recognized, metrics, '일반분석');
-      if (typeof renderTrainingFinalAiResult_ === 'function') {
-        renderTrainingFinalAiResult_(result);
-      } else {
-        setSttText570_(result.generalAnalysisText || result.comment || '리미의 간단 분석!');
-      }
-
-      window.trainingFinalAiResult = Object.assign({}, result, {
-        requestSentence: currentTrainObj ? currentTrainObj.text : '',
-        badge: '일반 분석',
-        analysisSource: 'local_general'
-      });
-      setBadge570_('일반 분석', 'acc-soso');
-      setStatus570_('일반분석 완료. 다음 버튼을 누르면 연습완료와 업로드가 진행됩니다.');
-      hideLegacyCompleteButton570_();
-      setStep6NextButton570_();
-      return window.trainingFinalAiResult;
-    } finally {
-      window.trainingGeneralAnalysisInProgress = false;
-      try { if (typeof setTrainingAiLoadingState_ === 'function') setTrainingAiLoadingState_(false); } catch(e) {}
-      installTrainingAnalysisButtons570_();
-    }
-  };
-  try { runTrainingFinalGeneralAnalysisFromButton = window.runTrainingFinalGeneralAnalysisFromButton; } catch(e) {}
+  async function renderLocalOnlyFallback571_(reason){
+    showTrainingSections571_();
+    setSttText571_('분석중...');
+    setBadge571_('분석중', 'acc-wait');
+    const recognized = await ensureTrainingLocalRecognized571_(lastRecordedBlob);
+    const metrics = await analyzeTrainingAudioMetrics571_();
+    const fallback = buildTrainingLocalOnlyResult571_(recognized, metrics, reason || 'gemini_failed');
+    if (typeof renderTrainingFinalAiResult_ === 'function') renderTrainingFinalAiResult_(fallback);
+    else setSttText571_(fallback.generalAnalysisText || fallback.comment || '로컬 분석을 완료했습니다.');
+    window.trainingFinalAiResult = Object.assign({}, fallback, {
+      requestSentence: currentTrainObj ? currentTrainObj.text : '',
+      badge: '로컬 분석',
+      analysisSource: 'local_general'
+    });
+    setBadge571_('로컬 분석', 'acc-soso');
+    setStatus571_('로컬 분석 완료. 다음 버튼을 누르면 연습완료와 업로드가 진행됩니다.');
+    hideLegacyCompleteButton571_();
+    setStep6NextButton571_();
+    return window.trainingFinalAiResult;
+  }
 
   window.runTrainingFinalAiAnalysis_ = async function(audioBlob, options){
     options = options || {};
     if (!audioBlob) throw new Error('녹음 파일이 없습니다.');
     if (!GET_API_URL || !GET_API_URL.includes('script.google.com/macros/s/')) {
-      throw new Error('서비스 연결이 준비되지 않았습니다. 잠시 후 다시 시도해주세요.');
+      throw new Error('서비스 연결이 준비되지 않았습니다.');
     }
     if (!currentTrainObj) throw new Error('연습 문장이 없습니다.');
 
     const requestId = window.trainingFinalAiActiveRequestId || (typeof buildTrainingFinalRequestId_ === 'function' ? buildTrainingFinalRequestId_() : ('TRAIN_AI_' + Date.now()));
     window.trainingFinalAiActiveRequestId = requestId;
 
-    const localRecognized = await ensureTrainingLocalRecognized570_(audioBlob, '고급분석은 시간이 걸릴 수 있습니다.\n리미가 녹음과 문장 전달력을 정밀하게 확인하고 있어요.\n잠시만 기다려주세요.');
+    const localRecognized = await ensureTrainingLocalRecognized571_(audioBlob);
     if (!localRecognized) {
-      throw new Error('로컬 STT 인식 결과가 없어 고급분석을 진행하지 못했습니다. 일반분석으로 전환합니다.');
+      throw new Error('로컬 STT 인식 결과가 없어 로컬 분석으로 전환합니다.');
     }
 
-    const scriptText = safeText570_(currentTrainObj.text);
-    const cleanTarget = scriptText.replace(/[^가-힣]/g, '');
-    const cleanHeard = localRecognized.replace(/[^가-힣]/g, '');
-    const localMatchScore = cleanTarget && cleanHeard && typeof getSimilarity === 'function'
-      ? Math.round(getSimilarity(cleanTarget, cleanHeard) * 100)
-      : 0;
+    const scriptText = safeText571_(currentTrainObj.text);
+    const localMatchScore = getTrainingSimilarity571_(localRecognized);
     const localScore5 = (1 + (Math.max(0, Math.min(100, localMatchScore)) / 100) * 4).toFixed(1);
     const ctx = (typeof getUlimActiveUserContext_5_35 === 'function') ? getUlimActiveUserContext_5_35() : null;
 
@@ -18209,13 +18178,17 @@ ${ruleSummary}`, 'success');
       body: JSON.stringify(payload)
     });
 
-    return await pollTrainingFinalAiResult_(requestId);
+    const result = await pollTrainingFinalAiResult_(requestId);
+    if (!result || result.ok === false || /^(error|busy|limit|gemini_failed)/i.test(String(result.status || ''))) {
+      throw new Error((result && (result.message || result.status)) || 'Gemini 분석 실패');
+    }
+    return result;
   };
   try { runTrainingFinalAiAnalysis_ = window.runTrainingFinalAiAnalysis_; } catch(e) {}
 
   window.runTrainingFinalAiAnalysisFromButton = async function(){
     if (window.trainingFinalAiInProgress) {
-      setStatus570_('리미가 이미 고급분석 중입니다. 잠시만 기다려주세요.');
+      setStatus571_('리미가 이미 분석 중입니다. 잠시만 기다려주세요.');
       return null;
     }
     if (typeof step !== 'undefined' && (step !== 6 || !currentTrainObj)) {
@@ -18227,7 +18200,7 @@ ${ruleSummary}`, 'success');
 
     const existing = window.trainingFinalAiResult || null;
     if (existing && existing.requestSentence === currentTrainObj.text && existing.analysisSource === 'local_gemini') {
-      setStatus570_('이미 마지막 녹음본의 고급분석이 완료되었습니다. 다음 버튼을 누르면 업로드됩니다.');
+      setStatus571_('이미 마지막 녹음본의 AI 분석이 완료되었습니다. 다음 버튼을 누르면 업로드됩니다.');
       return existing;
     }
 
@@ -18239,136 +18212,140 @@ ${ruleSummary}`, 'success');
 
     window.trainingFinalAiInProgress = true;
     window.trainingFinalAiActiveRequestId = (typeof buildTrainingFinalRequestId_ === 'function') ? buildTrainingFinalRequestId_() : ('TRAIN_AI_' + Date.now());
-    const btn = byId570_('trainingAiAnalyzeBtn');
 
     try {
       if (typeof setTrainingAiLoadingState_ === 'function') setTrainingAiLoadingState_(true);
-      showTrainingSections570_();
-      setSttText570_('고급분석은 시간이 걸릴 수 있습니다.\n리미가 녹음과 문장 전달력을 정밀하게 확인하고 있어요.\n잠시만 기다려주세요.');
-      setBadge570_('고급분석 중', 'acc-wait');
-      setStatus570_('고급분석 중입니다. 잠시만 기다려주세요.');
+      showTrainingSections571_();
+      setSttText571_('분석중...');
+      setBadge571_('분석중', 'acc-wait');
+      setStatus571_('AI 분석 중입니다. 잠시만 기다려주세요.');
 
       const result = await Promise.race([
         window.runTrainingFinalAiAnalysis_(lastRecordedBlob, { force: true, analysisMode: 'local_gemini' }),
-        new Promise(function(_, reject){ setTimeout(function(){ reject(new Error('고급분석 시간이 오래 걸려 일반분석으로 전환합니다.')); }, 30000); })
+        new Promise(function(_, reject){ setTimeout(function(){ reject(new Error('AI 분석 시간이 오래 걸려 로컬 분석으로 전환합니다.')); }, 30000); })
       ]);
 
       if (result && result.ok !== false) {
         result.analysisSource = result.analysisSource || 'local_gemini';
         result.source = result.source || 'local_gemini';
+        if (typeof renderTrainingFinalAiResult_ === 'function') renderTrainingFinalAiResult_(result);
+        setStatus571_('AI 분석 완료. 다음 버튼을 누르면 연습완료와 업로드가 진행됩니다.');
+        hideLegacyCompleteButton571_();
+        setStep6NextButton571_();
+        return result;
       }
-      setStatus570_('고급분석 완료. 다음 버튼을 누르면 연습완료와 업로드가 진행됩니다.');
-      hideLegacyCompleteButton570_();
-      setStep6NextButton570_();
-      return result;
+      return await renderLocalOnlyFallback571_('Gemini 분석 결과가 비어 있습니다.');
     } catch (err) {
-      console.warn('[5.70 발성훈련 고급분석 실패]', err);
-      const fallback = await window.runTrainingFinalGeneralAnalysisFromButton({ silent: true, reason: err && err.message ? err.message : String(err || '') });
-      setStatus570_('고급분석이 지연되어 일반분석으로 전환했습니다. 다음 버튼을 누르면 업로드됩니다.');
-      return fallback;
+      console.warn('[5.71 발성훈련 AI 분석 실패: 로컬 분석 전환]', err);
+      return await renderLocalOnlyFallback571_(err && err.message ? err.message : String(err || ''));
     } finally {
       window.trainingFinalAiInProgress = false;
       window.trainingFinalAiActiveRequestId = '';
       if (typeof setTrainingAiLoadingState_ === 'function') setTrainingAiLoadingState_(false);
-      if (btn) {
-        btn.disabled = false;
-        btn.classList.remove('training-ai-loading');
-        btn.dataset.loading = '0';
-        btn.textContent = '고급';
-        btn.style.opacity = '1';
-      }
-      installTrainingAnalysisButtons570_();
+      restoreSingleAiButton571_();
     }
   };
   try { runTrainingFinalAiAnalysisFromButton = window.runTrainingFinalAiAnalysisFromButton; } catch(e) {}
 
-  const oldSetLoading570_ = window.setTrainingAiLoadingState_ || (typeof setTrainingAiLoadingState_ === 'function' ? setTrainingAiLoadingState_ : null);
+  const oldSetLoading571_ = window.setTrainingAiLoadingState_ || (typeof setTrainingAiLoadingState_ === 'function' ? setTrainingAiLoadingState_ : null);
   window.setTrainingAiLoadingState_ = function(isLoading){
-    if (oldSetLoading570_) oldSetLoading570_.apply(this, arguments);
-    const advBtn = byId570_('trainingAiAnalyzeBtn');
-    const advLabel = byId570_('trainingAiAnalyzeBtnLabel');
-    const genBtn = byId570_('trainingGeneralAnalyzeBtn');
-    if (advLabel) advLabel.textContent = isLoading ? '고급분석 중' : '고급분석';
-    if (advBtn && !isLoading) advBtn.textContent = '고급';
-    if (genBtn) {
-      genBtn.disabled = !!isLoading || !!window.trainingGeneralAnalysisInProgress;
-      genBtn.style.opacity = (genBtn.disabled ? '.65' : '1');
+    if (oldSetLoading571_) {
+      try { oldSetLoading571_.apply(this, arguments); } catch(e) {}
     }
+    const aiBtn = byId571_('trainingAiAnalyzeBtn');
+    const aiLabel = byId571_('trainingAiAnalyzeBtnLabel');
+    const titleText = byId571_('aiSectionTitleText');
+    const generalWrap = byId571_('trainingGeneralAnalyzeWrap');
+    if (generalWrap && generalWrap.parentElement) generalWrap.parentElement.removeChild(generalWrap);
+
+    if (aiBtn) {
+      aiBtn.disabled = !!isLoading;
+      aiBtn.style.opacity = isLoading ? '.7' : '1';
+      if (isLoading) {
+        aiBtn.classList.add('training-ai-loading');
+        aiBtn.innerHTML = '<img class="training-ai-loading-img" src="assets/rimi_analyzing.gif" alt="리미 분석 중">';
+      } else {
+        aiBtn.classList.remove('training-ai-loading');
+        aiBtn.textContent = 'AI';
+      }
+    }
+    if (aiLabel) aiLabel.textContent = isLoading ? '분석 중...' : 'AI 분석';
+    if (titleText) titleText.textContent = isLoading ? '분석중...' : 'AI 분석 결과';
   };
   try { setTrainingAiLoadingState_ = window.setTrainingAiLoadingState_; } catch(e) {}
 
-  const oldEnableComplete570_ = window.enableVocalTrainingCompleteButton_ || (typeof enableVocalTrainingCompleteButton_ === 'function' ? enableVocalTrainingCompleteButton_ : null);
+  const oldEnableComplete571_ = window.enableVocalTrainingCompleteButton_ || (typeof enableVocalTrainingCompleteButton_ === 'function' ? enableVocalTrainingCompleteButton_ : null);
   window.enableVocalTrainingCompleteButton_ = function(){
-    if (oldEnableComplete570_) {
-      try { oldEnableComplete570_.apply(this, arguments); } catch(e) {}
+    if (oldEnableComplete571_) {
+      try { oldEnableComplete571_.apply(this, arguments); } catch(e) {}
     }
-    hideLegacyCompleteButton570_();
-    setStep6NextButton570_();
+    hideLegacyCompleteButton571_();
+    setStep6NextButton571_();
   };
   try { enableVocalTrainingCompleteButton_ = window.enableVocalTrainingCompleteButton_; } catch(e) {}
 
-  const oldRenderTrain570_ = window.renderTrain || (typeof renderTrain === 'function' ? renderTrain : null);
-  if (typeof oldRenderTrain570_ === 'function') {
+  const oldRenderTrain571_ = window.renderTrain || (typeof renderTrain === 'function' ? renderTrain : null);
+  if (typeof oldRenderTrain571_ === 'function') {
     window.renderTrain = function(){
-      const out = oldRenderTrain570_.apply(this, arguments);
-      hideLegacyCompleteButton570_();
-      installTrainingAnalysisButtons570_();
-      setStep6NextButton570_();
-      if (typeof step !== 'undefined' && step === 6) {
-        const label = byId570_('aiSectionTitleText');
-        if (label) label.textContent = '분석 결과';
-      }
+      const out = oldRenderTrain571_.apply(this, arguments);
+      hideLegacyCompleteButton571_();
+      restoreSingleAiButton571_();
+      setStep6NextButton571_();
+      const label = byId571_('aiSectionTitleText');
+      if (label && !window.trainingFinalAiInProgress) label.textContent = 'AI 분석 결과';
       return out;
     };
     try { renderTrain = window.renderTrain; } catch(e) {}
   }
 
-  const oldComplete570_ = window.completeTraining || (typeof completeTraining === 'function' ? completeTraining : null);
-  if (typeof oldComplete570_ === 'function') {
+  const oldComplete571_ = window.completeTraining || (typeof completeTraining === 'function' ? completeTraining : null);
+  if (typeof oldComplete571_ === 'function') {
     window.completeTraining = async function(){
       if (typeof step !== 'undefined' && step === 6 && currentTrainObj && lastRecordedBlob) {
         const hasResult = !!(window.trainingFinalAiResult && window.trainingFinalAiResult.requestSentence === currentTrainObj.text);
         if (!hasResult) {
-          await window.runTrainingFinalGeneralAnalysisFromButton({ silent: true, auto: true });
+          await renderLocalOnlyFallback571_('AI 분석 없이 연습완료');
         }
       }
-      const out = await oldComplete570_.apply(this, arguments);
-      hideLegacyCompleteButton570_();
-      setStep6NextButton570_();
+      const out = await oldComplete571_.apply(this, arguments);
+      hideLegacyCompleteButton571_();
+      setStep6NextButton571_();
+      restoreSingleAiButton571_();
       return out;
     };
     try { completeTraining = window.completeTraining; } catch(e) {}
   }
 
-  const oldTrainNext570_ = window.trainNext || (typeof trainNext === 'function' ? trainNext : null);
+  const oldTrainNext571_ = window.trainNext || (typeof trainNext === 'function' ? trainNext : null);
   window.trainNext = async function(){
     if (typeof step !== 'undefined' && step === 6) {
-      if (window.trainingStep6UploadInProgress570_) return;
+      if (window.trainingStep6UploadInProgress571_) return;
       if (!lastRecordedBlob) return alert('녹음을 완료한 뒤 다음 버튼을 누르면 연습완료와 업로드가 진행됩니다.');
-      window.trainingStep6UploadInProgress570_ = true;
-      const next = byId570_('btn_next');
+      window.trainingStep6UploadInProgress571_ = true;
+      const next = byId571_('btn_next');
       try {
         if (next) {
           next.disabled = true;
           next.textContent = '업로드 중...';
         }
         if (!window.trainingFinalAiResult || window.trainingFinalAiResult.requestSentence !== currentTrainObj.text) {
-          await window.runTrainingFinalGeneralAnalysisFromButton({ silent: true, auto: true });
+          await renderLocalOnlyFallback571_('AI 분석 없이 연습완료');
         }
         return await window.completeTraining();
       } finally {
-        window.trainingStep6UploadInProgress570_ = false;
-        setStep6NextButton570_();
+        window.trainingStep6UploadInProgress571_ = false;
+        setStep6NextButton571_();
+        restoreSingleAiButton571_();
       }
     }
-    if (typeof oldTrainNext570_ === 'function') return oldTrainNext570_.apply(this, arguments);
+    if (typeof oldTrainNext571_ === 'function') return oldTrainNext571_.apply(this, arguments);
   };
   try { trainNext = window.trainNext; } catch(e) {}
 
-  function installRecStatusObserver570_(){
-    const el = byId570_('recStatus');
-    if (!el || el.__ulim570Observer) return;
-    el.__ulim570Observer = true;
+  function installRecStatusObserver571_(){
+    const el = byId571_('recStatus');
+    if (!el || el.__ulim571Observer) return;
+    el.__ulim571Observer = true;
     const obs = new MutationObserver(function(){
       const t = el.textContent || '';
       if (/연습완료\s*버튼/.test(t)) {
@@ -18378,19 +18355,20 @@ ${ruleSummary}`, 'success');
     obs.observe(el, { childList: true, characterData: true, subtree: true });
   }
 
-  function install570_(){
-    hideLegacyCompleteButton570_();
-    installTrainingAnalysisButtons570_();
-    setStep6NextButton570_();
-    installRecStatusObserver570_();
+  function install571_(){
+    hideLegacyCompleteButton571_();
+    restoreSingleAiButton571_();
+    setStep6NextButton571_();
+    installRecStatusObserver571_();
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install570_);
-  else install570_();
-  setTimeout(install570_, 400);
-  setTimeout(install570_, 1200);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install571_);
+  else install571_();
+  setTimeout(install571_, 400);
+  setTimeout(install571_, 1200);
+  setTimeout(install571_, 2200);
 
-  if (window.ULIM_DEBUG === true) console.log('[ULIM 5.70] 발성훈련 로컬 STT+Gemini/분석분리/STEP6 업로드 패치 적용 완료');
+  if (window.ULIM_DEBUG === true) console.log('[ULIM 5.71] 발성훈련 AI 단일 버튼/로컬 STT+Gemini/로컬 fallback/STEP6 업로드 패치 적용 완료');
 })();
 </script>
 
