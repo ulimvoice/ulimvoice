@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램 5.77</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script type="text/javascript" nonce="e4b7f6f75cb8472f80550a644ac" src="//local.adguard.org?ts=1781079912753&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000df707206b60c379f4d38fedb%26fn%3Dindex_5_79_%25EC%259D%25BC%25EC%259D%25BC%25ED%258F%2589%25EA%25B0%2580%25EB%25A1%259C%25EC%25BB%25AC%25EC%259E%2590%25EB%258F%2599%25EC%259E%2584%25EC%258B%259C%25EC%25A0%2580%25EC%259E%25A5_GAS%25EC%259E%2584%25EC%258B%259C%25EC%25A0%2580%25EC%259E%25A5%25EC%25A0%259C%25EA%25B1%25B0_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D494746%26p%3Dfs%26cid%3D1%26sig%3D0ca1bf5ce93f64cbbe8e8f7c2e43b99a464050aa8ca8f26676b6941b81d166a6%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
+<script type="text/javascript" nonce="e4b7f6f75cb8472f80550a644ac" src="//local.adguard.org?ts=1781079912753&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000009920720692375d25ff77d024%26fn%3Dindex_5_80_%25EB%25B0%259C%25EC%2584%25B1%25EC%2597%25B0%25EC%258A%25B5%25EC%259D%25BC%25EC%25A7%2580%25EB%258B%25AC%25EB%25A0%25A5_%25EC%259D%25BC%25EC%25A3%25BC%25EC%259B%2594%25EC%25A1%25B0%25ED%259A%258C_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D494746%26p%3Dfs%26cid%3D1%26sig%3Dc1e3887c0e1690ee0d59064ad1cb5cca089a0c5cde978d9b4f882b3d6ec158b0%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
 <link rel="dns-prefetch" href="//script.google.com">
 <link rel="dns-prefetch" href="//script.googleusercontent.com">
 
@@ -1746,6 +1746,120 @@ body.admin-mode .admin-only-tab { display:block !important; }
 }
 </style>
 
+
+<style id="vocalPracticeCalendarStyle580">
+/* =========================================================
+   5.80 강사 발성연습일지 달력 일/주/월 조회
+   ========================================================= */
+.vocal-calendar-wrap {
+    background:#f8fafc;
+    border:1px solid #e5e7eb;
+    border-radius:16px;
+    padding:12px;
+    margin-top:8px;
+}
+.vocal-calendar-head {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:8px;
+}
+.vocal-calendar-nav,
+.vocal-calendar-title {
+    border:0;
+    background:#fff;
+    border-radius:10px;
+    padding:9px 12px;
+    font-weight:900;
+    cursor:pointer;
+    color:#166534;
+    border:1px solid #dcfce7;
+}
+.vocal-calendar-title {
+    flex:1;
+    text-align:center;
+    color:#111827;
+}
+.vocal-calendar-title.active {
+    background:#2ecc71;
+    color:#fff;
+    border-color:#2ecc71;
+}
+.vocal-calendar-grid {
+    display:grid;
+    grid-template-columns:52px repeat(7, minmax(32px, 1fr));
+    gap:4px;
+}
+.vocal-calendar-dow,
+.vocal-calendar-week,
+.vocal-calendar-day {
+    min-height:34px;
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:13px;
+    font-weight:900;
+    user-select:none;
+}
+.vocal-calendar-dow {
+    background:#eef2f7;
+    color:#374151;
+}
+.vocal-calendar-week {
+    background:#eff6ff;
+    color:#2563eb;
+    cursor:pointer;
+    border:1px solid #dbeafe;
+}
+.vocal-calendar-week:hover {
+    background:#dbeafe;
+}
+.vocal-calendar-week.active {
+    background:#3498db;
+    color:#fff;
+    border-color:#3498db;
+}
+.vocal-calendar-day {
+    background:#fff;
+    color:#111827;
+    cursor:pointer;
+    border:1px solid #e5e7eb;
+}
+.vocal-calendar-day:hover {
+    border-color:#2ecc71;
+    background:#f0fdf4;
+}
+.vocal-calendar-day.muted {
+    color:#b6bbc5;
+    background:#fafafa;
+}
+.vocal-calendar-day.today {
+    border:2px solid #2ecc71;
+}
+.vocal-calendar-day.active {
+    background:#2ecc71;
+    color:#fff;
+    border-color:#2ecc71;
+}
+.vocal-calendar-day.week-active {
+    background:#dcfce7;
+    color:#166534;
+    border-color:#bbf7d0;
+}
+.vocal-calendar-range-label {
+    margin-top:10px;
+    font-size:13px;
+    color:#166534;
+    font-weight:900;
+}
+@media (max-width:700px) {
+    .vocal-calendar-grid { grid-template-columns:42px repeat(7, minmax(28px, 1fr)); gap:3px; }
+    .vocal-calendar-dow, .vocal-calendar-week, .vocal-calendar-day { min-height:31px; font-size:12px; border-radius:8px; }
+    .vocal-calendar-nav, .vocal-calendar-title { padding:8px 9px; font-size:13px; }
+}
+</style>
 </head>
 <body>
 
@@ -19242,6 +19356,284 @@ ${ruleSummary}`, 'success');
         injectDailyDraftControls_();
         bindDateAndFilterGuards_();
     }, 0);
+})();
+
+
+/* =========================================================
+   5.80 강사 발성연습일지 달력 일/주/월 조회 패치
+   - 날짜 칸 클릭: 하루 조회
+   - 주차 칸 클릭: 해당 주 조회
+   - 월 제목 클릭: 해당 월 조회
+   ========================================================= */
+(function(){
+    const VOCAL_RANGE_DEFAULT_SCOPE = 'day';
+    let vocalCalendarViewYear = null;
+    let vocalCalendarViewMonth = null; // 0-based
+    let vocalRangeState = null;
+    let vocalKeywordDebounceTimer = null;
+
+    function pad2_(n) { return String(n).padStart(2, '0'); }
+
+    function dateKey_(d) {
+        return d.getFullYear() + '-' + pad2_(d.getMonth() + 1) + '-' + pad2_(d.getDate());
+    }
+
+    function parseDateKey_(key) {
+        const m = String(key || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!m) return null;
+        return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    }
+
+    function addDays_(d, days) {
+        const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        x.setDate(x.getDate() + days);
+        return x;
+    }
+
+    function todayKey_() {
+        return dateKey_(new Date());
+    }
+
+    function monthFirstKey_(year, month) {
+        return dateKey_(new Date(year, month, 1));
+    }
+
+    function nextMonthFirstKey_(year, month) {
+        return dateKey_(new Date(year, month + 1, 1));
+    }
+
+    function formatRangeLabel_(scope, fromKey, toKey, fallbackYear, fallbackMonth) {
+        const from = parseDateKey_(fromKey) || new Date(fallbackYear, fallbackMonth, 1);
+        if (scope === 'month') return `${from.getFullYear()}년 ${from.getMonth() + 1}월 전체`;
+        if (scope === 'week') {
+            const to = parseDateKey_(toKey);
+            const end = to ? addDays_(to, -1) : addDays_(from, 6);
+            return `${from.getFullYear()}년 ${from.getMonth() + 1}월 ${from.getDate()}일 ~ ${end.getMonth() + 1}월 ${end.getDate()}일 주간`;
+        }
+        return `${from.getFullYear()}년 ${from.getMonth() + 1}월 ${from.getDate()}일 하루`;
+    }
+
+    function ensureDefaultVocalRange_() {
+        if (vocalRangeState) return;
+        const today = new Date();
+        const fromKey = todayKey_();
+        const toKey = dateKey_(addDays_(today, 1));
+        vocalCalendarViewYear = today.getFullYear();
+        vocalCalendarViewMonth = today.getMonth();
+        vocalRangeState = {
+            scope: VOCAL_RANGE_DEFAULT_SCOPE,
+            dateFrom: fromKey,
+            dateTo: toKey,
+            date: fromKey,
+            label: formatRangeLabel_('day', fromKey, toKey, vocalCalendarViewYear, vocalCalendarViewMonth)
+        };
+    }
+
+    function ensureVocalPracticeCalendarUi_() {
+        ensureDefaultVocalRange_();
+
+        const dateInput = document.getElementById('adminVocalPracticeDate');
+        const panel = document.getElementById('adminPanelVocalPractice');
+        if (!panel) return;
+
+        if (dateInput && dateInput.dataset.calendar580 !== '1') {
+            const field = dateInput.closest('.admin-field');
+            if (field) {
+                field.innerHTML = `
+                    <label>연습기록 달력</label>
+                    <input type="hidden" id="adminVocalPracticeDate" value="${vocalRangeState.date || vocalRangeState.dateFrom}">
+                    <div id="adminVocalPracticeCalendar" class="vocal-calendar-wrap"></div>
+                `;
+                const hidden = document.getElementById('adminVocalPracticeDate');
+                if (hidden) hidden.dataset.calendar580 = '1';
+            }
+        }
+
+        const oldQueryBtn = panel.querySelector('.admin-btn-row button[onclick*="adminLoadVocalPracticeLogs"]');
+        if (oldQueryBtn) {
+            oldQueryBtn.style.display = 'none';
+            const row = oldQueryBtn.closest('.admin-btn-row');
+            if (row) row.style.display = 'none';
+        }
+
+        const keyword = document.getElementById('adminVocalPracticeKeyword');
+        if (keyword && keyword.dataset.vocalCalendar580 !== '1') {
+            keyword.dataset.vocalCalendar580 = '1';
+            keyword.addEventListener('input', function() {
+                clearTimeout(vocalKeywordDebounceTimer);
+                vocalKeywordDebounceTimer = setTimeout(function(){
+                    adminLoadVocalPracticeLogs(false);
+                }, 500);
+            });
+        }
+
+        const instructor = document.getElementById('adminVocalPracticeInstructor');
+        if (instructor && instructor.dataset.vocalCalendar580 !== '1') {
+            instructor.dataset.vocalCalendar580 = '1';
+            instructor.addEventListener('input', function() {
+                clearTimeout(vocalKeywordDebounceTimer);
+                vocalKeywordDebounceTimer = setTimeout(function(){
+                    adminLoadVocalPracticeLogs(false);
+                }, 500);
+            });
+        }
+
+        renderVocalPracticeCalendar_();
+    }
+
+    function setVocalRange_(scope, fromKey, toKey, label, shouldLoad) {
+        vocalRangeState = {
+            scope: scope,
+            dateFrom: fromKey,
+            dateTo: toKey,
+            date: fromKey,
+            label: label || formatRangeLabel_(scope, fromKey, toKey, vocalCalendarViewYear, vocalCalendarViewMonth)
+        };
+        const hidden = document.getElementById('adminVocalPracticeDate');
+        if (hidden) hidden.value = fromKey;
+        renderVocalPracticeCalendar_();
+        if (shouldLoad !== false) adminLoadVocalPracticeLogs(true);
+    }
+
+    function renderVocalPracticeCalendar_() {
+        ensureDefaultVocalRange_();
+        const box = document.getElementById('adminVocalPracticeCalendar');
+        if (!box) return;
+
+        const year = vocalCalendarViewYear;
+        const month = vocalCalendarViewMonth;
+        const first = new Date(year, month, 1);
+        const startOffset = (first.getDay() + 6) % 7; // Monday first
+        const start = addDays_(first, -startOffset);
+        const today = todayKey_();
+        const dows = ['월','화','수','목','금','토','일'];
+
+        let html = `
+            <div class="vocal-calendar-head">
+                <button type="button" class="vocal-calendar-nav" data-vocal-cal-prev="1" title="이전 달">‹</button>
+                <button type="button" class="vocal-calendar-title ${vocalRangeState.scope === 'month' ? 'active' : ''}" data-vocal-cal-month="1" title="월 전체 조회">${year}년 ${month + 1}월</button>
+                <button type="button" class="vocal-calendar-nav" data-vocal-cal-next="1" title="다음 달">›</button>
+            </div>
+            <div class="vocal-calendar-grid">
+                <div class="vocal-calendar-dow">주</div>
+                ${dows.map(d => `<div class="vocal-calendar-dow">${d}</div>`).join('')}
+        `;
+
+        for (let w = 0; w < 6; w++) {
+            const weekStart = addDays_(start, w * 7);
+            const weekEnd = addDays_(weekStart, 7);
+            const weekFromKey = dateKey_(weekStart);
+            const weekToKey = dateKey_(weekEnd);
+            const weekActive = vocalRangeState.scope === 'week' && vocalRangeState.dateFrom === weekFromKey;
+            html += `<div class="vocal-calendar-week ${weekActive ? 'active' : ''}" data-vocal-week-from="${weekFromKey}" data-vocal-week-to="${weekToKey}" data-vocal-week-no="${w + 1}" title="${w + 1}주차 주간 조회">${w + 1}주</div>`;
+            for (let i = 0; i < 7; i++) {
+                const day = addDays_(weekStart, i);
+                const key = dateKey_(day);
+                const inMonth = day.getMonth() === month;
+                const dayActive = vocalRangeState.scope === 'day' && vocalRangeState.dateFrom === key;
+                const weekRangeActive = vocalRangeState.scope === 'week' && key >= vocalRangeState.dateFrom && key < vocalRangeState.dateTo;
+                const classes = [
+                    'vocal-calendar-day',
+                    inMonth ? '' : 'muted',
+                    key === today ? 'today' : '',
+                    dayActive ? 'active' : '',
+                    weekRangeActive && !dayActive ? 'week-active' : ''
+                ].filter(Boolean).join(' ');
+                html += `<div class="${classes}" data-vocal-day="${key}" title="${key} 하루 조회">${day.getDate()}</div>`;
+            }
+        }
+
+        html += `</div><div class="vocal-calendar-range-label" id="adminVocalPracticeRangeLabel">조회 범위: ${ulimAdminEsc_(vocalRangeState.label || '')}</div>`;
+        box.innerHTML = html;
+
+        box.querySelector('[data-vocal-cal-prev]')?.addEventListener('click', function(){
+            const d = new Date(vocalCalendarViewYear, vocalCalendarViewMonth - 1, 1);
+            vocalCalendarViewYear = d.getFullYear();
+            vocalCalendarViewMonth = d.getMonth();
+            renderVocalPracticeCalendar_();
+        });
+        box.querySelector('[data-vocal-cal-next]')?.addEventListener('click', function(){
+            const d = new Date(vocalCalendarViewYear, vocalCalendarViewMonth + 1, 1);
+            vocalCalendarViewYear = d.getFullYear();
+            vocalCalendarViewMonth = d.getMonth();
+            renderVocalPracticeCalendar_();
+        });
+        box.querySelector('[data-vocal-cal-month]')?.addEventListener('click', function(){
+            const fromKey = monthFirstKey_(vocalCalendarViewYear, vocalCalendarViewMonth);
+            const toKey = nextMonthFirstKey_(vocalCalendarViewYear, vocalCalendarViewMonth);
+            setVocalRange_('month', fromKey, toKey, formatRangeLabel_('month', fromKey, toKey, vocalCalendarViewYear, vocalCalendarViewMonth), true);
+        });
+        box.querySelectorAll('[data-vocal-week-from]').forEach(function(el){
+            el.addEventListener('click', function(){
+                const fromKey = this.getAttribute('data-vocal-week-from');
+                const toKey = this.getAttribute('data-vocal-week-to');
+                setVocalRange_('week', fromKey, toKey, formatRangeLabel_('week', fromKey, toKey, vocalCalendarViewYear, vocalCalendarViewMonth), true);
+            });
+        });
+        box.querySelectorAll('[data-vocal-day]').forEach(function(el){
+            el.addEventListener('click', function(){
+                const fromKey = this.getAttribute('data-vocal-day');
+                const d = parseDateKey_(fromKey);
+                if (!d) return;
+                const toKey = dateKey_(addDays_(d, 1));
+                vocalCalendarViewYear = d.getFullYear();
+                vocalCalendarViewMonth = d.getMonth();
+                setVocalRange_('day', fromKey, toKey, formatRangeLabel_('day', fromKey, toKey, vocalCalendarViewYear, vocalCalendarViewMonth), true);
+            });
+        });
+    }
+
+    window.adminInitVocalPracticePanel_ = function() {
+        ensureDefaultVocalRange_();
+        ensureVocalPracticeCalendarUi_();
+    };
+
+    window.adminLoadVocalPracticeLogs = async function(showOverlay = true) {
+        if (!adminToken) return;
+        ensureDefaultVocalRange_();
+        ensureVocalPracticeCalendarUi_();
+        const instructor = document.getElementById('adminVocalPracticeInstructor')?.value || '';
+        const keyword = document.getElementById('adminVocalPracticeKeyword')?.value || '';
+        const range = vocalRangeState || {};
+
+        try {
+            if (showOverlay) showLoading('발성 연습일지 불러오는 중...');
+            const data = await adminApi('adminGetVocalPracticeLogs', {
+                adminToken,
+                date: range.date || range.dateFrom || todayKey_(),
+                scope: range.scope || 'day',
+                dateFrom: range.dateFrom || todayKey_(),
+                dateTo: range.dateTo || dateKey_(addDays_(new Date(), 1)),
+                instructor,
+                keyword
+            });
+            if (showOverlay) hideLoading();
+            adminVocalPracticeLogs = Array.isArray(data.logs) ? data.logs : [];
+            adminRenderVocalPracticeLogs();
+            const summary = document.getElementById('adminVocalPracticeSummary');
+            if (summary) summary.textContent = `${range.label || '선택 범위'} · 연습기록 ${adminVocalPracticeLogs.length}건`;
+        } catch (err) {
+            if (showOverlay) hideLoading();
+            alert(err.message || err);
+        }
+    };
+
+    const originalShowAdminPanel580 = window.showAdminPanel;
+    if (typeof originalShowAdminPanel580 === 'function' && originalShowAdminPanel580.datasetVocal580 !== '1') {
+        const wrapped = function(panelId) {
+            const result = originalShowAdminPanel580.apply(this, arguments);
+            if (panelId === 'adminPanelVocalPractice') {
+                ensureVocalPracticeCalendarUi_();
+            }
+            return result;
+        };
+        wrapped.datasetVocal580 = '1';
+        window.showAdminPanel = wrapped;
+    }
+
+    document.addEventListener('DOMContentLoaded', function(){
+        if (document.getElementById('adminPanelVocalPractice')) ensureVocalPracticeCalendarUi_();
+    });
 })();
 </script>
 
