@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램 5.77</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script type="text/javascript" nonce="e4b7f6f75cb8472f80550a644ac" src="//local.adguard.org?ts=1781087115865&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000006cb0720b88d1cdeb91bf9a4d%26fn%3Dindex_5_81_%25EB%25B0%259C%25EC%2584%25B1%25EC%2597%25B0%25EC%258A%25B5%25EC%259D%25BC%25EC%25A7%2580_%25EC%25A3%25BC%25EC%259B%2594%25EC%25A1%25B0%25ED%259A%258C%25EB%25B3%25B5%25EA%25B5%25AC_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D494746%26p%3Dfs%26cid%3D1%26sig%3D2dd6cc29e69f3794a7301c95608b2fbb38b6fd8eaa61e57dfc0d837260f63757%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
+<script type="text/javascript" nonce="e4b7f6f75cb8472f80550a644ac" src="//local.adguard.org?ts=1781088911863&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000006cc87206a871e78fe2023d75%26fn%3Dindex_5_83_%25EA%25B8%25B0%25EC%25B6%259C%25EB%25AC%25B8%25EC%25A0%259C%25EC%25A7%2581%25EC%25A0%2591%25EC%259E%2591%25EC%2584%25B1_%25EB%2585%25B9%25EC%259D%258C%25EC%2597%2585%25EB%25A1%259C%25EB%2593%259C_%25EA%25B0%2595%25EC%2582%25AC%25EB%258C%2580%25EB%25B3%25B8%25ED%2599%2595%25EC%259D%25B8_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D494747%26p%3Dfs%26cid%3D1%26sig%3D4ab542b990c36701df040b547f7456b520a62cc9907ac29ced2dd424f2e5bdfd%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
 <link rel="dns-prefetch" href="//script.google.com">
 <link rel="dns-prefetch" href="//script.googleusercontent.com">
 
@@ -101,6 +101,16 @@ audio { width: 100%; height: 40px; }
 .past-display-card { border: 2px solid #ddd; border-radius: 20px; padding: 30px; background: #fff; min-height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; word-break: keep-all; margin-bottom:20px; }
 .past-role { font-size: 20px; font-weight: 900; color: #2ecc71; margin-bottom: 20px; }
 .past-lines { font-size: 18px; line-height: 1.8; color: #333; white-space: pre-wrap; font-family: 'KoPub Batang', serif; }
+.past-upload-status { margin-top:10px; font-size:13px; font-weight:800; color:#166534; text-align:center; min-height:20px; }
+.past-custom-box { display:none; margin-top:14px; padding:16px; border:1px solid #dcfce7; background:#f0fdf4; border-radius:16px; }
+.past-custom-box.active { display:block; }
+.past-custom-box label { display:block; font-size:13px; font-weight:900; color:#166534; margin-bottom:8px; }
+.past-custom-textarea { width:100%; min-height:170px; box-sizing:border-box; border:1px solid #bbf7d0; border-radius:12px; padding:12px; resize:vertical; font-size:15px; line-height:1.55; background:#fff; }
+.past-custom-help { font-size:12px; color:#166534; margin-top:8px; line-height:1.5; font-weight:700; }
+.past-custom-apply { margin-top:10px; width:100%; padding:12px; border:none; border-radius:10px; background:#2ecc71; color:#fff; font-weight:900; cursor:pointer; }
+.practice-log-type-badge { display:inline-block; margin-left:8px; padding:3px 8px; border-radius:999px; background:#eef2ff; color:#3730a3; font-size:12px; font-weight:900; vertical-align:middle; }
+.practice-log-type-badge.past { background:#fff7ed; color:#9a3412; }
+.practice-log-type-badge.past-custom { background:#fdf2f8; color:#9d174d; }
 @media (max-width: 600px) {
     .section { padding: 20px; }
     .info-grid { grid-template-columns: 1fr; }
@@ -2098,7 +2108,16 @@ body.admin-mode .admin-only-tab { display:block !important; }
 
       <div class="btn-row">
         <button class="btn-male" onclick="rollPastQuestion('male')">👱‍♂️ 남자 기출 뽑기</button>
+        <button class="btn-gen" onclick="showPastCustomWriter()">✍️ 직접작성하기</button>
         <button class="btn-female" onclick="rollPastQuestion('female')">👩 여자 기출 뽑기</button>
+      </div>
+
+      <div id="pastCustomBox" class="past-custom-box">
+        <label for="pastCustomTextarea">직접작성 대본</label>
+        <textarea id="pastCustomTextarea" class="past-custom-textarea" placeholder="학생이 직접 연습할 대본을 입력하세요.
+입력한 대본은 녹음 업로드 시 강사페이지에서 그대로 확인됩니다." oninput="syncPastCustomTextToDisplay_(true)"></textarea>
+        <button type="button" class="past-custom-apply" onclick="applyPastCustomScript()">작성 대본 적용</button>
+        <div class="past-custom-help">직접작성 대본을 적용한 뒤 녹음하고 업로드하면, 강사페이지의 발성/기출 연습일지에서 대본내용과 녹음파일을 함께 확인할 수 있습니다.</div>
       </div>
 
       <div class="record-box" id="pastRecordBox" style="display:block; margin-top:30px; border-top:2px dashed #eee; padding-top:20px;">
@@ -2115,6 +2134,10 @@ body.admin-mode .admin-only-tab { display:block !important; }
                 <div class="time-info">
                     녹음 시간: <span id="pastTime" class="time-val">0.0s</span>
                 </div>
+                <div class="btn-row" style="margin-top:12px;">
+                    <button id="pastUploadBtn" class="btn-save" type="button" onclick="uploadPastQuestionRecord()" style="display:none;">📤 기출 녹음 업로드</button>
+                </div>
+                <div id="pastUploadStatus" class="past-upload-status"></div>
             </div>
         </div>
       </div>
@@ -2260,7 +2283,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
           <button type="button" class="admin-subtab active" id="adminStudentsSubtab" data-admin-panel="adminPanelStudents" onclick="showAdminPanel('adminPanelStudents')">학생검색</button>
           <button type="button" class="admin-subtab" id="adminAttendanceSubtab" data-admin-panel="adminPanelAttendance" onclick="showAdminPanel('adminPanelAttendance')">출석부 확인/발송</button>
           <button type="button" class="admin-subtab" data-admin-panel="adminPanelDailyEval" onclick="showAdminPanel('adminPanelDailyEval')">수업 일일평가</button>
-          <button type="button" class="admin-subtab" data-admin-panel="adminPanelVocalPractice" onclick="showAdminPanel('adminPanelVocalPractice')">발성 연습일지</button>
+          <button type="button" class="admin-subtab" data-admin-panel="adminPanelVocalPractice" onclick="showAdminPanel('adminPanelVocalPractice')">발성/기출 연습일지</button>
           <button type="button" class="admin-subtab" data-admin-panel="adminPanelClassroomUsage" onclick="showAdminPanel('adminPanelClassroomUsage')">강의실 사용체크</button>
           <button type="button" class="admin-subtab admin-full-only" data-admin-panel="adminPanelRoom" onclick="showAdminPanel('adminPanelRoom')">연습실 예약 알림</button>
           <button type="button" class="admin-subtab admin-full-only" data-admin-panel="adminPanelPayment" onclick="showAdminPanel('adminPanelPayment')">결제관리</button>
@@ -2473,9 +2496,9 @@ body.admin-mode .admin-only-tab { display:block !important; }
 
         <div id="adminPanelVocalPractice" class="admin-panel">
           <div class="admin-card">
-            <h3 style="margin-top:0;">발성 연습일지 체크</h3>
+            <h3 style="margin-top:0;">발성/기출 연습일지 체크</h3>
             <p style="font-size:14px; color:#666; line-height:1.6; margin-top:-4px;">
-              날짜별 발성훈련 기록을 확인하고, 녹음파일과 AI 코멘트를 보며 학생에게 남길 강사 코멘트를 작성합니다.
+              날짜별 발성훈련·기출문제 녹음 기록을 확인하고, 녹음파일과 AI 코멘트를 보며 학생에게 남길 강사 코멘트를 작성합니다.
             </p>
             <div class="admin-grid">
               <div class="admin-field">
@@ -2488,7 +2511,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
               </div>
               <div class="admin-field">
                 <label for="adminVocalPracticeKeyword">검색어</label>
-                <input type="text" id="adminVocalPracticeKeyword" placeholder="학생명, 문장, 코멘트 검색">
+                <input type="text" id="adminVocalPracticeKeyword" placeholder="학생명, 문장, 기출, 코멘트 검색">
               </div>
             </div>
             <div class="admin-btn-row">
@@ -4815,14 +4838,82 @@ async function shareVocalResult() {
 /* --- [탭 4] 기출문제 로직 --- */
 const defaultPast = { male: [], female: [] };
 const pData = (typeof pastQuestionData !== 'undefined') ? pastQuestionData : defaultPast;
+let pastCurrentQuestion = null;
+let pastLastRecordedBlob = null;
+let pastLastRecordingMeta = null;
+
+function resetPastUploadState_() {
+    pastLastRecordedBlob = null;
+    pastLastRecordingMeta = null;
+    const btn = document.getElementById('pastUploadBtn');
+    const status = document.getElementById('pastUploadStatus');
+    if (btn) {
+        btn.style.display = 'none';
+        btn.disabled = false;
+        btn.textContent = '📤 기출 녹음 업로드';
+    }
+    if (status) status.textContent = '';
+}
 
 function rollPastQuestion(gender) {
     if (!pData[gender] || pData[gender].length === 0) {
         return alert("해당 성별의 기출문제가 없습니다.");
     }
+    const customBox = document.getElementById('pastCustomBox');
+    if (customBox) customBox.classList.remove('active');
     const q = pick(pData[gender]);
+    pastCurrentQuestion = Object.assign({}, q, { gender: gender, sourceMode: 'preset' });
     document.getElementById("pastRoleDisplay").textContent = q.role;
     document.getElementById("pastLinesDisplay").textContent = q.lines;
+    const resultBox = document.getElementById('pastResultBox');
+    const audioEl = document.getElementById('pastAudio');
+    if (resultBox) resultBox.style.display = 'none';
+    if (audioEl) audioEl.removeAttribute('src');
+    resetPastUploadState_();
+}
+
+function showPastCustomWriter() {
+    const customBox = document.getElementById('pastCustomBox');
+    if (customBox) customBox.classList.add('active');
+    syncPastCustomTextToDisplay_(false);
+    const textarea = document.getElementById('pastCustomTextarea');
+    if (textarea) setTimeout(() => textarea.focus(), 50);
+}
+
+function syncPastCustomTextToDisplay_(silent) {
+    const textarea = document.getElementById('pastCustomTextarea');
+    const text = String(textarea && textarea.value ? textarea.value : '').trim();
+    if (!text) {
+        if (!silent) {
+            pastCurrentQuestion = { role: '직접작성 대본', lines: '', gender: 'custom', sourceMode: 'custom' };
+            document.getElementById("pastRoleDisplay").textContent = '직접작성 대본';
+            document.getElementById("pastLinesDisplay").textContent = '직접작성할 대본을 입력해주세요.';
+        }
+        return;
+    }
+
+    pastCurrentQuestion = {
+        role: '직접작성 대본',
+        lines: text,
+        gender: 'custom',
+        sourceMode: 'custom'
+    };
+    document.getElementById("pastRoleDisplay").textContent = '직접작성 대본';
+    document.getElementById("pastLinesDisplay").textContent = text;
+
+    const resultBox = document.getElementById('pastResultBox');
+    const audioEl = document.getElementById('pastAudio');
+    if (resultBox) resultBox.style.display = 'none';
+    if (audioEl) audioEl.removeAttribute('src');
+    resetPastUploadState_();
+}
+
+function applyPastCustomScript() {
+    const textarea = document.getElementById('pastCustomTextarea');
+    const text = String(textarea && textarea.value ? textarea.value : '').trim();
+    if (!text) return alert('직접작성할 대본을 먼저 입력해주세요.');
+    syncPastCustomTextToDisplay_(true);
+    alert('직접작성 대본이 적용되었습니다. 이제 녹음 후 업로드하면 강사페이지에서 대본과 녹음파일을 함께 확인할 수 있습니다.');
 }
 /* --- [탭 4] 기출문제 녹음 기능 --- */
 let pastMediaRecorder, pastAudioChunks = [], isPastRecording = false, pastStartTime;
@@ -4837,6 +4928,12 @@ async function togglePastRecord() {
     const audioEl = document.getElementById('pastAudio');
 
     if (!isPastRecording) {
+        const customBox = document.getElementById('pastCustomBox');
+        if (customBox && customBox.classList.contains('active')) {
+            const customText = String(document.getElementById('pastCustomTextarea')?.value || '').trim();
+            if (!customText) return alert('직접작성 대본을 입력한 뒤 녹음해주세요.');
+            syncPastCustomTextToDisplay_(true);
+        }
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             
@@ -4858,13 +4955,30 @@ async function togglePastRecord() {
 
             pastMediaRecorder.addEventListener("stop", () => {
                 const audioBlob = new Blob(pastAudioChunks, { type: getActualRecorderMimeType_(pastMediaRecorder, options, 'audio/mp4') });
+                pastLastRecordedBlob = audioBlob;
+                const duration = (Date.now() - pastStartTime) / 1000;
+                pastLastRecordingMeta = {
+                    duration: duration,
+                    recordedAt: new Date().toISOString(),
+                    question: pastCurrentQuestion || {
+                        role: document.getElementById("pastRoleDisplay")?.textContent || '',
+                        lines: document.getElementById("pastLinesDisplay")?.textContent || ''
+                    }
+                };
                 const audioUrl = URL.createObjectURL(audioBlob);
                 audioEl.src = audioUrl;
 
-                const duration = (Date.now() - pastStartTime) / 1000;
                 timeDisplay.textContent = duration.toFixed(1) + "s";
                 
                 resultBox.style.display = 'block'; 
+                const uploadBtn = document.getElementById('pastUploadBtn');
+                const uploadStatus = document.getElementById('pastUploadStatus');
+                if (uploadBtn) {
+                    uploadBtn.style.display = 'block';
+                    uploadBtn.disabled = false;
+                    uploadBtn.textContent = '📤 기출 녹음 업로드';
+                }
+                if (uploadStatus) uploadStatus.textContent = '녹음 완료. 업로드하면 강사페이지에서 확인할 수 있습니다.';
                 
                 stream.getTracks().forEach(track => track.stop());
             });
@@ -4880,6 +4994,101 @@ async function togglePastRecord() {
         btn.textContent = '🎤';
         btn.classList.remove('recording');
         status.textContent = "버튼을 눌러 녹음 시작";
+    }
+}
+
+function getPastQuestionUploadMeta_() {
+    const role = String(document.getElementById('pastRoleDisplay')?.textContent || '').trim();
+    const lines = String(document.getElementById('pastLinesDisplay')?.textContent || '').trim();
+    const question = (pastLastRecordingMeta && pastLastRecordingMeta.question) || pastCurrentQuestion || {};
+    const safeRole = String(question.role || role || '기출문제').trim();
+    const safeLines = String(question.lines || lines || '').trim();
+    return {
+        role: safeRole,
+        lines: safeLines,
+        gender: String(question.gender || '').trim(),
+        sourceMode: String(question.sourceMode || '').trim(),
+        duration: pastLastRecordingMeta && pastLastRecordingMeta.duration ? pastLastRecordingMeta.duration : 0
+    };
+}
+
+async function uploadPastQuestionRecord() {
+    const btn = document.getElementById('pastUploadBtn');
+    const status = document.getElementById('pastUploadStatus');
+
+    if (!pastLastRecordedBlob) {
+        return alert('기출문제 녹음을 완료한 뒤 업로드할 수 있습니다.');
+    }
+
+    const meta = getPastQuestionUploadMeta_();
+    if (!meta.lines || meta.lines === '-') {
+        return alert('먼저 기출문제를 뽑은 뒤 녹음해주세요.');
+    }
+
+    if (!studentName || studentName === '게스트' || !studentNo || studentNo === 'GUEST') {
+        await promptAndAuthenticate();
+        if (!studentName || studentName === '게스트' || !studentNo || studentNo === 'GUEST') {
+            return alert('학생 인증 후 업로드할 수 있습니다.');
+        }
+    }
+
+    updateFilenameConstants();
+
+    try {
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = '업로드 중...';
+        }
+        if (status) status.textContent = '기출 녹음 업로드 요청을 보내는 중입니다.';
+        showLoading('기출 녹음 파일을 변환하는 중입니다...');
+
+        const mimeType = pastLastRecordedBlob.type || getBestAudioMimeType_() || 'audio/mp4';
+        const base64Data = await blobToBase64(pastLastRecordedBlob);
+        const isCustomPast = meta.sourceMode === 'custom' || meta.gender === 'custom';
+        const roleText = isCustomPast ? '직접작성 대본' : (meta.role || '기출문제');
+        const sentenceText = `${isCustomPast ? '[기출문제-직접작성]' : '[기출문제]'} ${roleText}
+${meta.lines}`;
+        const pastIdPrefix = isCustomPast ? 'PAST_CUSTOM_' : 'PAST_';
+        const pastId = pastIdPrefix + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '_' + Math.random().toString(36).slice(2, 8);
+
+        showLoading('기출 녹음 파일 업로드 요청을 보내는 중입니다...');
+        const result = await uploadAudioToDriveAndLog(
+            pastId,
+            sentenceText,
+            base64Data,
+            mimeType,
+            isCustomPast ? '기출문제 직접작성 업로드' : '기출문제 녹음 업로드',
+            {
+                mediaKind: mimeType.indexOf('video/') === 0 ? 'video' : 'audio',
+                fileSize: pastLastRecordedBlob.size || 0,
+                analysisText: '',
+                originalSentence: sentenceText,
+                localWhisperText: '',
+                aiSource: isCustomPast ? '기출문제 직접작성' : '기출문제',
+                aiComment: '',
+                contentCategory: isCustomPast ? 'past_question_custom' : 'past_question',
+                recordCategory: isCustomPast ? 'past_question_custom' : 'past_question',
+                studentSessionToken: typeof getStudentSessionToken_ === 'function' ? getStudentSessionToken_() : ''
+            }
+        );
+
+        hideLoading();
+        if (status) status.textContent = result && result.status === 'submitted'
+            ? '업로드 요청이 접수되었습니다. 잠시 후 강사페이지에서 확인됩니다.'
+            : '업로드 완료. 강사페이지에서 확인할 수 있습니다.';
+        if (btn) {
+            btn.textContent = '업로드 완료';
+            btn.disabled = true;
+        }
+        alert('기출 녹음 업로드 요청을 보냈습니다.');
+    } catch (err) {
+        hideLoading();
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '📤 기출 녹음 업로드';
+        }
+        if (status) status.textContent = '업로드 실패: ' + (err && err.message ? err.message : err);
+        alert('기출 녹음 업로드 실패: ' + (err && err.message ? err.message : err));
     }
 }
 // 페이지 로드 시 달력과 현재 문장 초기화
@@ -12884,10 +13093,19 @@ function adminRenderVocalPracticeLogs() {
             ? `<p><a href="${ulimAdminEsc_(log.fileUrl)}" target="_blank">녹음파일 열기</a></p>`
             : '<p style="color:#999;">녹음파일 링크 없음</p>';
 
+        const recordType = String(log.recordType || '').trim() || '발성훈련';
+        const vocalKey = String(log.vocalId || '');
+        const isCustomPast = /직접|custom/i.test(recordType) || /^PAST_CUSTOM_/i.test(vocalKey);
+        const isPast = isCustomPast || /기출|past/i.test(recordType) || /^PAST_/i.test(vocalKey);
+        const typeLabel = isCustomPast ? '기출문제 직접작성' : (isPast ? '기출문제' : '발성훈련');
+        const badgeClass = isCustomPast ? 'past past-custom' : (isPast ? 'past' : '');
+        const typeBadge = `<span class="practice-log-type-badge ${badgeClass}">${ulimAdminEsc_(typeLabel)}</span>`;
+        const sentenceLabel = isCustomPast ? '직접작성 대본' : (isPast ? '기출 대본' : '문장');
+
         return `
             <div class="practice-log-card ${hasComment ? 'has-comment' : ''}">
-                <div class="practice-log-title">${ulimAdminEsc_(log.studentName)} ${hasComment ? '★' : ''}</div>
-                <div class="practice-log-text"><b>문장</b><br>${ulimAdminEsc_(log.sentence || '')}</div>
+                <div class="practice-log-title">${ulimAdminEsc_(log.studentName)} ${typeBadge} ${hasComment ? '★' : ''}</div>
+                <div class="practice-log-text"><b>${sentenceLabel}</b><br>${ulimAdminEsc_(log.sentence || '')}</div>
                 ${log.aiComment ? `<div class="practice-log-text" style="margin-top:8px;"><b>AI 코멘트</b><br>${ulimAdminEsc_(log.aiComment)}</div>` : ''}
                 ${audio}
                 <div style="margin-top:10px;">
