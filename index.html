@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램 5.77</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script type="text/javascript" nonce="e4b7f6f75cb8472f80550a644ac" src="//local.adguard.org?ts=1781079912753&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000676c7206a1354653c73bd576%26fn%3Dindex_5_77_getDailyClass%25EC%259E%2594%25EC%2597%25AC%25EC%2598%25A4%25EB%25A5%2598%25EC%2599%2584%25EC%25A0%2584%25EC%2588%2598%25EC%25A0%2595_%25EC%259D%25BC%25EC%259D%25BC%25ED%258F%2589%25EA%25B0%2580%25EB%25B3%25B5%25EA%25B5%25AC_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D494745%26p%3Dfs%26cid%3D1%26sig%3D282903c202d06a3b52703ca7733d3d074de8267d3c67359123c8ec937874abb1%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
+<script type="text/javascript" nonce="e4b7f6f75cb8472f80550a644ac" src="//local.adguard.org?ts=1781079912753&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000df707206b60c379f4d38fedb%26fn%3Dindex_5_79_%25EC%259D%25BC%25EC%259D%25BC%25ED%258F%2589%25EA%25B0%2580%25EB%25A1%259C%25EC%25BB%25AC%25EC%259E%2590%25EB%258F%2599%25EC%259E%2584%25EC%258B%259C%25EC%25A0%2580%25EC%259E%25A5_GAS%25EC%259E%2584%25EC%258B%259C%25EC%25A0%2580%25EC%259E%25A5%25EC%25A0%259C%25EA%25B1%25B0_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D494746%26p%3Dfs%26cid%3D1%26sig%3D0ca1bf5ce93f64cbbe8e8f7c2e43b99a464050aa8ca8f26676b6941b81d166a6%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
 <link rel="dns-prefetch" href="//script.google.com">
 <link rel="dns-prefetch" href="//script.googleusercontent.com">
 
@@ -18372,18 +18372,17 @@ ${ruleSummary}`, 'success');
 
 <script>
 /* =========================================================
-   5.75 강사페이지 보안/일일평가 개선 패치
+   5.79 강사페이지 보안/일일평가 로컬 자동임시저장 패치
    - 공용 PC에서 이전 강사 데이터 즉시 제거
    - 일일평가 [이번주 수업] 반별 공통 입력화
-   - 일일평가 수동/자동 임시저장 및 불러오기
+   - 일일평가 수동 임시저장 버튼 제거
+   - 입력/변경 즉시 강사별 localStorage 자동 임시저장
+   - 구글시트 임시저장 호출 제거
    ========================================================= */
 (function() {
     if (window.__ULIM_DAILY_EVAL_574_PATCH__) return;
     window.__ULIM_DAILY_EVAL_574_PATCH__ = true;
 
-    const AUTO_DRAFT_DELAY_MS = 10000;
-    let dailyDraftTimer = null;
-    let dailyDraftSaving = false;
     let dailyDraftLastKey = '';
     let dailyDraftLastSavedAt = '';
     let dailyDraftPromptedKey = '';
@@ -18414,12 +18413,13 @@ ${ruleSummary}`, 'success');
     }
 
     function getDailyContextKey_() {
-        const adminId = (adminInfo && (adminInfo.id || adminInfo.name)) || 'unknown';
-        return [adminId, getDailyDate_(), cleanClass_(getDailyClass_() || '전체반')].join('||');
+        const adminId = (adminInfo && (adminInfo.id || adminInfo.adminId || adminInfo.name)) || (adminToken ? String(adminToken).slice(0, 16) : 'unknown');
+        const adminName = (adminInfo && adminInfo.name) || '';
+        return [adminId, adminName, getDailyDate_(), cleanClass_(getDailyClass_() || '전체반')].join('||');
     }
 
     function getLocalDraftKey_() {
-        return 'ulim_daily_eval_draft_574::' + getDailyContextKey_();
+        return 'ulim_daily_eval_local_draft_579::' + getDailyContextKey_();
     }
 
     function removeOldAdminApiCaches_() {
@@ -18440,7 +18440,7 @@ ${ruleSummary}`, 'success');
     }
 
     function clearAdminSensitiveScreen_(reason) {
-        try { console.log('[ULIM 5.75] clear admin screen:', reason || ''); } catch (ignore) {}
+        try { console.log('[ULIM 5.79] clear admin screen:', reason || ''); } catch (ignore) {}
 
         try {
             adminStudents = [];
@@ -18505,20 +18505,14 @@ ${ruleSummary}`, 'success');
         const targetRow = rows.find(row => row.innerHTML.indexOf('adminLoadDailyEvalStudents') !== -1);
         if (!targetRow) return;
 
-        const saveBtn = document.createElement('button');
-        saveBtn.type = 'button';
-        saveBtn.className = 'admin-btn blue';
-        saveBtn.textContent = '임시저장';
-        saveBtn.onclick = function() { adminSaveDailyEvalDraft(true); };
+        // 5.79: 수동 임시저장/불러오기 버튼은 표시하지 않습니다.
+        // 입력이 발생하면 강사별 localStorage에만 즉시 자동 임시저장합니다.
+        // 구글시트/GAS 임시저장 호출은 사용하지 않습니다.
 
-        const loadBtn = document.createElement('button');
-        loadBtn.type = 'button';
-        loadBtn.className = 'admin-btn gray';
-        loadBtn.textContent = '임시저장 불러오기';
-        loadBtn.onclick = function() { adminLoadDailyEvalDraft(true); };
-
-        targetRow.insertBefore(saveBtn, targetRow.children[1] || null);
-        targetRow.insertBefore(loadBtn, targetRow.children[2] || null);
+        Array.from(targetRow.querySelectorAll('button')).forEach(function(btn) {
+            const label = String(btn.textContent || '').replace(/\s/g, '');
+            if (label === '임시저장' || label === '임시저장불러오기') btn.remove();
+        });
 
         const status = document.createElement('div');
         status.id = 'adminDailyDraftStatus';
@@ -18626,9 +18620,7 @@ ${ruleSummary}`, 'success');
 
     function scheduleDailyDraftSave_() {
         if (!adminToken) return;
-        clearTimeout(dailyDraftTimer);
-        setDraftStatus_('입력 중... 10초 후 자동 임시저장됩니다.', 'info');
-        dailyDraftTimer = setTimeout(() => adminSaveDailyEvalDraft(false), AUTO_DRAFT_DELAY_MS);
+        saveDailyEvalLocalDraft_(false);
     }
 
     function collectDraftRows_(includeEmpty) {
@@ -18658,7 +18650,7 @@ ${ruleSummary}`, 'success');
 
     function collectDailyDraft_() {
         return {
-            version: '5.75',
+            version: '5.78',
             savedAtClient: new Date().toISOString(),
             adminId: (adminInfo && adminInfo.id) || '',
             adminName: (adminInfo && adminInfo.name) || '',
@@ -18669,47 +18661,41 @@ ${ruleSummary}`, 'success');
         };
     }
 
-    window.adminSaveDailyEvalDraft = async function(manual) {
+    function saveDailyEvalLocalDraft_(manual) {
         if (!adminToken) {
             if (manual) alert('강사 로그인이 필요합니다.');
-            return;
+            return false;
         }
 
         const date = getDailyDate_();
         const className = getDailyClass_();
         if (!date || !className) {
             if (manual) alert('수업일과 반명을 먼저 선택해주세요.');
-            return;
+            return false;
         }
 
         const draft = collectDailyDraft_();
         const hasContent = (draft.commonLesson || '').trim() || (draft.rows || []).some(r => (r.lessonAttitude || r.teacherComment || r.lessonContent || '').trim());
         if (!hasContent) {
             if (manual) alert('임시저장할 내용이 없습니다.');
-            return;
+            return false;
         }
 
-        const draftJson = JSON.stringify(draft);
         try {
-            localStorage.setItem(getLocalDraftKey_(), draftJson);
-        } catch (ignore) {}
-
-        if (dailyDraftSaving) return;
-        dailyDraftSaving = true;
-
-        try {
-            setDraftStatus_(manual ? '임시저장 중...' : '자동 임시저장 중...', 'info');
-            await adminPostNoCors('adminSaveDailyEvalDraft', { adminToken, date, className, draftJson });
+            localStorage.setItem(getLocalDraftKey_(), JSON.stringify(draft));
             dailyDraftLastKey = getDailyContextKey_();
             dailyDraftLastSavedAt = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-            setDraftStatus_((manual ? '임시저장 완료' : '자동 임시저장 완료') + ` (${dailyDraftLastSavedAt})`, 'ok');
-            if (manual) alert('임시저장 요청을 보냈습니다.');
+            setDraftStatus_('로컬 자동 임시저장 완료 (' + dailyDraftLastSavedAt + ')', 'ok');
+            return true;
         } catch (err) {
-            setDraftStatus_('임시저장 실패: ' + (err.message || err), 'error');
-            if (manual) alert(err.message || '임시저장 중 문제가 발생했습니다.');
-        } finally {
-            dailyDraftSaving = false;
+            setDraftStatus_('로컬 임시저장 실패: ' + (err.message || err), 'error');
+            if (manual) alert(err.message || '로컬 임시저장 중 문제가 발생했습니다.');
+            return false;
         }
+    }
+
+    window.adminSaveDailyEvalDraft = function(manual) {
+        return saveDailyEvalLocalDraft_(manual);
     };
 
     function applyDailyDraft_(draft) {
@@ -18758,29 +18744,22 @@ ${ruleSummary}`, 'success');
             value: String(draft.commonLesson || (rows[0] && rows[0].lessonContent) || '').trim()
         };
 
-        adminRenderDailyEvalRows('임시저장본을 불러왔습니다.');
-        setDraftStatus_('임시저장본 불러오기 완료', 'ok');
+        adminRenderDailyEvalRows('로컬 자동 임시저장본을 불러왔습니다.');
+        setDraftStatus_('로컬 로컬 자동 임시저장본 복구 완료', 'ok');
         return true;
     }
 
-    async function getDraftFromServerOrLocal_() {
+    function getDraftFromLocal_() {
         const date = getDailyDate_();
         const className = getDailyClass_();
         if (!date || !className || !adminToken) return null;
 
         try {
-            const data = await adminApi('adminGetDailyEvalDraft', { adminToken, date, className, noCache: 1 });
-            if (data && data.found && data.draft && data.draft.draftJson) {
-                return JSON.parse(data.draft.draftJson);
-            }
-        } catch (err) {
-            console.warn('서버 임시저장 조회 오류:', err);
-        }
-
-        try {
             const raw = localStorage.getItem(getLocalDraftKey_());
             if (raw) return JSON.parse(raw);
-        } catch (ignore) {}
+        } catch (err) {
+            console.warn('로컬 임시저장 조회 오류:', err);
+        }
 
         return null;
     }
@@ -18792,9 +18771,7 @@ ${ruleSummary}`, 'success');
         if (!date || !className) return alert('수업일과 반명을 먼저 선택해주세요.');
 
         try {
-            if (manual) showLoading('임시저장본 불러오는 중...');
-            const draft = await getDraftFromServerOrLocal_();
-            if (manual) hideLoading();
+            const draft = getDraftFromLocal_();
 
             if (!draft) {
                 if (manual) alert('불러올 임시저장본이 없습니다.');
@@ -18814,11 +18791,11 @@ ${ruleSummary}`, 'success');
         if (dailyDraftPromptedKey === key) return;
         dailyDraftPromptedKey = key;
 
-        const draft = await getDraftFromServerOrLocal_();
+        const draft = getDraftFromLocal_();
         if (!draft) return;
 
         const savedAtText = draft.savedAtClient ? new Date(draft.savedAtClient).toLocaleString('ko-KR') : '';
-        const ok = confirm(`이 반의 일일평가 임시저장본이 있습니다.${savedAtText ? '\n저장시각: ' + savedAtText : ''}\n불러올까요?`);
+        const ok = confirm(`이 반의 로컬 자동 임시저장본이 있습니다.${savedAtText ? '\n저장시각: ' + savedAtText : ''}\n불러올까요?`);
         if (ok) applyDailyDraft_(draft);
     }
 
@@ -18999,11 +18976,6 @@ ${ruleSummary}`, 'success');
         if (sendSms && !confirm(`일일평가를 저장하고 [${recipientTypes.join(', ')}]에게 ${channelLabel}으로 발송할까요?`)) return;
 
         try {
-            if (dailyDraftTimer) {
-                clearTimeout(dailyDraftTimer);
-                dailyDraftTimer = null;
-            }
-
             showLoading(sendSms ? `일일평가 저장 및 ${channelLabel} 발송 중...` : '일일평가 저장 중...');
             const compactRows = rows.map(r => ({
                 date: r.date || '',
@@ -19032,11 +19004,6 @@ ${ruleSummary}`, 'success');
             });
 
             try {
-                await adminPostNoCors('adminClearDailyEvalDraft', {
-                    adminToken,
-                    date: getDailyDate_(),
-                    className: getDailyClass_()
-                });
                 localStorage.removeItem(getLocalDraftKey_());
             } catch (ignore) {}
 
@@ -19063,7 +19030,7 @@ ${ruleSummary}`, 'success');
             });
 
             adminRenderDailyEvalRows('저장된 일일평가 내용을 화면에 반영했습니다.');
-            setDraftStatus_('최종 저장 완료. 임시저장본을 정리했습니다.', 'ok');
+            setDraftStatus_('최종 저장 완료. 로컬 자동 임시저장본을 정리했습니다.', 'ok');
             alert((data && data.message) || '처리 완료');
         } catch (e) {
             hideLoading();
