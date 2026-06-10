@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<!-- 5.74 강사페이지 데이터노출방지_반공통수업_일일평가임시저장 -->
+<!-- 5.75 강사페이지 일일평가 학생목록 복구/보안패치 보강 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>울림 성우·스피치·연기학원 통합 연습 프로그램 5.74</title>
+<title>울림 성우·스피치·연기학원 통합 연습 프로그램 5.75</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script type="text/javascript" nonce="e4b7f6f75cb8472f80550a644ac" src="//local.adguard.org?ts=1781079912753&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000005afc7207a18ff2bb71d1f4c0%26fn%3Dindex_5_74_%25EA%25B0%2595%25EC%2582%25AC%25EB%25B3%25B4%25EC%2595%2588_%25EB%25B0%2598%25EA%25B3%25B5%25ED%2586%25B5%25EC%2588%2598%25EC%2597%2585_%25EC%259D%25BC%25EC%259D%25BC%25ED%258F%2589%25EA%25B0%2580%25EC%259E%2584%25EC%258B%259C%25EC%25A0%2580%25EC%259E%25A5_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D494745%26p%3Dfs%26cid%3D1%26sig%3Dabe6d97b184f4e0dc110f71544d8e82f77fc5a91b3e812df6f5aa66981de1b39%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
+<script type="text/javascript" nonce="e4b7f6f75cb8472f80550a644ac" src="//local.adguard.org?ts=1781079912753&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000add87207b954574fd25e6d13%26fn%3Dindex_5_75_%25EC%259D%25BC%25EC%259D%25BC%25ED%258F%2589%25EA%25B0%2580%25ED%2595%2599%25EC%2583%259D%25EB%25AA%25A9%25EB%25A1%259D%25EB%25B3%25B5%25EA%25B5%25AC_%25EA%25B0%2595%25EC%2582%25AC%25EB%25B3%25B4%25EC%2595%2588_%25EB%25B0%2598%25EA%25B3%25B5%25ED%2586%25B5%25EC%2588%2598%25EC%2597%2585_%25EC%259E%2584%25EC%258B%259C%25EC%25A0%2580%25EC%259E%25A5_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D494745%26p%3Dfs%26cid%3D1%26sig%3D237b7d1bd91d9f5f8ffd1b53f62eb344f5e4e5c2f7fdb87d7ea63f186e1e880c%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
 <link rel="dns-prefetch" href="//script.google.com">
 <link rel="dns-prefetch" href="//script.googleusercontent.com">
 
@@ -18372,7 +18372,7 @@ ${ruleSummary}`, 'success');
 
 <script>
 /* =========================================================
-   5.74 강사페이지 보안/일일평가 개선 패치
+   5.75 강사페이지 보안/일일평가 개선 패치
    - 공용 PC에서 이전 강사 데이터 즉시 제거
    - 일일평가 [이번주 수업] 반별 공통 입력화
    - 일일평가 수동/자동 임시저장 및 불러오기
@@ -18414,7 +18414,7 @@ ${ruleSummary}`, 'success');
     }
 
     function getDailyContextKey_() {
-        const adminId = (window.adminInfo && (adminInfo.id || adminInfo.name)) || 'unknown';
+        const adminId = (adminInfo && (adminInfo.id || adminInfo.name)) || 'unknown';
         return [adminId, getDailyDate_(), cleanClass_(getDailyClass_() || '전체반')].join('||');
     }
 
@@ -18440,19 +18440,19 @@ ${ruleSummary}`, 'success');
     }
 
     function clearAdminSensitiveScreen_(reason) {
-        try { console.log('[ULIM 5.74] clear admin screen:', reason || ''); } catch (ignore) {}
+        try { console.log('[ULIM 5.75] clear admin screen:', reason || ''); } catch (ignore) {}
 
         try {
-            window.adminStudents = [];
-            window.adminClassList = [];
-            window.adminAttendanceRecords = [];
-            window.adminDailyEvalRows = [];
-            window.adminRoomReservations = [];
-            window.adminVocalPracticeLogs = [];
-            window.adminClassroomUsageRows = [];
-            window.adminStudentsLoaded = false;
-            window.adminDailyEvalTemplateLoaded = false;
-            window.adminClassListLoadedKey = '';
+            adminStudents = [];
+            adminClassList = [];
+            adminAttendanceRecords = [];
+            adminDailyEvalRows = [];
+            adminRoomReservations = [];
+            adminVocalPracticeLogs = [];
+            adminClassroomUsageRows = [];
+            adminStudentsLoaded = false;
+            adminDailyEvalTemplateLoaded = false;
+            adminClassListLoadedKey = '';
         } catch (ignore) {}
 
         [
@@ -18625,7 +18625,7 @@ ${ruleSummary}`, 'success');
     }
 
     function scheduleDailyDraftSave_() {
-        if (!window.adminToken) return;
+        if (!adminToken) return;
         clearTimeout(dailyDraftTimer);
         setDraftStatus_('입력 중... 10초 후 자동 임시저장됩니다.', 'info');
         dailyDraftTimer = setTimeout(() => adminSaveDailyEvalDraft(false), AUTO_DRAFT_DELAY_MS);
@@ -18639,7 +18639,7 @@ ${ruleSummary}`, 'success');
 
         return rows.map(row => {
             const idx = Number(row.dataset.dailyIndex);
-            const base = Object.assign({}, (window.adminDailyEvalRows || [])[idx] || {});
+            const base = Object.assign({}, (adminDailyEvalRows || [])[idx] || {});
             const rawClassName = (className && className !== '전체반') ? className : (base.className || className || '');
             base.date = date;
             base.className = cleanClass_(rawClassName);
@@ -18658,10 +18658,10 @@ ${ruleSummary}`, 'success');
 
     function collectDailyDraft_() {
         return {
-            version: '5.74',
+            version: '5.75',
             savedAtClient: new Date().toISOString(),
-            adminId: (window.adminInfo && adminInfo.id) || '',
-            adminName: (window.adminInfo && adminInfo.name) || '',
+            adminId: (adminInfo && adminInfo.id) || '',
+            adminName: (adminInfo && adminInfo.name) || '',
             date: getDailyDate_(),
             className: getDailyClass_(),
             commonLesson: (document.getElementById('adminDailyCommonLesson')?.value || '').trim(),
@@ -18670,7 +18670,7 @@ ${ruleSummary}`, 'success');
     }
 
     window.adminSaveDailyEvalDraft = async function(manual) {
-        if (!window.adminToken) {
+        if (!adminToken) {
             if (manual) alert('강사 로그인이 필요합니다.');
             return;
         }
@@ -18716,8 +18716,8 @@ ${ruleSummary}`, 'success');
         if (!draft) return false;
         const rows = Array.isArray(draft.rows) ? draft.rows : [];
 
-        if ((!window.adminDailyEvalRows || !adminDailyEvalRows.length) && rows.length) {
-            window.adminDailyEvalRows = rows.map(r => Object.assign({}, r, {
+        if ((!adminDailyEvalRows || !adminDailyEvalRows.length) && rows.length) {
+            adminDailyEvalRows = rows.map(r => Object.assign({}, r, {
                 date: r.date || draft.date || getDailyDate_(),
                 className: r.className || draft.className || getDailyClass_(),
                 studentName: r.studentName || r.name || '',
@@ -18737,7 +18737,7 @@ ${ruleSummary}`, 'success');
                 nameMap[nameKey] = r;
             });
 
-            window.adminDailyEvalRows = (window.adminDailyEvalRows || []).map(row => {
+            adminDailyEvalRows = (adminDailyEvalRows || []).map(row => {
                 const exactKey = typeof adminDailyEvalExactKey === 'function'
                     ? adminDailyEvalExactKey(row)
                     : [cleanClass_(row.className), row.studentName || row.name].join('|');
@@ -18766,7 +18766,7 @@ ${ruleSummary}`, 'success');
     async function getDraftFromServerOrLocal_() {
         const date = getDailyDate_();
         const className = getDailyClass_();
-        if (!date || !className || !window.adminToken) return null;
+        if (!date || !className || !adminToken) return null;
 
         try {
             const data = await adminApi('adminGetDailyEvalDraft', { adminToken, date, className, noCache: 1 });
@@ -18786,7 +18786,7 @@ ${ruleSummary}`, 'success');
     }
 
     window.adminLoadDailyEvalDraft = async function(manual) {
-        if (!window.adminToken) return alert('강사 로그인이 필요합니다.');
+        if (!adminToken) return alert('강사 로그인이 필요합니다.');
         const date = getDailyDate_();
         const className = getDailyClass_();
         if (!date || !className) return alert('수업일과 반명을 먼저 선택해주세요.');
@@ -18830,7 +18830,7 @@ ${ruleSummary}`, 'success');
         const wrap = document.getElementById('adminDailyEvalTableWrap');
         if (!wrap) return;
 
-        const list = window.adminDailyEvalRows || [];
+        const list = adminDailyEvalRows || [];
         if (!list.length) {
             wrap.innerHTML = `<div class="notice-empty">표시할 학생이 없습니다. 반명 또는 검색어를 확인하세요.</div>`;
             setDraftStatus_('');
@@ -18905,7 +18905,7 @@ ${ruleSummary}`, 'success');
             const checked = row.querySelector('.admin-daily-check')?.checked;
             if (!checked) return null;
 
-            const base = Object.assign({}, (window.adminDailyEvalRows || [])[idx] || {});
+            const base = Object.assign({}, (adminDailyEvalRows || [])[idx] || {});
             base.date = date;
             const rawClassName = (className && className !== '전체반') ? className : (base.className || className || '');
             base.className = cleanClass_(rawClassName);
@@ -18926,7 +18926,7 @@ ${ruleSummary}`, 'success');
         const common = document.getElementById('adminDailyCommonLesson');
 
         if (common && !common.value.trim()) {
-            const firstWithLesson = (window.adminDailyEvalRows || []).map(r => {
+            const firstWithLesson = (adminDailyEvalRows || []).map(r => {
                 const p = typeof adminExtractDailyEvalParts_ === 'function' ? adminExtractDailyEvalParts_(r) : r;
                 return (p.lessonContent || '').trim();
             }).find(Boolean);
@@ -18935,7 +18935,7 @@ ${ruleSummary}`, 'success');
 
         rows.forEach(row => {
             const idx = Number(row.dataset.dailyIndex);
-            const base = Object.assign({}, (window.adminDailyEvalRows || [])[idx] || {});
+            const base = Object.assign({}, (adminDailyEvalRows || [])[idx] || {});
             const parts = typeof adminExtractDailyEvalParts_ === 'function' ? adminExtractDailyEvalParts_(base) : base;
             const attitudeEl = row.querySelector('.admin-eval-attitude');
             const commentEl = row.querySelector('.admin-eval-comment');
@@ -18951,7 +18951,7 @@ ${ruleSummary}`, 'success');
         const wrap = document.getElementById('adminDailyEvalTableWrap');
 
         if (!className && !keyword) {
-            window.adminDailyEvalRows = [];
+            adminDailyEvalRows = [];
             if (wrap) wrap.innerHTML = '<div class="admin-data-guard-message">반명 또는 학생명을 선택하면 일일평가 작성 화면이 표시됩니다.</div>';
             return;
         }
@@ -18967,7 +18967,7 @@ ${ruleSummary}`, 'success');
         window.adminLoadDailyEvalStudents = async function() {
             const wrap = document.getElementById('adminDailyEvalTableWrap');
             if (wrap) wrap.innerHTML = '<div class="admin-data-guard-message">현재 반 학생을 불러오는 중입니다...</div>';
-            window.adminDailyEvalRows = [];
+            adminDailyEvalRows = [];
             const result = await originalLoadDailyStudents.apply(this, arguments);
             setTimeout(() => maybeOfferDailyDraft_(), 200);
             return result;
@@ -19044,7 +19044,7 @@ ${ruleSummary}`, 'success');
 
             rows.forEach(saved => {
                 const targetKey = typeof adminDailyEvalExactKey === 'function' ? adminDailyEvalExactKey(saved) : '';
-                window.adminDailyEvalRows = (window.adminDailyEvalRows || []).map(row => {
+                adminDailyEvalRows = (adminDailyEvalRows || []).map(row => {
                     const sameExact = targetKey && typeof adminDailyEvalExactKey === 'function' && adminDailyEvalExactKey(row) === targetKey;
                     const sameName = typeof adminDailyEvalNameKey === 'function' && adminDailyEvalNameKey(row) === adminDailyEvalNameKey(saved);
                     if (sameExact || sameName) {
@@ -19055,7 +19055,7 @@ ${ruleSummary}`, 'success');
                             teacherComment: saved.teacherComment || '',
                             videoLink: saved.videoLink || row.videoLink || '',
                             savedAt: '방금 저장',
-                            savedBy: (window.adminInfo && (adminInfo.name || adminInfo.id)) || ''
+                            savedBy: (adminInfo && (adminInfo.name || adminInfo.id)) || ''
                         });
                     }
                     return row;
@@ -19090,7 +19090,7 @@ ${ruleSummary}`, 'success');
                 const panel = panelId ? document.getElementById(panelId) : null;
                 if (panel) panel.classList.remove('open');
 
-                window.adminDailyEvalRows = [];
+                adminDailyEvalRows = [];
                 dailyCommonLessonMemory = { key: getDailyContextKey_(), value: '' };
                 const wrap = document.getElementById('adminDailyEvalTableWrap');
                 if (wrap) wrap.innerHTML = '<div class="admin-data-guard-message">선택한 반의 학생을 불러오는 중입니다...</div>';
@@ -19113,9 +19113,9 @@ ${ruleSummary}`, 'success');
 
         try {
             clearAdminSensitiveScreen_('login-start');
-            window.adminToken = '';
-            window.adminInfo = null;
-            window.adminModeActive = false;
+            adminToken = '';
+            adminInfo = null;
+            adminModeActive = false;
             document.body.classList.remove('admin-mode', 'teacher-mode', 'full-admin-mode');
             localStorage.removeItem('adminToken');
             localStorage.removeItem('adminInfo');
@@ -19131,14 +19131,14 @@ ${ruleSummary}`, 'success');
             if (typeof setAdminSecureSession_ === 'function') {
                 setAdminSecureSession_(data);
             } else {
-                window.adminToken = data.adminToken || '';
-                window.adminInfo = data.admin || {};
-                localStorage.setItem('adminToken', window.adminToken);
-                localStorage.setItem('adminInfo', JSON.stringify(window.adminInfo));
+                adminToken = data.adminToken || '';
+                adminInfo = data.admin || {};
+                localStorage.setItem('adminToken', adminToken);
+                localStorage.setItem('adminInfo', JSON.stringify(adminInfo));
                 localStorage.setItem('ulimLastMode', 'admin');
             }
 
-            window.adminModeActive = true;
+            adminModeActive = true;
 
             if (typeof adminEnableAllTabsForAdminMode === 'function') adminEnableAllTabsForAdminMode();
             if (typeof setAdminTabVisibility === 'function') setAdminTabVisibility();
@@ -19147,7 +19147,7 @@ ${ruleSummary}`, 'success');
             const changedOk = typeof promptAdminPasswordChangeIfNeeded_ === 'function'
                 ? await promptAdminPasswordChangeIfNeeded_(pw)
                 : true;
-            if (!changedOk && window.adminInfo && adminInfo.mustChangePassword) {
+            if (!changedOk && adminInfo && adminInfo.mustChangePassword) {
                 alert('비밀번호 변경 전에는 일부 기능 사용이 제한될 수 있습니다.');
             }
 
@@ -19184,8 +19184,8 @@ ${ruleSummary}`, 'success');
             const data = await adminApi('adminGetSession', { adminToken, noCache: 1 });
             hideLoading();
 
-            window.adminInfo = data.admin || window.adminInfo || {};
-            localStorage.setItem('adminInfo', JSON.stringify(window.adminInfo));
+            adminInfo = data.admin || adminInfo || {};
+            localStorage.setItem('adminInfo', JSON.stringify(adminInfo));
             document.body.classList.add('admin-mode');
 
             if (typeof setAdminTabVisibility === 'function') setAdminTabVisibility();
@@ -19208,9 +19208,9 @@ ${ruleSummary}`, 'success');
     };
 
     window.adminLogout = function() {
-        window.adminToken = '';
-        window.adminModeActive = false;
-        window.adminInfo = null;
+        adminToken = '';
+        adminModeActive = false;
+        adminInfo = null;
         localStorage.removeItem('adminToken');
         localStorage.removeItem('adminInfo');
         localStorage.removeItem('ulimLastMode');
@@ -19230,7 +19230,7 @@ ${ruleSummary}`, 'success');
         if (dateEl && dateEl.dataset.guard574 !== '1') {
             dateEl.dataset.guard574 = '1';
             dateEl.addEventListener('change', function() {
-                window.adminDailyEvalRows = [];
+                adminDailyEvalRows = [];
                 dailyCommonLessonMemory = { key: getDailyContextKey_(), value: '' };
                 setDraftStatus_('');
                 const wrap = document.getElementById('adminDailyEvalTableWrap');
@@ -19243,7 +19243,7 @@ ${ruleSummary}`, 'success');
             filterEl.dataset.guard574 = '1';
             filterEl.addEventListener('input', function() {
                 if (!getDailyClass_()) {
-                    window.adminDailyEvalRows = [];
+                    adminDailyEvalRows = [];
                     const wrap = document.getElementById('adminDailyEvalTableWrap');
                     if (wrap) wrap.innerHTML = '<div class="admin-data-guard-message">학생명 검색 후 현재 반 학생 불러오기를 눌러주세요.</div>';
                 }
