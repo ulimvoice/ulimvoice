@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<!-- 5.77 getDailyClass 잔여 오류 완전 수정 / 일일평가 학생목록 복구 보강 -->
+<!-- 5.84 기출문제 업로드 주소 발성훈련 업로드 주소와 동일화 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>울림 성우·스피치·연기학원 통합 연습 프로그램 5.77</title>
+<title>울림 성우·스피치·연기학원 통합 연습 프로그램 5.84</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script type="text/javascript" nonce="e4b7f6f75cb8472f80550a644ac" src="//local.adguard.org?ts=1781088911863&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000006cc87206a871e78fe2023d75%26fn%3Dindex_5_83_%25EA%25B8%25B0%25EC%25B6%259C%25EB%25AC%25B8%25EC%25A0%259C%25EC%25A7%2581%25EC%25A0%2591%25EC%259E%2591%25EC%2584%25B1_%25EB%2585%25B9%25EC%259D%258C%25EC%2597%2585%25EB%25A1%259C%25EB%2593%259C_%25EA%25B0%2595%25EC%2582%25AC%25EB%258C%2580%25EB%25B3%25B8%25ED%2599%2595%25EC%259D%25B8_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D494747%26p%3Dfs%26cid%3D1%26sig%3D4ab542b990c36701df040b547f7456b520a62cc9907ac29ced2dd424f2e5bdfd%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
+<script type="text/javascript" nonce="e4b7f6f75cb8472f80550a644ac" src="//local.adguard.org?ts=1781094315650&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000f0f072069f647b11369c6ef1%26fn%3Dindex_5_84_%25EA%25B8%25B0%25EC%25B6%259C%25EB%25AC%25B8%25EC%25A0%259C%25EC%2597%2585%25EB%25A1%259C%25EB%2593%259C%25EC%25A3%25BC%25EC%2586%258C_%25EB%25B0%259C%25EC%2584%25B1%25ED%259B%2588%25EB%25A0%25A8%25EB%258F%2599%25EC%259D%25BC%25ED%2599%2594_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D494748%26p%3Dfs%26cid%3D1%26sig%3D1b1591a6d9a0bd68d32d15b90bc6ffce85e9425f78e298567a16b024f9d5e70c%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
 <link rel="dns-prefetch" href="//script.google.com">
 <link rel="dns-prefetch" href="//script.googleusercontent.com">
 
@@ -2818,8 +2818,11 @@ let instructorFolderId = '';
 // 학생부 GAS URL (인증 및 강사 정보 조회)
 const GET_API_URL = 'https://script.google.com/macros/s/AKfycbyS3QUvrjNbwvaw92_g-QKQyN3Yito8DAdpAjxUzfnsuVf3Ce7ccuaXIv651U7FnYF4/exec'; 
 
-// 연습일지 GAS URL (데이터 전송 및 드라이브 업로드)
-const GOOGLE_APP_SCRIPT_URL = GET_API_URL; // 발성훈련 업로드도 학생부 GAS로 통합
+// 연습일지/기출문제 업로드 GAS URL
+// 기출문제 탭도 발성훈련 업로드와 반드시 같은 배포 주소를 사용합니다.
+const VOCAL_TRAINING_UPLOAD_URL = GET_API_URL;
+const GOOGLE_APP_SCRIPT_URL = VOCAL_TRAINING_UPLOAD_URL; // 기존 발성훈련 업로드 함수 호환용
+const PAST_QUESTION_UPLOAD_URL = VOCAL_TRAINING_UPLOAD_URL;
 
 
 // =========================================================================================
@@ -3018,7 +3021,10 @@ async function waitForVocalTrainingUploadResult_(requestId, timeoutMs = 60000) {
 }
 
 async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeType, action, extraMeta = {}) {
-    if (!GOOGLE_APP_SCRIPT_URL || !GOOGLE_APP_SCRIPT_URL.includes('script.google.com/macros/s/')) {
+    extraMeta = extraMeta || {};
+    const uploadUrl = String(extraMeta.uploadUrl || GOOGLE_APP_SCRIPT_URL || '').trim();
+
+    if (!uploadUrl || !uploadUrl.includes('script.google.com/macros/s/')) {
         throw new Error("서비스 연결이 준비되지 않았습니다. 잠시 후 다시 시도해주세요.");
     }
 
@@ -3050,11 +3056,15 @@ async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeT
         aiSource: extraMeta.aiSource || (window.trainingFinalAiResult && (window.trainingFinalAiResult.source || window.trainingFinalAiResult.status || window.trainingFinalAiResult.badge)) || '',
         aiComment: extraMeta.aiComment || (window.trainingFinalAiResult && (window.trainingFinalAiResult.comment || window.trainingFinalAiResult.analysisText)) || '',
         preferredExtension: getExtensionFromMime_(safeMimeType, safeMediaKind === 'video' ? 'mp4' : 'm4a'),
+        contentCategory: extraMeta.contentCategory || '',
+        recordCategory: extraMeta.recordCategory || '',
+        category: extraMeta.category || extraMeta.recordCategory || extraMeta.contentCategory || '',
+        uploadUrlType: extraMeta.uploadUrlType || '',
         clientTime: new Date().toISOString(),
         studentSessionToken: extraMeta.studentSessionToken || (typeof getStudentSessionToken_ === 'function' ? getStudentSessionToken_() : '')
     };
 
-    await fetch(GOOGLE_APP_SCRIPT_URL, {
+    await fetch(uploadUrl, {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -5034,6 +5044,10 @@ async function uploadPastQuestionRecord() {
 
     updateFilenameConstants();
 
+    if (typeof PAST_QUESTION_UPLOAD_URL === 'undefined' || PAST_QUESTION_UPLOAD_URL !== VOCAL_TRAINING_UPLOAD_URL) {
+        return alert('기출문제 업로드 주소 설정이 올바르지 않습니다. 학원에 문의해주세요.');
+    }
+
     try {
         if (btn) {
             btn.disabled = true;
@@ -5068,6 +5082,9 @@ ${meta.lines}`;
                 aiComment: '',
                 contentCategory: isCustomPast ? 'past_question_custom' : 'past_question',
                 recordCategory: isCustomPast ? 'past_question_custom' : 'past_question',
+                category: isCustomPast ? 'past_question_custom' : 'past_question',
+                uploadUrl: PAST_QUESTION_UPLOAD_URL,
+                uploadUrlType: 'same_as_vocal_training',
                 studentSessionToken: typeof getStudentSessionToken_ === 'function' ? getStudentSessionToken_() : ''
             }
         );
