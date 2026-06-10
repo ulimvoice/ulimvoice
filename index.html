@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램 5.77</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script type="text/javascript" nonce="e4b7f6f75cb8472f80550a644ac" src="//local.adguard.org?ts=1781079912753&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000009920720692375d25ff77d024%26fn%3Dindex_5_80_%25EB%25B0%259C%25EC%2584%25B1%25EC%2597%25B0%25EC%258A%25B5%25EC%259D%25BC%25EC%25A7%2580%25EB%258B%25AC%25EB%25A0%25A5_%25EC%259D%25BC%25EC%25A3%25BC%25EC%259B%2594%25EC%25A1%25B0%25ED%259A%258C_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D494746%26p%3Dfs%26cid%3D1%26sig%3Dc1e3887c0e1690ee0d59064ad1cb5cca089a0c5cde978d9b4f882b3d6ec158b0%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
+<script type="text/javascript" nonce="e4b7f6f75cb8472f80550a644ac" src="//local.adguard.org?ts=1781087115865&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000006cb0720b88d1cdeb91bf9a4d%26fn%3Dindex_5_81_%25EB%25B0%259C%25EC%2584%25B1%25EC%2597%25B0%25EC%258A%25B5%25EC%259D%25BC%25EC%25A7%2580_%25EC%25A3%25BC%25EC%259B%2594%25EC%25A1%25B0%25ED%259A%258C%25EB%25B3%25B5%25EA%25B5%25AC_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D494746%26p%3Dfs%26cid%3D1%26sig%3D2dd6cc29e69f3794a7301c95608b2fbb38b6fd8eaa61e57dfc0d837260f63757%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
 <link rel="dns-prefetch" href="//script.google.com">
 <link rel="dns-prefetch" href="//script.googleusercontent.com">
 
@@ -1749,7 +1749,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
 
 <style id="vocalPracticeCalendarStyle580">
 /* =========================================================
-   5.80 강사 발성연습일지 달력 일/주/월 조회
+   5.81 강사 발성연습일지 달력 일/주/월 조회 복구
    ========================================================= */
 .vocal-calendar-wrap {
     background:#f8fafc;
@@ -19360,7 +19360,7 @@ ${ruleSummary}`, 'success');
 
 
 /* =========================================================
-   5.80 강사 발성연습일지 달력 일/주/월 조회 패치
+   5.81 강사 발성연습일지 달력 일/주/월 조회 복구 패치
    - 날짜 칸 클릭: 하루 조회
    - 주차 칸 클릭: 해당 주 조회
    - 월 제목 클릭: 해당 월 조회
@@ -19392,6 +19392,93 @@ ${ruleSummary}`, 'success');
 
     function todayKey_() {
         return dateKey_(new Date());
+    }
+
+    function rangeDateKeys_(fromKey, toKey, maxDays) {
+        const out = [];
+        let d = parseDateKey_(fromKey);
+        const to = parseDateKey_(toKey);
+        if (!d || !to) return out;
+        const limit = Number(maxDays || 45);
+        let guard = 0;
+        while (d < to && guard < limit) {
+            out.push(dateKey_(d));
+            d = addDays_(d, 1);
+            guard++;
+        }
+        return out;
+    }
+
+    function dedupeVocalLogs_(logs) {
+        const seen = new Set();
+        const out = [];
+        (logs || []).forEach(function(log) {
+            const key = String((log && (log.recordId || log.fileId || '')) || '') || [log.practiceDate, log.studentName, log.sentence, log.fileUrl].join('|');
+            if (seen.has(key)) return;
+            seen.add(key);
+            out.push(log);
+        });
+        return out;
+    }
+
+    async function loadVocalPracticeLogsWithFallback_(range, instructor, keyword) {
+        const scope = String((range && range.scope) || 'day');
+        const commonParams = {
+            adminToken,
+            date: (range && (range.date || range.dateFrom)) || todayKey_(),
+            scope,
+            dateFrom: (range && range.dateFrom) || todayKey_(),
+            dateTo: (range && range.dateTo) || dateKey_(addDays_(new Date(), 1)),
+            instructor,
+            keyword,
+            noCache: true
+        };
+
+        // 일간은 기존 단일 날짜 조회가 가장 가볍고 안정적입니다.
+        if (scope === 'day') {
+            const dayData = await adminApi('adminGetVocalPracticeLogs', commonParams);
+            return Object.assign({}, dayData, { logs: Array.isArray(dayData.logs) ? dayData.logs : [] });
+        }
+
+        // 1차: 새 GAS의 dateFrom/dateTo 범위 조회를 우선 사용합니다.
+        const rangeData = await adminApi('adminGetVocalPracticeLogs', commonParams);
+        const rangeLogs = Array.isArray(rangeData.logs) ? rangeData.logs : [];
+        const rangeReady = String(rangeData.scope || '') === scope && String(rangeData.dateFrom || '') === String(commonParams.dateFrom || '') && String(rangeData.dateTo || '') === String(commonParams.dateTo || '');
+
+        // 새 GAS가 정상 배포되어 범위 응답을 돌려주고, 결과가 있으면 바로 사용합니다.
+        if (rangeReady && rangeLogs.length > 0) {
+            return Object.assign({}, rangeData, { logs: rangeLogs });
+        }
+
+        // 2차 안전장치: 구버전 GAS가 배포되어 있거나 범위 조회가 0건으로 잘못 떨어질 때,
+        // 날짜별 조회는 작동한다는 점을 이용해 선택 범위를 하루씩 조회해 합칩니다.
+        const keys = rangeDateKeys_(commonParams.dateFrom, commonParams.dateTo, scope === 'month' ? 35 : 10);
+        if (!keys.length) return Object.assign({}, rangeData, { logs: rangeLogs });
+
+        const merged = [];
+        for (const dayKey of keys) {
+            try {
+                const dayData = await adminApi('adminGetVocalPracticeLogs', {
+                    adminToken,
+                    date: dayKey,
+                    scope: 'day',
+                    instructor,
+                    keyword,
+                    noCache: true
+                });
+                if (Array.isArray(dayData.logs) && dayData.logs.length) merged.push(...dayData.logs);
+            } catch (ignore) {}
+        }
+
+        const logs = dedupeVocalLogs_(merged.length ? merged : rangeLogs);
+        return Object.assign({}, rangeData, {
+            logs,
+            count: logs.length,
+            scope,
+            dateFrom: commonParams.dateFrom,
+            dateTo: commonParams.dateTo,
+            fallbackMode: true
+        });
     }
 
     function monthFirstKey_(year, month) {
@@ -19598,20 +19685,15 @@ ${ruleSummary}`, 'success');
 
         try {
             if (showOverlay) showLoading('발성 연습일지 불러오는 중...');
-            const data = await adminApi('adminGetVocalPracticeLogs', {
-                adminToken,
-                date: range.date || range.dateFrom || todayKey_(),
-                scope: range.scope || 'day',
-                dateFrom: range.dateFrom || todayKey_(),
-                dateTo: range.dateTo || dateKey_(addDays_(new Date(), 1)),
-                instructor,
-                keyword
-            });
+            const data = await loadVocalPracticeLogsWithFallback_(range, instructor, keyword);
             if (showOverlay) hideLoading();
             adminVocalPracticeLogs = Array.isArray(data.logs) ? data.logs : [];
             adminRenderVocalPracticeLogs();
             const summary = document.getElementById('adminVocalPracticeSummary');
-            if (summary) summary.textContent = `${range.label || '선택 범위'} · 연습기록 ${adminVocalPracticeLogs.length}건`;
+            if (summary) {
+                const fallbackText = data && data.fallbackMode ? ' · 날짜별 복구조회' : '';
+                summary.textContent = `${range.label || '선택 범위'} · 연습기록 ${adminVocalPracticeLogs.length}건${fallbackText}`;
+            }
         } catch (err) {
             if (showOverlay) hideLoading();
             alert(err.message || err);
