@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<!-- 5.86 학생 연습기록 발성/기출 분리 + 업로드 링크 표시 -->
+<!-- 5.88 기출문제 드라이브 학생 노출 제거 + 교직원 로그인 버튼 복구 + 학생 화면 교직원 화면 문구 제거 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>울림 성우·스피치·연기학원 통합 연습 프로그램 5.84</title>
+<title>울림 성우·스피치·연기학원 통합 연습 프로그램 5.87</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script type="text/javascript" nonce="e4b7f6f75cb8472f80550a644ac" src="//local.adguard.org?ts=1781181745889&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_0000000085387209b29b732c69b60826%26fn%3Dindex_5_86_%25ED%2595%2599%25EC%2583%259D%25EC%2597%25B0%25EC%258A%25B5%25EA%25B8%25B0%25EB%25A1%259D_%25EB%25B0%259C%25EC%2584%25B1%25EA%25B8%25B0%25EC%25B6%259C%25EB%25B6%2584%25EB%25A6%25AC_%25EC%2597%2585%25EB%25A1%259C%25EB%2593%259C%25EB%25A7%2581%25ED%2581%25AC_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D494773%26p%3Dfs%26cid%3D1%26sig%3D47db9ce3fdb134e0f82c0a6156c30f5eb28bd9700bc0e1549a1f239c6166b3e3%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
+<script type="text/javascript" nonce="e4b7f6f75cb8472f80550a644ac" src="//local.adguard.org?ts=1781181745889&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000b13c7209bfe18c9ae47e91dd%26fn%3Dindex_5_88_%25EA%25B5%2590%25EC%25A7%2581%25EC%259B%2590%25EB%25A1%259C%25EA%25B7%25B8%25EC%259D%25B8%25EB%25B2%2584%25ED%258A%25BC%25EB%25B3%25B5%25EA%25B5%25AC_%25ED%2595%2599%25EC%2583%259D%25EB%25AC%25B8%25EA%25B5%25AC%25EC%25A0%2595%25EB%25A6%25AC_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D494774%26p%3Dfs%26cid%3D1%26sig%3D5297bbeb060d5c879b1b77357d262415f99511123a70d8c05bb406b0aa550bc9%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
 <link rel="dns-prefetch" href="//script.google.com">
 <link rel="dns-prefetch" href="//script.googleusercontent.com">
 
@@ -108,17 +108,6 @@ audio { width: 100%; height: 40px; }
 .past-custom-textarea { width:100%; min-height:170px; box-sizing:border-box; border:1px solid #bbf7d0; border-radius:12px; padding:12px; resize:vertical; font-size:15px; line-height:1.55; background:#fff; }
 .past-custom-help { font-size:12px; color:#166534; margin-top:8px; line-height:1.5; font-weight:700; }
 .past-custom-apply { margin-top:10px; width:100%; padding:12px; border:none; border-radius:10px; background:#2ecc71; color:#fff; font-weight:900; cursor:pointer; }
-.past-drive-box { margin-top:14px; padding:16px; border:1px solid #dbeafe; background:#eff6ff; border-radius:16px; }
-.past-drive-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:10px; }
-.past-drive-title { font-size:15px; font-weight:900; color:#1d4ed8; }
-.past-drive-help { font-size:12px; color:#1e40af; line-height:1.5; font-weight:700; margin-top:4px; }
-.past-drive-actions { display:flex; gap:8px; flex-wrap:wrap; }
-.past-drive-btn { border:none; border-radius:10px; padding:10px 12px; background:#2563eb; color:#fff; font-weight:900; cursor:pointer; }
-.past-drive-btn.gray { background:#64748b; }
-.past-drive-btn.green { background:#2ecc71; }
-.past-drive-select { width:100%; box-sizing:border-box; border:1px solid #bfdbfe; border-radius:12px; padding:12px; background:#fff; font-size:14px; font-weight:800; color:#1f2937; }
-.past-drive-meta { margin-top:8px; min-height:18px; font-size:12px; color:#1e3a8a; font-weight:800; line-height:1.45; }
-
 .practice-log-type-badge { display:inline-block; margin-left:8px; padding:3px 8px; border-radius:999px; background:#eef2ff; color:#3730a3; font-size:12px; font-weight:900; vertical-align:middle; }
 .practice-log-type-badge.past { background:#fff7ed; color:#9a3412; }
 .practice-log-type-badge.past-custom { background:#fdf2f8; color:#9d174d; }
@@ -505,7 +494,7 @@ audio { width: 100%; height: 40px; }
 }
 
 /* ===========================
-   🔐 강사 페이지
+   🔐 교직원 전용
    =========================== */
 .admin-grid {
     display: grid;
@@ -1911,7 +1900,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
             <button onclick="authenticateStudentFromInputs()" style="width: 100%; padding: 14px; background: #2ecc71; color: white; border: none; border-radius: 8px; font-size: 17px; font-weight: bold; cursor: pointer; transition: background 0.2s;">로그인</button>
             <button onclick="findStudentPasswordByPrompt()" style="width: 100%; padding: 12px; background: #f97316; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 10px;">비밀번호 재설정 요청</button>
             <button onclick="guestLogin()" style="width: 100%; padding: 14px; background: #aaa; color: white; border: none; border-radius: 8px; font-size: 17px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: background 0.2s;">게스트 로그인 (상황극 탭만 사용)</button>
-            <button onclick="openAdminPage()" style="width: 100%; padding: 14px; background: #111827; color: white; border: none; border-radius: 8px; font-size: 17px; font-weight: bold; cursor: pointer; margin-top: 10px;">강사 페이지</button>
+            <button onclick="openAdminPage()" style="width: 100%; padding: 14px; background: #111827; color: white; border: none; border-radius: 8px; font-size: 17px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: background 0.2s;">교직원 로그인</button>
         </div>
        <div style="margin-top: 40px; text-align: center;">
     <p style="font-size: 14px; color: #888; margin-bottom: 15px;">울림 연기학원의 다양한 소식을 만나보세요!</p>
@@ -1955,7 +1944,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
     <div class="tab" data-tab="tab4">📄 기출문제</div>
     <div class="tab" data-tab="tabPronunciation">🎙️ 표준발음</div>
     <div class="tab" data-tab="tabRoom">🏢 연습실 예약</div>
-    <div class="tab admin-only-tab" data-tab="tabAdmin" style="display:none;">🔐 강사페이지</div>
+    <div class="tab admin-only-tab" data-tab="tabAdmin" style="display:none;">🔐 교직원</div>
   </div>
 
   <div class="tab-content active" id="tab1">
@@ -2123,26 +2112,6 @@ body.admin-mode .admin-only-tab { display:block !important; }
         <button class="btn-female" onclick="rollPastQuestion('female')">👩 여자 기출 뽑기</button>
       </div>
 
-      <div id="pastDriveBox" class="past-drive-box">
-        <div class="past-drive-head">
-          <div>
-            <div class="past-drive-title">📁 구글드라이브 기출대본 가져오기</div>
-            <div class="past-drive-help">GAS 메뉴의 [기출문제 대본 폴더 생성/확인]에서 열린 폴더에 Google Docs 또는 TXT/MD 파일을 올리면 여기서 불러올 수 있습니다.</div>
-          </div>
-          <div class="past-drive-actions">
-            <button type="button" class="past-drive-btn gray" onclick="openPastDriveFolder()">업로드 폴더 열기</button>
-            <button type="button" class="past-drive-btn" onclick="loadPastDriveScriptList(false)">대본 목록 새로고침</button>
-          </div>
-        </div>
-        <select id="pastDriveScriptSelect" class="past-drive-select">
-          <option value="">구글드라이브 대본 목록을 불러오세요</option>
-        </select>
-        <div class="past-drive-actions" style="margin-top:10px;">
-          <button type="button" class="past-drive-btn green" onclick="applySelectedPastDriveScript()">선택한 대본 적용</button>
-        </div>
-        <div id="pastDriveStatus" class="past-drive-meta">지원 형식: Google Docs, TXT, MD, CSV, JSON. PDF/HWP/DOCX는 Google Docs로 변환해서 올려주세요.</div>
-      </div>
-
       <div id="pastCustomBox" class="past-custom-box">
         <label for="pastCustomTextarea">직접작성 대본</label>
         <textarea id="pastCustomTextarea" class="past-custom-textarea" placeholder="직접 연습할 대본을 입력하세요." oninput="syncPastCustomTextToDisplay_(true)"></textarea>
@@ -2276,22 +2245,22 @@ body.admin-mode .admin-only-tab { display:block !important; }
 
   <div class="tab-content" id="tabAdmin">
     <div class="section">
-      <h2 style="margin-top:0;">🔐 강사 페이지</h2>
+      <h2 style="margin-top:0;">🔐 교직원 전용</h2>
       <p style="color:#666; line-height:1.6; margin-top:0;">
         출석 체크, 수업일일평가 작성 페이지 입니다.
       </p>
 
       <div id="adminLoginBox" class="admin-login-card">
-        <h3 style="margin-top:0; color:#166534;">강사 로그인</h3>
+        <h3 style="margin-top:0; color:#166534;">교직원 로그인</h3>
         <div class="admin-field">
-          <label for="adminIdInput">강사 ID</label>
-          <input type="text" id="adminIdInput" placeholder="강사 ID">
+          <label for="adminIdInput">교직원 ID</label>
+          <input type="text" id="adminIdInput" placeholder="교직원 ID">
         </div>
         <div class="admin-field">
           <label for="adminPwInput">비밀번호</label>
           <input type="password" id="adminPwInput" placeholder="비밀번호">
         </div>
-        <button type="button" class="admin-btn" style="width:100%;" onclick="adminLogin()">강사 로그인</button>
+        <button type="button" class="admin-btn" style="width:100%;" onclick="adminLogin()">교직원 로그인</button>
     
       </div>
 
@@ -4881,143 +4850,6 @@ const pData = (typeof pastQuestionData !== 'undefined') ? pastQuestionData : def
 let pastCurrentQuestion = null;
 let pastLastRecordedBlob = null;
 let pastLastRecordingMeta = null;
-let pastDriveScripts = [];
-let pastDriveFolderUrl = '';
-
-function setPastDriveStatus_(message) {
-    const el = document.getElementById('pastDriveStatus');
-    if (el) el.textContent = message || '';
-}
-
-function renderPastDriveScriptOptions_(items) {
-    const select = document.getElementById('pastDriveScriptSelect');
-    if (!select) return;
-    select.innerHTML = '';
-
-    const first = document.createElement('option');
-    first.value = '';
-    first.textContent = items && items.length ? '불러올 기출대본을 선택하세요' : '구글드라이브 대본이 없습니다';
-    select.appendChild(first);
-
-    (items || []).forEach(function(item, index) {
-        const option = document.createElement('option');
-        option.value = String(item.id || '');
-        option.textContent = (item.supported === false ? '[지원불가] ' : '') + String(item.name || ('대본 ' + (index + 1)));
-        if (item.supported === false) option.disabled = true;
-        select.appendChild(option);
-    });
-}
-
-async function loadPastDriveScriptList(silent) {
-    try {
-        if (!silent) showLoading('구글드라이브 기출대본 목록을 불러오는 중입니다...');
-        setPastDriveStatus_('구글드라이브 기출대본 목록을 불러오는 중입니다.');
-        const result = await pronJsonpRequest({
-            action: 'getPastQuestionDriveScripts',
-            studentSessionToken: typeof getStudentSessionToken_ === 'function' ? getStudentSessionToken_() : ''
-        }, 15000);
-
-        if (!result || result.status !== 'success') {
-            throw new Error((result && result.message) || '대본 목록을 불러오지 못했습니다.');
-        }
-
-        pastDriveScripts = Array.isArray(result.items) ? result.items : [];
-        pastDriveFolderUrl = String(result.folderUrl || '');
-        renderPastDriveScriptOptions_(pastDriveScripts);
-
-        const supportedCount = pastDriveScripts.filter(function(item) { return item.supported !== false; }).length;
-        if (supportedCount > 0) {
-            setPastDriveStatus_('대본 ' + supportedCount + '개를 불러왔습니다. 선택 후 [선택한 대본 적용]을 누르세요.');
-        } else {
-            setPastDriveStatus_('불러올 수 있는 대본이 없습니다. 업로드 폴더에 Google Docs 또는 TXT/MD 파일을 올려주세요.');
-        }
-    } catch (err) {
-        console.error(err);
-        renderPastDriveScriptOptions_([]);
-        setPastDriveStatus_('대본 목록 불러오기 실패: ' + (err && err.message ? err.message : err));
-        if (!silent) alert('기출대본 목록을 불러오지 못했습니다: ' + (err && err.message ? err.message : err));
-    } finally {
-        if (!silent) hideLoading();
-    }
-}
-
-async function openPastDriveFolder() {
-    try {
-        if (!pastDriveFolderUrl) {
-            showLoading('기출문제 대본 업로드 폴더를 확인하는 중입니다...');
-            const result = await pronJsonpRequest({ action: 'getPastQuestionDriveFolder' }, 12000);
-            if (!result || result.status !== 'success' || !result.folderUrl) {
-                throw new Error((result && result.message) || '폴더 정보를 확인하지 못했습니다.');
-            }
-            pastDriveFolderUrl = String(result.folderUrl || '');
-            setPastDriveStatus_('업로드 폴더가 준비되었습니다. 열린 폴더에 대본 파일을 올린 뒤 목록을 새로고침하세요.');
-        }
-        window.open(pastDriveFolderUrl, '_blank', 'noopener');
-    } catch (err) {
-        console.error(err);
-        alert('기출문제 대본 업로드 폴더를 열지 못했습니다: ' + (err && err.message ? err.message : err));
-    } finally {
-        hideLoading();
-    }
-}
-
-async function applySelectedPastDriveScript() {
-    const select = document.getElementById('pastDriveScriptSelect');
-    const fileId = String(select && select.value ? select.value : '').trim();
-    if (!fileId) return alert('불러올 구글드라이브 대본을 먼저 선택해주세요.');
-
-    const selected = pastDriveScripts.find(function(item) { return String(item.id || '') === fileId; }) || { id: fileId };
-    if (selected.supported === false) {
-        return alert('이 파일 형식은 바로 읽을 수 없습니다. Google Docs 또는 TXT/MD 파일로 변환해서 올려주세요.');
-    }
-
-    try {
-        showLoading('선택한 기출대본을 불러오는 중입니다...');
-        setPastDriveStatus_('선택한 대본 내용을 불러오는 중입니다.');
-        const result = await pronJsonpRequest({
-            action: 'getPastQuestionDriveScriptContent',
-            fileId: fileId,
-            studentSessionToken: typeof getStudentSessionToken_ === 'function' ? getStudentSessionToken_() : ''
-        }, 18000);
-
-        if (!result || result.status !== 'success') {
-            throw new Error((result && result.message) || '대본 내용을 불러오지 못했습니다.');
-        }
-
-        const content = String(result.content || '').trim();
-        if (!content) return alert('선택한 파일에 읽을 수 있는 대본 내용이 없습니다.');
-
-        const customBox = document.getElementById('pastCustomBox');
-        if (customBox) customBox.classList.remove('active');
-
-        const title = String(result.title || selected.name || '구글드라이브 대본').trim();
-        pastCurrentQuestion = {
-            role: title,
-            lines: content,
-            gender: 'drive',
-            sourceMode: 'drive',
-            fileId: fileId,
-            fileName: title
-        };
-
-        document.getElementById('pastRoleDisplay').textContent = title;
-        document.getElementById('pastLinesDisplay').textContent = content;
-
-        const resultBox = document.getElementById('pastResultBox');
-        const audioEl = document.getElementById('pastAudio');
-        if (resultBox) resultBox.style.display = 'none';
-        if (audioEl) audioEl.removeAttribute('src');
-        resetPastUploadState_();
-        setPastDriveStatus_('[' + title + '] 대본을 적용했습니다.');
-    } catch (err) {
-        console.error(err);
-        setPastDriveStatus_('대본 불러오기 실패: ' + (err && err.message ? err.message : err));
-        alert('기출대본을 불러오지 못했습니다: ' + (err && err.message ? err.message : err));
-    } finally {
-        hideLoading();
-    }
-}
-
 function resetPastUploadState_() {
     pastLastRecordedBlob = null;
     pastLastRecordingMeta = null;
@@ -11397,7 +11229,7 @@ async function adminSaveVocalPracticeComment(index) {
 
 
 /* =========================================================
-   울림앱 2차 패치 - 강사페이지 출석체크 O/X → 출석부 즉시 반영
+   울림앱 2차 패치 - 교직원 화면 출석체크 O/X → 출석부 즉시 반영
    적용 위치:
    1) index.html의 기존 관리자 페이지 스크립트 영역 아래쪽에 그대로 붙여넣기
    2) 기존 adminRenderAttendanceTable / adminGetSelectedAttendanceRecords / adminSaveAttendance가 있더라도
@@ -11606,7 +11438,7 @@ async function adminSaveAttendanceRecords_(records, silent = false) {
 
 
 /* =========================================================
-   울림앱 4차 - 강사페이지 강의실 사용체크 시간표 UI
+   울림앱 4차 - 교직원 화면 강의실 사용체크 시간표 UI
    ========================================================= */
 let ADMIN_CLASSROOM_USAGE_ROOMS = ["2강의실", "3강의실", "녹음실", "4강의실", "5강의실", "신체훈련실"];
 let ADMIN_CLASSROOM_USAGE_INSTRUCTORS = [];
@@ -12191,7 +12023,7 @@ async function adminLogin() {
     const id = document.getElementById('adminIdInput').value.trim();
     const pw = document.getElementById('adminPwInput').value.trim();
 
-    if (!id || !pw) return alert('강사 ID와 비밀번호를 입력해주세요.');
+    if (!id || !pw) return alert('ID와 비밀번호를 입력해주세요.');
 
     try {
         showLoading('로그인 정보 확인 중...');
@@ -12228,7 +12060,7 @@ async function adminLogin() {
 
 async function changeAdminPasswordByPrompt(force = false, knownCurrentPassword = '') {
     if (!adminToken) {
-        alert('강사 로그인 후 이용해주세요.');
+        alert('교직원 로그인 후 이용해주세요.');
         return false;
     }
 
@@ -12699,7 +12531,7 @@ window.__ulimPasswordFindMovedToLoginScreen = true;
 
 <style>
 /* =========================================================
-   5-16 모바일 강사페이지 가독성 개선
+   5-16 모바일 교직원 화면 가독성 개선
    - 표가 좁게 찌그러져 글자가 세로로 보이는 현상 방지
    - 출석부/일일평가 표는 모바일에서 카드형으로 전환
    - 강의실 사용표/예약표는 가로 스크롤 유지
@@ -12989,9 +12821,9 @@ window.__ulimPasswordFindMovedToLoginScreen = true;
 
 <script>
 /* =========================================================
-   5-16 모바일 강사페이지 가독성 개선 스크립트
+   5-16 모바일 교직원 화면 가독성 개선 스크립트
    - admin-table의 th 값을 td data-label로 넣어 카드형 모바일 표시
-   - 강사페이지에서는 학생 계정바가 하단을 가리지 않도록 숨김
+   - 교직원 화면에서는 학생 계정바가 하단을 가리지 않도록 숨김
    ========================================================= */
 function ulimEnhanceAdminMobileTables_() {
     document.querySelectorAll('#tabAdmin table.admin-table').forEach(table => {
@@ -13092,7 +12924,7 @@ function ulimRefreshStudentAccountBarVisibility_() {
 <script>
 /* =========================================================
    5-17 담당강사 항목 UI 제거
-   - 관리자/강사 페이지의 표/카드에서 담당강사 컬럼 제거
+   - 관리자/교직원 전용의 표/카드에서 담당강사 컬럼 제거
    - 출석체크, 일일평가, 발성 연습일지, 공지 대상, 전체 학생목록에 적용
    - 내부 필터/권한 판단에는 instructor 값을 계속 사용
    ========================================================= */
@@ -16734,7 +16566,7 @@ ${ruleSummary}`, 'success');
     const pwEl = document.getElementById('adminPwInput');
     const id = idEl ? idEl.value.trim() : '';
     const pw = pwEl ? pwEl.value.trim() : '';
-    if (!id || !pw) return alert('강사 ID와 비밀번호를 입력해주세요.');
+    if (!id || !pw) return alert('ID와 비밀번호를 입력해주세요.');
     try {
       if (typeof showLoading === 'function') showLoading('로그인 정보 확인 중...');
       const data = await adminApi('adminLogin', { adminId:id, adminPw:pw });
@@ -18896,7 +18728,7 @@ ${ruleSummary}`, 'success');
 
 <script>
 /* =========================================================
-   5.79 강사페이지 보안/일일평가 로컬 자동임시저장 패치
+   5.79 교직원 화면 보안/일일평가 로컬 자동임시저장 패치
    - 공용 PC에서 이전 강사 데이터 즉시 제거
    - 일일평가 [이번주 수업] 반별 공통 입력화
    - 일일평가 수동 임시저장 버튼 제거
@@ -19187,7 +19019,7 @@ ${ruleSummary}`, 'success');
 
     function saveDailyEvalLocalDraft_(manual) {
         if (!adminToken) {
-            if (manual) alert('강사 로그인이 필요합니다.');
+            if (manual) alert('교직원 로그인이 필요합니다.');
             return false;
         }
 
@@ -19289,7 +19121,7 @@ ${ruleSummary}`, 'success');
     }
 
     window.adminLoadDailyEvalDraft = async function(manual) {
-        if (!adminToken) return alert('강사 로그인이 필요합니다.');
+        if (!adminToken) return alert('교직원 로그인이 필요합니다.');
         const date = getDailyDate_();
         const className = getDailyClass_();
         if (!date || !className) return alert('수업일과 반명을 먼저 선택해주세요.');
@@ -19600,7 +19432,7 @@ ${ruleSummary}`, 'success');
         const id = document.getElementById('adminIdInput')?.value.trim() || '';
         const pw = document.getElementById('adminPwInput')?.value.trim() || '';
 
-        if (!id || !pw) return alert('강사 ID와 비밀번호를 입력해주세요.');
+        if (!id || !pw) return alert('ID와 비밀번호를 입력해주세요.');
 
         try {
             clearAdminSensitiveScreen_('login-start');
@@ -20710,6 +20542,46 @@ ${ruleSummary}`, 'success');
     else install586_();
 
     console.log('[울림앱 패치 적용]', PATCH_VERSION);
+})();
+</script>
+
+
+<script id="ulimHiddenAdminAccess587">
+/* 5.87 학생 화면에서는 교직원 로그인 버튼을 노출하지 않고, 관리자/강사는 숨은 진입만 사용 */
+(function(){
+  if (window.__ULIM_HIDDEN_ADMIN_ACCESS_587__) return;
+  window.__ULIM_HIDDEN_ADMIN_ACCESS_587__ = true;
+
+  function shouldOpenAdmin587_() {
+    return /(?:^|[?&])admin=1(?:&|$)/.test(location.search || '') ||
+           String(location.hash || '').toLowerCase() === '#admin';
+  }
+
+  function safeOpenAdmin587_() {
+    if (typeof openAdminPage === 'function') {
+      openAdminPage();
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    if (shouldOpenAdmin587_()) {
+      setTimeout(safeOpenAdmin587_, 350);
+    }
+
+    var logo = document.querySelector('.header-content a, .logo-img, header');
+    if (!logo) return;
+    var count = 0;
+    var timer = null;
+    logo.addEventListener('click', function(){
+      count += 1;
+      clearTimeout(timer);
+      timer = setTimeout(function(){ count = 0; }, 1600);
+      if (count >= 5) {
+        count = 0;
+        safeOpenAdmin587_();
+      }
+    });
+  });
 })();
 </script>
 
