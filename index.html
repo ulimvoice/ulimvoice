@@ -2114,10 +2114,9 @@ body.admin-mode .admin-only-tab { display:block !important; }
 
       <div id="pastCustomBox" class="past-custom-box">
         <label for="pastCustomTextarea">직접작성 대본</label>
-        <textarea id="pastCustomTextarea" class="past-custom-textarea" placeholder="학생이 직접 연습할 대본을 입력하세요.
-입력한 대본은 녹음 업로드 시 강사페이지에서 그대로 확인됩니다." oninput="syncPastCustomTextToDisplay_(true)"></textarea>
+        <textarea id="pastCustomTextarea" class="past-custom-textarea" placeholder="연습할 대본을 직접 입력하세요." oninput="syncPastCustomTextToDisplay_(true)"></textarea>
         <button type="button" class="past-custom-apply" onclick="applyPastCustomScript()">작성 대본 적용</button>
-        <div class="past-custom-help">직접작성 대본을 적용한 뒤 녹음하고 업로드하면, 강사페이지의 발성/기출 연습일지에서 대본내용과 녹음파일을 함께 확인할 수 있습니다.</div>
+        <div class="past-custom-help">직접작성 대본을 적용한 뒤 녹음하고 업로드하면, 대본내용과 녹음파일이 함께 업로드 됩니다.</div>
       </div>
 
       <div class="record-box" id="pastRecordBox" style="display:block; margin-top:30px; border-top:2px dashed #eee; padding-top:20px;">
@@ -4923,7 +4922,7 @@ function applyPastCustomScript() {
     const text = String(textarea && textarea.value ? textarea.value : '').trim();
     if (!text) return alert('직접작성할 대본을 먼저 입력해주세요.');
     syncPastCustomTextToDisplay_(true);
-    alert('직접작성 대본이 적용되었습니다. 이제 녹음 후 업로드하면 강사페이지에서 대본과 녹음파일을 함께 확인할 수 있습니다.');
+    alert('직접작성 대본이 적용되었습니다. 이제 녹음 후 업로드하면 대본과 녹음파일을 함께 확인할 수 있습니다.');
 }
 /* --- [탭 4] 기출문제 녹음 기능 --- */
 let pastMediaRecorder, pastAudioChunks = [], isPastRecording = false, pastStartTime;
@@ -4988,7 +4987,7 @@ async function togglePastRecord() {
                     uploadBtn.disabled = false;
                     uploadBtn.textContent = '📤 기출 녹음 업로드';
                 }
-                if (uploadStatus) uploadStatus.textContent = '녹음 완료. 업로드하면 강사페이지에서 확인할 수 있습니다.';
+                if (uploadStatus) uploadStatus.textContent = '녹음 완료.';
                 
                 stream.getTracks().forEach(track => track.stop());
             });
@@ -5091,8 +5090,8 @@ ${meta.lines}`;
 
         hideLoading();
         if (status) status.textContent = result && result.status === 'submitted'
-            ? '업로드 요청이 접수되었습니다. 잠시 후 강사페이지에서 확인됩니다.'
-            : '업로드 완료. 강사페이지에서 확인할 수 있습니다.';
+            ? '업로드 요청이 접수되었습니다.'
+            : '업로드 완료.';
         if (btn) {
             btn.textContent = '업로드 완료';
             btn.disabled = true;
