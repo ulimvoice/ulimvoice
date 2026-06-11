@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<!-- 5.84 기출문제 업로드 주소 발성훈련 업로드 주소와 동일화 -->
+<!-- 5.86 학생 연습기록 발성/기출 분리 + 업로드 링크 표시 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램 5.84</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script type="text/javascript" nonce="e4b7f6f75cb8472f80550a644ac" src="//local.adguard.org?ts=1781094315650&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000f0f072069f647b11369c6ef1%26fn%3Dindex_5_84_%25EA%25B8%25B0%25EC%25B6%259C%25EB%25AC%25B8%25EC%25A0%259C%25EC%2597%2585%25EB%25A1%259C%25EB%2593%259C%25EC%25A3%25BC%25EC%2586%258C_%25EB%25B0%259C%25EC%2584%25B1%25ED%259B%2588%25EB%25A0%25A8%25EB%258F%2599%25EC%259D%25BC%25ED%2599%2594_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D494748%26p%3Dfs%26cid%3D1%26sig%3D1b1591a6d9a0bd68d32d15b90bc6ffce85e9425f78e298567a16b024f9d5e70c%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
+<script type="text/javascript" nonce="e4b7f6f75cb8472f80550a644ac" src="//local.adguard.org?ts=1781181745889&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_0000000085387209b29b732c69b60826%26fn%3Dindex_5_86_%25ED%2595%2599%25EC%2583%259D%25EC%2597%25B0%25EC%258A%25B5%25EA%25B8%25B0%25EB%25A1%259D_%25EB%25B0%259C%25EC%2584%25B1%25EA%25B8%25B0%25EC%25B6%259C%25EB%25B6%2584%25EB%25A6%25AC_%25EC%2597%2585%25EB%25A1%259C%25EB%2593%259C%25EB%25A7%2581%25ED%2581%25AC_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D494773%26p%3Dfs%26cid%3D1%26sig%3D47db9ce3fdb134e0f82c0a6156c30f5eb28bd9700bc0e1549a1f239c6166b3e3%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
 <link rel="dns-prefetch" href="//script.google.com">
 <link rel="dns-prefetch" href="//script.googleusercontent.com">
 
@@ -108,6 +108,17 @@ audio { width: 100%; height: 40px; }
 .past-custom-textarea { width:100%; min-height:170px; box-sizing:border-box; border:1px solid #bbf7d0; border-radius:12px; padding:12px; resize:vertical; font-size:15px; line-height:1.55; background:#fff; }
 .past-custom-help { font-size:12px; color:#166534; margin-top:8px; line-height:1.5; font-weight:700; }
 .past-custom-apply { margin-top:10px; width:100%; padding:12px; border:none; border-radius:10px; background:#2ecc71; color:#fff; font-weight:900; cursor:pointer; }
+.past-drive-box { margin-top:14px; padding:16px; border:1px solid #dbeafe; background:#eff6ff; border-radius:16px; }
+.past-drive-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:10px; }
+.past-drive-title { font-size:15px; font-weight:900; color:#1d4ed8; }
+.past-drive-help { font-size:12px; color:#1e40af; line-height:1.5; font-weight:700; margin-top:4px; }
+.past-drive-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.past-drive-btn { border:none; border-radius:10px; padding:10px 12px; background:#2563eb; color:#fff; font-weight:900; cursor:pointer; }
+.past-drive-btn.gray { background:#64748b; }
+.past-drive-btn.green { background:#2ecc71; }
+.past-drive-select { width:100%; box-sizing:border-box; border:1px solid #bfdbfe; border-radius:12px; padding:12px; background:#fff; font-size:14px; font-weight:800; color:#1f2937; }
+.past-drive-meta { margin-top:8px; min-height:18px; font-size:12px; color:#1e3a8a; font-weight:800; line-height:1.45; }
+
 .practice-log-type-badge { display:inline-block; margin-left:8px; padding:3px 8px; border-radius:999px; background:#eef2ff; color:#3730a3; font-size:12px; font-weight:900; vertical-align:middle; }
 .practice-log-type-badge.past { background:#fff7ed; color:#9a3412; }
 .practice-log-type-badge.past-custom { background:#fdf2f8; color:#9d174d; }
@@ -2112,11 +2123,31 @@ body.admin-mode .admin-only-tab { display:block !important; }
         <button class="btn-female" onclick="rollPastQuestion('female')">👩 여자 기출 뽑기</button>
       </div>
 
+      <div id="pastDriveBox" class="past-drive-box">
+        <div class="past-drive-head">
+          <div>
+            <div class="past-drive-title">📁 구글드라이브 기출대본 가져오기</div>
+            <div class="past-drive-help">GAS 메뉴의 [기출문제 대본 폴더 생성/확인]에서 열린 폴더에 Google Docs 또는 TXT/MD 파일을 올리면 여기서 불러올 수 있습니다.</div>
+          </div>
+          <div class="past-drive-actions">
+            <button type="button" class="past-drive-btn gray" onclick="openPastDriveFolder()">업로드 폴더 열기</button>
+            <button type="button" class="past-drive-btn" onclick="loadPastDriveScriptList(false)">대본 목록 새로고침</button>
+          </div>
+        </div>
+        <select id="pastDriveScriptSelect" class="past-drive-select">
+          <option value="">구글드라이브 대본 목록을 불러오세요</option>
+        </select>
+        <div class="past-drive-actions" style="margin-top:10px;">
+          <button type="button" class="past-drive-btn green" onclick="applySelectedPastDriveScript()">선택한 대본 적용</button>
+        </div>
+        <div id="pastDriveStatus" class="past-drive-meta">지원 형식: Google Docs, TXT, MD, CSV, JSON. PDF/HWP/DOCX는 Google Docs로 변환해서 올려주세요.</div>
+      </div>
+
       <div id="pastCustomBox" class="past-custom-box">
         <label for="pastCustomTextarea">직접작성 대본</label>
-        <textarea id="pastCustomTextarea" class="past-custom-textarea" placeholder="연습할 대본을 직접 입력하세요." oninput="syncPastCustomTextToDisplay_(true)"></textarea>
+        <textarea id="pastCustomTextarea" class="past-custom-textarea" placeholder="직접 연습할 대본을 입력하세요." oninput="syncPastCustomTextToDisplay_(true)"></textarea>
         <button type="button" class="past-custom-apply" onclick="applyPastCustomScript()">작성 대본 적용</button>
-        <div class="past-custom-help">직접작성 대본을 적용한 뒤 녹음하고 업로드하면, 대본내용과 녹음파일이 함께 업로드 됩니다.</div>
+        <div class="past-custom-help">직접작성 대본을 적용한 뒤 녹음하고 업로드하면, 연습일지에서 대본내용과 녹음파일을 함께 확인할 수 있습니다.</div>
       </div>
 
       <div class="record-box" id="pastRecordBox" style="display:block; margin-top:30px; border-top:2px dashed #eee; padding-top:20px;">
@@ -4850,6 +4881,142 @@ const pData = (typeof pastQuestionData !== 'undefined') ? pastQuestionData : def
 let pastCurrentQuestion = null;
 let pastLastRecordedBlob = null;
 let pastLastRecordingMeta = null;
+let pastDriveScripts = [];
+let pastDriveFolderUrl = '';
+
+function setPastDriveStatus_(message) {
+    const el = document.getElementById('pastDriveStatus');
+    if (el) el.textContent = message || '';
+}
+
+function renderPastDriveScriptOptions_(items) {
+    const select = document.getElementById('pastDriveScriptSelect');
+    if (!select) return;
+    select.innerHTML = '';
+
+    const first = document.createElement('option');
+    first.value = '';
+    first.textContent = items && items.length ? '불러올 기출대본을 선택하세요' : '구글드라이브 대본이 없습니다';
+    select.appendChild(first);
+
+    (items || []).forEach(function(item, index) {
+        const option = document.createElement('option');
+        option.value = String(item.id || '');
+        option.textContent = (item.supported === false ? '[지원불가] ' : '') + String(item.name || ('대본 ' + (index + 1)));
+        if (item.supported === false) option.disabled = true;
+        select.appendChild(option);
+    });
+}
+
+async function loadPastDriveScriptList(silent) {
+    try {
+        if (!silent) showLoading('구글드라이브 기출대본 목록을 불러오는 중입니다...');
+        setPastDriveStatus_('구글드라이브 기출대본 목록을 불러오는 중입니다.');
+        const result = await pronJsonpRequest({
+            action: 'getPastQuestionDriveScripts',
+            studentSessionToken: typeof getStudentSessionToken_ === 'function' ? getStudentSessionToken_() : ''
+        }, 15000);
+
+        if (!result || result.status !== 'success') {
+            throw new Error((result && result.message) || '대본 목록을 불러오지 못했습니다.');
+        }
+
+        pastDriveScripts = Array.isArray(result.items) ? result.items : [];
+        pastDriveFolderUrl = String(result.folderUrl || '');
+        renderPastDriveScriptOptions_(pastDriveScripts);
+
+        const supportedCount = pastDriveScripts.filter(function(item) { return item.supported !== false; }).length;
+        if (supportedCount > 0) {
+            setPastDriveStatus_('대본 ' + supportedCount + '개를 불러왔습니다. 선택 후 [선택한 대본 적용]을 누르세요.');
+        } else {
+            setPastDriveStatus_('불러올 수 있는 대본이 없습니다. 업로드 폴더에 Google Docs 또는 TXT/MD 파일을 올려주세요.');
+        }
+    } catch (err) {
+        console.error(err);
+        renderPastDriveScriptOptions_([]);
+        setPastDriveStatus_('대본 목록 불러오기 실패: ' + (err && err.message ? err.message : err));
+        if (!silent) alert('기출대본 목록을 불러오지 못했습니다: ' + (err && err.message ? err.message : err));
+    } finally {
+        if (!silent) hideLoading();
+    }
+}
+
+async function openPastDriveFolder() {
+    try {
+        if (!pastDriveFolderUrl) {
+            showLoading('기출문제 대본 업로드 폴더를 확인하는 중입니다...');
+            const result = await pronJsonpRequest({ action: 'getPastQuestionDriveFolder' }, 12000);
+            if (!result || result.status !== 'success' || !result.folderUrl) {
+                throw new Error((result && result.message) || '폴더 정보를 확인하지 못했습니다.');
+            }
+            pastDriveFolderUrl = String(result.folderUrl || '');
+            setPastDriveStatus_('업로드 폴더가 준비되었습니다. 열린 폴더에 대본 파일을 올린 뒤 목록을 새로고침하세요.');
+        }
+        window.open(pastDriveFolderUrl, '_blank', 'noopener');
+    } catch (err) {
+        console.error(err);
+        alert('기출문제 대본 업로드 폴더를 열지 못했습니다: ' + (err && err.message ? err.message : err));
+    } finally {
+        hideLoading();
+    }
+}
+
+async function applySelectedPastDriveScript() {
+    const select = document.getElementById('pastDriveScriptSelect');
+    const fileId = String(select && select.value ? select.value : '').trim();
+    if (!fileId) return alert('불러올 구글드라이브 대본을 먼저 선택해주세요.');
+
+    const selected = pastDriveScripts.find(function(item) { return String(item.id || '') === fileId; }) || { id: fileId };
+    if (selected.supported === false) {
+        return alert('이 파일 형식은 바로 읽을 수 없습니다. Google Docs 또는 TXT/MD 파일로 변환해서 올려주세요.');
+    }
+
+    try {
+        showLoading('선택한 기출대본을 불러오는 중입니다...');
+        setPastDriveStatus_('선택한 대본 내용을 불러오는 중입니다.');
+        const result = await pronJsonpRequest({
+            action: 'getPastQuestionDriveScriptContent',
+            fileId: fileId,
+            studentSessionToken: typeof getStudentSessionToken_ === 'function' ? getStudentSessionToken_() : ''
+        }, 18000);
+
+        if (!result || result.status !== 'success') {
+            throw new Error((result && result.message) || '대본 내용을 불러오지 못했습니다.');
+        }
+
+        const content = String(result.content || '').trim();
+        if (!content) return alert('선택한 파일에 읽을 수 있는 대본 내용이 없습니다.');
+
+        const customBox = document.getElementById('pastCustomBox');
+        if (customBox) customBox.classList.remove('active');
+
+        const title = String(result.title || selected.name || '구글드라이브 대본').trim();
+        pastCurrentQuestion = {
+            role: title,
+            lines: content,
+            gender: 'drive',
+            sourceMode: 'drive',
+            fileId: fileId,
+            fileName: title
+        };
+
+        document.getElementById('pastRoleDisplay').textContent = title;
+        document.getElementById('pastLinesDisplay').textContent = content;
+
+        const resultBox = document.getElementById('pastResultBox');
+        const audioEl = document.getElementById('pastAudio');
+        if (resultBox) resultBox.style.display = 'none';
+        if (audioEl) audioEl.removeAttribute('src');
+        resetPastUploadState_();
+        setPastDriveStatus_('[' + title + '] 대본을 적용했습니다.');
+    } catch (err) {
+        console.error(err);
+        setPastDriveStatus_('대본 불러오기 실패: ' + (err && err.message ? err.message : err));
+        alert('기출대본을 불러오지 못했습니다: ' + (err && err.message ? err.message : err));
+    } finally {
+        hideLoading();
+    }
+}
 
 function resetPastUploadState_() {
     pastLastRecordedBlob = null;
@@ -4922,7 +5089,7 @@ function applyPastCustomScript() {
     const text = String(textarea && textarea.value ? textarea.value : '').trim();
     if (!text) return alert('직접작성할 대본을 먼저 입력해주세요.');
     syncPastCustomTextToDisplay_(true);
-    alert('직접작성 대본이 적용되었습니다. 이제 녹음 후 업로드하면 대본과 녹음파일을 함께 확인할 수 있습니다.');
+    alert('직접작성 대본이 적용되었습니다.');
 }
 /* --- [탭 4] 기출문제 녹음 기능 --- */
 let pastMediaRecorder, pastAudioChunks = [], isPastRecording = false, pastStartTime;
@@ -5017,6 +5184,8 @@ function getPastQuestionUploadMeta_() {
         lines: safeLines,
         gender: String(question.gender || '').trim(),
         sourceMode: String(question.sourceMode || '').trim(),
+        fileId: String(question.fileId || '').trim(),
+        fileName: String(question.fileName || question.role || '').trim(),
         duration: pastLastRecordingMeta && pastLastRecordingMeta.duration ? pastLastRecordingMeta.duration : 0
     };
 }
@@ -5058,11 +5227,16 @@ async function uploadPastQuestionRecord() {
         const mimeType = pastLastRecordedBlob.type || getBestAudioMimeType_() || 'audio/mp4';
         const base64Data = await blobToBase64(pastLastRecordedBlob);
         const isCustomPast = meta.sourceMode === 'custom' || meta.gender === 'custom';
-        const roleText = isCustomPast ? '직접작성 대본' : (meta.role || '기출문제');
-        const sentenceText = `${isCustomPast ? '[기출문제-직접작성]' : '[기출문제]'} ${roleText}
+        const isDrivePast = meta.sourceMode === 'drive' || meta.gender === 'drive';
+        const roleText = isCustomPast ? '직접작성 대본' : (isDrivePast ? (meta.fileName || meta.role || '구글드라이브 대본') : (meta.role || '기출문제'));
+        const pastLabel = isCustomPast ? '[기출문제-직접작성]' : (isDrivePast ? '[기출문제-드라이브]' : '[기출문제]');
+        const sentenceText = `${pastLabel} ${roleText}
 ${meta.lines}`;
-        const pastIdPrefix = isCustomPast ? 'PAST_CUSTOM_' : 'PAST_';
+        const pastIdPrefix = isCustomPast ? 'PAST_CUSTOM_' : (isDrivePast ? 'PAST_DRIVE_' : 'PAST_');
         const pastId = pastIdPrefix + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '_' + Math.random().toString(36).slice(2, 8);
+        const pastCategory = isCustomPast ? 'past_question_custom' : (isDrivePast ? 'past_question_drive' : 'past_question');
+        const pastUploadAction = isCustomPast ? '기출문제 직접작성 업로드' : (isDrivePast ? '기출문제 드라이브대본 업로드' : '기출문제 녹음 업로드');
+        const pastAiSource = isCustomPast ? '기출문제 직접작성' : (isDrivePast ? '기출문제 드라이브대본' : '기출문제');
 
         showLoading('기출 녹음 파일 업로드 요청을 보내는 중입니다...');
         const result = await uploadAudioToDriveAndLog(
@@ -5070,18 +5244,20 @@ ${meta.lines}`;
             sentenceText,
             base64Data,
             mimeType,
-            isCustomPast ? '기출문제 직접작성 업로드' : '기출문제 녹음 업로드',
+            pastUploadAction,
             {
                 mediaKind: mimeType.indexOf('video/') === 0 ? 'video' : 'audio',
                 fileSize: pastLastRecordedBlob.size || 0,
                 analysisText: '',
                 originalSentence: sentenceText,
                 localWhisperText: '',
-                aiSource: isCustomPast ? '기출문제 직접작성' : '기출문제',
+                aiSource: pastAiSource,
                 aiComment: '',
-                contentCategory: isCustomPast ? 'past_question_custom' : 'past_question',
-                recordCategory: isCustomPast ? 'past_question_custom' : 'past_question',
-                category: isCustomPast ? 'past_question_custom' : 'past_question',
+                contentCategory: pastCategory,
+                recordCategory: pastCategory,
+                category: pastCategory,
+                pastQuestionScriptFileId: meta.fileId || '',
+                pastQuestionScriptFileName: meta.fileName || meta.role || '',
                 uploadUrl: PAST_QUESTION_UPLOAD_URL,
                 uploadUrlType: 'same_as_vocal_training',
                 studentSessionToken: typeof getStudentSessionToken_ === 'function' ? getStudentSessionToken_() : ''
@@ -5134,7 +5310,7 @@ window.onload = async function() {
    - 새 버전 발견 시 확인창 표시
    - 확인 시 캐시 우회 새로고침
    =========================== */
-const ULIM_APP_VERSION = "2026.06.06.549.01";
+const ULIM_APP_VERSION = "2026.06.11.586.01";
 const ULIM_UPDATE_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const ULIM_UPDATE_LAST_CHECK_KEY = "ulimUpdateLastCheckAt";
 let ulimUpdatePromptShown = false;
@@ -19950,6 +20126,590 @@ ${ruleSummary}`, 'success');
     document.addEventListener('DOMContentLoaded', function(){
         if (document.getElementById('adminPanelVocalPractice')) ensureVocalPracticeCalendarUi_();
     });
+})();
+</script>
+
+
+
+<style>
+/* =========================================================
+   5.86 학생 연습기록: 발성/기출 분리 + 업로드 링크 표시
+   ========================================================= */
+.practice-record-toggle-btn {
+    width: 100%;
+    padding: 11px;
+    margin-top: 8px;
+    background: #e5e7eb;
+    border: none;
+    border-radius: 10px;
+    font-weight: 900;
+    cursor: pointer;
+    color: #374151;
+    transition: background .15s, color .15s, box-shadow .15s;
+}
+.practice-record-toggle-btn.has-comment {
+    background: #facc15 !important;
+    color: #78350f !important;
+    box-shadow: 0 3px 0 rgba(120, 53, 15, .18);
+}
+.practice-record-toggle-btn.has-comment::after {
+    content: "  ★ 코멘트 도착";
+}
+.past-practice-calendar-section {
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 2px dashed #e5e7eb;
+}
+.past-practice-calendar-area {
+    display: none;
+    margin-top: 12px;
+}
+.past-practice-calendar-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 12px;
+}
+.practice-file-btn {
+    display: inline-block;
+    padding: 9px 12px;
+    border-radius: 10px;
+    background: #2563eb;
+    color: #fff !important;
+    text-decoration: none;
+    font-weight: 900;
+    margin-top: 8px;
+}
+.practice-file-note {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 6px;
+    line-height: 1.45;
+}
+.practice-log-card.student-view {
+    text-align: left;
+}
+.practice-log-card.student-view p {
+    margin: 8px 0;
+}
+</style>
+
+<script>
+/* =========================================================
+   5.86 학생 연습기록: 발성훈련/기출문제 분리 + 업로드 링크 표시
+   - 단일 연습로그 시트는 유지
+   - 학생 화면에서 recordType/vocalId/aiSource/sentence 기준으로 발성/기출 분리
+   ========================================================= */
+(function(){
+    const PATCH_VERSION = '5.86-student-practice-split-upload-link';
+
+    function safeText586_(value) {
+        return String(value == null ? '' : value).trim();
+    }
+
+    function esc586_(value) {
+        if (typeof escapeHtml_ === 'function') return escapeHtml_(value);
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function isHttp586_(value) {
+        return /^https?:\/\//i.test(safeText586_(value));
+    }
+
+    function isPastPracticeLog586_(log) {
+        log = log || {};
+        const text = [
+            log.recordType,
+            log.vocalId,
+            log.aiSource,
+            log.category,
+            log.recordCategory,
+            log.contentCategory,
+            log.sentence
+        ].map(safeText586_).join(' ');
+        return /기출|past_question|pastquestion|PAST_/i.test(text);
+    }
+
+    function getStudentAllPracticeLogsByDate586_(dateKey) {
+        try {
+            if (typeof studentVocalPracticeLogMap !== 'undefined' && studentVocalPracticeLogMap && studentVocalPracticeLogMap.get) {
+                return studentVocalPracticeLogMap.get(dateKey) || [];
+            }
+        } catch(e) {}
+        return [];
+    }
+
+    window.isPastPracticeLog_ = isPastPracticeLog586_;
+    window.getStudentAllPracticeLogsByDate_ = getStudentAllPracticeLogsByDate586_;
+    window.getStudentVocalPracticeLogsByDate_ = function(dateKey) {
+        return getStudentAllPracticeLogsByDate586_(dateKey).filter(function(log){ return !isPastPracticeLog586_(log); });
+    };
+    try { getStudentVocalPracticeLogsByDate_ = window.getStudentVocalPracticeLogsByDate_; } catch(e) {}
+
+    window.getStudentPastPracticeLogsByDate_ = function(dateKey) {
+        return getStudentAllPracticeLogsByDate586_(dateKey).filter(isPastPracticeLog586_);
+    };
+
+    function hasTeacherComment586_(logs) {
+        return (logs || []).some(function(log){ return !!safeText586_(log.teacherComment); });
+    }
+
+    function buildUploadFileHtml586_(log) {
+        const fileUrl = safeText586_(log && log.fileUrl);
+        if (isHttp586_(fileUrl)) {
+            return `
+                <p><strong>업로드 파일:</strong><br><a class="practice-file-btn" href="${esc586_(fileUrl)}" target="_blank" rel="noopener">녹음파일 열기</a></p>
+                <div class="practice-file-note">구글드라이브 권한은 업로드 시 링크 열람 가능으로 설정됩니다. 열리지 않으면 학원에 문의해주세요.</div>
+            `;
+        }
+        return '<p style="color:#999;"><strong>업로드 파일:</strong> 링크 없음</p>';
+    }
+
+    function buildStudentPracticeCards586_(logs, mode) {
+        const isPastMode = mode === 'past';
+        return (logs || []).map(function(log){
+            const teacherComment = safeText586_(log.teacherComment);
+            const aiComment = safeText586_(log.aiComment);
+            const recordType = safeText586_(log.recordType) || (isPastMode ? '기출문제' : '발성훈련');
+            const titleLabel = isPastMode ? '기출문제 연습 완료' : '발성훈련 연습 완료';
+            const sentenceLabel = isPastMode ? '대본' : '문장';
+            return `
+                <div class="practice-log-card student-view ${teacherComment ? 'has-comment' : ''}">
+                    <div class="practice-log-title">✅ ${esc586_(titleLabel)} ${teacherComment ? ' / ★ 선생님 코멘트' : ''}</div>
+                    <div class="practice-log-meta">${esc586_(recordType)}${log.timestamp ? ' · ' + esc586_(log.timestamp) : ''}</div>
+                    <p><strong>문장ID:</strong> ${esc586_(log.vocalId || '')}</p>
+                    <p><strong>${sentenceLabel}:</strong><br>${esc586_(log.sentence || '')}</p>
+                    ${aiComment ? `<p><strong>AI 코멘트:</strong><br>${esc586_(aiComment)}</p>` : ''}
+                    ${buildUploadFileHtml586_(log)}
+                    ${teacherComment ? `<p style="background:#fff7cc; padding:10px; border-radius:10px;"><strong>선생님 코멘트:</strong><br>${esc586_(teacherComment)}</p>` : '<p style="color:#999;">아직 선생님 코멘트가 없습니다.</p>'}
+                </div>
+            `;
+        }).join('');
+    }
+
+    function updatePracticeToggleButtonStates586_() {
+        try {
+            const vocalBtn = document.getElementById('vocalPracticeToggleBtn') || document.querySelector('button[onclick="toggleCalendar()"]');
+            if (vocalBtn) {
+                vocalBtn.id = 'vocalPracticeToggleBtn';
+                vocalBtn.classList.add('practice-record-toggle-btn');
+                const hasVocalComment = Array.from(studentVocalPracticeLogMap.values()).some(function(logs){
+                    return hasTeacherComment586_((logs || []).filter(function(log){ return !isPastPracticeLog586_(log); }));
+                });
+                vocalBtn.classList.toggle('has-comment', !!hasVocalComment);
+            }
+        } catch(e) {}
+
+        try {
+            const pastBtn = document.getElementById('pastPracticeToggleBtn');
+            if (pastBtn) {
+                pastBtn.classList.add('practice-record-toggle-btn');
+                const hasPastComment = Array.from(studentVocalPracticeLogMap.values()).some(function(logs){
+                    return hasTeacherComment586_((logs || []).filter(isPastPracticeLog586_));
+                });
+                pastBtn.classList.toggle('has-comment', !!hasPastComment);
+            }
+        } catch(e) {}
+    }
+
+    function ensureVocalPracticeToggleButton586_() {
+        const btn = document.querySelector('button[onclick="toggleCalendar()"]');
+        if (btn) {
+            btn.id = 'vocalPracticeToggleBtn';
+            btn.classList.add('practice-record-toggle-btn');
+        }
+    }
+
+    function currentYm586_() {
+        const d = new Date();
+        return { year: d.getFullYear(), month: d.getMonth() };
+    }
+
+    window.loadStudentVocalPracticeLogsForMonth_ = async function(year, month, force = false) {
+        if (!studentName || studentName === '게스트' || !getStudentSessionToken_()) return null;
+        const key = `${year}-${String(month + 1).padStart(2, '0')}`;
+        if (!force && typeof studentVocalPracticeLoadedKey !== 'undefined' && studentVocalPracticeLoadedKey === key) {
+            updatePracticeToggleButtonStates586_();
+            return null;
+        }
+
+        try {
+            const query = new URLSearchParams();
+            query.set('action', 'getStudentVocalPracticeLogs');
+            query.set('studentSessionToken', getStudentSessionToken_());
+            query.set('year', String(year));
+            query.set('month', String(month + 1));
+            query.set('_', Date.now());
+
+            const response = await fetch(`${GET_API_URL}?${query.toString()}`);
+            if (!response.ok) throw new Error('연습일지 조회 실패');
+            const data = await response.json();
+            if (!data || data.status !== 'success') throw new Error((data && data.message) || '연습일지 응답 오류');
+
+            studentVocalPracticeLogMap = new Map();
+            (data.logs || []).forEach(function(log){
+                const dateKey = safeText586_(log.practiceDate);
+                if (!dateKey) return;
+                if (!studentVocalPracticeLogMap.has(dateKey)) studentVocalPracticeLogMap.set(dateKey, []);
+                studentVocalPracticeLogMap.get(dateKey).push(log);
+            });
+            studentVocalPracticeLoadedKey = key;
+            updatePracticeToggleButtonStates586_();
+            return data;
+        } catch (err) {
+            console.warn('학생 연습일지 서버 조회 실패:', err);
+            updatePracticeToggleButtonStates586_();
+            return null;
+        }
+    };
+    try { loadStudentVocalPracticeLogsForMonth_ = window.loadStudentVocalPracticeLogsForMonth_; } catch(e) {}
+
+    window.toggleCalendar = async function() {
+        const calendarArea = document.getElementById('calendarDisplayArea');
+        if (!calendarArea) return;
+        if (calendarArea.style.display === 'none' || !calendarArea.style.display) {
+            const now = new Date();
+            await loadStudentVocalPracticeLogsForMonth_(now.getFullYear(), now.getMonth(), true);
+            if (typeof renderCalendar === 'function') renderCalendar(now.getFullYear(), now.getMonth());
+            calendarArea.style.display = 'block';
+        } else {
+            calendarArea.style.display = 'none';
+        }
+        updatePracticeToggleButtonStates586_();
+    };
+    try { toggleCalendar = window.toggleCalendar; } catch(e) {}
+
+    window.displayDayRecord = function(dateKey, isCompleted) {
+        const records = typeof getVocalRecords === 'function' ? getVocalRecords() : new Map();
+        const record = records.get(dateKey);
+        const serverLogs = window.getStudentVocalPracticeLogsByDate_(dateKey);
+        const box = document.getElementById('recordDisplayBox');
+        const dateEl = document.getElementById('recordDisplayDate');
+        const contentEl = document.getElementById('recordDisplayContent');
+        if (!box || !dateEl || !contentEl) return;
+
+        dateEl.textContent = `${dateKey} 발성훈련 기록`;
+
+        if ((isCompleted && record) || serverLogs.length) {
+            const cards = buildStudentPracticeCards586_(serverLogs, 'vocal');
+            if (cards) {
+                contentEl.innerHTML = cards;
+            } else {
+                contentEl.innerHTML = `
+                    <p style="font-weight: bold; color: #2ecc71;">✅ 연습 완료</p>
+                    <p><strong>문장 내용:</strong> "${esc586_((record && record.text) || '')}"</p>
+                    ${record && record.fileUrl ? buildUploadFileHtml586_(record) : '<p style="font-size: 13px; color: #777;">서버 연습일지 기록은 아직 동기화되지 않았습니다.</p>'}
+                `;
+            }
+        } else {
+            contentEl.innerHTML = `
+                <p style="font-weight: bold; color: #ff6b6b;">${isCompleted ? '❌ 기록 없음' : '❌ 미완료'}</p>
+                <p>해당 날짜에 발성훈련을 완료한 기록이 없습니다.</p>
+            `;
+        }
+
+        box.style.display = 'flex';
+    };
+    try { displayDayRecord = window.displayDayRecord; } catch(e) {}
+
+    let pastPracticeCalendarYear586_ = null;
+    let pastPracticeCalendarMonth586_ = null;
+
+    function ensurePastPracticeCalendarUi586_() {
+        const tab = document.getElementById('tab4');
+        if (!tab || document.getElementById('pastPracticeLogSection')) return;
+        const section = tab.querySelector('.section') || tab;
+        const wrap = document.createElement('div');
+        wrap.id = 'pastPracticeLogSection';
+        wrap.className = 'past-practice-calendar-section';
+        wrap.innerHTML = `
+            <button type="button" id="pastPracticeToggleBtn" class="practice-record-toggle-btn" onclick="togglePastPracticeCalendar()">📅 기출 연습 기록 보기/숨기기</button>
+            <div id="pastPracticeCalendarArea" class="past-practice-calendar-area">
+                <h3 style="margin-top:18px; color:#555;">📅 기출문제 연습 기록</h3>
+                <div id="pastPracticeCalendarContainer" class="past-practice-calendar-container"></div>
+                <p style="font-size:12px; color:#aaa; text-align:center; margin-top:10px;">(O: 업로드 완료, ★: 선생님 코멘트 있음)</p>
+            </div>
+        `;
+        section.appendChild(wrap);
+        updatePracticeToggleButtonStates586_();
+    }
+
+    async function renderPastPracticeCalendarWithServer586_(year, month) {
+        await loadStudentVocalPracticeLogsForMonth_(year, month, true);
+        renderPastPracticeCalendar586_(year, month);
+    }
+
+    function renderPastPracticeCalendar586_(year, month) {
+        ensurePastPracticeCalendarUi586_();
+        const today = new Date();
+        const currentYear = Number.isFinite(Number(year)) ? Number(year) : (pastPracticeCalendarYear586_ || today.getFullYear());
+        const currentMonth = Number.isFinite(Number(month)) ? Number(month) : (pastPracticeCalendarMonth586_ != null ? pastPracticeCalendarMonth586_ : today.getMonth());
+        pastPracticeCalendarYear586_ = currentYear;
+        pastPracticeCalendarMonth586_ = currentMonth;
+
+        const container = document.getElementById('pastPracticeCalendarContainer');
+        if (!container) return;
+
+        const firstDay = new Date(currentYear, currentMonth, 1);
+        const lastDay = new Date(currentYear, currentMonth + 1, 0);
+        const numDays = lastDay.getDate();
+        const startDayOfWeek = firstDay.getDay();
+        const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+        let html = `<div style="width:100%; max-width:430px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <button onclick="renderPastPracticeCalendarWithServer_(${currentYear}, ${currentMonth === 0 ? 11 : currentMonth - 1})" style="background:#ddd; border:none; padding:5px 10px; border-radius:5px;">⬅</button>
+                <h2 style="font-size:18px; margin:0;">${currentYear}. ${currentMonth + 1}</h2>
+                <button onclick="renderPastPracticeCalendarWithServer_(${currentYear}, ${currentMonth === 11 ? 0 : currentMonth + 1})" style="background:#ddd; border:none; padding:5px 10px; border-radius:5px;">➡</button>
+            </div>
+            <table style="width:100%; border-collapse:collapse; text-align:center; font-size:15px;">
+            <thead><tr style="background:#eee; height:35px;"><th>일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th></tr></thead><tbody><tr>`;
+
+        let cellCount = 0;
+        for (let i = 0; i < startDayOfWeek; i++) {
+            html += '<td style="border:1px solid #eee; padding:5px;"></td>';
+            cellCount++;
+        }
+
+        for (let day = 1; day <= numDays; day++) {
+            if (cellCount % 7 === 0 && cellCount !== 0) html += '</tr><tr>';
+            const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const logs = window.getStudentPastPracticeLogsByDate_(dateKey);
+            const hasLogs = logs.length > 0;
+            const hasComment = hasTeacherComment586_(logs);
+            let statusText = String(day);
+            let background = '#fff';
+            let color = '#333';
+            let title = dateKey;
+            let onClickEvent = '';
+
+            if (hasComment) {
+                statusText = '<span style="font-weight:900;">★</span>';
+                background = '#fff7cc';
+                color = '#b45309';
+                title += '\n[선생님 코멘트 있음]';
+                onClickEvent = `onclick="displayPastDayRecord('${dateKey}')" style="cursor:pointer;"`;
+            } else if (hasLogs) {
+                statusText = '<span style="font-weight:900; color:#2ecc71;">O</span>';
+                background = '#e8f5e9';
+                title += '\n[기출 업로드 완료]';
+                onClickEvent = `onclick="displayPastDayRecord('${dateKey}')" style="cursor:pointer;"`;
+            }
+            if (dateKey === todayKey && !hasComment && !hasLogs) {
+                background = '#fffbe5';
+                color = '#2980b9';
+                statusText = `<span style="font-weight:900; color:#2980b9;">${day}</span>`;
+            }
+
+            html += `<td ${onClickEvent} style="border:1px solid #eee; padding:5px; background:${background}; color:${color};" title="${esc586_(title)}">${statusText}</td>`;
+            cellCount++;
+        }
+
+        while (cellCount % 7 !== 0) {
+            html += '<td style="border:1px solid #eee; padding:5px;"></td>';
+            cellCount++;
+        }
+        html += '</tr></tbody></table></div>';
+        container.innerHTML = html;
+        updatePracticeToggleButtonStates586_();
+    }
+
+    window.renderPastPracticeCalendar_ = renderPastPracticeCalendar586_;
+    window.renderPastPracticeCalendarWithServer_ = renderPastPracticeCalendarWithServer586_;
+
+    window.togglePastPracticeCalendar = async function() {
+        ensurePastPracticeCalendarUi586_();
+        const area = document.getElementById('pastPracticeCalendarArea');
+        if (!area) return;
+        if (area.style.display === 'none' || !area.style.display) {
+            const now = new Date();
+            const y = pastPracticeCalendarYear586_ || now.getFullYear();
+            const m = pastPracticeCalendarMonth586_ != null ? pastPracticeCalendarMonth586_ : now.getMonth();
+            await loadStudentVocalPracticeLogsForMonth_(y, m, true);
+            renderPastPracticeCalendar586_(y, m);
+            area.style.display = 'block';
+        } else {
+            area.style.display = 'none';
+        }
+        updatePracticeToggleButtonStates586_();
+    };
+
+    window.displayPastDayRecord = function(dateKey) {
+        const logs = window.getStudentPastPracticeLogsByDate_(dateKey);
+        const box = document.getElementById('recordDisplayBox');
+        const dateEl = document.getElementById('recordDisplayDate');
+        const contentEl = document.getElementById('recordDisplayContent');
+        if (!box || !dateEl || !contentEl) return;
+        dateEl.textContent = `${dateKey} 기출문제 기록`;
+        if (logs.length) {
+            contentEl.innerHTML = buildStudentPracticeCards586_(logs, 'past');
+        } else {
+            contentEl.innerHTML = '<p style="font-weight:bold; color:#999;">해당 날짜에 업로드한 기출문제 기록이 없습니다.</p>';
+        }
+        box.style.display = 'flex';
+    };
+
+    window.uploadPastQuestionRecord = async function() {
+        const btn = document.getElementById('pastUploadBtn');
+        const status = document.getElementById('pastUploadStatus');
+
+        if (!pastLastRecordedBlob) {
+            return alert('기출문제 녹음을 완료한 뒤 업로드할 수 있습니다.');
+        }
+
+        const meta = getPastQuestionUploadMeta_();
+        if (!meta.lines || meta.lines === '-') {
+            return alert('먼저 기출문제를 뽑은 뒤 녹음해주세요.');
+        }
+
+        if (!studentName || studentName === '게스트' || !(typeof getStudentSessionToken_ === 'function' && getStudentSessionToken_())) {
+            if (typeof promptAndAuthenticate === 'function') await promptAndAuthenticate();
+            if (!studentName || studentName === '게스트' || !(typeof getStudentSessionToken_ === 'function' && getStudentSessionToken_())) {
+                return alert('학생 인증 후 업로드할 수 있습니다.');
+            }
+        }
+
+        if (typeof updateFilenameConstants === 'function') updateFilenameConstants();
+
+        if (typeof PAST_QUESTION_UPLOAD_URL === 'undefined' || PAST_QUESTION_UPLOAD_URL !== VOCAL_TRAINING_UPLOAD_URL) {
+            return alert('기출문제 업로드 주소 설정이 올바르지 않습니다. 학원에 문의해주세요.');
+        }
+
+        try {
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '업로드 중...';
+            }
+            if (status) status.textContent = '기출 녹음 업로드 요청을 보내는 중입니다.';
+            showLoading('기출 녹음 파일을 변환하는 중입니다...');
+
+            const mimeType = pastLastRecordedBlob.type || getBestAudioMimeType_() || 'audio/mp4';
+            const base64Data = await blobToBase64(pastLastRecordedBlob);
+            const isCustomPast = meta.sourceMode === 'custom' || meta.gender === 'custom';
+            const isDrivePast = meta.sourceMode === 'drive' || meta.gender === 'drive';
+            const roleText = isCustomPast ? '직접작성 대본' : (isDrivePast ? (meta.fileName || meta.role || '구글드라이브 대본') : (meta.role || '기출문제'));
+            const pastLabel = isCustomPast ? '[기출문제-직접작성]' : (isDrivePast ? '[기출문제-드라이브]' : '[기출문제]');
+            const sentenceText = `${pastLabel} ${roleText}\n${meta.lines}`;
+            const pastIdPrefix = isCustomPast ? 'PAST_CUSTOM_' : (isDrivePast ? 'PAST_DRIVE_' : 'PAST_');
+            const pastId = pastIdPrefix + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '_' + Math.random().toString(36).slice(2, 8);
+            const pastCategory = isCustomPast ? 'past_question_custom' : (isDrivePast ? 'past_question_drive' : 'past_question');
+            const pastUploadAction = isCustomPast ? '기출문제 직접작성 업로드' : (isDrivePast ? '기출문제 드라이브대본 업로드' : '기출문제 녹음 업로드');
+            const pastAiSource = isCustomPast ? '기출문제 직접작성' : (isDrivePast ? '기출문제 드라이브대본' : '기출문제');
+
+            showLoading('기출 녹음 파일 업로드 요청을 보내는 중입니다...');
+            const result = await uploadAudioToDriveAndLog(
+                pastId,
+                sentenceText,
+                base64Data,
+                mimeType,
+                pastUploadAction,
+                {
+                    mediaKind: mimeType.indexOf('video/') === 0 ? 'video' : 'audio',
+                    fileSize: pastLastRecordedBlob.size || 0,
+                    analysisText: '',
+                    originalSentence: sentenceText,
+                    localWhisperText: '',
+                    aiSource: pastAiSource,
+                    aiComment: '',
+                    contentCategory: pastCategory,
+                    recordCategory: pastCategory,
+                    category: pastCategory,
+                    pastQuestionScriptFileId: meta.fileId || '',
+                    pastQuestionScriptFileName: meta.fileName || meta.role || '',
+                    uploadUrl: PAST_QUESTION_UPLOAD_URL,
+                    uploadUrlType: 'same_as_vocal_training',
+                    studentSessionToken: typeof getStudentSessionToken_ === 'function' ? getStudentSessionToken_() : ''
+                }
+            );
+
+            hideLoading();
+            if (status) status.textContent = result && result.status === 'submitted'
+                ? '업로드 요청이 접수되었습니다. 잠시 후 기출 연습기록 달력에서 확인됩니다.'
+                : '업로드 완료. 기출 연습기록 달력에서 확인할 수 있습니다.';
+            if (btn) {
+                btn.textContent = '업로드 완료';
+                btn.disabled = true;
+            }
+
+            const now = new Date();
+            await loadStudentVocalPracticeLogsForMonth_(now.getFullYear(), now.getMonth(), true);
+            ensurePastPracticeCalendarUi586_();
+            const area = document.getElementById('pastPracticeCalendarArea');
+            if (area && area.style.display !== 'none') renderPastPracticeCalendar586_(now.getFullYear(), now.getMonth());
+            updatePracticeToggleButtonStates586_();
+
+            alert('기출 녹음 업로드 요청을 보냈습니다.');
+        } catch (err) {
+            hideLoading();
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = '📤 기출 녹음 업로드';
+            }
+            if (status) status.textContent = '업로드 실패: ' + (err && err.message ? err.message : err);
+            alert('기출 녹음 업로드 실패: ' + (err && err.message ? err.message : err));
+        }
+    };
+    try { uploadPastQuestionRecord = window.uploadPastQuestionRecord; } catch(e) {}
+
+    const originalCompleteTraining586_ = window.completeTraining;
+    if (typeof originalCompleteTraining586_ === 'function') {
+        window.completeTraining = async function() {
+            const result = await originalCompleteTraining586_.apply(this, arguments);
+            try {
+                const now = new Date();
+                await loadStudentVocalPracticeLogsForMonth_(now.getFullYear(), now.getMonth(), true);
+                if (typeof renderCalendar === 'function') renderCalendar(now.getFullYear(), now.getMonth());
+                updatePracticeToggleButtonStates586_();
+            } catch(e) {}
+            return result;
+        };
+        try { completeTraining = window.completeTraining; } catch(e) {}
+    }
+
+    function install586_() {
+        ensureVocalPracticeToggleButton586_();
+        ensurePastPracticeCalendarUi586_();
+        updatePracticeToggleButtonStates586_();
+
+        document.querySelectorAll('.tab').forEach(function(tab){
+            if (tab.dataset.practice586 === '1') return;
+            tab.dataset.practice586 = '1';
+            tab.addEventListener('click', function(){
+                setTimeout(function(){
+                    ensureVocalPracticeToggleButton586_();
+                    ensurePastPracticeCalendarUi586_();
+                    if (tab.dataset && tab.dataset.tab === 'tab4') {
+                        const now = new Date();
+                        loadStudentVocalPracticeLogsForMonth_(now.getFullYear(), now.getMonth(), false).then(function(){
+                            updatePracticeToggleButtonStates586_();
+                        });
+                    }
+                }, 80);
+            });
+        });
+
+        setTimeout(function(){
+            try {
+                if (typeof getStudentSessionToken_ === 'function' && getStudentSessionToken_()) {
+                    const now = new Date();
+                    loadStudentVocalPracticeLogsForMonth_(now.getFullYear(), now.getMonth(), false).then(function(){
+                        if (typeof renderCalendar === 'function') renderCalendar(now.getFullYear(), now.getMonth());
+                        if (document.getElementById('pastPracticeCalendarArea')?.style.display !== 'none') renderPastPracticeCalendar586_(now.getFullYear(), now.getMonth());
+                        updatePracticeToggleButtonStates586_();
+                    });
+                }
+            } catch(e) {}
+        }, 1500);
+    }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install586_);
+    else install586_();
+
+    console.log('[울림앱 패치 적용]', PATCH_VERSION);
 })();
 </script>
 
