@@ -5247,7 +5247,7 @@ window.onload = async function() {
    - 새 버전 발견 시 확인창 표시
    - 확인 시 캐시 우회 새로고침
    =========================== */
-const ULIM_APP_VERSION = "2026.06.12.591.01";
+const ULIM_APP_VERSION = "2026.06.13.592.01";
 const ULIM_UPDATE_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const ULIM_UPDATE_LAST_CHECK_KEY = "ulimUpdateLastCheckAt";
 let ulimUpdatePromptShown = false;
@@ -20687,6 +20687,656 @@ ${ruleSummary}`, 'success');
       }
     });
   });
+})();
+</script>
+
+<script id="ulim-auth-gate-auto-login-5-92">
+/* =========================================================
+   5.92 교직원 진입 권한 잠금 + 자동로그인 선택
+   - 교직원 로그인 화면 진입만으로 일반 탭 권한이 풀리지 않도록 차단
+   - 학생/교직원 로그인 화면에 자동 로그인 유지 체크박스 추가
+   - 체크 해제 시 세션 저장소만 사용하여 앱/브라우저 종료 후 자동 로그아웃
+   ========================================================= */
+(function(){
+  if (window.__ULIM_AUTH_GATE_AUTO_LOGIN_592__) return;
+  window.__ULIM_AUTH_GATE_AUTO_LOGIN_592__ = true;
+
+  var STUDENT_AUTO_KEY = 'ulimStudentAutoLogin';
+  var ADMIN_AUTO_KEY = 'ulimAdminAutoLogin';
+  var STUDENT_KEYS = ['studentSessionToken','studentUid','uid','studentNo','studentName','instructorName','studentMustChangePassword','phoneLast4','instructorFolderId'];
+  var ADMIN_KEYS = ['adminToken','adminInfo'];
+  var COMMON_MODE_KEY = 'ulimLastMode';
+
+  var prevGetItem = Storage.prototype.getItem;
+  var prevSetItem = Storage.prototype.setItem;
+  var prevRemoveItem = Storage.prototype.removeItem;
+
+  function safeGet(store, key){ try { return prevGetItem.call(store, key) || ''; } catch(e) { return ''; } }
+  function safeSet(store, key, value){ try { prevSetItem.call(store, key, String(value == null ? '' : value)); } catch(e) {} }
+  function safeRemove(store, key){ try { prevRemoveItem.call(store, key); } catch(e) {} }
+  function hasKey(list, key){ return list.indexOf(String(key || '')) !== -1; }
+  function isStudentKey(key){ return hasKey(STUDENT_KEYS, key); }
+  function isAdminKey(key){ return hasKey(ADMIN_KEYS, key); }
+  function isModeKey(key){ return String(key || '') === COMMON_MODE_KEY; }
+  function studentAutoOn(){ return safeGet(localStorage, STUDENT_AUTO_KEY) !== 'N'; }
+  function adminAutoOn(){ return safeGet(localStorage, ADMIN_AUTO_KEY) !== 'N'; }
+
+  function readAny(key){
+    var s = safeGet(sessionStorage, key);
+    if (s) return s;
+    return safeGet(localStorage, key);
+  }
+  function readStudent(key){
+    var s = safeGet(sessionStorage, key);
+    if (s) return s;
+    return studentAutoOn() ? safeGet(localStorage, key) : '';
+  }
+  function readAdmin(key){
+    var s = safeGet(sessionStorage, key);
+    if (s) return s;
+    return adminAutoOn() ? safeGet(localStorage, key) : '';
+  }
+  function readMode(){
+    return safeGet(sessionStorage, COMMON_MODE_KEY) || safeGet(localStorage, COMMON_MODE_KEY) || '';
+  }
+
+  // 기존 코드가 localStorage.getItem(...)으로 세션을 읽어도 자동로그인 해제 세션을 사용할 수 있게 보강합니다.
+  Storage.prototype.getItem = function(key){
+    if (this === localStorage) {
+      if (isStudentKey(key)) {
+        var sv = safeGet(sessionStorage, key);
+        if (sv) return sv;
+        if (!studentAutoOn()) return '';
+      }
+      if (isAdminKey(key)) {
+        var av = safeGet(sessionStorage, key);
+        if (av) return av;
+        if (!adminAutoOn()) return '';
+      }
+      if (isModeKey(key)) {
+        var mv = safeGet(sessionStorage, key);
+        if (mv) return mv;
+      }
+    }
+    return prevGetItem.call(this, key);
+  };
+
+  // 자동로그인 해제 상태에서 기존 코드가 localStorage에 저장하려 해도 sessionStorage로 우회합니다.
+  Storage.prototype.setItem = function(key, value){
+    if (this === localStorage) {
+      if (isStudentKey(key) && !studentAutoOn()) {
+        safeSet(sessionStorage, key, value);
+        safeRemove(localStorage, key);
+        return;
+      }
+      if (isAdminKey(key) && !adminAutoOn()) {
+        safeSet(sessionStorage, key, value);
+        safeRemove(localStorage, key);
+        return;
+      }
+      if (isModeKey(key)) {
+        var v = String(value == null ? '' : value);
+        if (v === 'student' && !studentAutoOn()) {
+          safeSet(sessionStorage, key, v);
+          safeRemove(localStorage, key);
+          return;
+        }
+        if (v === 'admin' && !adminAutoOn()) {
+          safeSet(sessionStorage, key, v);
+          safeRemove(localStorage, key);
+          return;
+        }
+      }
+    }
+    return prevSetItem.call(this, key, value);
+  };
+
+  function parseAdminInfo(raw){
+    try { return raw ? JSON.parse(raw) : null; } catch(e) { return null; }
+  }
+  function getAdminInfoAny(){ return parseAdminInfo(readAdmin('adminInfo')); }
+  function hasAdminSession(){
+    var info = getAdminInfoAny();
+    return !!(readAdmin('adminToken') && info && (info.id || info.name));
+  }
+  function hasStudentSession(){
+    var token = readStudent('studentSessionToken');
+    var name = readStudent('studentName');
+    return !!(token && name && name !== '게스트');
+  }
+  function adminLoginScreenOpen(){
+    var tab = document.getElementById('tabAdmin');
+    var loginBox = document.getElementById('adminLoginBox');
+    return !!(tab && tab.classList.contains('active') && loginBox && loginBox.style.display !== 'none' && !hasAdminSession());
+  }
+
+  function copyKeys(fromStore, toStore, keys){
+    keys.forEach(function(key){
+      var v = safeGet(fromStore, key);
+      if (v) safeSet(toStore, key, v);
+    });
+  }
+  function clearLocalStudentKeys(){ STUDENT_KEYS.forEach(function(k){ safeRemove(localStorage, k); }); }
+  function clearSessionStudentKeys(){ STUDENT_KEYS.forEach(function(k){ safeRemove(sessionStorage, k); }); }
+  function clearLocalAdminKeys(){ ADMIN_KEYS.forEach(function(k){ safeRemove(localStorage, k); }); }
+  function clearSessionAdminKeys(){ ADMIN_KEYS.forEach(function(k){ safeRemove(sessionStorage, k); }); }
+
+  function syncStudentStorageByPreference(){
+    if (studentAutoOn()) {
+      copyKeys(sessionStorage, localStorage, STUDENT_KEYS);
+      if (safeGet(sessionStorage, COMMON_MODE_KEY) === 'student') safeSet(localStorage, COMMON_MODE_KEY, 'student');
+    } else {
+      copyKeys(localStorage, sessionStorage, STUDENT_KEYS);
+      if (safeGet(localStorage, COMMON_MODE_KEY) === 'student') safeSet(sessionStorage, COMMON_MODE_KEY, 'student');
+      clearLocalStudentKeys();
+      if (safeGet(localStorage, COMMON_MODE_KEY) === 'student') safeRemove(localStorage, COMMON_MODE_KEY);
+    }
+  }
+  function syncAdminStorageByPreference(){
+    if (adminAutoOn()) {
+      copyKeys(sessionStorage, localStorage, ADMIN_KEYS);
+      if (safeGet(sessionStorage, COMMON_MODE_KEY) === 'admin') safeSet(localStorage, COMMON_MODE_KEY, 'admin');
+    } else {
+      copyKeys(localStorage, sessionStorage, ADMIN_KEYS);
+      if (safeGet(localStorage, COMMON_MODE_KEY) === 'admin') safeSet(sessionStorage, COMMON_MODE_KEY, 'admin');
+      clearLocalAdminKeys();
+      if (safeGet(localStorage, COMMON_MODE_KEY) === 'admin') safeRemove(localStorage, COMMON_MODE_KEY);
+    }
+  }
+  function enforceAutoLoginPolicy(){
+    if (!studentAutoOn()) clearLocalStudentKeys();
+    if (!adminAutoOn()) clearLocalAdminKeys();
+    var mode = safeGet(localStorage, COMMON_MODE_KEY);
+    if (mode === 'student' && !studentAutoOn()) safeRemove(localStorage, COMMON_MODE_KEY);
+    if (mode === 'admin' && !adminAutoOn()) safeRemove(localStorage, COMMON_MODE_KEY);
+  }
+
+  function injectAutoLoginCheckboxes(){
+    var studentPw = document.getElementById('phoneLast4Input');
+    if (studentPw && !document.getElementById('studentAutoLoginCheck')) {
+      var div = document.createElement('div');
+      div.style.margin = '-18px 0 22px';
+      div.innerHTML = '<label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:800; color:#374151; cursor:pointer;">' +
+        '<input type="checkbox" id="studentAutoLoginCheck" style="width:18px;height:18px;"> 자동 로그인 유지</label>' +
+        '<div style="font-size:11px; color:#777; line-height:1.4; margin-top:4px;">체크 해제 시 앱/브라우저 종료 후 로그인이 자동 해제됩니다.</div>';
+      var parent = studentPw.parentNode;
+      if (parent && parent.parentNode) parent.parentNode.insertBefore(div, parent.nextSibling);
+      var cb = document.getElementById('studentAutoLoginCheck');
+      if (cb) {
+        cb.checked = studentAutoOn();
+        cb.onchange = function(){
+          safeSet(localStorage, STUDENT_AUTO_KEY, cb.checked ? 'Y' : 'N');
+          syncStudentStorageByPreference();
+        };
+      }
+    }
+
+    var adminPw = document.getElementById('adminPwInput');
+    if (adminPw && !document.getElementById('adminAutoLoginCheck')) {
+      var div2 = document.createElement('div');
+      div2.style.margin = '-2px 0 12px';
+      div2.innerHTML = '<label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:800; color:#374151; cursor:pointer;">' +
+        '<input type="checkbox" id="adminAutoLoginCheck" style="width:18px;height:18px;"> 자동 로그인 유지</label>' +
+        '<div style="font-size:11px; color:#777; line-height:1.4; margin-top:4px;">체크 해제 시 앱/브라우저 종료 후 로그인이 자동 해제됩니다.</div>';
+      var parent2 = adminPw.parentNode;
+      if (parent2 && parent2.parentNode) parent2.parentNode.insertBefore(div2, parent2.nextSibling);
+      var cb2 = document.getElementById('adminAutoLoginCheck');
+      if (cb2) {
+        cb2.checked = adminAutoOn();
+        cb2.onchange = function(){
+          safeSet(localStorage, ADMIN_AUTO_KEY, cb2.checked ? 'Y' : 'N');
+          syncAdminStorageByPreference();
+        };
+      }
+    }
+  }
+
+  function saveStudentSession(data){
+    data = data || {};
+    var target = studentAutoOn() ? localStorage : sessionStorage;
+    var other = studentAutoOn() ? sessionStorage : localStorage;
+    var token = String(data.sessionToken || readStudent('studentSessionToken') || '').trim();
+    var uid = String(data.studentUid || data.uid || readStudent('studentUid') || '').trim();
+    var no = String(data.studentNo || data.attendanceNo || readStudent('studentNo') || '').trim();
+    var name = String(data.name || data.studentName || readStudent('studentName') || '').trim();
+    var instructor = String(data.instructor || readStudent('instructorName') || '').trim();
+
+    if (token) safeSet(target, 'studentSessionToken', token);
+    if (uid) { safeSet(target, 'studentUid', uid); safeSet(target, 'uid', uid); }
+    if (no) safeSet(target, 'studentNo', no);
+    if (name) safeSet(target, 'studentName', name);
+    if (instructor || data.instructor !== undefined) safeSet(target, 'instructorName', instructor);
+    safeSet(target, 'studentMustChangePassword', data.mustChangePassword ? 'Y' : 'N');
+    safeSet(target, COMMON_MODE_KEY, 'student');
+
+    STUDENT_KEYS.forEach(function(k){ safeRemove(other, k); });
+    if (safeGet(other, COMMON_MODE_KEY) === 'student') safeRemove(other, COMMON_MODE_KEY);
+
+    try { studentSessionToken = token; } catch(e) {}
+    try { window.studentUid = uid; } catch(e) {}
+    try { studentNo = no; } catch(e) {}
+    try { studentName = name; } catch(e) {}
+    try { instructorName = instructor; } catch(e) {}
+    try { studentMustChangePassword = !!data.mustChangePassword; } catch(e) {}
+    try { phoneLast4 = ''; } catch(e) {}
+    try { if (typeof updateFilenameConstants === 'function') updateFilenameConstants(); } catch(e) {}
+  }
+
+  function saveAdminSession(data){
+    data = data || {};
+    var target = adminAutoOn() ? localStorage : sessionStorage;
+    var other = adminAutoOn() ? sessionStorage : localStorage;
+    var token = String(data.adminToken || readAdmin('adminToken') || '').trim();
+    var info = data.admin || getAdminInfoAny() || null;
+
+    if (token) safeSet(target, 'adminToken', token);
+    if (info) safeSet(target, 'adminInfo', JSON.stringify(info));
+    safeSet(target, COMMON_MODE_KEY, 'admin');
+
+    ADMIN_KEYS.forEach(function(k){ safeRemove(other, k); });
+    if (safeGet(other, COMMON_MODE_KEY) === 'admin') safeRemove(other, COMMON_MODE_KEY);
+
+    try { adminToken = token; } catch(e) {}
+    try { adminInfo = info; } catch(e) {}
+    try { adminModeActive = !!(token && info); } catch(e) {}
+    if (token && info && document.body) document.body.classList.add('admin-mode');
+  }
+
+  function applyStudentGlobals(){
+    try { studentSessionToken = readStudent('studentSessionToken') || ''; } catch(e) {}
+    try { window.studentUid = readStudent('studentUid') || readStudent('uid') || ''; } catch(e) {}
+    try { studentNo = readStudent('studentNo') || ''; } catch(e) {}
+    try { studentName = readStudent('studentName') || ''; } catch(e) {}
+    try { instructorName = readStudent('instructorName') || ''; } catch(e) {}
+    try { studentMustChangePassword = readStudent('studentMustChangePassword') === 'Y'; } catch(e) {}
+  }
+
+  function applyAdminGlobals(){
+    var info = getAdminInfoAny();
+    try { adminToken = readAdmin('adminToken') || ''; } catch(e) {}
+    try { adminInfo = info; } catch(e) {}
+    try { adminModeActive = !!(readAdmin('adminToken') && info); } catch(e) {}
+    if (document.body) {
+      document.body.classList.toggle('admin-mode', !!(readAdmin('adminToken') && info));
+    }
+  }
+
+  function showWrapper(){
+    var overlay = document.getElementById('loginOverlay');
+    var wrapper = document.querySelector('.wrapper');
+    if (overlay) overlay.style.display = 'none';
+    if (wrapper) {
+      wrapper.style.display = 'flex';
+      wrapper.style.flexDirection = 'column';
+      wrapper.style.width = '95%';
+      wrapper.style.maxWidth = '1200px';
+      wrapper.style.margin = '0 auto';
+      wrapper.style.padding = '20px 0';
+      wrapper.style.visibility = 'visible';
+    }
+  }
+
+  function activateTab(tabId){
+    document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
+    document.querySelectorAll('.tab-content').forEach(function(c){ c.classList.remove('active'); });
+    var tab = document.querySelector('.tab[data-tab="' + tabId + '"]');
+    var content = document.getElementById(tabId);
+    if (tab) tab.classList.add('active');
+    if (content) content.classList.add('active');
+  }
+
+  function setAdminTabVisibleByAuth(){
+    var tab = document.querySelector('.tab[data-tab="tabAdmin"]');
+    var show = hasAdminSession();
+    if (document.body) document.body.classList.toggle('admin-mode', show);
+    if (tab) {
+      tab.classList.add('admin-only-tab');
+      tab.style.display = show ? '' : 'none';
+    }
+  }
+
+  window.setAdminSecureSession_ = function(data){ saveAdminSession(data); };
+  try { setAdminSecureSession_ = window.setAdminSecureSession_; } catch(e) {}
+
+  var originalSetAdminTabVisibility = window.setAdminTabVisibility;
+  window.setAdminTabVisibility = function(){
+    if (hasAdminSession()) applyAdminGlobals();
+    setAdminTabVisibleByAuth();
+    if (hasAdminSession() && typeof window.adminEnableAllTabsForAdminMode === 'function') {
+      window.adminEnableAllTabsForAdminMode();
+    }
+  };
+  try { setAdminTabVisibility = window.setAdminTabVisibility; } catch(e) {}
+
+  var originalAdminEnableAllTabs = window.adminEnableAllTabsForAdminMode;
+  window.adminEnableAllTabsForAdminMode = function(){
+    if (!hasAdminSession()) {
+      setAdminTabVisibleByAuth();
+      installSecureTabGate();
+      return false;
+    }
+    applyAdminGlobals();
+    if (typeof originalAdminEnableAllTabs === 'function') {
+      return originalAdminEnableAllTabs.apply(this, arguments);
+    }
+    return true;
+  };
+  try { adminEnableAllTabsForAdminMode = window.adminEnableAllTabsForAdminMode; } catch(e) {}
+
+  window.openAdminPage = function(){
+    injectAutoLoginCheckboxes();
+    showWrapper();
+
+    var loginBox = document.getElementById('adminLoginBox');
+    var dashboard = document.getElementById('adminDashboard');
+
+    if (hasAdminSession()) {
+      applyAdminGlobals();
+      setAdminTabVisibleByAuth();
+      if (typeof window.adminEnableAllTabsForAdminMode === 'function') window.adminEnableAllTabsForAdminMode();
+      activateTab('tabAdmin');
+      if (loginBox) loginBox.style.display = 'none';
+      if (dashboard) dashboard.style.display = 'none';
+      if (typeof window.adminLoadInitialData === 'function') window.adminLoadInitialData();
+    } else {
+      try { adminToken = ''; adminInfo = null; adminModeActive = false; } catch(e) {}
+      if (document.body) document.body.classList.remove('admin-mode','teacher-mode','full-admin-mode','admin-booting');
+      setAdminTabVisibleByAuth();
+      activateTab('tabAdmin');
+      if (loginBox) loginBox.style.display = 'block';
+      if (dashboard) dashboard.style.display = 'none';
+      var adminTab = document.querySelector('.tab[data-tab="tabAdmin"]');
+      if (adminTab) adminTab.style.display = 'none';
+    }
+    installSecureTabGate();
+    try { if (typeof renderStudentAccountBar_ === 'function') renderStudentAccountBar_(); } catch(e) {}
+    return false;
+  };
+  try { openAdminPage = window.openAdminPage; } catch(e) {}
+
+  window.getStudentSessionToken_ = function(){
+    var token = readStudent('studentSessionToken') || '';
+    try { studentSessionToken = token; } catch(e) {}
+    return token;
+  };
+  try { getStudentSessionToken_ = window.getStudentSessionToken_; } catch(e) {}
+
+  window.ulimIsStudentLoggedIn_ = function(){ return hasStudentSession(); };
+  try { ulimIsStudentLoggedIn_ = window.ulimIsStudentLoggedIn_; } catch(e) {}
+
+  window.authenticate = async function(name, password){
+    name = String(name || '').trim();
+    password = String(password || '').trim();
+    if (!name || !password) return alert('학생 이름과 비밀번호를 입력해주세요.');
+    try { if (typeof showLoading === 'function') showLoading('로그인 정보 확인 중...'); } catch(e) {}
+    try {
+      var q = new URLSearchParams();
+      q.set('action','secureStudentLogin');
+      q.set('name', name);
+      q.set('password', password);
+      q.set('_', Date.now());
+      var res = await fetch(GET_API_URL + '?' + q.toString(), { method:'GET', cache:'no-store' });
+      var text = await res.text();
+      var data = null;
+      try { data = JSON.parse(text); } catch(parseErr) { throw new Error('로그인 응답을 확인하지 못했습니다.'); }
+      if (!res.ok) throw new Error((data && data.message) || '로그인 연결이 지연되고 있습니다.');
+      if (!data || data.status !== 'success' || !data.sessionToken) throw new Error((data && data.message) || '학생 이름 또는 비밀번호가 일치하지 않습니다.');
+      saveStudentSession(data);
+      try { if (typeof hideLoading === 'function') hideLoading(); } catch(e) {}
+      alert((readStudent('studentName') || name) + '님 로그인되었습니다.');
+      if ((data.mustChangePassword || readStudent('studentMustChangePassword') === 'Y') && typeof changeStudentPasswordByPrompt === 'function') {
+        setTimeout(function(){ changeStudentPasswordByPrompt(true, password); }, 250);
+      }
+      applyStudentGlobals();
+      if (typeof showMainContent === 'function') showMainContent(true);
+      installSecureTabGate();
+      try { if (typeof renderStudentAccountBar_ === 'function') renderStudentAccountBar_(); } catch(e) {}
+    } catch(e) {
+      try { if (typeof hideLoading === 'function') hideLoading(); } catch(ignore) {}
+      alert(e && e.message ? e.message : '로그인 처리 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    }
+  };
+  try { authenticate = window.authenticate; } catch(e) {}
+
+  window.authenticateStudentFromInputs = function(){
+    var nameEl = document.getElementById('studentNameInput');
+    var pwEl = document.getElementById('phoneLast4Input');
+    return window.authenticate(nameEl ? nameEl.value.trim() : '', pwEl ? pwEl.value : '');
+  };
+  try { authenticateStudentFromInputs = window.authenticateStudentFromInputs; } catch(e) {}
+
+  window.adminLogin = async function(){
+    var idEl = document.getElementById('adminIdInput');
+    var pwEl = document.getElementById('adminPwInput');
+    var id = idEl ? idEl.value.trim() : '';
+    var pw = pwEl ? pwEl.value.trim() : '';
+    if (!id || !pw) return alert('ID와 비밀번호를 입력해주세요.');
+
+    try {
+      clearLocalAdminKeys();
+      clearSessionAdminKeys();
+      try { adminToken = ''; adminInfo = null; adminModeActive = false; } catch(e) {}
+      if (document.body) document.body.classList.remove('admin-mode','teacher-mode','full-admin-mode');
+      if (typeof clearAdminSensitiveScreen_ === 'function') clearAdminSensitiveScreen_('login-start');
+
+      if (typeof showLoading === 'function') showLoading('로그인 정보 확인 중...');
+      var data = await adminApi('adminLogin', { adminId: id, adminPw: pw, noCache: 1 });
+      if (typeof hideLoading === 'function') hideLoading();
+
+      saveAdminSession(data);
+      applyAdminGlobals();
+      setAdminTabVisibleByAuth();
+      if (typeof window.adminEnableAllTabsForAdminMode === 'function') window.adminEnableAllTabsForAdminMode();
+      if (typeof applyAdminPermissions === 'function') applyAdminPermissions();
+
+      var changedOk = typeof promptAdminPasswordChangeIfNeeded_ === 'function' ? await promptAdminPasswordChangeIfNeeded_(pw) : true;
+      if (!changedOk && adminInfo && adminInfo.mustChangePassword) alert('비밀번호 변경 전에는 일부 기능 사용이 제한될 수 있습니다.');
+
+      if (typeof window.adminLoadInitialData === 'function') await window.adminLoadInitialData();
+      try { if (window.registerRoomPushTokenAfterAdminLogin) window.registerRoomPushTokenAfterAdminLogin(); } catch(pushErr) { console.warn(pushErr); }
+      installSecureTabGate();
+    } catch(e) {
+      if (typeof hideLoading === 'function') hideLoading();
+      var loginBox = document.getElementById('adminLoginBox');
+      var dashboard = document.getElementById('adminDashboard');
+      if (loginBox) loginBox.style.display = 'block';
+      if (dashboard) dashboard.style.display = 'none';
+      alert(e && e.message ? e.message : '로그인 처리 중 문제가 발생했습니다.');
+    }
+  };
+  try { adminLogin = window.adminLogin; } catch(e) {}
+
+  var originalAdminLoadInitialData = window.adminLoadInitialData;
+  if (typeof originalAdminLoadInitialData === 'function') {
+    window.adminLoadInitialData = async function(){
+      if (hasAdminSession()) applyAdminGlobals();
+      var result = await originalAdminLoadInitialData.apply(this, arguments);
+      if (!adminAutoOn()) syncAdminStorageByPreference();
+      installSecureTabGate();
+      return result;
+    };
+    try { adminLoadInitialData = window.adminLoadInitialData; } catch(e) {}
+  }
+
+  var originalVerifyStudent = window.ulimVerifyStudentInBackground567_;
+  if (typeof originalVerifyStudent === 'function') {
+    window.ulimVerifyStudentInBackground567_ = async function(){
+      var result = await originalVerifyStudent.apply(this, arguments);
+      if (!studentAutoOn()) syncStudentStorageByPreference();
+      return result;
+    };
+  }
+
+  window.checkStudentName = async function(){
+    injectAutoLoginCheckboxes();
+    enforceAutoLoginPolicy();
+
+    if (readMode() === 'admin' && hasAdminSession()) {
+      window.openAdminPage();
+      return;
+    }
+
+    if (hasStudentSession()) {
+      applyStudentGlobals();
+      try { if (typeof showMainContent === 'function') showMainContent(true); } catch(e) {}
+      try { if (typeof renderStudentAccountBar_ === 'function') renderStudentAccountBar_(); } catch(e) {}
+      installSecureTabGate();
+      return;
+    }
+
+    var overlay = document.getElementById('loginOverlay');
+    var wrapper = document.querySelector('.wrapper');
+    if (overlay) overlay.style.display = 'flex';
+    if (wrapper) wrapper.style.display = 'none';
+  };
+  try { checkStudentName = window.checkStudentName; } catch(e) {}
+
+  window.studentSecureLogout = function(){
+    if (!confirm('학생 로그아웃할까요?')) return;
+    try { sessionStorage.setItem('ULIM_EXPLICIT_LOGOUT_IN_PROGRESS', 'Y'); } catch(e) {}
+    var token = readStudent('studentSessionToken');
+    try {
+      if (typeof GET_API_URL !== 'undefined' && GET_API_URL && token) {
+        var q = new URLSearchParams();
+        q.set('action','logoutStudentSession');
+        q.set('studentSessionToken', token);
+        q.set('_', Date.now());
+        fetch(GET_API_URL + '?' + q.toString(), { method:'GET', cache:'no-store' }).catch(function(){});
+      }
+    } catch(e) {}
+    clearLocalStudentKeys();
+    clearSessionStudentKeys();
+    if (safeGet(localStorage, COMMON_MODE_KEY) === 'student') safeRemove(localStorage, COMMON_MODE_KEY);
+    if (safeGet(sessionStorage, COMMON_MODE_KEY) === 'student') safeRemove(sessionStorage, COMMON_MODE_KEY);
+    try { studentSessionToken = ''; window.studentUid = ''; studentNo = ''; studentName = ''; instructorName = ''; studentMustChangePassword = false; } catch(e) {}
+    try { if (typeof renderStudentAccountBar_ === 'function') renderStudentAccountBar_(); } catch(e) {}
+    try { if (typeof showStudentLoginPanel === 'function') showStudentLoginPanel(); else window.checkStudentName(); } catch(e) { window.checkStudentName(); }
+    setTimeout(function(){ try { sessionStorage.removeItem('ULIM_EXPLICIT_LOGOUT_IN_PROGRESS'); } catch(e) {} }, 1200);
+  };
+  try { studentSecureLogout = window.studentSecureLogout; } catch(e) {}
+
+  window.adminLogout = function(){
+    var token = readAdmin('adminToken');
+    try {
+      if (typeof GET_API_URL !== 'undefined' && GET_API_URL && token) {
+        var q = new URLSearchParams();
+        q.set('action','logoutAdminSession');
+        q.set('adminToken', token);
+        q.set('_', Date.now());
+        fetch(GET_API_URL + '?' + q.toString(), { method:'GET', cache:'no-store' }).catch(function(){});
+      }
+    } catch(e) {}
+    clearLocalAdminKeys();
+    clearSessionAdminKeys();
+    if (safeGet(localStorage, COMMON_MODE_KEY) === 'admin') safeRemove(localStorage, COMMON_MODE_KEY);
+    if (safeGet(sessionStorage, COMMON_MODE_KEY) === 'admin') safeRemove(sessionStorage, COMMON_MODE_KEY);
+    try { adminToken = ''; adminInfo = null; adminModeActive = false; } catch(e) {}
+    if (document.body) document.body.classList.remove('admin-mode','teacher-mode','full-admin-mode','admin-booting');
+    var loginBox = document.getElementById('adminLoginBox');
+    var dashboard = document.getElementById('adminDashboard');
+    if (loginBox) loginBox.style.display = 'block';
+    if (dashboard) dashboard.style.display = 'none';
+    setAdminTabVisibleByAuth();
+    installSecureTabGate();
+  };
+  try { adminLogout = window.adminLogout; } catch(e) {}
+
+  function secureActivateTab(tabId, save){
+    if (!tabId) tabId = 'tab1';
+    var tab = document.querySelector('.tab[data-tab="' + tabId + '"]');
+    var content = document.getElementById(tabId);
+    if (!tab || !content) return false;
+    document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
+    document.querySelectorAll('.tab-content').forEach(function(c){ c.classList.remove('active'); });
+    tab.classList.add('active');
+    content.classList.add('active');
+    if (save !== false) {
+      var modeStore = hasAdminSession() || hasStudentSession() ? localStorage : sessionStorage;
+      try { safeSet(modeStore, 'ulimActiveTabId', tabId); } catch(e) {}
+    }
+    return true;
+  }
+
+  function canAccessTab(tabId){
+    if (!tabId) return false;
+    if (tabId === 'tabAdmin') return hasAdminSession();
+    if (hasAdminSession()) return true;
+    if (adminLoginScreenOpen()) return false;
+    if (hasStudentSession()) return true;
+    return tabId === 'tab1';
+  }
+
+  function installSecureTabGate(){
+    document.querySelectorAll('.tab[data-tab]').forEach(function(tab){
+      if (tab.dataset.authGate592 === '1') return;
+      tab.dataset.authGate592 = '1';
+      tab.addEventListener('click', function(ev){
+        var tabId = tab.dataset.tab || 'tab1';
+        if (tabId === 'tabAdmin') {
+          if (!hasAdminSession()) {
+            if (ev) { ev.preventDefault(); ev.stopImmediatePropagation(); }
+            window.openAdminPage();
+            return false;
+          }
+          if (ev) { ev.preventDefault(); ev.stopImmediatePropagation(); }
+          secureActivateTab('tabAdmin', true);
+          return false;
+        }
+        if (!canAccessTab(tabId)) {
+          if (ev) { ev.preventDefault(); ev.stopImmediatePropagation(); }
+          alert(adminLoginScreenOpen() ? '교직원 로그인 후 이용해주세요.' : '학생 로그인 후 이용 가능한 기능입니다.');
+          return false;
+        }
+      }, true);
+    });
+  }
+
+  document.addEventListener('click', function(ev){
+    var node = ev.target;
+    if (!node || !node.closest) return;
+    var tab = node.closest('.tab[data-tab]');
+    if (!tab) return;
+    var tabId = tab.dataset.tab || 'tab1';
+    if (tabId === 'tabAdmin' && !hasAdminSession()) {
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
+      window.openAdminPage();
+      return false;
+    }
+    if (!canAccessTab(tabId)) {
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
+      alert(adminLoginScreenOpen() ? '교직원 로그인 후 이용해주세요.' : '학생 로그인 후 이용 가능한 기능입니다.');
+      return false;
+    }
+  }, true);
+
+  var oldUlimActivate566 = window.ulimActivateTab566_;
+  window.ulimActivateTab566_ = function(tabId, save){
+    if (!canAccessTab(tabId)) {
+      if (tabId === 'tabAdmin') window.openAdminPage();
+      return false;
+    }
+    return secureActivateTab(tabId, save);
+  };
+  window.ulimActivateTab565_ = window.ulimActivateTab566_;
+
+  function boot592(){
+    injectAutoLoginCheckboxes();
+    enforceAutoLoginPolicy();
+    if (hasStudentSession()) applyStudentGlobals();
+    if (hasAdminSession()) applyAdminGlobals();
+    setAdminTabVisibleByAuth();
+    installSecureTabGate();
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot592);
+  else boot592();
+  window.addEventListener('pageshow', function(){ setTimeout(boot592, 0); });
+  setTimeout(boot592, 300);
+  setTimeout(boot592, 1200);
+
+  console.log('[ULIM 5.92] 교직원 권한 잠금/자동로그인 선택 패치 적용 완료');
 })();
 </script>
 
