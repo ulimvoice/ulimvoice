@@ -20857,7 +20857,7 @@ ${ruleSummary}`, 'success');
       var div = document.createElement('div');
       div.style.margin = '-18px 0 22px';
       div.innerHTML = '<label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:800; color:#374151; cursor:pointer;">' +
-        '<input type="checkbox" id="studentAutoLoginCheck" style="width:18px;height:18px;"> 자동 로그인 유지</label>' +
+        '<input type="checkbox" id="studentAutoLoginCheck" style="width:18px;height:18px;"> 자동 로그인</label>' +
         '<div style="font-size:11px; color:#777; line-height:1.4; margin-top:4px;">체크 해제 시 앱/브라우저 종료 후 로그인이 자동 해제됩니다.</div>';
       var parent = studentPw.parentNode;
       if (parent && parent.parentNode) parent.parentNode.insertBefore(div, parent.nextSibling);
@@ -20876,7 +20876,7 @@ ${ruleSummary}`, 'success');
       var div2 = document.createElement('div');
       div2.style.margin = '-2px 0 12px';
       div2.innerHTML = '<label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:800; color:#374151; cursor:pointer;">' +
-        '<input type="checkbox" id="adminAutoLoginCheck" style="width:18px;height:18px;"> 자동 로그인 유지</label>' +
+        '<input type="checkbox" id="adminAutoLoginCheck" style="width:18px;height:18px;"> 자동 로그인</label>' +
         '<div style="font-size:11px; color:#777; line-height:1.4; margin-top:4px;">체크 해제 시 앱/브라우저 종료 후 로그인이 자동 해제됩니다.</div>';
       var parent2 = adminPw.parentNode;
       if (parent2 && parent2.parentNode) parent2.parentNode.insertBefore(div2, parent2.nextSibling);
@@ -21284,7 +21284,7 @@ ${ruleSummary}`, 'success');
         }
         if (!canAccessTab(tabId)) {
           if (ev) { ev.preventDefault(); ev.stopImmediatePropagation(); }
-          alert(adminLoginScreenOpen() ? '교직원 로그인 후 이용해주세요.' : '학생 로그인 후 이용 가능한 기능입니다.');
+          alert(adminLoginScreenOpen() ? '로그인 후 이용해주세요.' : '로그인 후 이용 가능한 기능입니다.');
           return false;
         }
       }, true);
