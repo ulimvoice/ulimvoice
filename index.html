@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- 6.02 동명이인 일일평가 학생번호/반/강사 정확 매칭 + 6.01 기능 유지 -->
 <!-- 6.01 강사별 독립평가 + 학생 다중 강사평가 + 평가표 중복 제거 + 문장ID/Drive 안내문구 제거 -->
 <!-- 6.00 일일평가에 로컬 출석상태 즉시 반영 + 5.99 기능 유지 -->
 <!-- 5.99 강사 출석체크 교직원 세션 인식 수정 + 5.98 기능 유지 -->
@@ -7,9 +8,9 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>울림 성우·스피치·연기학원 통합 연습 프로그램 6.01</title>
+<title>울림 성우·스피치·연기학원 통합 연습 프로그램 6.02</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script type="text/javascript" nonce="ba2411dadd4341349b65b550e65" src="//local.adguard.org?ts=1782024212488&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_0000000010bc7207a6d21c386c86996c%26fn%3Dindex_6_01_%25EA%25B0%2595%25EC%2582%25AC%25EB%25B3%2584%25EB%258F%2585%25EB%25A6%25BD%25ED%258F%2589%25EA%25B0%2580_%25EC%25A4%2591%25EB%25B3%25B5%25EC%25A0%259C%25EA%25B1%25B0_%25EB%25A9%2594%25ED%2583%2580%25EB%25AC%25B8%25EA%25B5%25AC%25EC%2582%25AD%25EC%25A0%259C_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D495006%26p%3Dfs%26cid%3D1%26sig%3Dc484d50f090c2dba839276639a6d0440277fe5d7723eafedb9a50606fbc4e9fb%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
+<script type="text/javascript" nonce="ba2411dadd4341349b65b550e65" src="//local.adguard.org?ts=1782025581012&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000bf9472079d7a72a75cedef4d%26fn%3Dindex_6_02_%25EB%258F%2599%25EB%25AA%2585%25EC%259D%25B4%25EC%259D%25B8_%25EC%259D%25BC%25EC%259D%25BC%25ED%258F%2589%25EA%25B0%2580_%25ED%2595%2599%25EC%2583%259D%25EB%25B2%2588%25ED%2598%25B8%25EC%25A0%2595%25ED%2599%2595%25EB%25A7%25A4%25EC%25B9%25AD_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D495007%26p%3Dfs%26cid%3D1%26sig%3D10e930fcb6f72833057885c11c0f49d6e96c801059104a182112d62915ef6446%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
 <link rel="dns-prefetch" href="//script.google.com">
 <link rel="dns-prefetch" href="//script.googleusercontent.com">
 
@@ -6287,13 +6288,15 @@ function adminStudentMatchesStatusFilter(student, filterValue = '') {
 }
 
 function adminFindStudentByNoName_(student) {
-    const no = String(student?.studentNo || '').trim();
+    const no = String(student?.studentNo || student?.attendanceNo || '').trim();
     const nameKey = adminNormalizeKoreanName(student?.name || student?.studentName || '');
-    return (adminStudents || []).find(s => {
-        const sNo = String(s.studentNo || '').trim();
-        const sNameKey = adminNormalizeKoreanName(s.name || s.studentName || '');
-        return (no && sNo && no === sNo) || (!!nameKey && nameKey === sNameKey);
-    }) || null;
+    const list = adminStudents || [];
+    if (no) {
+        return list.find(s => String(s.studentNo || s.attendanceNo || '').trim() === no) || null;
+    }
+    if (!nameKey) return null;
+    const matches = list.filter(s => adminNormalizeKoreanName(s.name || s.studentName || '') === nameKey);
+    return matches.length === 1 ? matches[0] : null;
 }
 
 function adminMergeEnrollmentStatusToRows_(rows) {
@@ -7874,43 +7877,59 @@ function adminBuildDailyRowsFromStudents() {
 
 
 function adminDailyEvalExactKey(row) {
+    const no = String((row && (row.studentNo || row.attendanceNo)) || '').trim();
+    if (no) return 'NO|' + no;
     return [
-        normalizeForClientMatch(row.className || ''),
-        normalizeForClientMatch(row.studentName || row.name || '')
+        'CLASSNAME',
+        normalizeForClientMatch((row && row.className) || ''),
+        normalizeForClientMatch((row && (row.studentName || row.name)) || '')
     ].join('|');
 }
 
 function adminDailyEvalNameKey(row) {
-    return normalizeForClientMatch(row.studentName || row.name || '');
+    return normalizeForClientMatch((row && (row.studentName || row.name)) || '');
+}
+
+function adminBuildUniqueDailyNameMap602_(rows) {
+    const lists = {};
+    (rows || []).forEach(row => {
+        const key = adminDailyEvalNameKey(row);
+        if (!key) return;
+        if (!lists[key]) lists[key] = [];
+        lists[key].push(row);
+    });
+    const unique = {};
+    Object.keys(lists).forEach(key => {
+        if (lists[key].length === 1) unique[key] = lists[key][0];
+    });
+    return unique;
 }
 
 async function adminMergeSavedDailyEvaluations(date, className, keyword = '') {
     if (!adminToken || !adminDailyEvalRows.length) return;
 
     try {
-        const data = await adminApi('adminGetDailyEvaluations', {
-            adminToken,
-            date,
-            className,
-            keyword
-        });
-
+        const data = await adminApi('adminGetDailyEvaluations', { adminToken, date, className, keyword });
         const savedRows = data.rows || [];
         if (!savedRows.length) return;
 
         const exactMap = {};
-        const nameMap = {};
-
-        savedRows.forEach(row => {
-            exactMap[adminDailyEvalExactKey(row)] = row;
-            nameMap[adminDailyEvalNameKey(row)] = row;
+        savedRows.forEach(row => { exactMap[adminDailyEvalExactKey(row)] = row; });
+        const uniqueSavedByName = adminBuildUniqueDailyNameMap602_(savedRows);
+        const currentNameCounts = {};
+        (adminDailyEvalRows || []).forEach(row => {
+            const key = adminDailyEvalNameKey(row);
+            currentNameCounts[key] = (currentNameCounts[key] || 0) + 1;
         });
 
         adminDailyEvalRows = adminDailyEvalRows.map(row => {
-            const saved = exactMap[adminDailyEvalExactKey(row)] || nameMap[adminDailyEvalNameKey(row)];
+            const no = String(row.studentNo || row.attendanceNo || '').trim();
+            const nameKey = adminDailyEvalNameKey(row);
+            const saved = exactMap[adminDailyEvalExactKey(row)] || (!no && currentNameCounts[nameKey] === 1 ? uniqueSavedByName[nameKey] : null);
             if (!saved || !saved.evaluation) return row;
 
             return Object.assign({}, row, {
+                studentNo: row.studentNo || saved.studentNo || '',
                 evaluation: saved.evaluation,
                 savedAt: saved.savedAt || '',
                 savedBy: saved.adminName || saved.adminId || '',
@@ -8079,6 +8098,7 @@ async function adminSaveDailyEvaluations(sendSms = false) {
             className: r.className || '',
             studentName: r.studentName || r.name || '',
             name: r.studentName || r.name || '',
+            studentNo: r.studentNo || r.attendanceNo || '',
             instructor: r.instructor || '',
             studentPhone: r.studentPhone || '',
             parentPhone: r.parentPhone || '',
@@ -8098,8 +8118,13 @@ async function adminSaveDailyEvaluations(sendSms = false) {
         const keyword = document.getElementById('adminDailyEvalFilter')?.value.trim() || '';
         rows.forEach(saved => {
             const targetKey = adminDailyEvalExactKey(saved);
+            const savedNo = String(saved.studentNo || saved.attendanceNo || '').trim();
+            const savedNameKey = adminDailyEvalNameKey(saved);
+            const sameNameCount = (adminDailyEvalRows || []).filter(r => adminDailyEvalNameKey(r) === savedNameKey).length;
             adminDailyEvalRows = adminDailyEvalRows.map(row => {
-                if (adminDailyEvalExactKey(row) === targetKey || adminDailyEvalNameKey(row) === adminDailyEvalNameKey(saved)) {
+                const sameExact = adminDailyEvalExactKey(row) === targetKey;
+                const sameUniqueName = !savedNo && sameNameCount === 1 && adminDailyEvalNameKey(row) === savedNameKey;
+                if (sameExact || sameUniqueName) {
                     return Object.assign({}, row, { evaluation: saved.evaluation, lessonContent: saved.lessonContent || '', lessonAttitude: saved.lessonAttitude || '', teacherComment: saved.teacherComment || '', videoLink: saved.videoLink || row.videoLink || '', attendanceStatus: saved.attendanceStatus || row.attendanceStatus || '', specialStatus: saved.specialStatus || row.specialStatus || '', savedAt: '방금 저장', savedBy: (adminInfo && (adminInfo.name || adminInfo.id)) || '' });
                 }
                 return row;
@@ -19218,20 +19243,22 @@ ${ruleSummary}`, 'success');
                 date: r.date || draft.date || getDailyDate_(),
                 className: r.className || draft.className || getDailyClass_(),
                 studentName: r.studentName || r.name || '',
-                name: r.name || r.studentName || ''
+                name: r.name || r.studentName || '',
+                studentNo: r.studentNo || r.attendanceNo || ''
             }));
         } else if (rows.length) {
             const exactMap = {};
-            const nameMap = {};
             rows.forEach(r => {
                 const exactKey = typeof adminDailyEvalExactKey === 'function'
                     ? adminDailyEvalExactKey(r)
                     : [cleanClass_(r.className), r.studentName || r.name].join('|');
-                const nameKey = typeof adminDailyEvalNameKey === 'function'
-                    ? adminDailyEvalNameKey(r)
-                    : String(r.studentName || r.name || '').trim();
                 exactMap[exactKey] = r;
-                nameMap[nameKey] = r;
+            });
+            const uniqueDraftByName = typeof adminBuildUniqueDailyNameMap602_ === 'function' ? adminBuildUniqueDailyNameMap602_(rows) : {};
+            const currentNameCounts = {};
+            (adminDailyEvalRows || []).forEach(r => {
+                const k = typeof adminDailyEvalNameKey === 'function' ? adminDailyEvalNameKey(r) : String(r.studentName || r.name || '').trim();
+                currentNameCounts[k] = (currentNameCounts[k] || 0) + 1;
             });
 
             adminDailyEvalRows = (adminDailyEvalRows || []).map(row => {
@@ -19241,7 +19268,8 @@ ${ruleSummary}`, 'success');
                 const nameKey = typeof adminDailyEvalNameKey === 'function'
                     ? adminDailyEvalNameKey(row)
                     : String(row.studentName || row.name || '').trim();
-                const saved = exactMap[exactKey] || nameMap[nameKey];
+                const no = String(row.studentNo || row.attendanceNo || '').trim();
+                const saved = exactMap[exactKey] || (!no && currentNameCounts[nameKey] === 1 ? uniqueDraftByName[nameKey] : null);
                 return saved ? Object.assign({}, row, saved, {
                     studentName: row.studentName || saved.studentName || saved.name,
                     name: row.name || saved.name || saved.studentName,
@@ -19496,6 +19524,7 @@ ${ruleSummary}`, 'success');
                 className: r.className || '',
                 studentName: r.studentName || r.name || '',
                 name: r.studentName || r.name || '',
+                studentNo: r.studentNo || r.attendanceNo || '',
                 instructor: r.instructor || '',
                 studentPhone: r.studentPhone || '',
                 parentPhone: r.parentPhone || '',
@@ -19525,10 +19554,13 @@ ${ruleSummary}`, 'success');
 
             rows.forEach(saved => {
                 const targetKey = typeof adminDailyEvalExactKey === 'function' ? adminDailyEvalExactKey(saved) : '';
+                const savedNo = String(saved.studentNo || saved.attendanceNo || '').trim();
+                const savedNameKey = typeof adminDailyEvalNameKey === 'function' ? adminDailyEvalNameKey(saved) : '';
+                const sameNameCount = (adminDailyEvalRows || []).filter(r => typeof adminDailyEvalNameKey === 'function' && adminDailyEvalNameKey(r) === savedNameKey).length;
                 adminDailyEvalRows = (adminDailyEvalRows || []).map(row => {
                     const sameExact = targetKey && typeof adminDailyEvalExactKey === 'function' && adminDailyEvalExactKey(row) === targetKey;
-                    const sameName = typeof adminDailyEvalNameKey === 'function' && adminDailyEvalNameKey(row) === adminDailyEvalNameKey(saved);
-                    if (sameExact || sameName) {
+                    const sameUniqueName = !savedNo && sameNameCount === 1 && typeof adminDailyEvalNameKey === 'function' && adminDailyEvalNameKey(row) === savedNameKey;
+                    if (sameExact || sameUniqueName) {
                         return Object.assign({}, row, {
                             evaluation: saved.evaluation,
                             lessonContent: saved.lessonContent || '',
