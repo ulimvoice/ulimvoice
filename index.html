@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- 6.01 강사별 독립평가 + 학생 다중 강사평가 + 평가표 중복 제거 + 문장ID/Drive 안내문구 제거 -->
 <!-- 6.00 일일평가에 로컬 출석상태 즉시 반영 + 5.99 기능 유지 -->
 <!-- 5.99 강사 출석체크 교직원 세션 인식 수정 + 5.98 기능 유지 -->
 <!-- 5.98 기출문제 대본 메타문구 제거 + AI 안내문구 제거 + 강사평가 학생 공개 유지 -->
@@ -6,9 +7,9 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>울림 성우·스피치·연기학원 통합 연습 프로그램 6.00</title>
+<title>울림 성우·스피치·연기학원 통합 연습 프로그램 6.01</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script type="text/javascript" nonce="ba2411dadd4341349b65b550e65" src="//local.adguard.org?ts=1782023819687&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000ca2c7206a097bc721196adc9%26fn%3Dindex_6_00_%25EC%259D%25BC%25EC%259D%25BC%25ED%258F%2589%25EA%25B0%2580_%25EB%25A1%259C%25EC%25BB%25AC%25EC%25B6%259C%25EC%2584%259D%25EC%2583%2581%25ED%2583%259C%25EC%25A6%2589%25EC%258B%259C%25EB%25B0%2598%25EC%2598%2581_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D495006%26p%3Dfs%26cid%3D1%26sig%3D6c3722faf7f175920538f242bd00e9490b15b8b484bb66691aa8fb7811d638fc%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
+<script type="text/javascript" nonce="ba2411dadd4341349b65b550e65" src="//local.adguard.org?ts=1782024212488&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_0000000010bc7207a6d21c386c86996c%26fn%3Dindex_6_01_%25EA%25B0%2595%25EC%2582%25AC%25EB%25B3%2584%25EB%258F%2585%25EB%25A6%25BD%25ED%258F%2589%25EA%25B0%2580_%25EC%25A4%2591%25EB%25B3%25B5%25EC%25A0%259C%25EA%25B1%25B0_%25EB%25A9%2594%25ED%2583%2580%25EB%25AC%25B8%25EA%25B5%25AC%25EC%2582%25AD%25EC%25A0%259C_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D495006%26p%3Dfs%26cid%3D1%26sig%3Dc484d50f090c2dba839276639a6d0440277fe5d7723eafedb9a50606fbc4e9fb%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
 <link rel="dns-prefetch" href="//script.google.com">
 <link rel="dns-prefetch" href="//script.googleusercontent.com">
 
@@ -3996,7 +3997,7 @@ function renderCalendar(year, month) {
         const record = records.get(dateKey); 
         const serverLogs = getStudentVocalPracticeLogsByDate_(dateKey);
         const serverLog = serverLogs.length ? serverLogs[0] : null;
-        const hasTeacherComment = serverLogs.some(r => String(r.teacherComment || '').trim());
+        const hasTeacherComment = serverLogs.some(r => (Array.isArray(r.teacherEvaluations) && r.teacherEvaluations.some(e => String((e && (e.scoreJson || e.comment)) || '').trim())) || String(r.teacherComment || '').trim());
 
         if (hasTeacherComment) {
             statusText = `<span style="font-weight:900;">★</span>`;
@@ -4051,17 +4052,20 @@ function displayDayRecord(dateKey, isCompleted) {
 
     if ((isCompleted && record) || serverLogs.length) {
         const cards = serverLogs.map(log => {
-            const teacherComment = String(log.teacherComment || '').trim();
+            const teacherEvaluations = Array.isArray(log.teacherEvaluations) ? log.teacherEvaluations : [];
+            const hasTeacherEvaluation = teacherEvaluations.some(e => String((e && (e.scoreJson || e.comment)) || '').trim()) || String(log.teacherComment || '').trim();
             const aiComment = String(log.aiComment || '').trim();
             const fileUrl = String(log.fileUrl || '').trim();
+            const evalHtml = (typeof window.ulimBuildStudentEvaluationCard595 === 'function')
+                ? window.ulimBuildStudentEvaluationCard595(log)
+                : '';
             return `
-                <div style="border:1px solid #e5e7eb; border-radius:14px; padding:12px; margin:10px 0; background:${teacherComment ? '#fffbeb' : '#fff'};">
-                    <p style="font-weight:900; color:#2ecc71; margin:0 0 8px;">✅ 연습 완료 ${teacherComment ? ' / ★ 선생님 코멘트' : ''}</p>
-                    <p><strong>문장ID:</strong> ${escapeHtml_(log.vocalId || '')}</p>
+                <div style="border:1px solid #e5e7eb; border-radius:14px; padding:12px; margin:10px 0; background:${hasTeacherEvaluation ? '#fffbeb' : '#fff'};">
+                    <p style="font-weight:900; color:#2ecc71; margin:0 0 8px;">✅ 연습 완료 ${hasTeacherEvaluation ? ' / ★ 선생님 평가' : ''}</p>
                     <p><strong>문장:</strong><br>${escapeHtml_(log.sentence || '')}</p>
                     ${aiComment ? `<p><strong>AI 코멘트:</strong><br>${escapeHtml_(aiComment)}</p>` : ''}
-                    ${teacherComment ? `<p style="background:#fff7cc; padding:10px; border-radius:10px;"><strong>선생님 코멘트:</strong><br>${escapeHtml_(teacherComment)}</p>` : '<p style="color:#999;">아직 선생님 코멘트가 없습니다.</p>'}
                     ${fileUrl && fileUrl.indexOf('http') === 0 ? `<p><a href="${escapeHtml_(fileUrl)}" target="_blank">녹음파일 열기</a></p>` : ''}
+                    ${evalHtml || '<p style="color:#999;">아직 선생님 평가가 없습니다.</p>'}
                 </div>
             `;
         }).join('');
@@ -20266,8 +20270,28 @@ ${ruleSummary}`, 'success');
         return getStudentAllPracticeLogsByDate586_(dateKey).filter(isPastPracticeLog586_);
     };
 
+    function getTeacherEvaluations586_(log) {
+        const list = Array.isArray(log && log.teacherEvaluations) ? log.teacherEvaluations : [];
+        if (list.length) return list;
+        const hasLegacy = safeText586_(log && (log.teacherScoreJson || log.teacherComment));
+        if (!hasLegacy) return [];
+        return [{
+            teacherName: safeText586_(log && log.teacherCommentTeacher) || '선생님',
+            scoreJson: log && log.teacherScoreJson || '',
+            scoreAverage: log && log.teacherScoreAverage || '',
+            comment: log && log.teacherComment || '',
+            savedAt: log && log.teacherCommentAt || ''
+        }];
+    }
+
+    function hasTeacherEvaluation586_(log) {
+        return getTeacherEvaluations586_(log).some(function(ev){
+            return !!safeText586_(ev && (ev.scoreJson || ev.comment));
+        });
+    }
+
     function hasTeacherComment586_(logs) {
-        return (logs || []).some(function(log){ return !!safeText586_(log.teacherComment); });
+        return (logs || []).some(hasTeacherEvaluation586_);
     }
 
     function buildUploadFileHtml586_(log) {
@@ -20275,7 +20299,6 @@ ${ruleSummary}`, 'success');
         if (isHttp586_(fileUrl)) {
             return `
                 <p><strong>업로드 파일:</strong><br><a class="practice-file-btn" href="${esc586_(fileUrl)}" target="_blank" rel="noopener">녹음파일 열기</a></p>
-                <div class="practice-file-note">구글드라이브 권한은 업로드 시 링크 열람 가능으로 설정됩니다. 열리지 않으면 학원에 문의해주세요.</div>
             `;
         }
         return '<p style="color:#999;"><strong>업로드 파일:</strong> 링크 없음</p>';
@@ -20285,6 +20308,7 @@ ${ruleSummary}`, 'success');
         const isPastMode = mode === 'past';
         return (logs || []).map(function(log){
             const teacherComment = safeText586_(log.teacherComment);
+            const hasTeacherEvaluation = hasTeacherEvaluation586_(log);
             const taskType = safeText586_(log.taskType || log.category);
             const isStandardMode = taskType === 'standard_pronunciation' || /표준발음|PRON_/i.test([log.recordType, log.vocalId].join(' '));
             const aiComment = isPastMode ? '' : safeText586_(log.aiComment);
@@ -20292,14 +20316,13 @@ ${ruleSummary}`, 'success');
             const titleLabel = isPastMode ? '기출문제 연습 완료' : (isStandardMode ? '표준발음 연습 완료' : '발성훈련 연습 완료');
             const sentenceLabel = isPastMode ? '대본' : '문장';
             return `
-                <div class="practice-log-card student-view ${teacherComment ? 'has-comment' : ''}">
-                    <div class="practice-log-title">✅ ${esc586_(titleLabel)} ${teacherComment ? ' / ★ 선생님 코멘트' : ''}</div>
+                <div class="practice-log-card student-view ${hasTeacherEvaluation ? 'has-comment' : ''}">
+                    <div class="practice-log-title">✅ ${esc586_(titleLabel)} ${hasTeacherEvaluation ? ' / ★ 선생님 평가' : ''}</div>
                     <div class="practice-log-meta">${esc586_(recordType)}${log.timestamp ? ' · ' + esc586_(log.timestamp) : ''}</div>
-                    <p><strong>문장ID:</strong> ${esc586_(log.vocalId || '')}</p>
                     <p><strong>${sentenceLabel}:</strong><br>${esc586_(isPastMode ? cleanPastSentence598_(log.sentence || '') : (log.sentence || ''))}</p>
                     ${aiComment ? `<p><strong>AI 코멘트:</strong><br>${esc586_(aiComment)}</p>` : ''}
                     ${buildUploadFileHtml586_(log)}
-                    ${(safeText586_(log.teacherScoreJson) && typeof window.ulimBuildStudentEvaluationCard595 === 'function') ? window.ulimBuildStudentEvaluationCard595(log) : (teacherComment ? `<p style="background:#fff7cc; padding:10px; border-radius:10px;"><strong>선생님 코멘트:</strong><br>${esc586_(teacherComment)}</p>` : '<p style="color:#999;">아직 선생님 코멘트가 없습니다.</p>')}
+                    ${(hasTeacherEvaluation && typeof window.ulimBuildStudentEvaluationCard595 === 'function') ? window.ulimBuildStudentEvaluationCard595(log) : '<p style="color:#999;">아직 선생님 평가가 없습니다.</p>'}
                 </div>
             `;
         }).join('');
@@ -22037,7 +22060,7 @@ ${ruleSummary}`, 'success');
 (function(){
   if(window.__ULIM_AI_LEARNING_595__) return;
   window.__ULIM_AI_LEARNING_595__=true;
-  const VERSION='5.98';
+  const VERSION='6.01';
   const SYNC_DELAY=4*60*1000;
   const STORAGE_PREFIX='ULIM_PRACTICE_EVAL_DRAFT_595_';
 
@@ -22160,22 +22183,37 @@ ${ruleSummary}`, 'success');
   try{if(window.ULIM_ADMIN_WRITE_ACTIONS&&ULIM_ADMIN_WRITE_ACTIONS.add)ULIM_ADMIN_WRITE_ACTIONS.add('adminSavePracticeEvaluation');}catch(e){}
 
   function scoreDefsForStudent(log){return SCORE_DEFS[taskType(log)]||[];}
-  function buildStudentEval(log){
-    const scores=safeJson(log.teacherScoreJson||'{}');const defs=scoreDefsForStudent(log);const avg=Number(log.teacherScoreAverage||0);const comment=String(log.teacherComment||'').trim();
-    if(!Object.keys(scores).length&&!comment)return'';
+  function normalizedTeacherEvaluations601(log){
+    const raw=Array.isArray(log&&log.teacherEvaluations)?log.teacherEvaluations:[];
+    const source=raw.length?raw:[{
+      teacherName:String(log&&log.teacherCommentTeacher||'선생님'),
+      evaluatorKey:'legacy',
+      scoreJson:log&&log.teacherScoreJson||'',
+      scoreAverage:log&&log.teacherScoreAverage||'',
+      comment:log&&log.teacherComment||'',
+      savedAt:log&&log.teacherCommentAt||''
+    }];
+    const seen={};
+    return source.filter(ev=>ev&&(String(ev.scoreJson||'').trim()||String(ev.comment||'').trim())).filter(ev=>{
+      const key=String(ev.evaluatorKey||ev.teacherName||'선생님').trim()||'선생님';
+      if(seen[key])return false;seen[key]=true;return true;
+    });
+  }
+  function buildSingleTeacherEval601(log,ev){
+    const scores=safeJson(ev.scoreJson||'{}');const defs=scoreDefsForStudent(log);const avg=Number(ev.scoreAverage||0);const comment=String(ev.comment||'').trim();const teacherName=String(ev.teacherName||'선생님').trim();
     const items=defs.filter(d=>scores[d[0]]).map(d=>`<div class="ulim-student-score-item"><div class="ulim-student-score-label">${esc(d[1])} · ${scores[d[0]]}/5</div><div class="ulim-score-dots">${[1,2,3,4,5].map(n=>`<span class="ulim-score-dot ${n<=Number(scores[d[0]])?'on':''}"></span>`).join('')}</div></div>`).join('');
-    return `<div class="ulim-student-eval-card"><div class="ulim-student-eval-head"><strong>선생님의 세부평가</strong>${avg?`<div class="ulim-average-badge">${avg.toFixed(1)}<small>/ 5</small></div>`:''}</div>${items?`<div class="ulim-student-score-list">${items}</div>`:''}${comment?`<div class="ulim-student-comment"><b>선생님 코멘트</b><br>${esc(comment)}</div>`:''}</div>`;
+    return `<div class="ulim-student-eval-card" data-evaluator-key="${esc(ev.evaluatorKey||teacherName)}"><div class="ulim-student-eval-head"><strong>${esc(teacherName)} 선생님의 세부평가</strong>${avg?`<div class="ulim-average-badge">${avg.toFixed(1)}<small>/ 5</small></div>`:''}</div>${items?`<div class="ulim-student-score-list">${items}</div>`:''}${comment?`<div class="ulim-student-comment"><b>${esc(teacherName)} 선생님 코멘트</b><br>${esc(comment)}</div>`:''}</div>`;
+  }
+  function buildStudentEval(log){
+    return normalizedTeacherEvaluations601(log).map(ev=>buildSingleTeacherEval601(log,ev)).join('');
   }
   window.ulimBuildStudentEvaluationCard595=buildStudentEval;
 
-  // 기존 학생 기록 카드가 다시 그려질 때 점수카드를 덧붙입니다.
+  // 학생 평가카드는 각 기록 렌더러에서 한 번만 출력합니다.
+  // 기존 MutationObserver 추가삽입 방식은 동일 평가표가 두 번 표시되는 원인이므로 사용하지 않습니다.
   const observer=new MutationObserver(()=>{
     document.querySelectorAll('.practice-log-card.student-view').forEach(card=>{
-      if(card.dataset.eval595==='1')return;
-      const idText=card.querySelector('p')?.textContent||'';
-      const all=[];try{studentVocalPracticeLogMap.forEach(arr=>(arr||[]).forEach(x=>all.push(x)));}catch(e){}
-      const log=all.find(x=>idText.includes(String(x.vocalId||''))&&card.textContent.includes(String(x.recordType||'').trim().slice(0,10)) )||null;
-      if(log){const html=buildStudentEval(log);if(html)card.insertAdjacentHTML('beforeend',html);card.dataset.eval595='1';}
+      if(card.querySelector('.ulim-student-eval-card'))card.dataset.eval595='1';
     });
   });
   if(document.body)observer.observe(document.body,{childList:true,subtree:true});
@@ -22218,7 +22256,16 @@ ${ruleSummary}`, 'success');
   const cleanupObserver598=new MutationObserver(m=>{m.forEach(x=>x.addedNodes.forEach(n=>{if(n&&n.nodeType===1)cleanupLegacyPastUi598(n);}));});
   if(document.body){cleanupLegacyPastUi598(document);cleanupObserver598.observe(document.body,{childList:true,subtree:true});}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ensurePronTools);else ensurePronTools();
-  console.log('[ULIM 5.98] 기출문제 Drive 메타문구/AI 안내문구 제거 + 강사평가 학생공개 유지',VERSION);
+  function cleanupPracticeMeta601(root){
+    const scope=root&&root.querySelectorAll?root:document;
+    scope.querySelectorAll('p,.practice-file-note,.practice-log-meta').forEach(el=>{
+      const text=String(el.textContent||'').trim();
+      if(/^문장ID\s*:/i.test(text)||/구글드라이브 권한은 업로드 시 링크 열람 가능으로 설정됩니다/i.test(text))el.remove();
+    });
+  }
+  const cleanupPracticeMetaObserver601=new MutationObserver(m=>{m.forEach(x=>x.addedNodes.forEach(n=>{if(n&&n.nodeType===1)cleanupPracticeMeta601(n);}));});
+  if(document.body){cleanupPracticeMeta601(document);cleanupPracticeMetaObserver601.observe(document.body,{childList:true,subtree:true});}
+  console.log('[ULIM 6.01] 강사별 독립평가 + 평가표 중복 제거 + 문장ID/Drive 안내문구 제거',VERSION);
 })();
 </script>
 
