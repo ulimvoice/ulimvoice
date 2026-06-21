@@ -1,11 +1,14 @@
 <!DOCTYPE html>
+<!-- 6.00 일일평가에 로컬 출석상태 즉시 반영 + 5.99 기능 유지 -->
+<!-- 5.99 강사 출석체크 교직원 세션 인식 수정 + 5.98 기능 유지 -->
+<!-- 5.98 기출문제 대본 메타문구 제거 + AI 안내문구 제거 + 강사평가 학생 공개 유지 -->
 <!-- 5.88 기출문제 드라이브 학생 노출 제거 + 교직원 로그인 버튼 복구 + 학생 화면 교직원 화면 문구 제거 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>울림 성우·스피치·연기학원 통합 연습 프로그램 5.95</title>
+<title>울림 성우·스피치·연기학원 통합 연습 프로그램 6.00</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script type="text/javascript" nonce="87f46df80ad24e629c211983f5e" src="//local.adguard.org?ts=1781944809225&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000006b387207ae38d1106de47548%26fn%3Dindex_5_95_AI%25ED%2595%2599%25EC%258A%25B5%25EB%258D%25B0%25EC%259D%25B4%25ED%2584%25B0_%25EA%25B0%2595%25EC%2582%25AC%25EC%25A0%2590%25EC%2588%2598UI_4%25EB%25B6%2584%25EB%258F%2599%25EA%25B8%25B0%25ED%2599%2594_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D494985%26p%3Dfs%26cid%3D1%26sig%3D4683b35bc4db594b5d15f11f1dbc9c001060a0e298109adfe308d92d1d617501%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
+<script type="text/javascript" nonce="ba2411dadd4341349b65b550e65" src="//local.adguard.org?ts=1782023819687&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000ca2c7206a097bc721196adc9%26fn%3Dindex_6_00_%25EC%259D%25BC%25EC%259D%25BC%25ED%258F%2589%25EA%25B0%2580_%25EB%25A1%259C%25EC%25BB%25AC%25EC%25B6%259C%25EC%2584%259D%25EC%2583%2581%25ED%2583%259C%25EC%25A6%2589%25EC%258B%259C%25EB%25B0%2598%25EC%2598%2581_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D495006%26p%3Dfs%26cid%3D1%26sig%3D6c3722faf7f175920538f242bd00e9490b15b8b484bb66691aa8fb7811d638fc%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
 <link rel="dns-prefetch" href="//script.google.com">
 <link rel="dns-prefetch" href="//script.googleusercontent.com">
 
@@ -13274,7 +13277,7 @@ function adminRenderVocalPracticeLogs() {
         return `
             <div class="practice-log-card ${hasComment ? 'has-comment' : ''}">
                 <div class="practice-log-title">${ulimAdminEsc_(log.studentName)} ${typeBadge} ${hasComment ? '★' : ''}</div>
-                <div class="practice-log-text"><b>${sentenceLabel}</b><br>${ulimAdminEsc_(log.sentence || '')}</div>
+                <div class="practice-log-text"><b>${sentenceLabel}</b><br>${ulimAdminEsc_(isPast && typeof window.ulimCleanPastSentence598 === 'function' ? window.ulimCleanPastSentence598(log.sentence || '') : (log.sentence || ''))}</div>
                 ${log.aiComment ? `<div class="practice-log-text" style="margin-top:8px;"><b>AI 코멘트</b><br>${ulimAdminEsc_(log.aiComment)}</div>` : ''}
                 ${audio}
                 <div style="margin-top:10px;">
@@ -20219,6 +20222,21 @@ ${ruleSummary}`, 'success');
         return /기출|past_question|pastquestion|PAST_/i.test(text);
     }
 
+    // 5.98 화면 표시 전용: 저장 원본은 유지하고 기출문제 Drive 메타 첫 줄만 숨깁니다.
+    function cleanPastSentence598_(value) {
+        const lines = String(value == null ? '' : value).replace(/\r\n/g, '\n').split('\n');
+        if (!lines.length) return '';
+        const driveTag = /^\s*\[기출문제\s*(?:[-_ ]\s*)?드라이브\]\s*/i;
+        if (driveTag.test(lines[0])) {
+            lines[0] = lines[0].replace(driveTag, '').trim();
+            // f1~f100, m1~m100 및 확장자 표시는 화면에서만 제거합니다.
+            lines[0] = lines[0].replace(/^[fm]\s*0*\d{1,3}(?:\.(?:docx|gdoc|txt))?\s*/i, '').trim();
+            if (!lines[0]) lines.shift();
+        }
+        return lines.join('\n').trim();
+    }
+    window.ulimCleanPastSentence598 = cleanPastSentence598_;
+
     function getStudentAllPracticeLogsByDate586_(dateKey) {
         try {
             if (typeof studentVocalPracticeLogMap !== 'undefined' && studentVocalPracticeLogMap && studentVocalPracticeLogMap.get) {
@@ -20278,7 +20296,7 @@ ${ruleSummary}`, 'success');
                     <div class="practice-log-title">✅ ${esc586_(titleLabel)} ${teacherComment ? ' / ★ 선생님 코멘트' : ''}</div>
                     <div class="practice-log-meta">${esc586_(recordType)}${log.timestamp ? ' · ' + esc586_(log.timestamp) : ''}</div>
                     <p><strong>문장ID:</strong> ${esc586_(log.vocalId || '')}</p>
-                    <p><strong>${sentenceLabel}:</strong><br>${esc586_(log.sentence || '')}</p>
+                    <p><strong>${sentenceLabel}:</strong><br>${esc586_(isPastMode ? cleanPastSentence598_(log.sentence || '') : (log.sentence || ''))}</p>
                     ${aiComment ? `<p><strong>AI 코멘트:</strong><br>${esc586_(aiComment)}</p>` : ''}
                     ${buildUploadFileHtml586_(log)}
                     ${(safeText586_(log.teacherScoreJson) && typeof window.ulimBuildStudentEvaluationCard595 === 'function') ? window.ulimBuildStudentEvaluationCard595(log) : (teacherComment ? `<p style="background:#fff7cc; padding:10px; border-radius:10px;"><strong>선생님 코멘트:</strong><br>${esc586_(teacherComment)}</p>` : '<p style="color:#999;">아직 선생님 코멘트가 없습니다.</p>')}
@@ -21425,8 +21443,60 @@ ${ruleSummary}`, 'success');
   let isFlushing = false;
   const memoTimers = {};
 
+  // top-level `let adminToken/adminInfo/adminAttendanceRecords`는 window 속성이 아닙니다.
+  // 기존 5.94 패치가 window.adminToken/window.adminInfo만 확인해 강사 로그인 상태를
+  // 놓치던 문제를 방지하기 위해 실제 전역 변수와 저장소를 함께 조회합니다.
+  function adminTokenValue_() {
+    try {
+      if (typeof adminToken !== 'undefined' && String(adminToken || '').trim()) {
+        return String(adminToken || '').trim();
+      }
+    } catch (ignore) {}
+    try {
+      if (String(window.adminToken || '').trim()) return String(window.adminToken || '').trim();
+    } catch (ignore) {}
+    try {
+      return String(sessionStorage.getItem('adminToken') || localStorage.getItem('adminToken') || '').trim();
+    } catch (ignore) {
+      return '';
+    }
+  }
+
+  function adminInfoValue_() {
+    try {
+      if (typeof adminInfo !== 'undefined' && adminInfo && typeof adminInfo === 'object') return adminInfo;
+    } catch (ignore) {}
+    try {
+      if (window.adminInfo && typeof window.adminInfo === 'object') return window.adminInfo;
+    } catch (ignore) {}
+    try {
+      const raw = sessionStorage.getItem('adminInfo') || localStorage.getItem('adminInfo') || '';
+      return raw ? JSON.parse(raw) : {};
+    } catch (ignore) {
+      return {};
+    }
+  }
+
+  function attendanceRecords_() {
+    try {
+      if (typeof adminAttendanceRecords !== 'undefined' && Array.isArray(adminAttendanceRecords)) {
+        return adminAttendanceRecords;
+      }
+    } catch (ignore) {}
+    return Array.isArray(window.adminAttendanceRecords) ? window.adminAttendanceRecords : [];
+  }
+
+  function replaceAttendanceRecords_(rows) {
+    const safeRows = Array.isArray(rows) ? rows : [];
+    try {
+      if (typeof adminAttendanceRecords !== 'undefined') adminAttendanceRecords = safeRows;
+    } catch (ignore) {}
+    try { window.adminAttendanceRecords = safeRows; } catch (ignore) {}
+    return safeRows;
+  }
+
   function adminOwnerId_() {
-    const info = window.adminInfo || {};
+    const info = adminInfoValue_() || {};
     return String(info.accountUid || info.uid || info.id || info.name || '').trim();
   }
 
@@ -21518,7 +21588,7 @@ ${ruleSummary}`, 'success');
 
   function currentRowsByKey_() {
     const map = {};
-    (window.adminAttendanceRecords || []).forEach(function (record, idx) {
+    attendanceRecords_().forEach(function (record, idx) {
       map[recordKey_(record)] = idx;
     });
     return map;
@@ -21569,10 +21639,10 @@ ${ruleSummary}`, 'success');
 
   function mergePendingIntoAttendanceRecords_() {
     const ownerId = adminOwnerId_();
-    if (!ownerId || !Array.isArray(window.adminAttendanceRecords)) return;
+    if (!ownerId || !Array.isArray(attendanceRecords_())) return;
     const queue = readQueue_(ownerId);
     const pending = queue.items || {};
-    window.adminAttendanceRecords = window.adminAttendanceRecords.map(function (record) {
+    replaceAttendanceRecords_(attendanceRecords_().map(function (record) {
       const item = pending[recordKey_(record)];
       if (!item || !item.record) return record;
       return Object.assign({}, record, item.record, {
@@ -21580,7 +21650,7 @@ ${ruleSummary}`, 'success');
         attendanceStatus: item.record.attendanceStatus || item.record.status || record.attendanceStatus,
         memo: item.record.memo !== undefined ? item.record.memo : record.memo
       });
-    });
+    }));
   }
 
   function scheduleFlush_() {
@@ -21610,7 +21680,7 @@ ${ruleSummary}`, 'success');
 
   function queueRecord_(record, idx) {
     const ownerId = adminOwnerId_();
-    if (!ownerId || !window.adminToken) {
+    if (!ownerId || !adminTokenValue_()) {
       alert('교직원 로그인이 필요합니다.');
       return false;
     }
@@ -21668,7 +21738,7 @@ ${ruleSummary}`, 'success');
   async function flushQueue_(forceAll) {
     if (isFlushing) return false;
     const ownerId = adminOwnerId_();
-    if (!ownerId || !window.adminToken) return false;
+    if (!ownerId || !adminTokenValue_()) return false;
     if (!navigator.onLine) {
       scheduleFlush_();
       return false;
@@ -21700,7 +21770,7 @@ ${ruleSummary}`, 'success');
     try {
       const records = dueKeys.map(function (key) { return queue.items[key].record; });
       const data = await window.adminApi('adminSaveAttendance', {
-        adminToken: window.adminToken,
+        adminToken: adminTokenValue_(),
         records: JSON.stringify(records),
         noCache: 1
       });
@@ -21799,14 +21869,14 @@ ${ruleSummary}`, 'success');
 
     const record = typeof window.adminUpdateAttendanceRecordFromRow_ === 'function'
       ? window.adminUpdateAttendanceRecordFromRow_(idx)
-      : (window.adminAttendanceRecords || [])[idx];
+      : attendanceRecords_()[idx];
     return queueRecord_(record, idx);
   };
 
   window.adminSaveAttendanceStatusChange = async function (idx) {
     const record = typeof window.adminUpdateAttendanceRecordFromRow_ === 'function'
       ? window.adminUpdateAttendanceRecordFromRow_(idx)
-      : (window.adminAttendanceRecords || [])[idx];
+      : attendanceRecords_()[idx];
     if (!record || !record.studentName) {
       alert('학생 정보를 찾지 못했습니다. 출석부를 다시 불러와주세요.');
       return false;
@@ -21815,7 +21885,7 @@ ${ruleSummary}`, 'success');
   };
 
   window.adminSyncAttendanceRowStatus = async function (idx, value) {
-    const record = (window.adminAttendanceRecords || [])[idx];
+    const record = attendanceRecords_()[idx];
     const normalized = typeof window.adminNormalizeAttendanceStatusForUi_ === 'function'
       ? window.adminNormalizeAttendanceStatusForUi_(value || '')
       : String(value || '');
@@ -21843,7 +21913,7 @@ ${ruleSummary}`, 'success');
       return false;
     }
     records.forEach(function (record) {
-      const idx = (window.adminAttendanceRecords || []).findIndex(function (row) {
+      const idx = attendanceRecords_().findIndex(function (row) {
         return recordKey_(row) === recordKey_(record);
       });
       queueRecord_(record, idx >= 0 ? idx : undefined);
@@ -21858,7 +21928,7 @@ ${ruleSummary}`, 'success');
   window.adminSaveAttendanceRecords_ = async function (records, silent) {
     if (!records || !records.length) return false;
     records.forEach(function (record) {
-      const idx = (window.adminAttendanceRecords || []).findIndex(function (row) {
+      const idx = attendanceRecords_().findIndex(function (row) {
         return recordKey_(row) === recordKey_(record);
       });
       queueRecord_(record, idx >= 0 ? idx : undefined);
@@ -21898,7 +21968,7 @@ ${ruleSummary}`, 'success');
   });
 
   setInterval(function () {
-    if (window.adminToken && adminOwnerId_()) {
+    if (adminTokenValue_() && adminOwnerId_()) {
       updatePendingUi_();
       flushQueue_(false).catch(function () {});
     }
@@ -21918,16 +21988,19 @@ ${ruleSummary}`, 'success');
     }, 500);
   }
 
-  console.log('[ULIM 5.94] 출석체크 로컬 우선 + 1분 백그라운드 반영 적용 완료', VERSION);
+  console.log('[ULIM 5.99] 강사 출석체크 세션 인식 수정 + 로컬 1분 반영 적용 완료', VERSION);
 })();
 
 </script>
 
 
 <style id="ulim-ai-learning-eval-style-595">
-/* 5.95 발성/표준발음 강사 점수평가 + 학생 결과 카드 */
+/* 5.97 발성/표준발음/기출문제 강사평가 공개 + 기출문제 AI평가 숨김 */
 .ulim-practice-type-standard{background:#ecfeff!important;color:#0e7490!important;}
 .ulim-eval-editor{margin-top:14px;padding:16px;border:1px solid #dbeafe;border-radius:18px;background:linear-gradient(180deg,#f8fbff,#fff);}
+.ulim-eval-editor.past-private{border-color:#ddd6fe;background:linear-gradient(180deg,#faf5ff,#fff);}
+.ulim-eval-editor.past-private .ulim-eval-editor-title{color:#6d28d9;}
+.ulim-private-eval-banner{margin:0 0 12px;padding:10px 12px;border:1px solid #ddd6fe;border-radius:12px;background:#f5f3ff;color:#5b21b6;font-size:12px;font-weight:900;line-height:1.45;}
 .ulim-eval-editor-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;}
 .ulim-eval-editor-title{font-size:15px;font-weight:950;color:#1e3a8a;}
 .ulim-eval-sync{font-size:12px;font-weight:900;padding:6px 10px;border-radius:999px;background:#eef2ff;color:#4338ca;}
@@ -21964,7 +22037,7 @@ ${ruleSummary}`, 'success');
 (function(){
   if(window.__ULIM_AI_LEARNING_595__) return;
   window.__ULIM_AI_LEARNING_595__=true;
-  const VERSION='5.95';
+  const VERSION='5.98';
   const SYNC_DELAY=4*60*1000;
   const STORAGE_PREFIX='ULIM_PRACTICE_EVAL_DRAFT_595_';
 
@@ -21976,6 +22049,12 @@ ${ruleSummary}`, 'success');
     standard_pronunciation:[
       ['standardAccuracy','표준발음 정확도'],['consonantAccuracy','자음 정확도'],['vowelAccuracy','모음 정확도'],
       ['finalConsonantLinking','받침·연음'],['phonologicalRules','음운변동 적용'],['clarity','문장 명료도']
+    ],
+    past_question:[
+      ['situationUnderstanding','상황 이해'],['characterObjective','인물 목적'],
+      ['emotionFlow','감정 흐름'],['emotionTransition','감정 전환'],
+      ['emphasisBreath','강조·호흡'],['characterConsistency','캐릭터 일관성'],
+      ['naturalness','자연스러움'],['delivery','전달력']
     ]
   };
   window.ULIM_PRACTICE_SCORE_DEFS=SCORE_DEFS;
@@ -21987,6 +22066,15 @@ ${ruleSummary}`, 'success');
     if(t==='past_question'||/기출|past|PAST_/i.test([log&&log.recordType,log&&log.vocalId].join(' ')))return'past_question';
     if(t==='standard_pronunciation'||/표준발음|PRON_/i.test([log&&log.recordType,log&&log.vocalId].join(' ')))return'standard_pronunciation';
     return'vocal_training';
+  }
+  function displaySentence(log){
+    const raw=String(log&&log.sentence||'');
+    if(taskType(log)!=='past_question')return raw;
+    if(typeof window.ulimCleanPastSentence598==='function')return window.ulimCleanPastSentence598(raw);
+    const lines=raw.replace(/\r\n/g,'\n').split('\n');
+    const tag=/^\s*\[기출문제\s*(?:[-_ ]\s*)?드라이브\]\s*/i;
+    if(lines.length&&tag.test(lines[0])){lines[0]=lines[0].replace(tag,'').replace(/^[fm]\s*0*\d{1,3}(?:\.(?:docx|gdoc|txt))?\s*/i,'').trim();if(!lines[0])lines.shift();}
+    return lines.join('\n').trim();
   }
   function owner(){const info=(typeof adminInfo!=='undefined'&&adminInfo)?adminInfo:null;const token=(typeof adminToken!=='undefined'?adminToken:'');return String((info&&(info.uid||info.id||info.name))||token||'').replace(/[^0-9A-Za-z가-힣_-]/g,'_').slice(0,80);}
   function storageKey(){return STORAGE_PREFIX+(owner()||'NOADMIN');}
@@ -22001,18 +22089,25 @@ ${ruleSummary}`, 'success');
   function defsFor(log){return SCORE_DEFS[taskType(log)]||[];}
   function scoreButtons(idx,key,value){let h='';for(let n=1;n<=5;n++)h+=`<button type="button" class="ulim-score-btn ${Number(value)===n?'selected':''}" data-idx="${idx}" data-key="${esc(key)}" data-value="${n}" onclick="ulimSetPracticeScore595(this)">${n}</button>`;return h;}
   function scoreEditor(log,idx){
-    const type=taskType(log);if(type==='past_question')return'';
+    const type=taskType(log);
+    const isPast=type==='past_question';
     const draft=safeJson(log.draftScoreJson||log.finalScoreJson||'{}');
     const comment=String(log.draftTeacherComment||log.finalTeacherComment||log.teacherComment||'');
     const local=log._localDraft;
     const statusText=local?'로컬 임시저장':(log.evaluationStatus==='평가완료'?'시트 저장됨':(log.draftSavedAt?'임시본 시트 저장':'작성 전'));
     const statusClass=local?'draft':(log.evaluationStatus==='평가완료'?'saved':'');
-    return `<div class="ulim-eval-editor" data-eval-index="${idx}">
-      <div class="ulim-eval-editor-head"><div class="ulim-eval-editor-title">강사 세부평가 · 1점~5점</div><span id="ulimEvalSync_${idx}" class="ulim-eval-sync ${statusClass}">${esc(statusText)}</span></div>
+    const title=isPast?'기출문제 강사평가 · 1점~5점':'강사 세부평가 · 1점~5점';
+    const placeholder='학생에게 보여줄 강사 개인 코멘트를 입력하세요.';
+    const note=isPast
+      ?'입력 내용은 즉시 이 기기에 보관되고, 마지막 수정 4분 후 임시본이 시트에 저장됩니다. ‘평가 저장’을 누른 최종 점수와 코멘트는 학생 화면에 공개되고 AI 학습라벨로도 축적됩니다.'
+      :'입력 내용은 즉시 이 기기에 보관되고, 마지막 수정 4분 후 임시본이 시트에 백그라운드 저장됩니다. 학생에게는 ‘평가 저장’을 누른 최종본만 보입니다.';
+    return `<div class="ulim-eval-editor ${isPast?'past-private':''}" data-eval-index="${idx}">
+      <div class="ulim-eval-editor-head"><div class="ulim-eval-editor-title">${esc(title)}</div><span id="ulimEvalSync_${idx}" class="ulim-eval-sync ${statusClass}">${esc(statusText)}</span></div>
+      ${isPast?'<div class="ulim-private-eval-banner">👩‍🏫 강사 직접평가 · 최종 저장 후 학생 공개</div>':''}
       <div class="ulim-score-grid">${defsFor(log).map(d=>`<div class="ulim-score-row"><div class="ulim-score-label">${esc(d[1])}</div><div class="ulim-score-buttons" data-score-key="${esc(d[0])}">${scoreButtons(idx,d[0],draft[d[0]])}</div></div>`).join('')}</div>
-      <div class="ulim-score-help">1점은 집중 교정이 필요한 상태, 3점은 보통, 5점은 매우 안정적인 상태입니다.</div>
-      <textarea class="ulim-eval-comment" id="ulimEvalComment_${idx}" placeholder="학생에게 보여줄 강사 개인 코멘트를 입력하세요." oninput="ulimPracticeDraftChanged595(${idx})">${esc(comment)}</textarea>
-      <div class="ulim-eval-actions"><button type="button" class="ulim-eval-final-btn" onclick="ulimSavePracticeEvaluation595(${idx},true)">평가 저장</button><div class="ulim-eval-note">입력 내용은 즉시 이 기기에 보관되고, 마지막 수정 4분 후 임시본이 시트에 백그라운드 저장됩니다. 학생에게는 ‘평가 저장’을 누른 최종본만 보입니다.</div></div>
+      <div class="ulim-score-help">1점은 집중 교정이 필요한 상태, 3점은 보통, 5점은 매우 안정적인 상태입니다. 사람의 내면이 아니라 녹음에서 관찰되는 표현을 기준으로 평가해주세요.</div>
+      <textarea class="ulim-eval-comment" id="ulimEvalComment_${idx}" placeholder="${esc(placeholder)}" oninput="ulimPracticeDraftChanged595(${idx})">${esc(comment)}</textarea>
+      <div class="ulim-eval-actions"><button type="button" class="ulim-eval-final-btn" onclick="ulimSavePracticeEvaluation595(${idx},true)">평가 저장</button><div class="ulim-eval-note">${esc(note)}</div></div>
     </div>`;
   }
 
@@ -22029,8 +22124,8 @@ ${ruleSummary}`, 'success');
       const badgeClass=isPast?'past':(isStandard?'ulim-practice-type-standard':'');
       const sentenceLabel=isPast?'기출 대본':'문장';
       const aiHtml=(!isPast&&log.aiComment)?`<div class="practice-log-text" style="margin-top:8px;"><b>AI 분석 참고</b><br>${esc(log.aiComment)}</div>`:'';
-      const pastNote=isPast?'<div class="practice-log-meta" style="margin-top:10px;">기출문제 AI 평가는 화면에 표시하지 않으며, 업로드 원천데이터만 학습용 시트에 기록됩니다.</div>':'';
-      return `<div class="practice-log-card ${hasFinal?'has-comment':''}"><div class="practice-log-title">${esc(log.studentName)} <span class="practice-log-type-badge ${badgeClass}">${typeLabel}</span> ${hasFinal?'★':''}</div><div class="practice-log-text"><b>${sentenceLabel}</b><br>${esc(log.sentence||'')}</div>${aiHtml}${audio}${pastNote}${scoreEditor(log,idx)}${log.finalSavedAt?`<div class="practice-log-meta">최종평가: ${esc(log.finalSavedAt)} / ${esc(log.evaluationTeacher||log.teacherCommentTeacher||'')}</div>`:''}</div>`;
+      const pastNote='';
+      return `<div class="practice-log-card ${hasFinal?'has-comment':''}"><div class="practice-log-title">${esc(log.studentName)} <span class="practice-log-type-badge ${badgeClass}">${typeLabel}</span> ${hasFinal?'★':''}</div><div class="practice-log-text"><b>${sentenceLabel}</b><br>${esc(displaySentence(log))}</div>${aiHtml}${audio}${pastNote}${scoreEditor(log,idx)}${log.finalSavedAt?`<div class="practice-log-meta">최종평가: ${esc(log.finalSavedAt)} / ${esc(log.evaluationTeacher||log.teacherCommentTeacher||'')}</div>`:''}</div>`;
     }).join('');
   };
 
@@ -22058,8 +22153,8 @@ ${ruleSummary}`, 'success');
     schedule();
   }
   window.ulimSavePracticeEvaluation595=async function(idx,finalize){
-    const draft=collect(idx);if(!draft)return;const defs=defsFor(adminVocalPracticeLogs[idx]);if(finalize&&Object.keys(draft.scores).length<defs.length)return alert('모든 점수 항목을 선택해주세요.');
-    try{setStatus(idx,'저장 중...','');const data=await send(draft,!!finalize);const q=readQueue();delete q[draft.recordId];writeQueue(q);setStatus(idx,finalize?'시트 저장됨':'임시본 저장됨',finalize?'saved':'');if(finalize){alert('평가가 저장되었습니다. 학생 화면에는 점수와 강사 코멘트가 보기 좋은 카드로 표시됩니다.');await adminLoadVocalPracticeLogs(false);}}catch(e){const q=readQueue();q[draft.recordId]=draft;writeQueue(q);setStatus(idx,'저장 실패 · 재시도 대기','error');alert(e.message||String(e));}
+    const draft=collect(idx);if(!draft)return;const log=adminVocalPracticeLogs[idx];const defs=defsFor(log);if(finalize&&Object.keys(draft.scores).length<defs.length)return alert('모든 점수 항목을 선택해주세요.');
+    try{setStatus(idx,'저장 중...','');const data=await send(draft,!!finalize);const q=readQueue();delete q[draft.recordId];writeQueue(q);setStatus(idx,finalize?'시트 저장됨':'임시본 저장됨',finalize?'saved':'');if(finalize){const isPast=taskType(log)==='past_question';alert(isPast?'기출문제 강사평가가 저장되었습니다. 학생 화면에는 강사 점수와 코멘트가 표시됩니다.':'평가가 저장되었습니다. 학생 화면에는 점수와 강사 코멘트가 보기 좋은 카드로 표시됩니다.');await adminLoadVocalPracticeLogs(false);}}catch(e){const q=readQueue();q[draft.recordId]=draft;writeQueue(q);setStatus(idx,'저장 실패 · 재시도 대기','error');alert(e.message||String(e));}
   };
   window.addEventListener('online',()=>flushDue(false));setInterval(()=>flushDue(false),60000);setTimeout(schedule,800);
   try{if(window.ULIM_ADMIN_WRITE_ACTIONS&&ULIM_ADMIN_WRITE_ACTIONS.add)ULIM_ADMIN_WRITE_ACTIONS.add('adminSavePracticeEvaluation');}catch(e){}
@@ -22114,8 +22209,258 @@ ${ruleSummary}`, 'success');
   if(typeof window.pronSetAdvancedStatus==='function'){
     const old=window.pronSetAdvancedStatus;window.pronSetAdvancedStatus=function(message,type){const r=old.apply(this,arguments);const t=String(message||'');if(type==='success'&&/(문장\s*일치도|발음평가\s*점수|리미\s*코멘트|간단\s*분석)/.test(t)&&!/(분석\s*중|확인\s*중)/.test(t))setTimeout(()=>uploadPronRecord(t),300);return r;};try{pronSetAdvancedStatus=window.pronSetAdvancedStatus;}catch(e){}
   }
+  function cleanupLegacyPastUi598(root){
+    const scope=root&&root.querySelectorAll?root:document;
+    scope.querySelectorAll('.practice-log-meta,.ulim-private-eval-banner').forEach(el=>{
+      if(/기출문제\s*AI\s*평가/i.test(String(el.textContent||'')))el.remove();
+    });
+  }
+  const cleanupObserver598=new MutationObserver(m=>{m.forEach(x=>x.addedNodes.forEach(n=>{if(n&&n.nodeType===1)cleanupLegacyPastUi598(n);}));});
+  if(document.body){cleanupLegacyPastUi598(document);cleanupObserver598.observe(document.body,{childList:true,subtree:true});}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ensurePronTools);else ensurePronTools();
-  console.log('[ULIM 5.95] AI 학습데이터/강사점수/4분 동기화 적용 완료',VERSION);
+  console.log('[ULIM 5.98] 기출문제 Drive 메타문구/AI 안내문구 제거 + 강사평가 학생공개 유지',VERSION);
+})();
+</script>
+
+
+
+<script id="ulim-daily-eval-pending-attendance-6-00">
+/* =========================================================
+   6.00 일일평가에 로컬 출석상태 즉시 반영
+   - 출석체크가 1분 백그라운드 대기 중이어도 일일평가에는 즉시 표시
+   - 날짜 + 반 + 학생번호/학생명 기준으로 로컬 대기열을 병합
+   - 평가 저장/미리보기에도 동일한 최신 출석상태 사용
+   ========================================================= */
+(function () {
+  'use strict';
+
+  if (window.__ULIM_DAILY_PENDING_ATTENDANCE_600__) return;
+  window.__ULIM_DAILY_PENDING_ATTENDANCE_600__ = true;
+
+  const STORAGE_PREFIX = 'ulim_admin_attendance_queue_v594::';
+
+  function adminInfo600_() {
+    try {
+      if (typeof adminInfo !== 'undefined' && adminInfo && typeof adminInfo === 'object') return adminInfo;
+    } catch (ignore) {}
+    try {
+      if (window.adminInfo && typeof window.adminInfo === 'object') return window.adminInfo;
+    } catch (ignore) {}
+    try {
+      const raw = sessionStorage.getItem('adminInfo') || localStorage.getItem('adminInfo') || '';
+      return raw ? JSON.parse(raw) : {};
+    } catch (ignore) {
+      return {};
+    }
+  }
+
+  function ownerId600_() {
+    const info = adminInfo600_() || {};
+    return String(info.accountUid || info.uid || info.id || info.name || '').trim();
+  }
+
+  function norm600_(value) {
+    return String(value || '')
+      .normalize('NFC')
+      .replace(/[\s\u00a0\u3000\-–—_.,()[\]{}]/g, '')
+      .replace(/T$/i, '')
+      .toLowerCase();
+  }
+
+  function classNorm600_(value) {
+    let text = String(value || '').trim();
+    try {
+      if (typeof adminCleanClassNameOnly_ === 'function') text = adminCleanClassNameOnly_(text);
+    } catch (ignore) {}
+    return norm600_(text);
+  }
+
+  function dateNorm600_(value) {
+    const raw = String(value || '').trim();
+    const m = raw.match(/(\d{4})[^0-9]?(\d{1,2})[^0-9]?(\d{1,2})/);
+    if (!m) return raw.replace(/\s+/g, '');
+    return [m[1], String(m[2]).padStart(2, '0'), String(m[3]).padStart(2, '0')].join('-');
+  }
+
+  function statusNorm600_(value) {
+    try {
+      if (typeof adminNormalizeDailyEvalStatusLabel_ === 'function') {
+        return adminNormalizeDailyEvalStatusLabel_(value);
+      }
+    } catch (ignore) {}
+    const raw = String(value || '').trim();
+    const key = raw.replace(/\s/g, '').toUpperCase();
+    if (['O', '○', 'ㅇ', '출석', 'TRUE', 'V', '✓', '✔'].includes(key)) return '출석';
+    if (['X', '×', '✕', '결석', 'FALSE'].includes(key)) return '결석';
+    if (['지각', '△', '늦음'].includes(key)) return '지각';
+    if (['보강', '신규', '반이동', '휴원'].includes(raw)) return raw;
+    if (!raw || raw === '-' || raw === '미체크') return '';
+    return raw;
+  }
+
+  function readPending600_() {
+    const ownerId = ownerId600_();
+    if (!ownerId) return [];
+    try {
+      const raw = localStorage.getItem(STORAGE_PREFIX + encodeURIComponent(ownerId));
+      if (!raw) return [];
+      const queue = JSON.parse(raw);
+      const items = queue && queue.items && typeof queue.items === 'object' ? queue.items : {};
+      return Object.keys(items)
+        .map(function (key) { return items[key] || {}; })
+        .filter(function (item) { return item.record && typeof item.record === 'object'; })
+        .sort(function (a, b) { return Number(a.updatedAt || 0) - Number(b.updatedAt || 0); });
+    } catch (err) {
+      console.warn('[ULIM 6.00] 출석 로컬 대기열 읽기 실패', err);
+      return [];
+    }
+  }
+
+  function sameStudent600_(pending, row) {
+    const pNo = norm600_(pending.studentNo || pending.attendanceNo || '');
+    const rNo = norm600_(row.studentNo || row.attendanceNo || '');
+    if (pNo && rNo) return pNo === rNo;
+    return norm600_(pending.studentName || pending.name || '') === norm600_(row.studentName || row.name || '');
+  }
+
+  function sameClass600_(pending, row) {
+    const p = classNorm600_(pending.className || pending.currentClass || '');
+    const r = classNorm600_(row.className || row.currentClass || '');
+    if (!p || !r) return true;
+    return p === r || p.indexOf(r) !== -1 || r.indexOf(p) !== -1;
+  }
+
+  function sameDate600_(pending, row) {
+    const p = dateNorm600_(pending.date || pending.classDate || '');
+    const r = dateNorm600_(row.date || row.classDate || document.getElementById('adminDailyEvalDate')?.value || '');
+    if (!p || !r) return true;
+    return p === r;
+  }
+
+  function findPending600_(row, pendingItems) {
+    let found = null;
+    pendingItems.forEach(function (item) {
+      const record = item.record || {};
+      if (!sameDate600_(record, row)) return;
+      if (!sameClass600_(record, row)) return;
+      if (!sameStudent600_(record, row)) return;
+      found = record;
+    });
+    return found;
+  }
+
+  function mergeRows600_() {
+    let rows;
+    try {
+      rows = (typeof adminDailyEvalRows !== 'undefined' && Array.isArray(adminDailyEvalRows))
+        ? adminDailyEvalRows
+        : null;
+    } catch (ignore) {
+      rows = null;
+    }
+    if (!rows || !rows.length) return 0;
+
+    const pendingItems = readPending600_();
+    if (!pendingItems.length) return 0;
+
+    let changed = 0;
+    const merged = rows.map(function (row) {
+      const pending = findPending600_(row || {}, pendingItems);
+      if (!pending) return row;
+
+      const status = statusNorm600_(pending.attendanceStatus || pending.status || pending.specialStatus || '');
+      const current = statusNorm600_(row.attendanceStatus || row.status || row.specialStatus || '');
+      const memo = pending.memo !== undefined ? String(pending.memo || '') : String(row.memo || '');
+      if (status === current && memo === String(row.memo || '') && row.__attendancePendingLocal === true) return row;
+
+      changed++;
+      return Object.assign({}, row, {
+        status: status || row.status || '',
+        attendanceStatus: status || row.attendanceStatus || '',
+        specialStatus: pending.specialStatus || row.specialStatus || '',
+        memo: memo,
+        __attendancePendingLocal: true
+      });
+    });
+
+    try { adminDailyEvalRows = merged; } catch (ignore) {}
+    try { window.adminDailyEvalRows = merged; } catch (ignore) {}
+    return changed;
+  }
+
+  function refreshVisibleStatus600_() {
+    const changed = mergeRows600_();
+    let rows;
+    try { rows = typeof adminDailyEvalRows !== 'undefined' ? adminDailyEvalRows : []; } catch (ignore) { rows = []; }
+    const trs = document.querySelectorAll('#adminDailyEvalTableWrap tr[data-daily-index]');
+    trs.forEach(function (tr) {
+      const idx = Number(tr.dataset.dailyIndex);
+      const row = rows[idx] || {};
+      const tds = tr.querySelectorAll('td');
+      if (tds.length < 2) return;
+      const statusCell = tds[tds.length - 2];
+      const statusText = [statusNorm600_(row.attendanceStatus || row.status || ''), row.specialStatus || '']
+        .filter(Boolean)
+        .filter(function (v, i, arr) { return arr.indexOf(v) === i; })
+        .join(' / ');
+      statusCell.textContent = statusText || '-';
+      if (row.__attendancePendingLocal) {
+        statusCell.title = '출석부 서버 반영 전 로컬 저장 상태입니다.';
+        statusCell.style.fontWeight = '900';
+        statusCell.style.color = '#166534';
+        statusCell.style.background = '#f0fdf4';
+      }
+    });
+    return changed;
+  }
+
+  window.ulimMergePendingAttendanceIntoDailyRows = mergeRows600_;
+  window.ulimRefreshDailyAttendanceStatus = refreshVisibleStatus600_;
+
+  const originalRender = window.adminRenderDailyEvalRows;
+  if (typeof originalRender === 'function') {
+    window.adminRenderDailyEvalRows = function (message) {
+      const count = mergeRows600_();
+      let nextMessage = message || '';
+      if (count > 0 && nextMessage.indexOf('로컬 출석') === -1) {
+        nextMessage += (nextMessage ? ' · ' : '') + '로컬 출석 ' + count + '건 즉시 반영';
+      }
+      const result = originalRender.call(this, nextMessage);
+      setTimeout(refreshVisibleStatus600_, 0);
+      return result;
+    };
+  }
+
+  const originalSelected = window.adminGetSelectedDailyRows;
+  if (typeof originalSelected === 'function') {
+    window.adminGetSelectedDailyRows = function () {
+      mergeRows600_();
+      return originalSelected.apply(this, arguments);
+    };
+  }
+
+  ['adminQuickSetAttendance', 'adminSaveAttendanceStatusChange', 'adminSyncAttendanceRowStatus'].forEach(function (name) {
+    const original = window[name];
+    if (typeof original !== 'function') return;
+    window[name] = async function () {
+      const result = await original.apply(this, arguments);
+      setTimeout(refreshVisibleStatus600_, 0);
+      return result;
+    };
+  });
+
+  document.addEventListener('click', function (event) {
+    const target = event.target && event.target.closest ? event.target.closest('[data-admin-panel], .admin-subtab, button') : null;
+    if (!target) return;
+    const text = String(target.textContent || '');
+    if (/일일평가/.test(text)) setTimeout(refreshVisibleStatus600_, 80);
+  }, true);
+
+  window.addEventListener('storage', function (event) {
+    if (event.key && event.key.indexOf(STORAGE_PREFIX) === 0) setTimeout(refreshVisibleStatus600_, 0);
+  });
+
+  console.log('[ULIM 6.00] 일일평가 로컬 출석상태 즉시 반영 패치 적용 완료');
 })();
 </script>
 
