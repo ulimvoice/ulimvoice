@@ -11,7 +11,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>울림 성우·스피치·연기학원 통합 연습 프로그램 6.10</title>
+<title>울림 성우·스피치·연기학원 통합 연습 프로그램 6.12</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://script.google.com">
 <link rel="dns-prefetch" href="//script.google.com">
@@ -1886,7 +1886,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
 
 <header>
     <div class="header-content">
-        <a href="#" onclick="showLoginOverlay(); return false;" style="outline: none; text-decoration: none;">
+        <a href="#" onclick="return ulimRefreshFromLogo612(event);" aria-label="울림앱 새로고침" title="새로고침" style="outline: none; text-decoration: none; cursor: pointer;">
             <img src="appdata/logo.png" class="logo-img" alt="울림연기학원" onerror="this.style.display='none';" id="logoImg">
         </a><h1 class="header-title">울림연기학원 연습 프로그램</h1>
     </div>
@@ -20870,7 +20870,7 @@ ${ruleSummary}`, 'success');
       setTimeout(safeOpenAdmin587_, 350);
     }
 
-    var logo = document.querySelector('.header-content a, .logo-img, header');
+    var logo = document.querySelector('.header-title');
     if (!logo) return;
     var count = 0;
     var timer = null;
@@ -23846,6 +23846,153 @@ body.ulim-layer-open-611 {
     document.addEventListener('DOMContentLoaded', init, { once: true });
   } else {
     init();
+  }
+})();
+</script>
+
+
+
+<!-- =========================================================
+  6.12 모바일 당겨서 새로고침 차단 + 상단 학원 로고 새로고침
+  - 모바일 화면 최상단에서 아래로 당겨도 브라우저 새로고침이 실행되지 않음
+  - 상단 학원 로고 1회 클릭 시 현재 로그인 세션을 유지한 채 앱을 새로고침
+  - 로고의 기존 로그인/로그아웃 진입 동작 제거
+  ========================================================= -->
+<style id="ulim-mobile-refresh-style-612">
+html,
+body {
+  overscroll-behavior-y: none !important;
+}
+
+@media (max-width: 900px), (pointer: coarse) {
+  html,
+  body {
+    overscroll-behavior: none !important;
+  }
+
+  #logoImg {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+}
+</style>
+
+<script id="ulim-mobile-refresh-control-612">
+(function(){
+  'use strict';
+  if (window.ULIM_MOBILE_REFRESH_CONTROL_612) return;
+  window.ULIM_MOBILE_REFRESH_CONTROL_612 = true;
+
+  const VERSION = '6.12';
+  let refreshing = false;
+  let touchStartY = 0;
+  let touchStartX = 0;
+
+  function isTouchMobile612_() {
+    try {
+      return (navigator.maxTouchPoints || 0) > 0 &&
+             (window.matchMedia('(max-width: 900px)').matches ||
+              window.matchMedia('(pointer: coarse)').matches);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function scrollingElement612_() {
+    return document.scrollingElement || document.documentElement || document.body;
+  }
+
+  function findScrollableAncestor612_(node) {
+    let el = node instanceof Element ? node : null;
+    while (el && el !== document.body && el !== document.documentElement) {
+      const style = window.getComputedStyle(el);
+      const overflowY = style.overflowY;
+      const canScroll = /(auto|scroll|overlay)/.test(overflowY) &&
+                        el.scrollHeight > el.clientHeight + 1;
+      if (canScroll) return el;
+      el = el.parentElement;
+    }
+    return null;
+  }
+
+  function blockPullToRefresh612_() {
+    if (!isTouchMobile612_()) return;
+
+    document.addEventListener('touchstart', function(event){
+      if (event.touches.length !== 1) return;
+      touchStartY = event.touches[0].clientY;
+      touchStartX = event.touches[0].clientX;
+    }, { passive: true });
+
+    document.addEventListener('touchmove', function(event){
+      if (event.touches.length !== 1) return;
+
+      const touch = event.touches[0];
+      const deltaY = touch.clientY - touchStartY;
+      const deltaX = touch.clientX - touchStartX;
+
+      // 아래로 당기는 세로 제스처만 처리합니다.
+      if (deltaY <= 6 || Math.abs(deltaX) >= Math.abs(deltaY)) return;
+
+      const innerScroller = findScrollableAncestor612_(event.target);
+      if (innerScroller) {
+        // 내부 스크롤 영역이 위쪽 끝에 있을 때 발생하는 바깥쪽 당김만 차단합니다.
+        if (innerScroller.scrollTop <= 0) event.preventDefault();
+        return;
+      }
+
+      const root = scrollingElement612_();
+      const rootTop = Math.max(0, root ? root.scrollTop : 0, window.scrollY || 0);
+      if (rootTop <= 0) event.preventDefault();
+    }, { passive: false });
+  }
+
+  window.ulimRefreshFromLogo612 = function(event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    if (refreshing) return false;
+    refreshing = true;
+
+    const logo = document.getElementById('logoImg');
+    if (logo) {
+      logo.style.opacity = '0.55';
+      logo.style.transform = 'scale(0.96)';
+      logo.setAttribute('aria-busy', 'true');
+    }
+
+    // localStorage/sessionStorage의 로그인 정보는 삭제하지 않고 현재 페이지를 다시 읽습니다.
+    window.setTimeout(function(){
+      window.location.reload();
+    }, 80);
+    return false;
+  };
+
+  function init612_() {
+    blockPullToRefresh612_();
+
+    const anchor = document.querySelector('.header-content a');
+    const logo = document.getElementById('logoImg');
+    if (anchor) {
+      anchor.setAttribute('href', '#');
+      anchor.setAttribute('aria-label', '울림앱 새로고침');
+      anchor.setAttribute('title', '새로고침');
+    }
+    if (logo) {
+      logo.setAttribute('role', 'button');
+      logo.setAttribute('aria-label', '울림앱 새로고침');
+    }
+
+    console.log('[ULIM]', VERSION, '모바일 당겨서 새로고침 차단 / 로고 새로고침 활성화');
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init612_, { once: true });
+  } else {
+    init612_();
   }
 })();
 </script>
