@@ -11,9 +11,9 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>울림 성우·스피치·연기학원 통합 연습 프로그램 6.07</title>
+<title>울림 성우·스피치·연기학원 통합 연습 프로그램 6.09</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script type="text/javascript" nonce="36940d89fff8416593eb8c4683b" src="//local.adguard.org?ts=1782278388252&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_0000000070347206b906d9a285f00def%26fn%3Dindex_6_07_%25EC%25BD%2594%25EB%25A9%2598%25ED%258A%25B8%25EC%2595%258C%25EB%25A6%25BC%25EB%25A7%258C%25ED%2595%25B4%25EC%25A0%259C_%25EB%258B%25AC%25EB%25A0%25A5%25EB%25B3%2584%25EC%259C%25A0%25EC%25A7%2580_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D495077%26p%3Dfs%26cid%3D1%26sig%3D4b38261fe0fe934c9a11e70058780d437f85bff91ef467e11ccf3ca703a89685%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
+<script type="text/javascript" nonce="36940d89fff8416593eb8c4683b" src="//local.adguard.org?ts=1782278388252&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_0000000049a87206af9a225bc77aab58%26fn%3Dindex_6_09_%25ED%2591%259C%25EC%25A4%2580%25EB%25B0%259C%25EC%259D%258C_%25EA%25B3%25A0%25EA%25B8%2589%25EB%25B6%2584%25EC%2584%259D%25EC%25A0%2584%25EC%259A%25A9_%25EB%258B%25AC%25EB%25A0%25A5%25EA%25B8%25B0%25EB%25A1%259D_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D495077%26p%3Dfs%26cid%3D1%26sig%3D8941930579969a41d628bd40c99ee6061e33582b5ca8e0f3535c8a710a6b8da2%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
 <link rel="dns-prefetch" href="//script.google.com">
 <link rel="dns-prefetch" href="//script.googleusercontent.com">
 
@@ -22316,34 +22316,68 @@ ${ruleSummary}`, 'success');
   });
   if(document.body)observer.observe(document.body,{childList:true,subtree:true});
 
-  // 표준발음 탭에 연습기록 버튼/상태 영역 추가
+  // 6.09 표준발음 학생 연습기록은 달력 형태로 제공합니다.
+  // 단, 고급 분석을 요청한 녹음만 Drive/시트에 기록하고 강사평가 대상으로 사용합니다.
   function ensurePronTools(){
-    const voice=document.querySelector('#tabPronunciation .pron-voice-card');if(!voice||document.getElementById('ulimPronPracticeTools595'))return;
-    voice.insertAdjacentHTML('beforeend',`<div id="ulimPronPracticeTools595" class="ulim-pron-record-tools"><button type="button" class="ulim-pron-record-btn" onclick="ulimTogglePronPracticeRecords595()">📘 표준발음 연습기록 보기</button><div id="ulimPronAutoSaveStatus595" class="ulim-pron-save-status"></div><div id="ulimPronPracticeList595" class="ulim-pron-record-list"></div></div>`);
+    // 표준발음 달력 UI는 6.09 전용 스크립트에서 생성합니다.
   }
-  async function loadPronRecords(){
-    const box=document.getElementById('ulimPronPracticeList595');if(!box)return;box.innerHTML='<div class="practice-log-meta">기록을 불러오는 중입니다...</div>';
-    const now=new Date();try{const data=await pronJsonpRequest({action:'getStudentVocalPracticeLogs',studentSessionToken:typeof getStudentSessionToken_==='function'?getStudentSessionToken_():(window.studentSessionToken||''),year:now.getFullYear(),month:now.getMonth()+1,category:'standard_pronunciation',_:Date.now()},12000);const logs=Array.isArray(data.logs)?data.logs:[];box.innerHTML=logs.length?logs.map(log=>`<div class="practice-log-card student-view"><div class="practice-log-title">🎙️ 표준발음 연습 · ${esc(log.practiceDate||'')}</div><div class="practice-log-text"><b>문장</b><br>${esc(log.sentence||'')}</div>${log.fileUrl?`<p><a href="${esc(log.fileUrl)}" target="_blank" rel="noopener">녹음파일 열기</a></p>`:''}${buildStudentEval(log)}</div>`).join(''):'<div class="practice-log-meta">이번 달 표준발음 연습기록이 없습니다.</div>';}catch(e){box.innerHTML='<div class="practice-log-meta">기록을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.</div>';}
-  }
-  window.ulimTogglePronPracticeRecords595=function(){const box=document.getElementById('ulimPronPracticeList595');if(!box)return;const show=box.style.display!=='block';box.style.display=show?'block':'none';if(show)loadPronRecords();};
 
-  // 표준발음 분석 완료 시 같은 녹음은 한 번만 백그라운드 업로드/기록
-  let pronUploadRunning=false;let lastFingerprint='';
+  let pronUploadRunning=false;
+  let lastFingerprint='';
+  let pronAdvancedRecordRequested609=false;
+  let pronAdvancedRecordResetTimer609=null;
+
+  function setPronAdvancedRecordRequested609(value){
+    pronAdvancedRecordRequested609=!!value;
+    if(pronAdvancedRecordResetTimer609) clearTimeout(pronAdvancedRecordResetTimer609);
+    if(pronAdvancedRecordRequested609){
+      pronAdvancedRecordResetTimer609=setTimeout(function(){pronAdvancedRecordRequested609=false;},180000);
+    }
+  }
+
+  const oldPronAdvancedRun609=window.pronRunEtriAdvancedAnalysis;
+  if(typeof oldPronAdvancedRun609==='function'){
+    window.pronRunEtriAdvancedAnalysis=function(){
+      setPronAdvancedRecordRequested609(true);
+      return oldPronAdvancedRun609.apply(this,arguments);
+    };
+    try{pronRunEtriAdvancedAnalysis=window.pronRunEtriAdvancedAnalysis;}catch(e){}
+  }
+  const oldPronGeneralRun609=window.pronRunGeneralAnalysis;
+  if(typeof oldPronGeneralRun609==='function'){
+    window.pronRunGeneralAnalysis=function(){
+      setPronAdvancedRecordRequested609(false);
+      return oldPronGeneralRun609.apply(this,arguments);
+    };
+    try{pronRunGeneralAnalysis=window.pronRunGeneralAnalysis;}catch(e){}
+  }
+
+  // 표준발음 고급 분석 완료 시 같은 녹음은 한 번만 백그라운드 업로드/기록
   async function uploadPronRecord(message){
-    const recorded=(typeof pronRecordedBlob!=='undefined'?pronRecordedBlob:window.pronRecordedBlob);if(pronUploadRunning||!recorded)return;
+    const recorded=(typeof pronRecordedBlob!=='undefined'?pronRecordedBlob:window.pronRecordedBlob);if(pronUploadRunning||!recorded||!pronAdvancedRecordRequested609)return;
     const source=document.getElementById('pronInputText')?.value.trim()||'';if(!source)return;
-    const fp=[recorded.size,recorded.type,source].join('|');if(fp===lastFingerprint)return;
+    const fp=['advanced',recorded.size,recorded.type,source].join('|');if(fp===lastFingerprint)return;
     const token=typeof getStudentSessionToken_==='function'?getStudentSessionToken_():(window.studentSessionToken||'');if(!token)return;
-    pronUploadRunning=true;const status=document.getElementById('ulimPronAutoSaveStatus595');if(status)status.textContent='표준발음 연습기록을 백그라운드 저장하는 중입니다.';
+    pronUploadRunning=true;const status=document.getElementById('ulimPronAdvancedSaveStatus609');if(status)status.textContent='고급 분석 기록을 백그라운드 저장하는 중입니다.';
     try{
       const conv=typeof pronConvertText==='function'?pronConvertText(source):{};const standard=conv.converted||conv.principle||'';const features=typeof pronGetAnalysisNumbers==='function'?pronGetAnalysisNumbers():{};
-      const base64=await blobToBase64(recorded);const mime=recorded.type||getBestAudioMimeType_()||'audio/mp4';const id='PRON_'+new Date().toISOString().slice(0,10).replace(/-/g,'')+'_'+Math.random().toString(36).slice(2,8);
-      await uploadAudioToDriveAndLog(id,source,base64,mime,'표준발음 연습 업로드',{mediaKind:'audio',contentCategory:'standard_pronunciation',recordCategory:'standard_pronunciation',category:'standard_pronunciation',aiSource:'표준발음 분석',aiComment:String(message||''),analysisText:String(message||''),originalSentence:source,localWhisperText:String((typeof pronLastSttText!=='undefined'?pronLastSttText:'')||''),recognizedText:String((typeof pronLastSttText!=='undefined'?pronLastSttText:'')||''),standardPronunciation:standard,audioFeatureJson:JSON.stringify(features),aiAnalysisJson:JSON.stringify({text:String(message||''),recognized:String((typeof pronLastSttText!=='undefined'?pronLastSttText:'')||''),standardPronunciation:standard,features:features}),studentSessionToken:token,fileSize:recorded.size});
-      lastFingerprint=fp;if(status)status.textContent='표준발음 연습기록 저장 요청이 완료되었습니다.';
-    }catch(e){if(status)status.textContent='연습기록 저장이 지연되고 있습니다. 다음 분석 때 다시 시도합니다.';}finally{pronUploadRunning=false;}
+      const base64=await blobToBase64(recorded);const mime=recorded.type||getBestAudioMimeType_()||'audio/mp4';const id='PRON_ADV_'+new Date().toISOString().slice(0,10).replace(/-/g,'')+'_'+Math.random().toString(36).slice(2,8);
+      await uploadAudioToDriveAndLog(id,source,base64,mime,'표준발음 고급분석 업로드',{mediaKind:'audio',contentCategory:'standard_pronunciation',recordCategory:'standard_pronunciation',category:'standard_pronunciation',analysisMode:'advanced',advancedAnalysis:'1',aiSource:'표준발음 고급분석',aiComment:String(message||''),analysisText:String(message||''),originalSentence:source,localWhisperText:String((typeof pronLastSttText!=='undefined'?pronLastSttText:'')||''),recognizedText:String((typeof pronLastSttText!=='undefined'?pronLastSttText:'')||''),standardPronunciation:standard,audioFeatureJson:JSON.stringify(features),aiAnalysisJson:JSON.stringify({analysisMode:'advanced',text:String(message||''),recognized:String((typeof pronLastSttText!=='undefined'?pronLastSttText:'')||''),standardPronunciation:standard,features:features}),studentSessionToken:token,fileSize:recorded.size});
+      lastFingerprint=fp;if(status)status.textContent='고급 분석 기록 저장 요청이 완료되었습니다.';
+      setPronAdvancedRecordRequested609(false);
+      try{if(typeof window.ulimInvalidatePracticeCache609==='function')window.ulimInvalidatePracticeCache609();}catch(e){}
+    }catch(e){if(status)status.textContent='고급 분석 기록 저장이 지연되고 있습니다. 잠시 후 다시 시도해주세요.';}finally{pronUploadRunning=false;}
   }
   if(typeof window.pronSetAdvancedStatus==='function'){
-    const old=window.pronSetAdvancedStatus;window.pronSetAdvancedStatus=function(message,type){const r=old.apply(this,arguments);const t=String(message||'');if(type==='success'&&/(문장\s*일치도|발음평가\s*점수|리미\s*코멘트|간단\s*분석)/.test(t)&&!/(분석\s*중|확인\s*중)/.test(t))setTimeout(()=>uploadPronRecord(t),300);return r;};try{pronSetAdvancedStatus=window.pronSetAdvancedStatus;}catch(e){}
+    const old=window.pronSetAdvancedStatus;
+    window.pronSetAdvancedStatus=function(message,type){
+      const r=old.apply(this,arguments);const t=String(message||'');
+      const isFinalAdvanced=pronAdvancedRecordRequested609&&type==='success'&&/(발음평가\s*점수|리미\s*코멘트|정밀\s*분석|고급\s*분석)/.test(t)&&!/(간단\s*분석|분석\s*중|확인\s*중)/.test(t);
+      if(isFinalAdvanced)setTimeout(()=>uploadPronRecord(t),300);
+      if(type==='error')setPronAdvancedRecordRequested609(false);
+      return r;
+    };
+    try{pronSetAdvancedStatus=window.pronSetAdvancedStatus;}catch(e){}
   }
   function cleanupLegacyPastUi598(root){
     const scope=root&&root.querySelectorAll?root:document;
@@ -22715,17 +22749,10 @@ ${ruleSummary}`, 'success');
     const logs = allLogs();
     const vocalUnread = logs.some(function(log){ return !isPast(log) && !isStandard(log) && isUnread(log); });
     const pastUnread = logs.some(function(log){ return isPast(log) && isUnread(log); });
-    const standardUnread = logs.some(function(log){ return isStandard(log) && isUnread(log); });
     const vocalBtn = document.getElementById('vocalPracticeToggleBtn') || document.querySelector('button[onclick="toggleCalendar()"]');
     const pastBtn = document.getElementById('pastPracticeToggleBtn');
-    const pronBtn = document.querySelector('#ulimPronPracticeTools595 .ulim-pron-record-btn');
     if (vocalBtn) vocalBtn.classList.toggle('has-comment', vocalUnread);
     if (pastBtn) pastBtn.classList.toggle('has-comment', pastUnread);
-    if (pronBtn) {
-      pronBtn.classList.toggle('has-comment', standardUnread);
-      pronBtn.dataset.unread606 = standardUnread ? '1' : '0';
-      pronBtn.textContent = standardUnread ? '📘 표준발음 연습기록 보기 · ★ 새 평가' : '📘 표준발음 연습기록 보기';
-    }
   }
   window.ulimRefreshPracticeUnread606 = refreshUnreadIndicators;
 
@@ -22920,29 +22947,8 @@ ${ruleSummary}`, 'success');
     };
   }
 
-  function buildPronList(logs){
-    const box=document.getElementById('ulimPronPracticeList595');
-    if(!box)return;
-    box.innerHTML=(logs||[]).length?(logs||[]).map(function(log){
-      const evalHtml=typeof window.ulimBuildStudentEvaluationCard595==='function'?window.ulimBuildStudentEvaluationCard595(log):'';
-      return '<div class="practice-log-card student-view '+(isUnread(log)?'has-comment':'')+'"><div class="practice-log-title">🎙️ 표준발음 연습 · '+esc(log.practiceDate||'')+(isUnread(log)?' · ★ 새 평가':'')+'</div><div class="practice-log-text"><b>문장</b><br>'+esc(log.sentence||'')+'</div>'+(log.fileUrl?'<p><a href="'+esc(log.fileUrl)+'" target="_blank" rel="noopener">녹음파일 열기</a></p>':'')+evalHtml+'</div>';
-    }).join(''):'<div class="practice-log-meta">이번 달 표준발음 연습기록이 없습니다.</div>';
-  }
-  window.ulimTogglePronPracticeRecords595=function(){
-    const box=document.getElementById('ulimPronPracticeList595');if(!box)return;
-    const show=box.style.display!=='block';box.style.display=show?'block':'none';if(!show)return;
-    const now=new Date();
-    const render=function(){
-      const logs=allLogs().filter(isStandard);
-      buildPronList(logs);
-      const unread=logs.filter(isUnread).map(function(x){return x.recordId;});
-      if(unread.length)sendViewed(unread);
-    };
-    const cache=readCache(now.getFullYear(),now.getMonth());
-    if(cache&&cache.logs){applyLogs(cache.logs,now.getFullYear(),now.getMonth());render();}
-    else box.innerHTML='<div class="practice-log-meta">기록을 불러오는 중입니다...</div>';
-    window.loadStudentVocalPracticeLogsForMonth_(now.getFullYear(),now.getMonth(),false).then(render);
-  };
+  // 6.08 표준발음 학생 연습기록 목록은 사용하지 않습니다.
+  window.ulimTogglePronPracticeRecords595=function(){};
 
   // 로그인 직후 달력 데이터를 낮은 우선순위로 미리 불러옵니다.
   const prefetch=function(){
@@ -22960,13 +22966,152 @@ ${ruleSummary}`, 'success');
     if(!c||Date.now()-Number(c.savedAt||0)>BACKGROUND_REFRESH_AGE) window.loadStudentVocalPracticeLogsForMonth_(now.getFullYear(),now.getMonth(),false);
   });
 
-  const style=document.createElement('style');
-  style.textContent='#ulimPronPracticeTools595 .ulim-pron-record-btn.has-comment{background:#facc15!important;color:#78350f!important;box-shadow:0 3px 0 rgba(120,53,15,.18)}';
-  document.head.appendChild(style);
   setTimeout(refreshUnreadIndicators,500);
   console.log('[울림앱 패치 적용]',VERSION);
 })();
 </script>
+
+
+
+
+<script id="ulim-pron-advanced-calendar-609">
+(function(){
+  'use strict';
+  const VERSION='6.09-pron-advanced-calendar';
+  let currentYear=new Date().getFullYear();
+  let currentMonth=new Date().getMonth();
+  let opened=false;
+
+  function s(v){return String(v==null?'':v).trim();}
+  function esc(v){return s(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+  function dateKey(y,m,d){return y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');}
+  function isAdvancedStandard(log){
+    if(!log)return false;
+    const type=[log.taskType,log.recordType,log.category,log.vocalId].map(s).join(' ');
+    if(!/standard_pronunciation|표준발음|PRON_/i.test(type))return false;
+    const detail=[log.analysisMode,log.aiSource,log.aiComment,log.recordType,log.vocalId].map(s).join(' ');
+    return /advanced|고급|발음평가\s*점수|리미\s*코멘트|PRON_ADV_/i.test(detail)&&!/간단\s*분석/i.test(detail);
+  }
+  function hasEval(log){
+    const list=Array.isArray(log&&log.teacherEvaluations)?log.teacherEvaluations:[];
+    return list.some(function(ev){return s(ev&&(ev.scoreJson||ev.comment));})||!!s(log&&log.teacherComment);
+  }
+  function unread(log){
+    if(!hasEval(log))return false;
+    if(typeof log.hasUnreadTeacherEvaluation==='boolean')return log.hasUnreadTeacherEvaluation;
+    return !s(log.studentViewed);
+  }
+  function allMonthLogs(){
+    const out=[];
+    try{studentVocalPracticeLogMap.forEach(function(list){(list||[]).forEach(function(x){if(isAdvancedStandard(x))out.push(x);});});}catch(e){}
+    return out;
+  }
+  function ensureUi(){
+    if(document.getElementById('ulimPronCalendarTools609'))return;
+    const card=document.querySelector('#tabPronunciation .pron-voice-card');
+    if(!card)return;
+    card.insertAdjacentHTML('beforeend',`
+      <div id="ulimPronCalendarTools609" class="ulim-pron-calendar-tools609">
+        <button type="button" id="ulimPronCalendarToggle609" class="ulim-pron-calendar-toggle609">📘 표준발음 고급분석 기록 보기</button>
+        <div id="ulimPronAdvancedSaveStatus609" class="ulim-pron-calendar-save609"></div>
+        <div id="ulimPronCalendarArea609" class="ulim-pron-calendar-area609" style="display:none;">
+          <div class="ulim-pron-calendar-head609">
+            <button type="button" id="ulimPronPrev609" aria-label="이전 달">‹</button>
+            <strong id="ulimPronMonthTitle609"></strong>
+            <button type="button" id="ulimPronNext609" aria-label="다음 달">›</button>
+          </div>
+          <div class="ulim-pron-calendar-week609"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>
+          <div id="ulimPronCalendarGrid609" class="ulim-pron-calendar-grid609"></div>
+          <div class="ulim-pron-calendar-guide609">O: 고급분석 기록 · ★: 선생님 평가 있음</div>
+          <div id="ulimPronDayDetail609" class="ulim-pron-day-detail609"></div>
+        </div>
+      </div>`);
+    document.getElementById('ulimPronCalendarToggle609').addEventListener('click',toggleCalendar);
+    document.getElementById('ulimPronPrev609').addEventListener('click',function(){moveMonth(-1);});
+    document.getElementById('ulimPronNext609').addEventListener('click',function(){moveMonth(1);});
+  }
+  function moveMonth(delta){
+    const d=new Date(currentYear,currentMonth+delta,1);currentYear=d.getFullYear();currentMonth=d.getMonth();renderAndLoad(false);
+  }
+  function updateButton(){
+    const btn=document.getElementById('ulimPronCalendarToggle609');if(!btn)return;
+    const hasUnread=allMonthLogs().some(unread);
+    btn.classList.toggle('has-comment',hasUnread);
+    btn.textContent=hasUnread?'📘 표준발음 고급분석 기록 보기 · ★ 새 평가':'📘 표준발음 고급분석 기록 보기';
+  }
+  function logsByDate(key){return allMonthLogs().filter(function(log){return s(log.practiceDate).slice(0,10)===key;});}
+  function renderCalendar(){
+    ensureUi();
+    const title=document.getElementById('ulimPronMonthTitle609');const grid=document.getElementById('ulimPronCalendarGrid609');
+    if(!title||!grid)return;
+    title.textContent=currentYear+'년 '+(currentMonth+1)+'월';grid.innerHTML='';
+    const first=new Date(currentYear,currentMonth,1).getDay();const last=new Date(currentYear,currentMonth+1,0).getDate();
+    for(let i=0;i<first;i++)grid.insertAdjacentHTML('beforeend','<span class="empty"></span>');
+    for(let d=1;d<=last;d++){
+      const key=dateKey(currentYear,currentMonth,d);const logs=logsByDate(key);const evalExists=logs.some(hasEval);const recordExists=logs.length>0;const isToday=key===new Date().toISOString().slice(0,10);
+      const marker=evalExists?'★':(recordExists?'O':'');
+      const cls=['ulim-pron-day609',recordExists?'has-record':'',evalExists?'has-eval':'',isToday?'today':''].filter(Boolean).join(' ');
+      grid.insertAdjacentHTML('beforeend','<button type="button" class="'+cls+'" data-date="'+key+'"><span>'+d+'</span><b>'+marker+'</b></button>');
+    }
+    grid.querySelectorAll('button[data-date]').forEach(function(btn){btn.addEventListener('click',function(){showDay(btn.dataset.date);});});
+    updateButton();
+  }
+  function renderEval(log){
+    try{return typeof window.ulimBuildStudentEvaluationCard595==='function'?window.ulimBuildStudentEvaluationCard595(log):'';}catch(e){return '';}
+  }
+  function showDay(key){
+    const box=document.getElementById('ulimPronDayDetail609');if(!box)return;
+    const logs=logsByDate(key);
+    document.querySelectorAll('.ulim-pron-day609.active').forEach(function(el){el.classList.remove('active');});
+    const active=document.querySelector('.ulim-pron-day609[data-date="'+key+'"]');if(active)active.classList.add('active');
+    if(!logs.length){box.innerHTML='<div class="practice-log-meta">이 날짜에는 고급분석 기록이 없습니다.</div>';return;}
+    box.innerHTML='<h4>'+esc(key)+' 표준발음 고급분석 기록</h4>'+logs.map(function(log){
+      return '<div class="practice-log-card student-view '+(unread(log)?'has-comment':'')+'">'
+        +'<div class="practice-log-title">✅ 표준발음 고급분석 완료'+(unread(log)?' · ★ 새 평가':'')+'</div>'
+        +'<div class="practice-log-text"><b>문장</b><br>'+esc(log.sentence||'')+'</div>'
+        +(log.aiComment?'<div class="practice-log-text"><b>고급분석 결과</b><br>'+esc(log.aiComment)+'</div>':'')
+        +(log.fileUrl?'<p><a class="ulim-pron-audio-link609" href="'+esc(log.fileUrl)+'" target="_blank" rel="noopener">녹음파일 열기</a></p>':'')
+        +renderEval(log)+'</div>';
+    }).join('');
+    const ids=logs.filter(unread).map(function(x){return x.recordId;});
+    if(ids.length&&typeof window.ulimMarkPracticeLogsViewed606==='function')window.ulimMarkPracticeLogsViewed606(ids);
+    setTimeout(function(){
+      box.querySelectorAll('.practice-log-card.has-comment').forEach(function(card){card.classList.remove('has-comment');});
+      updateButton();renderCalendar();
+    },100);
+  }
+  async function renderAndLoad(force){
+    renderCalendar();
+    if(typeof window.loadStudentVocalPracticeLogsForMonth_==='function'){
+      await window.loadStudentVocalPracticeLogsForMonth_(currentYear,currentMonth,!!force);
+      renderCalendar();
+    }
+  }
+  function toggleCalendar(){
+    ensureUi();const area=document.getElementById('ulimPronCalendarArea609');if(!area)return;
+    opened=area.style.display==='none'||!area.style.display;area.style.display=opened?'block':'none';
+    if(opened)renderAndLoad(false);
+  }
+  window.ulimInvalidatePracticeCache609=function(){
+    try{
+      const prefix='ulim_student_practice_month_v607::';
+      Object.keys(sessionStorage).filter(function(k){return k.indexOf(prefix)===0;}).forEach(function(k){sessionStorage.removeItem(k);});
+    }catch(e){}
+    if(opened)renderAndLoad(true);
+  };
+  const oldRefresh=window.ulimRefreshPracticeUnread606;
+  window.ulimRefreshPracticeUnread606=function(){
+    if(typeof oldRefresh==='function')oldRefresh.apply(this,arguments);
+    ensureUi();updateButton();if(opened)renderCalendar();
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){ensureUi();updateButton();});else{ensureUi();updateButton();}
+  setTimeout(function(){ensureUi();updateButton();},700);
+  console.log('[ULIM]',VERSION);
+})();
+</script>
+<style id="ulim-pron-advanced-calendar-style-609">
+.ulim-pron-calendar-tools609{margin-top:16px;padding-top:14px;border-top:1px dashed #d1d5db}.ulim-pron-calendar-toggle609{width:100%;border:0;border-radius:12px;padding:13px 14px;background:#e5e7eb;color:#374151;font-weight:900;cursor:pointer}.ulim-pron-calendar-toggle609.has-comment{background:#facc15;color:#78350f;box-shadow:0 3px 0 rgba(120,53,15,.18)}.ulim-pron-calendar-save609{min-height:20px;margin:7px 2px 0;font-size:12px;color:#166534;font-weight:800}.ulim-pron-calendar-area609{margin-top:12px;border:1px solid #dbeafe;border-radius:16px;padding:12px;background:#f8fafc}.ulim-pron-calendar-head609{display:grid;grid-template-columns:42px 1fr 42px;align-items:center;gap:8px}.ulim-pron-calendar-head609 strong{text-align:center;font-size:16px;color:#1e3a8a}.ulim-pron-calendar-head609 button{border:0;border-radius:10px;background:#fff;padding:9px;font-size:20px;font-weight:900;cursor:pointer}.ulim-pron-calendar-week609,.ulim-pron-calendar-grid609{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}.ulim-pron-calendar-week609{margin-top:10px}.ulim-pron-calendar-week609 span{text-align:center;font-size:12px;font-weight:900;color:#64748b;padding:4px}.ulim-pron-calendar-grid609{margin-top:4px}.ulim-pron-calendar-grid609 .empty{min-height:44px}.ulim-pron-day609{min-height:48px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:#374151}.ulim-pron-day609 b{font-size:14px;color:#16a34a}.ulim-pron-day609.has-eval{background:#fff7cc;border-color:#facc15}.ulim-pron-day609.has-eval b{color:#b45309}.ulim-pron-day609.today{outline:2px solid #60a5fa}.ulim-pron-day609.active{background:#dbeafe;border-color:#3b82f6}.ulim-pron-calendar-guide609{text-align:center;margin:9px 0 0;font-size:11px;color:#64748b}.ulim-pron-day-detail609{margin-top:12px}.ulim-pron-day-detail609 h4{margin:0 0 10px;color:#1e3a8a}.ulim-pron-audio-link609{display:inline-block;background:#2563eb;color:#fff!important;text-decoration:none;padding:9px 12px;border-radius:9px;font-weight:900}.ulim-pron-day-detail609 .practice-log-text{margin-top:10px;white-space:pre-wrap;line-height:1.6}.ulim-pron-day-detail609 .practice-log-card{margin-bottom:12px}@media(max-width:600px){.ulim-pron-calendar-area609{padding:9px}.ulim-pron-calendar-week609,.ulim-pron-calendar-grid609{gap:3px}.ulim-pron-day609{min-height:42px;border-radius:8px;font-size:12px}}
+</style>
 
 </body>
 </html>
