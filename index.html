@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- 6.07 학생 코멘트 열람 시 상단 알림만 해제 + 달력 ★ 유지 + 새 평가 재알림 + 6.06 기능 유지 -->
 <!-- 6.04 동명이인 + 중복 학생번호 고유식별키 매칭 + 6.03 기능 유지 -->
 <!-- 6.03 동명이인 출석부 정상행 우선/누락방지 + 6.02 기능 유지 -->
 <!-- 6.02 동명이인 일일평가 학생번호/반/강사 정확 매칭 + 6.01 기능 유지 -->
@@ -10,9 +11,9 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>울림 성우·스피치·연기학원 통합 연습 프로그램 6.04</title>
+<title>울림 성우·스피치·연기학원 통합 연습 프로그램 6.07</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script type="text/javascript" nonce="ba2411dadd4341349b65b550e65" src="//local.adguard.org?ts=1782025581012&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000009ed07206854548f6b5355d5a%26fn%3Dindex_6_04_%25EB%258F%2599%25EB%25AA%2585%25EC%259D%25B4%25EC%259D%25B8_%25EC%25A4%2591%25EB%25B3%25B5%25ED%2595%2599%25EC%2583%259D%25EB%25B2%2588%25ED%2598%25B8_%25EA%25B3%25A0%25EC%259C%25A0%25EC%258B%259D%25EB%25B3%2584%25ED%2582%25A4_%25EC%25B5%259C%25EC%258B%25A0%25ED%2586%25B5%25ED%2595%25A9%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D495007%26p%3Dfs%26cid%3D1%26sig%3D5eebc29325aa141564b07b2611e02643f6d7c4ee025bb1f884232f82eb41fc7c%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
+<script type="text/javascript" nonce="36940d89fff8416593eb8c4683b" src="//local.adguard.org?ts=1782278388252&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_0000000070347206b906d9a285f00def%26fn%3Dindex_6_07_%25EC%25BD%2594%25EB%25A9%2598%25ED%258A%25B8%25EC%2595%258C%25EB%25A6%25BC%25EB%25A7%258C%25ED%2595%25B4%25EC%25A0%259C_%25EB%258B%25AC%25EB%25A0%25A5%25EB%25B3%2584%25EC%259C%25A0%25EC%25A7%2580_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D495077%26p%3Dfs%26cid%3D1%26sig%3D4b38261fe0fe934c9a11e70058780d437f85bff91ef467e11ccf3ca703a89685%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
 <link rel="dns-prefetch" href="//script.google.com">
 <link rel="dns-prefetch" href="//script.googleusercontent.com">
 
@@ -4000,7 +4001,11 @@ function renderCalendar(year, month) {
         const record = records.get(dateKey); 
         const serverLogs = getStudentVocalPracticeLogsByDate_(dateKey);
         const serverLog = serverLogs.length ? serverLogs[0] : null;
-        const hasTeacherComment = serverLogs.some(r => (Array.isArray(r.teacherEvaluations) && r.teacherEvaluations.some(e => String((e && (e.scoreJson || e.comment)) || '').trim())) || String(r.teacherComment || '').trim());
+        // 달력의 ★는 학생이 코멘트를 열어본 뒤에도 유지합니다.
+        // 열람 여부는 상단 "코멘트 도착" 알림에만 사용합니다.
+        const hasTeacherComment = serverLogs.some(r => {
+            return (Array.isArray(r.teacherEvaluations) && r.teacherEvaluations.some(e => String((e && (e.scoreJson || e.comment)) || '').trim())) || String(r.teacherComment || '').trim();
+        });
 
         if (hasTeacherComment) {
             statusText = `<span style="font-weight:900;">★</span>`;
@@ -20369,8 +20374,20 @@ ${ruleSummary}`, 'success');
         });
     }
 
+    // 달력의 ★는 열람 여부와 무관하게 최종 강사평가가 존재하면 계속 유지합니다.
     function hasTeacherComment586_(logs) {
-        return (logs || []).some(hasTeacherEvaluation586_);
+        return (logs || []).some(function(log){
+            return hasTeacherEvaluation586_(log);
+        });
+    }
+
+    // 상단 "코멘트 도착" 알림은 아직 열람하지 않은 새 평가가 있을 때만 표시합니다.
+    function hasUnreadTeacherComment586_(logs) {
+        return (logs || []).some(function(log){
+            if (!hasTeacherEvaluation586_(log)) return false;
+            if (typeof log.hasUnreadTeacherEvaluation === 'boolean') return log.hasUnreadTeacherEvaluation;
+            return !safeText586_(log.studentViewed);
+        });
     }
 
     function buildUploadFileHtml586_(log) {
@@ -20388,6 +20405,7 @@ ${ruleSummary}`, 'success');
         return (logs || []).map(function(log){
             const teacherComment = safeText586_(log.teacherComment);
             const hasTeacherEvaluation = hasTeacherEvaluation586_(log);
+            const hasUnreadTeacherEvaluation = hasTeacherEvaluation && (typeof log.hasUnreadTeacherEvaluation === 'boolean' ? log.hasUnreadTeacherEvaluation : !safeText586_(log.studentViewed));
             const taskType = safeText586_(log.taskType || log.category);
             const isStandardMode = taskType === 'standard_pronunciation' || /표준발음|PRON_/i.test([log.recordType, log.vocalId].join(' '));
             const aiComment = isPastMode ? '' : safeText586_(log.aiComment);
@@ -20395,8 +20413,8 @@ ${ruleSummary}`, 'success');
             const titleLabel = isPastMode ? '기출문제 연습 완료' : (isStandardMode ? '표준발음 연습 완료' : '발성훈련 연습 완료');
             const sentenceLabel = isPastMode ? '대본' : '문장';
             return `
-                <div class="practice-log-card student-view ${hasTeacherEvaluation ? 'has-comment' : ''}">
-                    <div class="practice-log-title">✅ ${esc586_(titleLabel)} ${hasTeacherEvaluation ? ' / ★ 선생님 평가' : ''}</div>
+                <div class="practice-log-card student-view ${hasUnreadTeacherEvaluation ? 'has-comment' : ''}">
+                    <div class="practice-log-title">✅ ${esc586_(titleLabel)} ${hasUnreadTeacherEvaluation ? ' / ★ 새 선생님 평가' : (hasTeacherEvaluation ? ' / 선생님 평가' : '')}</div>
                     <div class="practice-log-meta">${esc586_(recordType)}${log.timestamp ? ' · ' + esc586_(log.timestamp) : ''}</div>
                     <p><strong>${sentenceLabel}:</strong><br>${esc586_(isPastMode ? cleanPastSentence598_(log.sentence || '') : (log.sentence || ''))}</p>
                     ${aiComment ? `<p><strong>AI 코멘트:</strong><br>${esc586_(aiComment)}</p>` : ''}
@@ -20414,7 +20432,7 @@ ${ruleSummary}`, 'success');
                 vocalBtn.id = 'vocalPracticeToggleBtn';
                 vocalBtn.classList.add('practice-record-toggle-btn');
                 const hasVocalComment = Array.from(studentVocalPracticeLogMap.values()).some(function(logs){
-                    return hasTeacherComment586_((logs || []).filter(function(log){ return !isPastPracticeLog586_(log); }));
+                    return hasUnreadTeacherComment586_((logs || []).filter(function(log){ return !isPastPracticeLog586_(log) && !isStandardPracticeLog586_(log); }));
                 });
                 vocalBtn.classList.toggle('has-comment', !!hasVocalComment);
             }
@@ -20425,7 +20443,7 @@ ${ruleSummary}`, 'success');
             if (pastBtn) {
                 pastBtn.classList.add('practice-record-toggle-btn');
                 const hasPastComment = Array.from(studentVocalPracticeLogMap.values()).some(function(logs){
-                    return hasTeacherComment586_((logs || []).filter(isPastPracticeLog586_));
+                    return hasUnreadTeacherComment586_((logs || []).filter(isPastPracticeLog586_));
                 });
                 pastBtn.classList.toggle('has-comment', !!hasPastComment);
             }
@@ -22598,6 +22616,355 @@ ${ruleSummary}`, 'success');
   });
 
   console.log('[ULIM 6.00] 일일평가 로컬 출석상태 즉시 반영 패치 적용 완료');
+})();
+</script>
+
+
+
+<script id="ulim-practice-read-speed-606">
+/* =========================================================
+   6.07 학생 연습기록 열람 알림 분리 + 달력 고속화
+   - 학생이 평가 기록을 열면 상단 "코멘트 도착" 알림과 노란 강조만 해제
+   - 달력의 ★는 최종 강사평가 존재 표시로 계속 유지
+   - 강사가 새 최종평가를 저장하면 서버 열람상태가 초기화되어 알림이 다시 표시
+   - 서버 [학생열람여부]를 백그라운드 갱신
+   - 월별 기록을 sessionStorage에 5분 캐시
+   - 달력은 먼저 즉시 표시하고 서버 새로고침은 백그라운드 실행
+   - 동일 월 중복 요청 병합
+   ========================================================= */
+(function(){
+  'use strict';
+  if (window.__ULIM_PRACTICE_READ_SPEED_606__) return;
+  window.__ULIM_PRACTICE_READ_SPEED_606__ = true;
+
+  const VERSION = '6.07-practice-alert-star-persist';
+  const CACHE_PREFIX = 'ulim_student_practice_month_v607::';
+  const CACHE_TTL = 5 * 60 * 1000;
+  const BACKGROUND_REFRESH_AGE = 45 * 1000;
+  const inflight = new Map();
+
+  function text(v){ return String(v == null ? '' : v).trim(); }
+  function esc(v){ return text(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function token(){
+    try { if (typeof getStudentSessionToken_ === 'function') return text(getStudentSessionToken_()); } catch(e) {}
+    try { return text(window.studentSessionToken || sessionStorage.getItem('studentSessionToken') || localStorage.getItem('studentSessionToken')); } catch(e) { return ''; }
+  }
+  function ownerHash(){
+    const raw = [text(window.studentName || (typeof studentName !== 'undefined' ? studentName : '')), token().slice(-18)].join('|');
+    let h = 2166136261;
+    for (let i=0;i<raw.length;i++) { h ^= raw.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return (h >>> 0).toString(36);
+  }
+  function normalizeYm(year, month){
+    const d = new Date(Number(year), Number(month), 1);
+    return {year:d.getFullYear(), month:d.getMonth()};
+  }
+  function monthKey(year, month){
+    const ym = normalizeYm(year, month);
+    return ym.year + '-' + String(ym.month + 1).padStart(2,'0');
+  }
+  function storageKey(year, month){ return CACHE_PREFIX + ownerHash() + '::' + monthKey(year, month); }
+  function readCache(year, month){
+    try {
+      const raw = sessionStorage.getItem(storageKey(year, month));
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (!data || !Array.isArray(data.logs)) return null;
+      return data;
+    } catch(e) { return null; }
+  }
+  function writeCache(year, month, logs){
+    try { sessionStorage.setItem(storageKey(year, month), JSON.stringify({savedAt:Date.now(), logs:Array.isArray(logs)?logs:[]})); } catch(e) {}
+  }
+  function applyLogs(logs, year, month){
+    try {
+      studentVocalPracticeLogMap = new Map();
+      (Array.isArray(logs) ? logs : []).forEach(function(log){
+        const dateKey = text(log.practiceDate);
+        if (!dateKey) return;
+        if (!studentVocalPracticeLogMap.has(dateKey)) studentVocalPracticeLogMap.set(dateKey, []);
+        studentVocalPracticeLogMap.get(dateKey).push(log);
+      });
+      studentVocalPracticeLoadedKey = monthKey(year, month);
+    } catch(e) {}
+    refreshUnreadIndicators();
+  }
+  function allLogs(){
+    const out=[];
+    try { studentVocalPracticeLogMap.forEach(function(list){ (list||[]).forEach(function(x){out.push(x);}); }); } catch(e) {}
+    return out;
+  }
+  function hasEval(log){
+    const list = Array.isArray(log && log.teacherEvaluations) ? log.teacherEvaluations : [];
+    return list.some(function(ev){ return text(ev && (ev.scoreJson || ev.comment)); }) || !!text(log && log.teacherComment);
+  }
+  function isUnread(log){
+    if (!hasEval(log)) return false;
+    if (typeof log.hasUnreadTeacherEvaluation === 'boolean') return log.hasUnreadTeacherEvaluation;
+    return !text(log.studentViewed);
+  }
+  function isPast(log){
+    try { if (typeof window.isPastPracticeLog_ === 'function') return window.isPastPracticeLog_(log); } catch(e) {}
+    return /기출|past_question|PAST_/i.test([log&&log.taskType,log&&log.recordType,log&&log.vocalId].join(' '));
+  }
+  function isStandard(log){
+    try { if (typeof window.isStandardPracticeLog_ === 'function') return window.isStandardPracticeLog_(log); } catch(e) {}
+    return /standard_pronunciation|표준발음|PRON_/i.test([log&&log.taskType,log&&log.recordType,log&&log.vocalId].join(' '));
+  }
+  function refreshUnreadIndicators(){
+    const logs = allLogs();
+    const vocalUnread = logs.some(function(log){ return !isPast(log) && !isStandard(log) && isUnread(log); });
+    const pastUnread = logs.some(function(log){ return isPast(log) && isUnread(log); });
+    const standardUnread = logs.some(function(log){ return isStandard(log) && isUnread(log); });
+    const vocalBtn = document.getElementById('vocalPracticeToggleBtn') || document.querySelector('button[onclick="toggleCalendar()"]');
+    const pastBtn = document.getElementById('pastPracticeToggleBtn');
+    const pronBtn = document.querySelector('#ulimPronPracticeTools595 .ulim-pron-record-btn');
+    if (vocalBtn) vocalBtn.classList.toggle('has-comment', vocalUnread);
+    if (pastBtn) pastBtn.classList.toggle('has-comment', pastUnread);
+    if (pronBtn) {
+      pronBtn.classList.toggle('has-comment', standardUnread);
+      pronBtn.dataset.unread606 = standardUnread ? '1' : '0';
+      pronBtn.textContent = standardUnread ? '📘 표준발음 연습기록 보기 · ★ 새 평가' : '📘 표준발음 연습기록 보기';
+    }
+  }
+  window.ulimRefreshPracticeUnread606 = refreshUnreadIndicators;
+
+  async function fetchMonth(year, month, force){
+    const ym = normalizeYm(year, month);
+    const key = monthKey(ym.year, ym.month);
+    if (inflight.has(key)) return inflight.get(key);
+    const p = (async function(){
+      const query = new URLSearchParams();
+      query.set('action','getStudentVocalPracticeLogs');
+      query.set('studentSessionToken', token());
+      query.set('year', String(ym.year));
+      query.set('month', String(ym.month + 1));
+      if (force) query.set('_', String(Date.now()));
+      const response = await fetch(GET_API_URL + '?' + query.toString(), {method:'GET', cache:'no-store'});
+      if (!response.ok) throw new Error('연습기록 조회 실패');
+      const data = await response.json();
+      if (!data || data.status !== 'success') throw new Error((data && data.message) || '연습기록 응답 오류');
+      const logs = Array.isArray(data.logs) ? data.logs : [];
+      applyLogs(logs, ym.year, ym.month);
+      writeCache(ym.year, ym.month, logs);
+      return data;
+    })().finally(function(){ inflight.delete(key); });
+    inflight.set(key, p);
+    return p;
+  }
+
+  window.loadStudentVocalPracticeLogsForMonth_ = function(year, month, force){
+    if (!token()) return Promise.resolve(null);
+    const ym = normalizeYm(year, month);
+    const cached = readCache(ym.year, ym.month);
+    const now = Date.now();
+
+    if (cached && cached.logs) {
+      applyLogs(cached.logs, ym.year, ym.month);
+      const age = now - Number(cached.savedAt || 0);
+      if (!force && age < CACHE_TTL) {
+        if (age > BACKGROUND_REFRESH_AGE) fetchMonth(ym.year, ym.month, false).catch(function(){});
+        return Promise.resolve({status:'success', logs:cached.logs, count:cached.logs.length, cache:true});
+      }
+    }
+
+    try {
+      if (!force && typeof studentVocalPracticeLoadedKey !== 'undefined' && studentVocalPracticeLoadedKey === monthKey(ym.year, ym.month)) {
+        return Promise.resolve({status:'success', logs:allLogs(), count:allLogs().length, memory:true});
+      }
+    } catch(e) {}
+    return fetchMonth(ym.year, ym.month, !!force).catch(function(err){ console.warn('[6.07] 연습기록 조회 지연',err); return null; });
+  };
+  try { loadStudentVocalPracticeLogsForMonth_ = window.loadStudentVocalPracticeLogsForMonth_; } catch(e) {}
+
+  function rerenderVisible(year, month){
+    try { if (typeof renderCalendar === 'function') renderCalendar(year, month); } catch(e) {}
+    try {
+      const area = document.getElementById('pastPracticeCalendarArea');
+      if (area && area.style.display !== 'none' && typeof window.renderPastPracticeCalendar_ === 'function') window.renderPastPracticeCalendar_(year, month);
+    } catch(e) {}
+    refreshUnreadIndicators();
+  }
+
+  window.renderCalendarWithServer_ = function(year, month){
+    const ym = normalizeYm(year, month);
+    try { if (typeof renderCalendar === 'function') renderCalendar(ym.year, ym.month); } catch(e) {}
+    window.loadStudentVocalPracticeLogsForMonth_(ym.year, ym.month, false).then(function(){
+      try { if (typeof renderCalendar === 'function') renderCalendar(ym.year, ym.month); } catch(e) {}
+    });
+  };
+  try { renderCalendarWithServer_ = window.renderCalendarWithServer_; } catch(e) {}
+
+  window.toggleCalendar = function(){
+    const area = document.getElementById('calendarDisplayArea');
+    if (!area) return;
+    const opening = area.style.display === 'none' || !area.style.display;
+    if (!opening) { area.style.display='none'; return; }
+    const now = new Date();
+    area.style.display='block';
+    try { if (typeof renderCalendar === 'function') renderCalendar(now.getFullYear(), now.getMonth()); } catch(e) {}
+    window.loadStudentVocalPracticeLogsForMonth_(now.getFullYear(), now.getMonth(), false).then(function(){
+      try { if (typeof renderCalendar === 'function') renderCalendar(now.getFullYear(), now.getMonth()); } catch(e) {}
+    });
+  };
+  try { toggleCalendar = window.toggleCalendar; } catch(e) {}
+
+  window.renderPastPracticeCalendarWithServer_ = function(year, month){
+    const ym = normalizeYm(year, month);
+    try { if (typeof window.renderPastPracticeCalendar_ === 'function') window.renderPastPracticeCalendar_(ym.year, ym.month); } catch(e) {}
+    window.loadStudentVocalPracticeLogsForMonth_(ym.year, ym.month, false).then(function(){
+      try { if (typeof window.renderPastPracticeCalendar_ === 'function') window.renderPastPracticeCalendar_(ym.year, ym.month); } catch(e) {}
+    });
+  };
+
+  window.togglePastPracticeCalendar = function(){
+    const area = document.getElementById('pastPracticeCalendarArea');
+    if (!area) return;
+    const opening = area.style.display === 'none' || !area.style.display;
+    if (!opening) { area.style.display='none'; return; }
+    const now = new Date();
+    area.style.display='block';
+    try { if (typeof window.renderPastPracticeCalendar_ === 'function') window.renderPastPracticeCalendar_(now.getFullYear(), now.getMonth()); } catch(e) {}
+    window.loadStudentVocalPracticeLogsForMonth_(now.getFullYear(), now.getMonth(), false).then(function(){
+      try { if (typeof window.renderPastPracticeCalendar_ === 'function') window.renderPastPracticeCalendar_(now.getFullYear(), now.getMonth()); } catch(e) {}
+    });
+  };
+
+  function loadedYm(){
+    try {
+      const key = String(studentVocalPracticeLoadedKey || '');
+      const m = key.match(/^(\d{4})-(\d{2})$/);
+      if (m) return {year:Number(m[1]), month:Number(m[2])-1};
+    } catch(e) {}
+    const now = new Date();
+    return {year:now.getFullYear(), month:now.getMonth()};
+  }
+
+  function updateCachedReadState(recordIds){
+    const ids = new Set((recordIds||[]).map(text).filter(Boolean));
+    if (!ids.size) return;
+    try {
+      studentVocalPracticeLogMap.forEach(function(list){
+        (list||[]).forEach(function(log){
+          if (ids.has(text(log.recordId))) {
+            log.studentViewed = '열람';
+            log.hasUnreadTeacherEvaluation = false;
+          }
+        });
+      });
+    } catch(e) {}
+    // 현재 화면에 로드된 월 캐시도 갱신합니다.
+    try {
+      const ym = loadedYm();
+      writeCache(ym.year, ym.month, allLogs());
+    } catch(e) {}
+  }
+
+  function clearVisibleUnreadNotice(){
+    // 현재 열려 있는 기록 카드의 "새 평가" 강조만 즉시 제거합니다.
+    // 점수/코멘트 내용과 달력 ★는 그대로 유지합니다.
+    document.querySelectorAll('.practice-log-card.student-view.has-comment').forEach(function(card){
+      card.classList.remove('has-comment');
+      const title = card.querySelector('.practice-log-title');
+      if (title) {
+        title.textContent = String(title.textContent || '')
+          .replace(/\s*\/\s*★\s*새\s*선생님\s*평가/g, ' / 선생님 평가')
+          .replace(/\s*·\s*★\s*새\s*평가/g, '');
+      }
+    });
+  }
+
+  async function sendViewed(recordIds){
+    const ids = Array.from(new Set((recordIds||[]).map(text).filter(Boolean)));
+    if (!ids.length || !token()) return;
+    updateCachedReadState(ids);
+    clearVisibleUnreadNotice();
+    const ym = loadedYm();
+    rerenderVisible(ym.year, ym.month);
+    try {
+      const query = new URLSearchParams();
+      query.set('action','markStudentVocalPracticeLogsViewed');
+      query.set('studentSessionToken', token());
+      query.set('recordIds', JSON.stringify(ids));
+      query.set('_', String(Date.now()));
+      const response = await fetch(GET_API_URL + '?' + query.toString(), {method:'GET', cache:'no-store'});
+      if (!response.ok) throw new Error('열람 처리 실패');
+      const data = await response.json();
+      if (!data || data.status !== 'success') throw new Error((data && data.message) || '열람 처리 실패');
+    } catch(err) {
+      console.warn('[6.07] 코멘트 열람 서버 반영 지연', err);
+    }
+  }
+  window.ulimMarkPracticeLogsViewed606 = sendViewed;
+
+  const oldDisplayDay = window.displayDayRecord;
+  if (typeof oldDisplayDay === 'function') {
+    window.displayDayRecord = function(dateKey, isCompleted){
+      const logs = (typeof window.getStudentVocalPracticeLogsByDate_ === 'function') ? window.getStudentVocalPracticeLogsByDate_(dateKey) : [];
+      const unreadIds = (logs||[]).filter(isUnread).map(function(x){return x.recordId;});
+      const result = oldDisplayDay.apply(this, arguments);
+      if (unreadIds.length) sendViewed(unreadIds);
+      return result;
+    };
+    try { displayDayRecord = window.displayDayRecord; } catch(e) {}
+  }
+
+  const oldDisplayPast = window.displayPastDayRecord;
+  if (typeof oldDisplayPast === 'function') {
+    window.displayPastDayRecord = function(dateKey){
+      const logs = (typeof window.getStudentPastPracticeLogsByDate_ === 'function') ? window.getStudentPastPracticeLogsByDate_(dateKey) : [];
+      const unreadIds = (logs||[]).filter(isUnread).map(function(x){return x.recordId;});
+      const result = oldDisplayPast.apply(this, arguments);
+      if (unreadIds.length) sendViewed(unreadIds);
+      return result;
+    };
+  }
+
+  function buildPronList(logs){
+    const box=document.getElementById('ulimPronPracticeList595');
+    if(!box)return;
+    box.innerHTML=(logs||[]).length?(logs||[]).map(function(log){
+      const evalHtml=typeof window.ulimBuildStudentEvaluationCard595==='function'?window.ulimBuildStudentEvaluationCard595(log):'';
+      return '<div class="practice-log-card student-view '+(isUnread(log)?'has-comment':'')+'"><div class="practice-log-title">🎙️ 표준발음 연습 · '+esc(log.practiceDate||'')+(isUnread(log)?' · ★ 새 평가':'')+'</div><div class="practice-log-text"><b>문장</b><br>'+esc(log.sentence||'')+'</div>'+(log.fileUrl?'<p><a href="'+esc(log.fileUrl)+'" target="_blank" rel="noopener">녹음파일 열기</a></p>':'')+evalHtml+'</div>';
+    }).join(''):'<div class="practice-log-meta">이번 달 표준발음 연습기록이 없습니다.</div>';
+  }
+  window.ulimTogglePronPracticeRecords595=function(){
+    const box=document.getElementById('ulimPronPracticeList595');if(!box)return;
+    const show=box.style.display!=='block';box.style.display=show?'block':'none';if(!show)return;
+    const now=new Date();
+    const render=function(){
+      const logs=allLogs().filter(isStandard);
+      buildPronList(logs);
+      const unread=logs.filter(isUnread).map(function(x){return x.recordId;});
+      if(unread.length)sendViewed(unread);
+    };
+    const cache=readCache(now.getFullYear(),now.getMonth());
+    if(cache&&cache.logs){applyLogs(cache.logs,now.getFullYear(),now.getMonth());render();}
+    else box.innerHTML='<div class="practice-log-meta">기록을 불러오는 중입니다...</div>';
+    window.loadStudentVocalPracticeLogsForMonth_(now.getFullYear(),now.getMonth(),false).then(render);
+  };
+
+  // 로그인 직후 달력 데이터를 낮은 우선순위로 미리 불러옵니다.
+  const prefetch=function(){
+    if(!token())return;
+    const now=new Date();
+    window.loadStudentVocalPracticeLogsForMonth_(now.getFullYear(),now.getMonth(),false).then(function(){
+      refreshUnreadIndicators();
+      try { if (typeof renderCalendar === 'function') renderCalendar(now.getFullYear(),now.getMonth()); } catch(e) {}
+    });
+  };
+  if ('requestIdleCallback' in window) requestIdleCallback(prefetch,{timeout:700}); else setTimeout(prefetch,250);
+  window.addEventListener('focus',function(){
+    const now=new Date();
+    const c=readCache(now.getFullYear(),now.getMonth());
+    if(!c||Date.now()-Number(c.savedAt||0)>BACKGROUND_REFRESH_AGE) window.loadStudentVocalPracticeLogsForMonth_(now.getFullYear(),now.getMonth(),false);
+  });
+
+  const style=document.createElement('style');
+  style.textContent='#ulimPronPracticeTools595 .ulim-pron-record-btn.has-comment{background:#facc15!important;color:#78350f!important;box-shadow:0 3px 0 rgba(120,53,15,.18)}';
+  document.head.appendChild(style);
+  setTimeout(refreshUnreadIndicators,500);
+  console.log('[울림앱 패치 적용]',VERSION);
 })();
 </script>
 
