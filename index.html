@@ -13,7 +13,7 @@
 <meta charset="UTF-8">
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램 6.10</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script type="text/javascript" nonce="36940d89fff8416593eb8c4683b" src="//local.adguard.org?ts=1782278388252&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000ff90720691c73240b99fcd4f%26fn%3Dindex_6_10_%25ED%2595%2599%25EC%2583%259D%25EC%2597%25B0%25EC%258A%25B5%25EA%25B8%25B0%25EB%25A1%259D_3%25EC%25A2%2585%25EB%258B%25AC%25EB%25A0%25A5%25EB%2594%2594%25EC%259E%2590%25EC%259D%25B8%25ED%2586%25B5%25EC%259D%25BC_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D495078%26p%3Dfs%26cid%3D1%26sig%3D6a95d0d3a9dfecf72fb21dc16ffc59a28feb9c6b2d62b5139d8830b01efe7218%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://script.google.com">
 <link rel="dns-prefetch" href="//script.google.com">
 <link rel="dns-prefetch" href="//script.googleusercontent.com">
 
@@ -23519,6 +23519,334 @@ button.ulim-student-calendar-day610:hover,
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init610); else init610();
   console.log('[ULIM]',VERSION);
+})();
+</script>
+
+
+
+<!-- =========================================================
+  6.11 모바일 긴 코멘트창 개선 + 뒤로가기로 열린 창 닫기
+  - 기록 상세창 본문만 스크롤하고 닫기 버튼은 항상 화면에 유지
+  - 모바일 상단 X 버튼 추가
+  - Android/PWA 뒤로가기 시 앱 종료 전에 열린 기록창/팝업/달력부터 닫기
+  ========================================================= -->
+<style id="ulim-mobile-layer-style-611">
+html.ulim-layer-open-611,
+body.ulim-layer-open-611 {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
+#recordDisplayBox {
+  box-sizing: border-box !important;
+  padding: 16px !important;
+  overscroll-behavior: contain;
+}
+
+#recordDisplayBox > div {
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  width: min(92vw, 560px) !important;
+  max-width: 560px !important;
+  max-height: min(90dvh, 860px) !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+#recordDisplayDate {
+  flex: 0 0 auto;
+  margin: 0 !important;
+  padding: 18px 54px 12px 18px !important;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fff;
+  line-height: 1.35;
+}
+
+#recordDisplayContent {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  margin: 0 !important;
+  padding: 15px 16px 20px !important;
+  border-radius: 0 !important;
+  word-break: break-word !important;
+  box-sizing: border-box !important;
+}
+
+#recordDisplayBox > div > button:not(.ulim-record-close-top-611) {
+  flex: 0 0 auto;
+  width: auto !important;
+  margin: 12px 16px calc(14px + env(safe-area-inset-bottom)) !important;
+  padding: 13px 14px !important;
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  box-shadow: 0 -5px 16px rgba(15, 23, 42, .08);
+}
+
+.ulim-record-close-top-611 {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 5;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 900;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, .12);
+}
+
+@media (max-width: 600px) {
+  #recordDisplayBox {
+    padding: 0 !important;
+    align-items: flex-end !important;
+  }
+
+  #recordDisplayBox > div {
+    width: 100% !important;
+    max-width: none !important;
+    max-height: 94dvh !important;
+    border-radius: 22px 22px 0 0 !important;
+    box-shadow: 0 -12px 34px rgba(0,0,0,.32) !important;
+  }
+
+  #recordDisplayDate {
+    padding: 17px 52px 12px 16px !important;
+    font-size: 17px !important;
+  }
+
+  #recordDisplayContent {
+    font-size: 15px !important;
+    line-height: 1.58 !important;
+    padding: 14px 14px 22px !important;
+  }
+
+  #recordDisplayBox > div > button:not(.ulim-record-close-top-611) {
+    margin: 10px 14px calc(12px + env(safe-area-inset-bottom)) !important;
+  }
+}
+</style>
+
+<script id="ulim-mobile-layer-history-611">
+(function(){
+  'use strict';
+  if (window.ULIM_MOBILE_LAYER_HISTORY_611) return;
+  window.ULIM_MOBILE_LAYER_HISTORY_611 = true;
+
+  const VERSION = '6.11';
+  const LAYERS = [
+    { id: 'recordDisplayBox', overlay: true },
+    { id: 'noticeOverlay', overlay: true },
+    { id: 'pwaInstallOverlay', overlay: true },
+    { id: 'calendarDisplayArea', overlay: false },
+    { id: 'pastPracticeCalendarArea', overlay: false },
+    { id: 'ulimPronCalendarArea609', overlay: false }
+  ];
+
+  const visibility = new Map();
+  const stack = [];
+  let observerSuppressed = false;
+  let consumingUiClose = false;
+  let sequence = 0;
+
+  function element(id) {
+    return document.getElementById(id);
+  }
+
+  function isVisible(id) {
+    const el = element(id);
+    if (!el) return false;
+    const cs = window.getComputedStyle(el);
+    return cs.display !== 'none' && cs.visibility !== 'hidden' && el.getClientRects().length > 0;
+  }
+
+  function isOverlay(id) {
+    const item = LAYERS.find(x => x.id === id);
+    return !!(item && item.overlay);
+  }
+
+  function updateBodyLock() {
+    const hasOverlay = stack.some(id => isOverlay(id) && isVisible(id));
+    document.documentElement.classList.toggle('ulim-layer-open-611', hasOverlay);
+    document.body.classList.toggle('ulim-layer-open-611', hasOverlay);
+  }
+
+  function removeFromStack(id) {
+    for (let i = stack.length - 1; i >= 0; i--) {
+      if (stack[i] === id) stack.splice(i, 1);
+    }
+  }
+
+  function registerOpen(id) {
+    if (!isVisible(id)) return;
+    removeFromStack(id);
+    stack.push(id);
+    sequence += 1;
+    try {
+      history.pushState({
+        ...(history.state || {}),
+        ulimLayer611: id,
+        ulimLayerSeq611: sequence
+      }, '', location.href);
+    } catch (e) {
+      console.warn('[6.11] history state 생성 실패', e);
+    }
+    if (id === 'recordDisplayBox') {
+      const content = element('recordDisplayContent');
+      if (content) content.scrollTop = 0;
+    }
+    updateBodyLock();
+  }
+
+  function closeDirect(id) {
+    const el = element(id);
+    if (!el) return;
+
+    if (id === 'noticeOverlay' && typeof window.closeNoticeModal === 'function') {
+      window.closeNoticeModal();
+    } else if (id === 'pwaInstallOverlay' && typeof window.closePwaInstallPopup === 'function') {
+      window.closePwaInstallPopup();
+    } else {
+      el.style.display = 'none';
+    }
+
+    visibility.set(id, false);
+    removeFromStack(id);
+    updateBodyLock();
+  }
+
+  function closeByUi(id) {
+    if (!isVisible(id)) return;
+    observerSuppressed = true;
+    closeDirect(id);
+    observerSuppressed = false;
+
+    if (history.state && history.state.ulimLayer611 === id) {
+      consumingUiClose = true;
+      try { history.back(); } catch (e) { consumingUiClose = false; }
+    }
+  }
+
+  function topVisibleLayer() {
+    for (let i = stack.length - 1; i >= 0; i--) {
+      if (isVisible(stack[i])) return stack[i];
+    }
+    for (let i = LAYERS.length - 1; i >= 0; i--) {
+      if (isVisible(LAYERS[i].id)) return LAYERS[i].id;
+    }
+    return '';
+  }
+
+  function setupRecordModal() {
+    const box = element('recordDisplayBox');
+    if (!box) return;
+    const panel = box.firstElementChild;
+    if (!panel) return;
+
+    let topClose = panel.querySelector('.ulim-record-close-top-611');
+    if (!topClose) {
+      topClose = document.createElement('button');
+      topClose.type = 'button';
+      topClose.className = 'ulim-record-close-top-611';
+      topClose.setAttribute('aria-label', '기록창 닫기');
+      topClose.textContent = '×';
+      panel.appendChild(topClose);
+    }
+    topClose.onclick = function(){ closeByUi('recordDisplayBox'); };
+
+    const bottomClose = Array.from(panel.children).find(function(node){
+      return node.tagName === 'BUTTON' && !node.classList.contains('ulim-record-close-top-611');
+    });
+    if (bottomClose) {
+      bottomClose.removeAttribute('onclick');
+      bottomClose.onclick = function(){ closeByUi('recordDisplayBox'); };
+    }
+
+    box.addEventListener('click', function(event){
+      if (event.target === box) closeByUi('recordDisplayBox');
+    });
+  }
+
+  function initializeVisibility() {
+    LAYERS.forEach(item => visibility.set(item.id, isVisible(item.id)));
+  }
+
+  function observeLayers() {
+    const observer = new MutationObserver(function(){
+      LAYERS.forEach(function(item){
+        const now = isVisible(item.id);
+        const before = !!visibility.get(item.id);
+        if (now === before) return;
+        visibility.set(item.id, now);
+        if (observerSuppressed) return;
+
+        if (now) {
+          registerOpen(item.id);
+        } else {
+          removeFromStack(item.id);
+          updateBodyLock();
+          if (history.state && history.state.ulimLayer611 === item.id) {
+            consumingUiClose = true;
+            try { history.back(); } catch (e) { consumingUiClose = false; }
+          }
+        }
+      });
+    });
+    observer.observe(document.documentElement, {
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['style', 'class']
+    });
+  }
+
+  window.ulimCloseRecordDisplay611 = function(){
+    closeByUi('recordDisplayBox');
+  };
+
+  window.addEventListener('popstate', function(){
+    if (consumingUiClose) {
+      consumingUiClose = false;
+      return;
+    }
+    const id = topVisibleLayer();
+    if (!id) return;
+    observerSuppressed = true;
+    closeDirect(id);
+    observerSuppressed = false;
+  });
+
+  document.addEventListener('keydown', function(event){
+    if (event.key !== 'Escape') return;
+    const id = topVisibleLayer();
+    if (id) closeByUi(id);
+  });
+
+  function init() {
+    setupRecordModal();
+    initializeVisibility();
+    observeLayers();
+    console.log('[ULIM]', VERSION, '모바일 창 닫기/뒤로가기 처리 활성화');
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, { once: true });
+  } else {
+    init();
+  }
 })();
 </script>
 
