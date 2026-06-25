@@ -1,19 +1,12 @@
 <!DOCTYPE html>
 <!-- 6.07 학생 코멘트 열람 시 상단 알림만 해제 + 달력 ★ 유지 + 새 평가 재알림 + 6.06 기능 유지 -->
-<!-- 6.04 동명이인 + 중복 학생번호 고유식별키 매칭 + 6.03 기능 유지 -->
-<!-- 6.03 동명이인 출석부 정상행 우선/누락방지 + 6.02 기능 유지 -->
-<!-- 6.02 동명이인 일일평가 학생번호/반/강사 정확 매칭 + 6.01 기능 유지 -->
-<!-- 6.01 강사별 독립평가 + 학생 다중 강사평가 + 평가표 중복 제거 + 문장ID/Drive 안내문구 제거 -->
-<!-- 6.00 일일평가에 로컬 출석상태 즉시 반영 + 5.99 기능 유지 -->
-<!-- 5.99 강사 출석체크 교직원 세션 인식 수정 + 5.98 기능 유지 -->
-<!-- 5.98 기출문제 대본 메타문구 제거 + AI 안내문구 제거 + 강사평가 학생 공개 유지 -->
-<!-- 5.88 기출문제 드라이브 학생 노출 제거 + 교직원 로그인 버튼 복구 + 학생 화면 교직원 화면 문구 제거 -->
+
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>울림 성우·스피치·연기학원 통합 연습 프로그램 6.13</title>
+<title>울림 성우·스피치·연기학원 통합 연습 프로그램 6.14</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script type="text/javascript" nonce="debb844fac3b4dd38172001f045" src="//local.adguard.org?ts=1782366837443&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_0000000036987207baeb090f011bf7ab%26fn%3Dindex_6_13_%25EA%25B5%2590%25EC%25A7%2581%25EC%259B%2590%25EA%25B3%2584%25EC%25A0%2595%25EC%25A0%2584%25ED%2599%2598_%25EB%25A1%259C%25EC%25BB%25AC%25ED%2599%2594%25EB%25A9%25B4%25EC%2599%2584%25EC%25A0%2584%25EB%25B6%2584%25EB%25A6%25AC_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D495102%26p%3Dfs%26cid%3D1%26sig%3Df4e462e3a82eb2ada861cd3387939f9e5c4594c7464899021cd40f2e463872d3%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
+<script type="text/javascript" nonce="debb844fac3b4dd38172001f045" src="//local.adguard.org?ts=1782368573805&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000303c720bb9a5fa2d6e90712d%26fn%3Dindex_6_14_%25EA%25B0%2595%25EC%2582%25AC%25ED%258E%2598%25EC%259D%25B4%25EC%25A7%2580_%25EC%25A6%2589%25EC%258B%259C%25EB%25B0%2598%25EC%2598%2581_%25ED%2599%2595%25EC%258B%25A4%25ED%2595%259C%25EC%25A0%2584%25EC%2586%25A1_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D495102%26p%3Dfs%26cid%3D1%26sig%3Df0e0c02c4395cac6c94eef3291de9ad4a42d03f23cdb6c22669cf048c00fda34%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
 <link rel="dns-prefetch" href="//script.google.com">
 <link rel="dns-prefetch" href="//script.googleusercontent.com">
 
@@ -5266,7 +5259,7 @@ window.onload = async function() {
    - 새 버전 발견 시 확인창 표시
    - 확인 시 캐시 우회 새로고침
    =========================== */
-const ULIM_APP_VERSION = "2026.06.13.592.01";
+const ULIM_APP_VERSION = "2026.06.25.614.01";
 const ULIM_UPDATE_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const ULIM_UPDATE_LAST_CHECK_KEY = "ulimUpdateLastCheckAt";
 let ulimUpdatePromptShown = false;
@@ -24374,6 +24367,702 @@ body {
   });
 
   console.log('[ULIM]', VERSION, '교직원 계정별 로컬 화면 분리 활성화');
+})();
+</script>
+
+
+<style id="ulim-reliable-write-style-6-14">
+#ulimReliableSyncPill614{
+  position:fixed;right:14px;bottom:14px;z-index:100000;
+  display:none;align-items:center;gap:7px;
+  min-height:38px;padding:8px 12px;border-radius:999px;
+  background:#334155;color:#fff;font-size:12px;font-weight:800;
+  box-shadow:0 8px 24px rgba(15,23,42,.28);
+  cursor:pointer;user-select:none
+}
+#ulimReliableSyncPill614.show{display:flex}
+#ulimReliableSyncPill614.sending{background:#2563eb}
+#ulimReliableSyncPill614.waiting{background:#d97706}
+#ulimReliableSyncPill614.failed{background:#dc2626}
+#ulimReliableSyncPill614.done{background:#16a34a}
+#ulimReliableSyncPill614 .dot{
+  width:8px;height:8px;border-radius:50%;background:currentColor;opacity:.92
+}
+.classroom-usage-cell-used.ulim-pending-614{
+  outline:2px dashed #f59e0b;outline-offset:-3px
+}
+@media(max-width:640px){
+  #ulimReliableSyncPill614{right:10px;bottom:10px;max-width:calc(100vw - 20px)}
+}
+</style>
+
+<script id="ulim-admin-reliable-write-6-14">
+/* =========================================================
+   6.14 강사페이지 즉시 화면반영 + 확실한 전송
+   - IndexedDB + localStorage 이중 영구 대기열
+   - 요청ID 기반 서버 중복방지 대기열
+   - 앱 종료/로그아웃 전 서버 전송 시도
+   - 서버 미도착 작업은 동일 강사 재로그인 시 자동 재전송
+   ========================================================= */
+(function(){
+  'use strict';
+  if(window.__ULIM_ADMIN_RELIABLE_WRITE_614__) return;
+  window.__ULIM_ADMIN_RELIABLE_WRITE_614__=true;
+
+  const DB_NAME='ulim_admin_reliable_write_614';
+  const DB_VERSION=1;
+  const STORE='jobs';
+  const MIRROR_KEY='ulim_admin_reliable_jobs_614';
+  const MAX_AUTO_ATTEMPTS=12;
+  const POLL_DELAYS=[300,700,1400,2600,4500];
+  const memory=new Map();
+  let dbPromise=null;
+  let flushing=false;
+  let initialized=false;
+  let completionTimer=null;
+
+  function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+  function now(){return Date.now();}
+  function uuid(){
+    try{return crypto.randomUUID();}
+    catch(e){return 'xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16);});}
+  }
+  function requestId(){return 'ARW614-'+Date.now()+'-'+uuid();}
+  function ownerKey(){
+    const i=(typeof adminInfo!=='undefined'&&adminInfo)||{};
+    return String(i.accountUid||i.uid||i.adminUid||i.id||i.name||'').trim();
+  }
+  function ownerName(){
+    const i=(typeof adminInfo!=='undefined'&&adminInfo)||{};
+    return String(i.name||i.id||'').trim();
+  }
+  function token(){try{return String(adminToken||'').trim();}catch(e){return '';}}
+  function isCurrentOwner(job){return !!job&&!!ownerKey()&&String(job.ownerKey||'')===ownerKey();}
+  function currentJobs(){
+    return Array.from(memory.values()).filter(isCurrentOwner).sort((a,b)=>Number(a.createdAt||0)-Number(b.createdAt||0));
+  }
+
+  function mirrorRead(){
+    try{
+      const arr=JSON.parse(localStorage.getItem(MIRROR_KEY)||'[]');
+      return Array.isArray(arr)?arr:[];
+    }catch(e){return [];}
+  }
+  function mirrorWrite(){
+    try{localStorage.setItem(MIRROR_KEY,JSON.stringify(Array.from(memory.values())));}catch(e){}
+  }
+
+  function openDb(){
+    if(dbPromise) return dbPromise;
+    dbPromise=new Promise((resolve,reject)=>{
+      if(!window.indexedDB) return reject(new Error('IndexedDB unavailable'));
+      const req=indexedDB.open(DB_NAME,DB_VERSION);
+      req.onupgradeneeded=()=>{
+        const db=req.result;
+        if(!db.objectStoreNames.contains(STORE)){
+          const store=db.createObjectStore(STORE,{keyPath:'id'});
+          store.createIndex('ownerKey','ownerKey',{unique:false});
+          store.createIndex('state','state',{unique:false});
+        }
+      };
+      req.onsuccess=()=>resolve(req.result);
+      req.onerror=()=>reject(req.error||new Error('IndexedDB open failed'));
+    });
+    return dbPromise;
+  }
+  async function idbAll(){
+    try{
+      const db=await openDb();
+      return await new Promise((resolve,reject)=>{
+        const req=db.transaction(STORE,'readonly').objectStore(STORE).getAll();
+        req.onsuccess=()=>resolve(req.result||[]);
+        req.onerror=()=>reject(req.error);
+      });
+    }catch(e){return [];}
+  }
+  async function idbPut(job){
+    try{
+      const db=await openDb();
+      await new Promise((resolve,reject)=>{
+        const req=db.transaction(STORE,'readwrite').objectStore(STORE).put(job);
+        req.onsuccess=()=>resolve();
+        req.onerror=()=>reject(req.error);
+      });
+    }catch(e){}
+  }
+  async function idbDelete(id){
+    try{
+      const db=await openDb();
+      await new Promise((resolve,reject)=>{
+        const req=db.transaction(STORE,'readwrite').objectStore(STORE).delete(id);
+        req.onsuccess=()=>resolve();
+        req.onerror=()=>reject(req.error);
+      });
+    }catch(e){}
+  }
+  async function loadJobs(){
+    const merged={};
+    mirrorRead().forEach(j=>{if(j&&j.id)merged[j.id]=j;});
+    (await idbAll()).forEach(j=>{
+      if(!j||!j.id)return;
+      if(!merged[j.id]||Number(j.updatedAt||0)>=Number(merged[j.id].updatedAt||0)) merged[j.id]=j;
+    });
+    Object.values(merged).forEach(j=>{
+      if(j.state==='sending'&&now()-Number(j.updatedAt||0)>30000)j.state='pending';
+      memory.set(j.id,j);
+    });
+    mirrorWrite();
+  }
+  async function persist(job){
+    job.updatedAt=now();
+    memory.set(job.id,job);
+    mirrorWrite();
+    await idbPut(job);
+    renderPill();
+    return job;
+  }
+  async function removeJob(id){
+    memory.delete(id);
+    mirrorWrite();
+    await idbDelete(id);
+    renderPill();
+  }
+
+  function ensurePill(){
+    let el=document.getElementById('ulimReliableSyncPill614');
+    if(el)return el;
+    el=document.createElement('div');
+    el.id='ulimReliableSyncPill614';
+    el.innerHTML='<span class="dot"></span><span class="label">전송 준비</span>';
+    el.title='눌러서 전송 상태 확인 또는 재시도';
+    el.addEventListener('click',async()=>{
+      const failed=currentJobs().filter(j=>j.state==='failed');
+      if(failed.length){
+        if(!confirm(`확인이 필요한 전송 ${failed.length}건을 다시 시도할까요?`))return;
+        for(const j of failed){j.state='pending';j.nextAttemptAt=0;j.forceRetry=true;await persist(j);}
+      }
+      flushQueue({force:true});
+    });
+    document.body.appendChild(el);
+    return el;
+  }
+  function renderPill(doneText){
+    const el=ensurePill();
+    const jobs=currentJobs();
+    const failed=jobs.filter(j=>j.state==='failed').length;
+    const active=jobs.filter(j=>j.state!=='failed').length;
+    el.className='';
+    if(failed){
+      el.classList.add('show','failed');
+      el.querySelector('.label').textContent=`전송 확인 필요 ${failed}건`;
+    }else if(active){
+      const offline=!navigator.onLine;
+      el.classList.add('show',offline?'waiting':'sending');
+      el.querySelector('.label').textContent=offline?`오프라인 저장 ${active}건`:`백그라운드 전송 ${active}건`;
+    }else if(doneText){
+      el.classList.add('show','done');
+      el.querySelector('.label').textContent=doneText;
+      clearTimeout(completionTimer);
+      completionTimer=setTimeout(()=>{el.className='';},1800);
+    }else{
+      el.className='';
+    }
+  }
+
+  function emit(job,state,extra){
+    window.dispatchEvent(new CustomEvent('ulimReliableWrite614',{
+      detail:Object.assign({job,state},extra||{})
+    }));
+  }
+  function retryable(msg){
+    return /잠시 후|진행 중|시간 초과|timeout|temporar|연결|네트워크|network|429|503|quota|대기열/i.test(String(msg||''));
+  }
+
+  async function queryStatus(ids){
+    if(!ids.length||!token())return [];
+    const data=await adminApi('adminGetReliableWriteStatus',{
+      adminToken:token(),
+      requestIds:JSON.stringify(ids),
+      noCache:'1',
+      forceRefresh:'1'
+    });
+    return Array.isArray(data.jobs)?data.jobs:[];
+  }
+
+  async function submitJob(job,forceRetry){
+    const body={
+      action:'adminReliableWrite',
+      requestId:job.id,
+      operation:job.operation,
+      adminToken:token(),
+      payloadJson:JSON.stringify(job.payload||{}),
+      forceRetry:forceRetry?'1':'0',
+      _:Date.now()
+    };
+    const text=JSON.stringify(body);
+    await fetch(GET_API_URL,{
+      method:'POST',
+      mode:'no-cors',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:text,
+      keepalive:text.length<60000
+    });
+  }
+
+  async function applyServerState(job,status){
+    if(!status)return false;
+    if(status.state==='complete'){
+      emit(job,'complete',{result:status.result||{},message:status.message||''});
+      await removeJob(job.id);
+      renderPill('전송 완료');
+      return true;
+    }
+    if(status.state==='failed'){
+      const message=String(status.message||(status.result&&status.result.message)||'전송 실패');
+      job.lastError=message;
+      job.attempts=Number(job.attempts||0)+1;
+      if(retryable(message)&&job.attempts<MAX_AUTO_ATTEMPTS){
+        job.state='pending';
+        job.forceRetry=true;
+        job.nextAttemptAt=0;
+        await persist(job);
+        emit(job,'retrying',{message});
+        return false;
+      }else{
+        job.state='failed';
+        await persist(job);
+        emit(job,'failed',{message,result:status.result||{}});
+      }
+      return true;
+    }
+    if(status.state==='processing'){
+      job.state='submitted';
+      job.serverUpdatedAt=status.updatedAt||'';
+      await persist(job);
+      emit(job,'processing',{message:status.message||''});
+      return false;
+    }
+    return false;
+  }
+
+  async function processJob(job,options){
+    if(!isCurrentOwner(job)||!token())return;
+    if(job.nextAttemptAt&&Number(job.nextAttemptAt)>now()&&!options.force)return;
+
+    job.state='sending';
+    job.attempts=Number(job.attempts||0);
+    await persist(job);
+    emit(job,'sending');
+
+    try{
+      let statuses=await queryStatus([job.id]);
+      let status=statuses[0];
+      if(status&&status.state!=='not_found'){
+        const handled=await applyServerState(job,status);
+        if(handled||status.state==='processing'){
+          if(status.state==='processing'){
+            for(const delay of POLL_DELAYS){
+              await sleep(delay);
+              statuses=await queryStatus([job.id]);
+              status=statuses[0];
+              if(await applyServerState(job,status))return;
+            }
+            job.state='submitted';
+            job.nextAttemptAt=now()+8000;
+            await persist(job);
+          }
+          return;
+        }
+      }
+
+      await submitJob(job,!!job.forceRetry);
+      job.forceRetry=false;
+      job.state='submitted';
+      await persist(job);
+
+      for(const delay of POLL_DELAYS){
+        await sleep(delay);
+        statuses=await queryStatus([job.id]);
+        status=statuses[0];
+        if(await applyServerState(job,status))return;
+      }
+
+      job.state='submitted';
+      job.nextAttemptAt=now()+8000;
+      await persist(job);
+    }catch(e){
+      const message=String(e&&e.message||e||'전송 실패');
+      job.lastError=message;
+      job.attempts=Number(job.attempts||0)+1;
+      job.state='pending';
+      job.nextAttemptAt=now()+Math.min(60000,3000*Math.max(1,job.attempts));
+      await persist(job);
+      emit(job,'retrying',{message});
+    }
+  }
+
+  async function flushQueue(options){
+    options=options||{};
+    if(flushing||!token()||!ownerKey()||!navigator.onLine)return;
+    flushing=true;
+    try{
+      const jobs=currentJobs().filter(j=>j.state!=='failed'||options.force);
+      for(const job of jobs){
+        if(!token()||!ownerKey())break;
+        await processJob(job,options);
+      }
+    }finally{
+      flushing=false;
+      renderPill();
+    }
+  }
+
+  async function enqueue(operation,payload,opts){
+    opts=opts||{};
+    const owner=ownerKey();
+    if(!owner)throw new Error('강사 계정을 확인하지 못했습니다.');
+    const id=opts.requestId||requestId();
+
+    if(opts.dedupeKey){
+      const olds=currentJobs().filter(j=>j.dedupeKey===opts.dedupeKey&&j.id!==id&&['pending','failed'].includes(j.state));
+      for(const old of olds)await removeJob(old.id);
+    }
+
+    const job={
+      id,operation,payload:payload||{},ownerKey:owner,ownerName:ownerName(),
+      dedupeKey:opts.dedupeKey||'',ui:opts.ui||{},
+      state:'pending',attempts:0,createdAt:now(),updatedAt:now(),nextAttemptAt:0,lastError:''
+    };
+    await persist(job);
+    emit(job,'queued');
+    setTimeout(()=>flushQueue({force:true}),0);
+    return job;
+  }
+
+  function beaconPending(){
+    const t=token();
+    if(!t||!navigator.sendBeacon)return;
+    const jobs=currentJobs().filter(j=>j.state!=='failed').slice(0,8);
+    for(const job of jobs){
+      try{
+        const body=JSON.stringify({
+          action:'adminReliableWrite',requestId:job.id,operation:job.operation,
+          adminToken:t,payloadJson:JSON.stringify(job.payload||{}),
+          forceRetry:job.forceRetry?'1':'0',_:Date.now()
+        });
+        if(body.length>60000)continue;
+        navigator.sendBeacon(GET_API_URL,new Blob([body],{type:'text/plain;charset=utf-8'}));
+      }catch(e){}
+    }
+  }
+
+  function attendanceKey(r){
+    return String(r.studentIdentityKey||r.studentNo||r.attendanceNo||r.studentPhone||r.studentName||r.name||'')+
+      '|'+String(r.date||'')+'|'+String(r.className||'');
+  }
+  function findAttendanceIndex(key){
+    try{return (adminAttendanceRecords||[]).findIndex(r=>attendanceKey(r)===key);}
+    catch(e){return -1;}
+  }
+  function setAttendanceJobState(job,text,error){
+    const keys=(job.ui&&job.ui.attendanceKeys)||[];
+    keys.forEach(key=>{
+      const idx=findAttendanceIndex(key);
+      if(idx>=0&&typeof adminSetAttendanceSaveState_==='function')adminSetAttendanceSaveState_(idx,text,!!error);
+    });
+  }
+
+  const originalAttendanceStatusChange=window.adminSaveAttendanceStatusChange;
+  window.adminSaveAttendanceStatusChange=async function(idx){
+    const record=adminUpdateAttendanceRecordFromRow_(idx);
+    if(!record||!record.studentName)return alert('학생 정보를 찾지 못했습니다. 출석부를 다시 불러와주세요.');
+    const key=attendanceKey(record);
+    adminSetAttendanceSaveState_(idx,'기기에 저장됨');
+    try{
+      await enqueue('attendance',{records:JSON.stringify([record])},{
+        dedupeKey:'attendance|'+ownerKey()+'|'+key,
+        ui:{type:'attendance',attendanceKeys:[key]}
+      });
+      adminSetAttendanceSaveState_(idx,navigator.onLine?'전송 중...':'오프라인 저장');
+      return true;
+    }catch(e){
+      adminSetAttendanceSaveState_(idx,'저장 실패',true);
+      alert(e.message||String(e));
+      return false;
+    }
+  };
+
+  window.adminSaveAttendanceRecords_=async function(records,silent){
+    if(!token())return false;
+    if(!records||!records.length)return false;
+    const keys=records.map(attendanceKey);
+    keys.forEach(key=>{
+      const idx=findAttendanceIndex(key);
+      if(idx>=0)adminSetAttendanceSaveState_(idx,'기기에 저장됨');
+    });
+    try{
+      await enqueue('attendance',{records:JSON.stringify(records)},{
+        dedupeKey:records.length===1?'attendance|'+ownerKey()+'|'+keys[0]:'',
+        ui:{type:'attendance',attendanceKeys:keys}
+      });
+      keys.forEach(key=>{
+        const idx=findAttendanceIndex(key);
+        if(idx>=0)adminSetAttendanceSaveState_(idx,navigator.onLine?'전송 중...':'오프라인 저장');
+      });
+      const s=document.getElementById('adminAttendanceSummary');
+      if(s)s.textContent=`${records.length}건 기기에 안전하게 저장 · 백그라운드 전송 중`;
+      return true;
+    }catch(e){
+      if(!silent)alert(e.message||String(e));
+      return false;
+    }
+  };
+
+  const originalDailySave=window.adminSaveDailyEvaluations;
+  window.adminSaveDailyEvaluations=async function(sendSms){
+    if(sendSms)return originalDailySave.apply(this,arguments);
+    const rows=adminGetSelectedDailyRows();
+    if(!rows.length)return alert('저장할 일일평가 내용이 없습니다.');
+    const compactRows=rows.map(r=>({
+      date:r.date||'',className:r.className||'',studentName:r.studentName||r.name||'',
+      name:r.studentName||r.name||'',studentNo:r.studentNo||r.attendanceNo||'',
+      studentIdentityKey:r.studentIdentityKey||'',instructor:r.instructor||'',
+      studentPhone:r.studentPhone||'',parentPhone:r.parentPhone||'',
+      attendanceStatus:r.attendanceStatus||'',specialStatus:r.specialStatus||'',
+      memo:r.memo||'',lessonContent:r.lessonContent||'',lessonAttitude:r.lessonAttitude||'',
+      teacherComment:r.teacherComment||'',videoLink:r.videoLink||'',evaluation:r.evaluation||''
+    }));
+    rows.forEach(saved=>{
+      const targetKey=typeof adminDailyEvalExactKey==='function'?adminDailyEvalExactKey(saved):attendanceKey(saved);
+      adminDailyEvalRows=(adminDailyEvalRows||[]).map(row=>{
+        const rowKey=typeof adminDailyEvalExactKey==='function'?adminDailyEvalExactKey(row):attendanceKey(row);
+        return rowKey===targetKey?Object.assign({},row,saved,{savedAt:'기기에 저장됨',savedBy:ownerName()}):row;
+      });
+    });
+    if(typeof adminRenderDailyEvalRows==='function')adminRenderDailyEvalRows('기기에 안전하게 저장했습니다. 백그라운드로 시트에 전송 중입니다.');
+    try{
+      await enqueue('dailyEvaluations',{
+        rows:JSON.stringify(compactRows),sendSms:'N',sendChannel:'alimtalk',recipientTypes:''
+      },{ui:{type:'daily',date:rows[0].date||'',className:rows[0].className||'',count:rows.length}});
+      const el=document.getElementById('adminDailyDraftStatus');
+      if(el)el.textContent=`${rows.length}건 기기에 저장됨 · 백그라운드 전송 중`;
+    }catch(e){
+      alert(e.message||String(e));
+    }
+  };
+
+  function overlapRoom(a,b){
+    return String(a.room||'').replace(/\s/g,'')===String(b.room||'').replace(/\s/g,'') &&
+      Number(a.startHour)<Number(b.endHour)&&Number(b.startHour)<Number(a.endHour);
+  }
+  function pendingClassroomRecord(id,p){
+    return {
+      recordId:'pending:'+id,date:p.date,room:p.room,startHour:Number(p.startHour),endHour:Number(p.endHour),
+      instructor:p.assignedInstructor||p.instructor||ownerName(),adminName:ownerName(),
+      className:p.className||'',purpose:p.className||'',memo:p.memo||'',status:'사용중',
+      _pending614:true,_requestId614:id
+    };
+  }
+
+  window.adminSaveClassroomUsageFromForm=async function(silentConfirm,forceOverride){
+    if(!token())return alert('로그인이 필요합니다.');
+    adminInitClassroomUsagePanel();
+    const p={
+      date:adminClassroomUsageDate_(),
+      room:document.getElementById('adminClassroomUsageRoom')?.value||'',
+      startHour:Number(document.getElementById('adminClassroomUsageStart')?.value||0),
+      endHour:Number(document.getElementById('adminClassroomUsageEnd')?.value||0),
+      assignedInstructor:document.getElementById('adminClassroomUsageInstructor')?.value.trim()||'',
+      className:document.getElementById('adminClassroomUsageClass')?.value.trim()||'',
+      memo:document.getElementById('adminClassroomUsageMemo')?.value.trim()||'',
+      override:forceOverride?'1':'0'
+    };
+    if(!p.date||!p.room||!p.startHour||!p.endHour)return alert('사용일, 강의실, 시간을 확인해주세요.');
+    if(p.endHour<=p.startHour)return alert('종료시간은 시작시간보다 늦어야 합니다.');
+    if(!silentConfirm&&!confirm(`${p.date}\n${p.room}\n${adminFormatClassroomHour_(p.startHour)}~${adminFormatClassroomHour_(p.endHour)}\n\n강의실 사용 체크할까요?`))return;
+
+    const occupied=(adminClassroomUsageRows||[]).filter(r=>String(r.status||'')==='사용중'&&overlapRoom(r,p));
+    if(occupied.length&&!forceOverride)return alert('이미 화면상 사용 중인 강의실입니다. 최신 현황을 다시 확인해주세요.');
+
+    const id=requestId();
+    const rollback=(adminClassroomUsageRows||[]).slice();
+    if(forceOverride)adminClassroomUsageRows=(adminClassroomUsageRows||[]).filter(r=>!overlapRoom(r,p));
+    adminClassroomUsageRows.push(pendingClassroomRecord(id,p));
+    adminRenderClassroomUsageTable();
+    document.querySelectorAll('.classroom-usage-cell-used').forEach(td=>{
+      if(td.textContent.includes(p.assignedInstructor||ownerName())&&td.textContent.includes(p.className||'사용중'))td.classList.add('ulim-pending-614');
+    });
+    const summary=document.getElementById('adminClassroomUsageSummary');
+    if(summary)summary.textContent='기기에 저장됨 · 서버 충돌 확인 및 백그라운드 전송 중';
+
+    try{
+      await enqueue('classroomSave',p,{requestId:id,ui:{type:'classroomSave',date:p.date,rollback,optimisticId:'pending:'+id}});
+    }catch(e){
+      adminClassroomUsageRows=rollback;
+      adminRenderClassroomUsageTable();
+      alert(e.message||String(e));
+    }
+  };
+
+  window.adminReleaseClassroomUsage=async function(recordId){
+    if(!token())return alert('로그인이 필요합니다.');
+    if(!recordId)return alert('해제할 기록을 찾지 못했습니다.');
+    if(String(recordId).startsWith('pending:')){
+      return alert('강의실 사용 체크를 서버에 전송 중입니다. 반영 완료 후 해제해주세요.');
+    }
+    if(!confirm('해당 강의실 사용 기록을 해제할까요?'))return;
+    const date=adminClassroomUsageDate_();
+    const rollback=(adminClassroomUsageRows||[]).slice();
+    adminClassroomUsageRows=(adminClassroomUsageRows||[]).filter(r=>String(r.recordId||'')!==String(recordId));
+    adminRenderClassroomUsageTable();
+    const s=document.getElementById('adminClassroomUsageSummary');
+    if(s)s.textContent='해제 내용을 기기에 저장 · 백그라운드 전송 중';
+    try{
+      await enqueue('classroomRelease',{recordId,date},{ui:{type:'classroomRelease',date,rollback}});
+    }catch(e){
+      adminClassroomUsageRows=rollback;
+      adminRenderClassroomUsageTable();
+      alert(e.message||String(e));
+    }
+  };
+
+  const originalLoadClassroom=window.adminLoadClassroomUsage;
+  if(typeof originalLoadClassroom==='function'){
+    window.adminLoadClassroomUsage=async function(){
+      const result=await originalLoadClassroom.apply(this,arguments);
+      const date=adminClassroomUsageDate_();
+      const jobs=currentJobs().filter(j=>j.ui&&j.ui.date===date&&['classroomSave','classroomRelease'].includes(j.operation));
+      for(const j of jobs){
+        if(j.operation==='classroomSave'){
+          adminClassroomUsageRows=(adminClassroomUsageRows||[]).filter(r=>!overlapRoom(r,j.payload));
+          adminClassroomUsageRows.push(pendingClassroomRecord(j.id,j.payload));
+        }else if(j.operation==='classroomRelease'){
+          adminClassroomUsageRows=(adminClassroomUsageRows||[]).filter(r=>String(r.recordId||'')!==String(j.payload.recordId||''));
+        }
+      }
+      if(jobs.length)adminRenderClassroomUsageTable();
+      return result;
+    };
+  }
+
+  const originalPracticeSave=window.ulimSavePracticeEvaluation595;
+  window.ulimSavePracticeEvaluation595=async function(idx,finalize){
+    if(!finalize||!window.ULIM_PRACTICE_SCORE_DEFS||!adminVocalPracticeLogs[idx]){
+      return originalPracticeSave?originalPracticeSave.apply(this,arguments):undefined;
+    }
+    const log=adminVocalPracticeLogs[idx];
+    const type=String(log.taskType||log.category||(/기출|past|PAST_/i.test([log.recordType,log.vocalId].join(' '))?'past_question':(/표준발음|PRON_/i.test([log.recordType,log.vocalId].join(' '))?'standard_pronunciation':'vocal_training')));
+    const defs=window.ULIM_PRACTICE_SCORE_DEFS[type]||[];
+    const box=document.querySelector(`[data-eval-index="${idx}"]`);
+    if(!box)return;
+    const scores={};
+    box.querySelectorAll('.ulim-score-buttons').forEach(g=>{
+      const selected=g.querySelector('.ulim-score-btn.selected');
+      if(selected)scores[g.dataset.scoreKey]=Number(selected.dataset.value);
+    });
+    if(Object.keys(scores).length<defs.length)return alert('모든 점수 항목을 선택해주세요.');
+    const comment=document.getElementById(`ulimEvalComment_${idx}`)?.value||'';
+    const statusEl=document.getElementById(`ulimEvalSync_${idx}`);
+    if(statusEl){statusEl.textContent='기기에 저장됨 · 전송 중';statusEl.className='ulim-eval-sync draft';}
+    try{
+      await enqueue('practiceEvaluation',{
+        recordId:log.recordId,scoreJson:JSON.stringify(scores),comment,finalize:'1',noCache:'1'
+      },{ui:{type:'practiceEvaluation',recordId:log.recordId,index:idx}});
+    }catch(e){
+      if(statusEl){statusEl.textContent='저장 실패 · 확인 필요';statusEl.className='ulim-eval-sync error';}
+      alert(e.message||String(e));
+    }
+  };
+
+  window.addEventListener('ulimReliableWrite614',e=>{
+    const d=e.detail||{},job=d.job||{},ui=job.ui||{};
+    if(ui.type==='attendance'){
+      if(d.state==='complete')setAttendanceJobState(job,'반영됨',false);
+      else if(d.state==='failed')setAttendanceJobState(job,'확인 필요',true);
+      else if(d.state==='retrying')setAttendanceJobState(job,'재전송 대기',true);
+      else setAttendanceJobState(job,navigator.onLine?'전송 중...':'오프라인 저장',false);
+    }
+    if(ui.type==='daily'){
+      const el=document.getElementById('adminDailyDraftStatus');
+      if(el){
+        if(d.state==='complete')el.textContent=`${ui.count||0}건 시트 반영 완료`;
+        else if(d.state==='failed')el.textContent=`전송 확인 필요: ${d.message||''}`;
+        else if(d.state==='retrying')el.textContent='기기에 보관됨 · 자동 재전송 대기';
+      }
+    }
+    if(ui.type==='classroomSave'||ui.type==='classroomRelease'){
+      if(d.state==='complete'){
+        const records=d.result&&d.result.records;
+        if(Array.isArray(records))adminClassroomUsageRows=records;
+        else adminClassroomUsageRows=(adminClassroomUsageRows||[]).filter(r=>String(r.recordId||'')!==String(ui.optimisticId||''));
+        adminRenderClassroomUsageTable();
+        const s=document.getElementById('adminClassroomUsageSummary');
+        if(s)s.textContent=d.message||(d.result&&d.result.message)||'강의실 사용일지 반영 완료';
+      }else if(d.state==='failed'){
+        if(Array.isArray(ui.rollback))adminClassroomUsageRows=ui.rollback;
+        adminRenderClassroomUsageTable();
+        const s=document.getElementById('adminClassroomUsageSummary');
+        if(s)s.textContent='전송 실패 · 기기에 보관됨';
+        alert(d.message||'강의실 사용일지 반영에 실패했습니다. 전송 상태를 눌러 다시 시도해주세요.');
+      }
+    }
+    if(ui.type==='practiceEvaluation'){
+      const el=document.getElementById(`ulimEvalSync_${ui.index}`);
+      if(el){
+        if(d.state==='complete'){el.textContent='시트 저장됨';el.className='ulim-eval-sync saved';}
+        else if(d.state==='failed'){el.textContent='저장 실패 · 확인 필요';el.className='ulim-eval-sync error';}
+        else if(d.state==='retrying'){el.textContent='기기에 보관됨 · 재전송 대기';el.className='ulim-eval-sync draft';}
+      }
+      if(d.state==='complete'&&typeof adminLoadVocalPracticeLogs==='function')setTimeout(()=>adminLoadVocalPracticeLogs(false),300);
+    }
+  });
+
+  const originalLoadInitial=window.adminLoadInitialData;
+  if(typeof originalLoadInitial==='function'){
+    window.adminLoadInitialData=async function(){
+      const r=await originalLoadInitial.apply(this,arguments);
+      renderPill();
+      setTimeout(()=>flushQueue({force:true}),50);
+      return r;
+    };
+  }
+
+  const originalLogout=window.adminLogout;
+  if(typeof originalLogout==='function'){
+    window.adminLogout=async function(){
+      try{
+        const deadline=Promise.race([flushQueue({force:true}),sleep(1100)]);
+        await deadline;
+        beaconPending();
+        await sleep(120);
+      }catch(e){}
+      return originalLogout.apply(this,arguments);
+    };
+  }
+
+  window.addEventListener('online',()=>flushQueue({force:true}));
+  window.addEventListener('pageshow',()=>setTimeout(()=>flushQueue({force:true}),200));
+  document.addEventListener('visibilitychange',()=>{
+    if(document.visibilityState==='visible')flushQueue({force:true});
+    else beaconPending();
+  });
+  window.addEventListener('pagehide',beaconPending);
+  setInterval(()=>flushQueue({force:false}),15000);
+
+  (async()=>{
+    await loadJobs();
+    initialized=true;
+    renderPill();
+    if(token()&&ownerKey())flushQueue({force:true});
+  })();
+
+  window.ulimReliableWrite614={
+    enqueue,flush:flushQueue,retryAll:async()=>{
+      for(const j of currentJobs()){j.state='pending';j.forceRetry=true;j.nextAttemptAt=0;await persist(j);}
+      return flushQueue({force:true});
+    },
+    jobs:()=>currentJobs().map(j=>Object.assign({},j))
+  };
 })();
 </script>
 
