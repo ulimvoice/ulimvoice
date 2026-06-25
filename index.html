@@ -1,12 +1,19 @@
 <!DOCTYPE html>
 <!-- 6.07 학생 코멘트 열람 시 상단 알림만 해제 + 달력 ★ 유지 + 새 평가 재알림 + 6.06 기능 유지 -->
-
+<!-- 6.04 동명이인 + 중복 학생번호 고유식별키 매칭 + 6.03 기능 유지 -->
+<!-- 6.03 동명이인 출석부 정상행 우선/누락방지 + 6.02 기능 유지 -->
+<!-- 6.02 동명이인 일일평가 학생번호/반/강사 정확 매칭 + 6.01 기능 유지 -->
+<!-- 6.01 강사별 독립평가 + 학생 다중 강사평가 + 평가표 중복 제거 + 문장ID/Drive 안내문구 제거 -->
+<!-- 6.00 일일평가에 로컬 출석상태 즉시 반영 + 5.99 기능 유지 -->
+<!-- 5.99 강사 출석체크 교직원 세션 인식 수정 + 5.98 기능 유지 -->
+<!-- 5.98 기출문제 대본 메타문구 제거 + AI 안내문구 제거 + 강사평가 학생 공개 유지 -->
+<!-- 5.88 기출문제 드라이브 학생 노출 제거 + 교직원 로그인 버튼 복구 + 학생 화면 교직원 화면 문구 제거 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>울림 성우·스피치·연기학원 통합 연습 프로그램 6.14</title>
+<title>울림 성우·스피치·연기학원 통합 연습 프로그램 6.15</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script type="text/javascript" nonce="debb844fac3b4dd38172001f045" src="//local.adguard.org?ts=1782368573805&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000303c720bb9a5fa2d6e90712d%26fn%3Dindex_6_14_%25EA%25B0%2595%25EC%2582%25AC%25ED%258E%2598%25EC%259D%25B4%25EC%25A7%2580_%25EC%25A6%2589%25EC%258B%259C%25EB%25B0%2598%25EC%2598%2581_%25ED%2599%2595%25EC%258B%25A4%25ED%2595%259C%25EC%25A0%2584%25EC%2586%25A1_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D495102%26p%3Dfs%26cid%3D1%26sig%3Df0e0c02c4395cac6c94eef3291de9ad4a42d03f23cdb6c22669cf048c00fda34%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
+<script type="text/javascript" nonce="debb844fac3b4dd38172001f045" src="//local.adguard.org?ts=1782368573805&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000f130720bb1aaf791047e1e3f%26fn%3Dindex_6_15_%25EC%259D%25BC%25EB%25B0%2598%25EA%25B0%2595%25EC%2582%25AC_%25EB%25A1%259C%25EC%25BB%25AC%25EB%25B0%25B1%25EA%25B7%25B8%25EB%259D%25BC%25EC%259A%25B4%25EB%2593%259C%25EB%25AC%25B8%25EA%25B5%25AC%25EC%2588%25A8%25EA%25B9%2580_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D495102%26p%3Dfs%26cid%3D1%26sig%3D698a3472a9d17c7d8091680c691d64c51e434741453dfb6ad5a9bfc194fb9f58%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
 <link rel="dns-prefetch" href="//script.google.com">
 <link rel="dns-prefetch" href="//script.googleusercontent.com">
 
@@ -25063,6 +25070,203 @@ body {
     },
     jobs:()=>currentJobs().map(j=>Object.assign({},j))
   };
+})();
+</script>
+
+
+<style id="ulim-reliable-write-message-visibility-6-15">
+/* 일반 강사와 학생에게는 내부 저장·전송 구조를 노출하지 않습니다. */
+body:not(.full-admin-mode) #ulimReliableSyncPill614 {
+  display: none !important;
+}
+body.teacher-mode .ulim-eval-sync:not(.error) {
+  display: none !important;
+}
+</style>
+
+<script id="ulim-reliable-write-message-visibility-script-6-15">
+/* =========================================================
+   6.15 일반 강사/학생 내부 전송 문구 숨김
+   - 전체관리자만 로컬저장·오프라인·백그라운드 전송 상태를 확인
+   - 일반 강사에게는 정상 처리 중인 기술 문구를 표시하지 않음
+   - 실제 실패만 간단한 '저장 실패'로 표시
+   - 평가 안내는 학생 공개 여부만 간단히 안내
+   ========================================================= */
+(function () {
+  'use strict';
+
+  if (window.__ULIM_RELIABLE_MESSAGE_VISIBILITY_615__) return;
+  window.__ULIM_RELIABLE_MESSAGE_VISIBILITY_615__ = true;
+
+  const TECH_PATTERN =
+    /로컬\s*(?:저장|임시저장)|기기에\s*(?:안전하게\s*)?(?:저장|보관)|백그라운드|오프라인\s*저장|전송\s*(?:중|대기|확인\s*필요)|재전송|반영\s*대기|서버\s*충돌\s*확인/i;
+
+  const FAILURE_PATTERN =
+    /실패|오류|확인\s*필요/i;
+
+  function hasLoggedInAdmin615_() {
+    try {
+      return typeof adminInfo !== 'undefined' && !!adminInfo;
+    } catch (ignore) {
+      return false;
+    }
+  }
+
+  function isFullAdmin615_() {
+    try {
+      return typeof adminIsFullAdmin === 'function' && adminIsFullAdmin();
+    } catch (ignore) {
+      return false;
+    }
+  }
+
+  function shouldHideTechnical615_() {
+    return hasLoggedInAdmin615_() && !isFullAdmin615_();
+  }
+
+  function simplifyTechnicalText615_(text) {
+    const value = String(text || '').trim();
+    if (!value) return '';
+    if (FAILURE_PATTERN.test(value)) return '저장 실패';
+    if (TECH_PATTERN.test(value)) return '';
+    return value;
+  }
+
+  function sanitizeElement615_(el) {
+    if (!el || !shouldHideTechnical615_()) return;
+
+    if (el.id === 'ulimReliableSyncPill614') {
+      el.style.display = 'none';
+      return;
+    }
+
+    if (el.classList && el.classList.contains('ulim-eval-note')) {
+      const simple = '평가 저장을 누른 최종 점수와 코멘트가 학생 화면에 공개됩니다.';
+      if (el.textContent !== simple) el.textContent = simple;
+      return;
+    }
+
+    if (el.classList && el.classList.contains('ulim-eval-sync')) {
+      const current = String(el.textContent || '');
+      if (FAILURE_PATTERN.test(current)) {
+        if (el.textContent !== '저장 실패') el.textContent = '저장 실패';
+        el.classList.add('error');
+        el.style.display = '';
+      } else {
+        el.textContent = '';
+        el.style.display = 'none';
+      }
+      return;
+    }
+
+    const current = String(el.textContent || '');
+    if (!TECH_PATTERN.test(current) && !FAILURE_PATTERN.test(current)) return;
+
+    const next = simplifyTechnicalText615_(current);
+    if (el.textContent !== next) el.textContent = next;
+  }
+
+  function sanitizePage615_() {
+    if (!shouldHideTechnical615_()) return;
+
+    const pill = document.getElementById('ulimReliableSyncPill614');
+    if (pill) {
+      pill.style.display = 'none';
+      pill.className = '';
+    }
+
+    [
+      'adminAttendanceSummary',
+      'adminDailyDraftStatus',
+      'adminClassroomUsageSummary',
+      'adminRoomReservationSummary',
+      'adminVocalPracticeSummary'
+    ].forEach(function (id) {
+      sanitizeElement615_(document.getElementById(id));
+    });
+
+    document.querySelectorAll(
+      '[id^="admin-att-save-state-"], .ulim-eval-sync, .ulim-eval-note, .admin-message-preview'
+    ).forEach(sanitizeElement615_);
+  }
+
+  const originalAttendanceState615_ = window.adminSetAttendanceSaveState_;
+  if (typeof originalAttendanceState615_ === 'function') {
+    window.adminSetAttendanceSaveState_ = function (idx, text, isError) {
+      if (!shouldHideTechnical615_()) {
+        return originalAttendanceState615_.apply(this, arguments);
+      }
+
+      const el = document.getElementById(`admin-att-save-state-${idx}`);
+      if (!el) return;
+
+      if (isError || FAILURE_PATTERN.test(String(text || ''))) {
+        el.textContent = '저장 실패';
+        el.style.color = '#dc2626';
+      } else {
+        el.textContent = '';
+      }
+    };
+  }
+
+  const observer615_ = new MutationObserver(function (mutations) {
+    if (!shouldHideTechnical615_()) return;
+
+    let needsScan = false;
+    for (const mutation of mutations) {
+      if (mutation.type === 'attributes' && mutation.target === document.body) {
+        needsScan = true;
+        break;
+      }
+
+      if (mutation.type === 'childList' || mutation.type === 'characterData') {
+        needsScan = true;
+        break;
+      }
+    }
+
+    if (needsScan) {
+      requestAnimationFrame(sanitizePage615_);
+    }
+  });
+
+  function start615_() {
+    observer615_.observe(document.documentElement, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: ['class']
+    });
+
+    sanitizePage615_();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start615_, { once: true });
+  } else {
+    start615_();
+  }
+
+  const originalApplyPermissions615_ = window.applyAdminPermissions;
+  if (typeof originalApplyPermissions615_ === 'function') {
+    window.applyAdminPermissions = function () {
+      const result = originalApplyPermissions615_.apply(this, arguments);
+      requestAnimationFrame(sanitizePage615_);
+      return result;
+    };
+  }
+
+  const originalAdminLoadInitialData615_ = window.adminLoadInitialData;
+  if (typeof originalAdminLoadInitialData615_ === 'function') {
+    window.adminLoadInitialData = async function () {
+      const result = await originalAdminLoadInitialData615_.apply(this, arguments);
+      sanitizePage615_();
+      return result;
+    };
+  }
+
+  console.log('[ULIM] 6.15 일반 강사 내부 저장·전송 문구 숨김 활성화');
 })();
 </script>
 
