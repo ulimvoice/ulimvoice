@@ -11,9 +11,9 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>울림 성우·스피치·연기학원 통합 연습 프로그램 6.12</title>
+<title>울림 성우·스피치·연기학원 통합 연습 프로그램 6.13</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="preconnect" href="https://script.google.com">
+<script type="text/javascript" nonce="debb844fac3b4dd38172001f045" src="//local.adguard.org?ts=1782366837443&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_0000000036987207baeb090f011bf7ab%26fn%3Dindex_6_13_%25EA%25B5%2590%25EC%25A7%2581%25EC%259B%2590%25EA%25B3%2584%25EC%25A0%2595%25EC%25A0%2584%25ED%2599%2598_%25EB%25A1%259C%25EC%25BB%25AC%25ED%2599%2594%25EB%25A9%25B4%25EC%2599%2584%25EC%25A0%2584%25EB%25B6%2584%25EB%25A6%25AC_%25EC%2599%2584%25EC%2584%25B1%25EB%25B3%25B8.html%26cd%3Dattachment%26ts%3D495102%26p%3Dfs%26cid%3D1%26sig%3Df4e462e3a82eb2ada861cd3387939f9e5c4594c7464899021cd40f2e463872d3%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><link rel="preconnect" href="https://script.google.com">
 <link rel="dns-prefetch" href="//script.google.com">
 <link rel="dns-prefetch" href="//script.googleusercontent.com">
 
@@ -23994,6 +23994,386 @@ body {
   } else {
     init612_();
   }
+})();
+</script>
+
+
+<script id="ulim-admin-account-ui-isolation-6-13">
+/* =========================================================
+   6.13 교직원 계정 전환 시 로컬 화면 완전 분리
+   - 이전 강사의 선택 반/검색어/입력값/표시 결과를 로그인 시작 전에 즉시 제거
+   - 출석/일일평가/공지/연습일지/강의실/연습실 화면 상태 초기화
+   - 강사별 출석 로컬 대기열과 일일평가 임시저장은 기존 계정별 키를 유지
+   - 계정 전환 중 이전 계정의 늦은 서버 응답은 화면 반영 전에 차단
+   ========================================================= */
+(function () {
+  'use strict';
+
+  if (window.__ULIM_ADMIN_ACCOUNT_UI_ISOLATION_613__) return;
+  window.__ULIM_ADMIN_ACCOUNT_UI_ISOLATION_613__ = true;
+
+  const VERSION = '6.13-admin-account-ui-isolation';
+  const CLASS_PROMPT = '반 목록에서 선택하거나 검색하세요';
+  window.__ULIM_ADMIN_ACCOUNT_EPOCH_613__ = Number(window.__ULIM_ADMIN_ACCOUNT_EPOCH_613__ || 0);
+
+  function today613_() {
+    try {
+      if (typeof getTodayInputValue === 'function') return getTodayInputValue();
+    } catch (ignore) {}
+    const now = new Date();
+    return [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, '0'),
+      String(now.getDate()).padStart(2, '0')
+    ].join('-');
+  }
+
+  function adminToken613_() {
+    try {
+      if (typeof adminToken !== 'undefined' && adminToken) return String(adminToken);
+    } catch (ignore) {}
+    try { return String(localStorage.getItem('adminToken') || ''); } catch (ignore) { return ''; }
+  }
+
+  function adminInfo613_() {
+    try {
+      if (typeof adminInfo !== 'undefined' && adminInfo && typeof adminInfo === 'object') return adminInfo;
+    } catch (ignore) {}
+    try {
+      const raw = localStorage.getItem('adminInfo') || '';
+      return raw ? JSON.parse(raw) : {};
+    } catch (ignore) {
+      return {};
+    }
+  }
+
+  function ownerKey613_() {
+    const info = adminInfo613_() || {};
+    return String(
+      info.accountUid ||
+      info.uid ||
+      info.adminUid ||
+      info.id ||
+      info.adminId ||
+      info.name ||
+      ''
+    ).trim();
+  }
+
+  function bumpEpoch613_() {
+    window.__ULIM_ADMIN_ACCOUNT_EPOCH_613__ =
+      Number(window.__ULIM_ADMIN_ACCOUNT_EPOCH_613__ || 0) + 1;
+    return window.__ULIM_ADMIN_ACCOUNT_EPOCH_613__;
+  }
+
+  function setValue613_(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.value = value == null ? '' : String(value);
+  }
+
+  function setText613_(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value == null ? '' : String(value);
+  }
+
+  function clearHtml613_(id) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '';
+  }
+
+  function resetSelect613_(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.options && el.options.length) el.selectedIndex = 0;
+    else el.value = '';
+  }
+
+  function resetClassSelector613_(inputId, panelId) {
+    const input = document.getElementById(inputId);
+    if (input) input.value = '';
+
+    let displayId = '';
+    let searchId = '';
+    if (inputId === 'adminDailyEvalClass') {
+      displayId = 'adminDailyEvalClassDisplay';
+      searchId = 'adminDailyEvalClassSearch';
+    } else if (inputId === 'noticeClass') {
+      displayId = 'noticeClassDisplay';
+      searchId = 'noticeClassSearch';
+    } else {
+      displayId = 'adminAttendanceClassDisplay';
+      searchId = 'adminAttendanceClassSearch';
+    }
+
+    const display = document.getElementById(displayId);
+    if (display) {
+      display.textContent = CLASS_PROMPT;
+      display.classList.add('empty');
+    }
+
+    setValue613_(searchId, '');
+
+    const panel = document.getElementById(panelId);
+    if (panel) panel.classList.remove('open');
+
+    const options = document.getElementById(panelId + 'Options');
+    if (options) options.innerHTML = '';
+  }
+
+  function clearObject613_(obj) {
+    if (!obj || typeof obj !== 'object') return;
+    Object.keys(obj).forEach(function (key) {
+      try { delete obj[key]; } catch (ignore) {}
+    });
+  }
+
+  function resetAdminAccountUi613_(reason) {
+    bumpEpoch613_();
+
+    try {
+      if (typeof window.ulimAdminClearSensitiveScreen_ === 'function') {
+        window.ulimAdminClearSensitiveScreen_(reason || 'account-switch-613');
+      }
+    } catch (ignore) {}
+
+    try {
+      if (typeof adminStudents !== 'undefined') adminStudents = [];
+      if (typeof adminStudentSearchRows !== 'undefined') adminStudentSearchRows = [];
+      if (typeof adminNoticeTargetRows !== 'undefined') adminNoticeTargetRows = [];
+      if (typeof adminNoticeSelectedMap !== 'undefined') adminNoticeSelectedMap = {};
+      if (typeof adminNoticeClassStudentCache !== 'undefined') adminNoticeClassStudentCache = {};
+      if (typeof adminRoomReservations !== 'undefined') adminRoomReservations = [];
+      if (typeof adminRoomSelectedMap !== 'undefined') adminRoomSelectedMap = {};
+      if (typeof adminClassList !== 'undefined') adminClassList = [];
+      if (typeof adminAttendanceRecords !== 'undefined') adminAttendanceRecords = [];
+      if (typeof adminDailyEvalRows !== 'undefined') adminDailyEvalRows = [];
+      if (typeof adminVocalPracticeLogs !== 'undefined') adminVocalPracticeLogs = [];
+      if (typeof adminClassroomUsageRows !== 'undefined') adminClassroomUsageRows = [];
+      if (typeof adminClassroomUsageOptionsLoadedDate !== 'undefined') adminClassroomUsageOptionsLoadedDate = '';
+      if (typeof ADMIN_CLASSROOM_USAGE_INSTRUCTORS !== 'undefined') ADMIN_CLASSROOM_USAGE_INSTRUCTORS = [];
+      if (typeof adminStudentsLoaded !== 'undefined') adminStudentsLoaded = false;
+      if (typeof adminDailyEvalTemplateLoaded !== 'undefined') adminDailyEvalTemplateLoaded = false;
+      if (typeof adminClassListLoadedKey !== 'undefined') adminClassListLoadedKey = '';
+    } catch (ignore) {}
+
+    try {
+      clearObject613_(window.__ulimAdminApiMemoryCache);
+      clearObject613_(window.__ulimAdminApiInflight);
+      if (typeof roomReservationMemoryCache !== 'undefined') clearObject613_(roomReservationMemoryCache);
+    } catch (ignore) {}
+
+    resetClassSelector613_('adminAttendanceClass', 'adminClassPickerPanel');
+    resetClassSelector613_('adminDailyEvalClass', 'adminDailyClassPickerPanel');
+    resetClassSelector613_('noticeClass', 'noticeClassPickerPanel');
+
+    [
+      'adminAttendanceFilter',
+      'adminDailyEvalFilter',
+      'noticeStudentKeyword',
+      'adminVocalPracticeInstructor',
+      'adminVocalPracticeKeyword',
+      'adminRoomKeyword',
+      'adminClassroomUsageInstructor',
+      'adminClassroomUsageClass',
+      'adminClassroomUsageMemo'
+    ].forEach(function (id) { setValue613_(id, ''); });
+
+    [
+      'adminAttendanceStatusFilter',
+      'noticeStatusFilter'
+    ].forEach(resetSelect613_);
+
+    const commonLesson = document.getElementById('adminDailyCommonLesson');
+    if (commonLesson) commonLesson.value = '';
+
+    const today = today613_();
+    [
+      'adminAttendanceDate',
+      'adminDailyEvalDate',
+      'adminVocalPracticeDate',
+      'adminClassroomUsageDate',
+      'adminRoomDate',
+      'paymentDateInput'
+    ].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (el) el.value = today;
+    });
+
+    [
+      'adminStudentTableWrap',
+      'adminAttendanceTableWrap',
+      'adminAttendanceMessagePreview',
+      'adminDailyEvalTableWrap',
+      'adminDailyEvalPreview',
+      'adminVocalPracticeList',
+      'adminClassroomUsageTableWrap',
+      'adminRoomReservationTableWrap',
+      'noticeTargetTableWrap'
+    ].forEach(clearHtml613_);
+
+    [
+      'adminAttendanceSummary',
+      'adminDailyDraftStatus',
+      'adminVocalPracticeSummary',
+      'adminClassroomUsageSummary',
+      'adminRoomReservationSummary'
+    ].forEach(function (id) { setText613_(id, ''); });
+
+    document.querySelectorAll('.admin-class-list-panel').forEach(function (panel) {
+      panel.classList.remove('open');
+    });
+
+    try {
+      for (let i = sessionStorage.length - 1; i >= 0; i--) {
+        const key = sessionStorage.key(i);
+        if (!key) continue;
+        if (
+          key.indexOf('ulim_admin_api_v54::') === 0 ||
+          key.indexOf('ulim_admin_classes_v2_') === 0 ||
+          key.indexOf('ulim_daily_template_') === 0
+        ) {
+          sessionStorage.removeItem(key);
+        }
+      }
+    } catch (ignore) {}
+
+    // 강사별 로컬 대기열/평가 임시저장 데이터는 삭제하지 않습니다.
+    // 각 키가 accountUid/id/name으로 분리되어 있으므로 현재 로그인한 계정만 읽습니다.
+  }
+
+  function selectedClassAllowed613_(inputId) {
+    const el = document.getElementById(inputId);
+    const value = String(el && el.value || '').trim();
+    if (!value || value === '전체반') return true;
+
+    let teacherMode = false;
+    try {
+      teacherMode = typeof adminIsTeacherMode === 'function' && adminIsTeacherMode();
+    } catch (ignore) {}
+    if (!teacherMode) return true;
+
+    let list = [];
+    try {
+      list = typeof adminFilterClassListForRole === 'function'
+        ? adminFilterClassListForRole(Array.isArray(adminClassList) ? adminClassList : [])
+        : (Array.isArray(adminClassList) ? adminClassList : []);
+    } catch (ignore) {}
+
+    return list.some(function (item) {
+      return String(item && item.className || '').trim() === value;
+    });
+  }
+
+  function purgeInvalidTeacherSelections613_() {
+    if (!selectedClassAllowed613_('adminAttendanceClass')) {
+      resetClassSelector613_('adminAttendanceClass', 'adminClassPickerPanel');
+      try { if (typeof adminAttendanceRecords !== 'undefined') adminAttendanceRecords = []; } catch (ignore) {}
+      clearHtml613_('adminAttendanceTableWrap');
+      setText613_('adminAttendanceSummary', '');
+    }
+
+    if (!selectedClassAllowed613_('adminDailyEvalClass')) {
+      resetClassSelector613_('adminDailyEvalClass', 'adminDailyClassPickerPanel');
+      try { if (typeof adminDailyEvalRows !== 'undefined') adminDailyEvalRows = []; } catch (ignore) {}
+      clearHtml613_('adminDailyEvalTableWrap');
+      setText613_('adminDailyDraftStatus', '');
+    }
+  }
+
+  window.ulimResetAdminAccountUi613_ = resetAdminAccountUi613_;
+
+  const originalAdminApi613_ = window.adminApi;
+  if (typeof originalAdminApi613_ === 'function') {
+    window.adminApi = async function (action, params) {
+      const epochAtStart = Number(window.__ULIM_ADMIN_ACCOUNT_EPOCH_613__ || 0);
+      const tokenAtStart = String((params && params.adminToken) || adminToken613_() || '');
+      const allowAcrossAccountChange = action === 'adminLogin';
+
+      const result = await originalAdminApi613_.apply(this, arguments);
+
+      if (!allowAcrossAccountChange) {
+        const epochNow = Number(window.__ULIM_ADMIN_ACCOUNT_EPOCH_613__ || 0);
+        const tokenNow = adminToken613_();
+        if (epochNow !== epochAtStart || (tokenAtStart && tokenNow && tokenAtStart !== tokenNow)) {
+          const staleError = new Error('계정이 변경되어 이전 강사의 조회 결과를 취소했습니다.');
+          staleError.code = 'ULIM_STALE_ADMIN_RESPONSE_613';
+          throw staleError;
+        }
+      }
+
+      return result;
+    };
+  }
+
+  const originalAdminLogin613_ = window.adminLogin;
+  if (typeof originalAdminLogin613_ === 'function') {
+    window.adminLogin = async function () {
+      resetAdminAccountUi613_('login-start-613');
+      const result = await originalAdminLogin613_.apply(this, arguments);
+      try {
+        sessionStorage.setItem('ulim_admin_active_owner_613', ownerKey613_());
+      } catch (ignore) {}
+      purgeInvalidTeacherSelections613_();
+      const pw = document.getElementById('adminPwInput');
+      if (pw) pw.value = '';
+      return result;
+    };
+  }
+
+  const originalAdminLoadInitialData613_ = window.adminLoadInitialData;
+  if (typeof originalAdminLoadInitialData613_ === 'function') {
+    window.adminLoadInitialData = async function () {
+      const beforeOwner = (() => {
+        try { return sessionStorage.getItem('ulim_admin_active_owner_613') || ''; }
+        catch (ignore) { return ''; }
+      })();
+      const currentOwner = ownerKey613_();
+
+      // 새 계정이거나 BFCache로 이전 DOM이 복원된 경우 먼저 화면을 비웁니다.
+      if (!beforeOwner || (currentOwner && beforeOwner !== currentOwner)) {
+        resetAdminAccountUi613_('session-owner-change-613');
+      }
+
+      const result = await originalAdminLoadInitialData613_.apply(this, arguments);
+      try {
+        sessionStorage.setItem('ulim_admin_active_owner_613', ownerKey613_());
+      } catch (ignore) {}
+      purgeInvalidTeacherSelections613_();
+      return result;
+    };
+  }
+
+  const originalAdminLogout613_ = window.adminLogout;
+  if (typeof originalAdminLogout613_ === 'function') {
+    window.adminLogout = function () {
+      resetAdminAccountUi613_('logout-613');
+      try { sessionStorage.removeItem('ulim_admin_active_owner_613'); } catch (ignore) {}
+      return originalAdminLogout613_.apply(this, arguments);
+    };
+  }
+
+  const originalRenderClassSelectors613_ = window.adminRenderClassSelectors;
+  if (typeof originalRenderClassSelectors613_ === 'function') {
+    window.adminRenderClassSelectors = function () {
+      const result = originalRenderClassSelectors613_.apply(this, arguments);
+      purgeInvalidTeacherSelections613_();
+      return result;
+    };
+  }
+
+  window.addEventListener('pageshow', function (event) {
+    if (!event.persisted) return;
+    const savedOwner = (() => {
+      try { return sessionStorage.getItem('ulim_admin_active_owner_613') || ''; }
+      catch (ignore) { return ''; }
+    })();
+    const currentOwner = ownerKey613_();
+    if (savedOwner && currentOwner && savedOwner !== currentOwner) {
+      resetAdminAccountUi613_('bfcache-owner-change-613');
+    }
+  });
+
+  console.log('[ULIM]', VERSION, '교직원 계정별 로컬 화면 분리 활성화');
 })();
 </script>
 
