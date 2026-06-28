@@ -2495,7 +2495,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
             <div class="admin-btn-row">
               <button type="button" class="admin-btn blue" onclick="adminLoadDailyEvalStudents()">현재 반 학생 불러오기</button>
               <button type="button" class="admin-btn" onclick="adminSaveDailyEvaluations(false)">평가 저장</button>
-              <button type="button" id="adminDailyEvalPreviewToggleBtn" class="admin-btn orange admin-full-only" onclick="adminPreviewDailyEvalMessages()" aria-controls="adminDailyEvalPreview" aria-expanded="false">발송 미리보기 열기</button>
+              <button type="button" class="admin-btn orange admin-full-only" onclick="adminPreviewDailyEvalMessages()">발송 미리보기</button>
               <button type="button" class="admin-btn red admin-full-only" onclick="adminSaveDailyEvaluations(true)">저장 후 발송</button>
             </div>
             <div id="adminDailyEvalTableWrap" class="admin-table-wrap"></div>
@@ -25405,118 +25405,662 @@ body.teacher-mode #ulimReliableSyncPill614 {
 </script>
 
 
-<!-- 6.20 일일평가 발송 미리보기 열기/닫기 토글 -->
-<script id="ulim-daily-eval-preview-toggle-620">
-(function () {
-  'use strict';
 
-  function getPreview620_() {
-    return document.getElementById('adminDailyEvalPreview');
-  }
+<!-- =========================================================
+     6.21 관리자 일일평가 발송 미리보기 팝업
+     - 관리자(전체관리) 전용
+     - 선택 학생별 좌우 페이지 이동
+     - 학생별 전체 발송문구 수정/저장
+     - 저장된 수정문구를 평가 저장 및 실제 발송 payload에 반영
+     ========================================================= -->
+<style id="ulim-admin-daily-preview-modal-style-621">
+/* 기존 화면 하단 미리보기는 사용하지 않습니다. */
+#adminDailyEvalPreview { display:none !important; }
 
-  function getToggleButton620_() {
-    return document.getElementById('adminDailyEvalPreviewToggleBtn');
-  }
-
-  function isPreviewOpen620_() {
-    const preview = getPreview620_();
-    if (!preview) return false;
-    return window.getComputedStyle(preview).display !== 'none';
-  }
-
-  function setPreviewOpen620_(open) {
-    const preview = getPreview620_();
-    const button = getToggleButton620_();
-    if (!preview) return;
-
-    preview.style.display = open ? 'block' : 'none';
-    preview.setAttribute('aria-hidden', open ? 'false' : 'true');
-
-    if (button) {
-      button.textContent = open ? '발송 미리보기 닫기' : '발송 미리보기 열기';
-      button.setAttribute('aria-expanded', open ? 'true' : 'false');
-      button.classList.toggle('gray', open);
-      button.classList.toggle('orange', !open);
+.admin-daily-preview-overlay-621 {
+    position: fixed;
+    inset: 0;
+    z-index: 50000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    box-sizing: border-box;
+    background: rgba(15, 23, 42, .68);
+    backdrop-filter: blur(3px);
+}
+.admin-daily-preview-overlay-621.open { display:flex; }
+.admin-daily-preview-modal-621 {
+    width: min(920px, 100%);
+    max-height: 92vh;
+    background: #fff;
+    border-radius: 22px;
+    box-shadow: 0 24px 70px rgba(0,0,0,.32);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.admin-daily-preview-head-621 {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    padding:17px 20px;
+    background:linear-gradient(135deg,#166534,#16a34a);
+    color:#fff;
+}
+.admin-daily-preview-title-621 {
+    min-width:0;
+}
+.admin-daily-preview-title-621 strong {
+    display:block;
+    font-size:19px;
+    font-weight:900;
+    line-height:1.3;
+}
+.admin-daily-preview-title-621 span {
+    display:block;
+    margin-top:3px;
+    font-size:12px;
+    opacity:.9;
+    font-weight:700;
+}
+.admin-daily-preview-close-621 {
+    width:40px;
+    height:40px;
+    flex:0 0 40px;
+    border:0;
+    border-radius:50%;
+    background:rgba(255,255,255,.18);
+    color:#fff;
+    font-size:24px;
+    font-weight:900;
+    cursor:pointer;
+}
+.admin-daily-preview-close-621:hover { background:rgba(255,255,255,.28); }
+.admin-daily-preview-meta-621 {
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:12px;
+    align-items:center;
+    padding:14px 20px;
+    background:#f8fafc;
+    border-bottom:1px solid #e5e7eb;
+}
+.admin-daily-preview-student-621 {
+    font-size:18px;
+    font-weight:900;
+    color:#111827;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+.admin-daily-preview-submeta-621 {
+    margin-top:4px;
+    color:#64748b;
+    font-size:12px;
+    font-weight:700;
+    line-height:1.5;
+}
+.admin-daily-preview-page-621 {
+    padding:7px 11px;
+    border-radius:999px;
+    background:#dcfce7;
+    color:#166534;
+    font-size:13px;
+    font-weight:900;
+    white-space:nowrap;
+}
+.admin-daily-preview-body-621 {
+    overflow:auto;
+    padding:18px 20px 12px;
+}
+.admin-daily-preview-label-621 {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:8px;
+    color:#374151;
+    font-size:13px;
+    font-weight:900;
+}
+.admin-daily-preview-saved-621 {
+    color:#16a34a;
+    font-size:12px;
+    font-weight:900;
+}
+.admin-daily-preview-textarea-621 {
+    width:100%;
+    min-height:48vh;
+    max-height:58vh;
+    box-sizing:border-box;
+    resize:vertical;
+    border:1px solid #cbd5e1;
+    border-radius:16px;
+    padding:16px;
+    background:#fff;
+    color:#111827;
+    font:500 14px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",sans-serif;
+    white-space:pre-wrap;
+}
+.admin-daily-preview-textarea-621:focus {
+    outline:none;
+    border-color:#16a34a;
+    box-shadow:0 0 0 4px rgba(22,163,74,.12);
+}
+.admin-daily-preview-help-621 {
+    margin-top:9px;
+    color:#64748b;
+    font-size:12px;
+    line-height:1.55;
+}
+.admin-daily-preview-status-621 {
+    min-height:20px;
+    margin-top:8px;
+    color:#166534;
+    font-size:12px;
+    font-weight:900;
+}
+.admin-daily-preview-footer-621 {
+    display:grid;
+    grid-template-columns:auto minmax(0,1fr) auto;
+    gap:10px;
+    align-items:center;
+    padding:14px 20px 18px;
+    border-top:1px solid #e5e7eb;
+    background:#fff;
+}
+.admin-daily-preview-nav-621 {
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+}
+.admin-daily-preview-btn-621 {
+    border:0;
+    border-radius:11px;
+    padding:11px 15px;
+    font-size:14px;
+    font-weight:900;
+    cursor:pointer;
+    color:#fff;
+    background:#16a34a;
+    white-space:nowrap;
+}
+.admin-daily-preview-btn-621.gray { background:#64748b; }
+.admin-daily-preview-btn-621.dark { background:#111827; }
+.admin-daily-preview-btn-621.nav {
+    min-width:48px;
+    padding:10px 15px;
+    background:#e2e8f0;
+    color:#0f172a;
+    font-size:22px;
+    line-height:1;
+}
+.admin-daily-preview-btn-621:disabled {
+    opacity:.42;
+    cursor:not-allowed;
+}
+.admin-daily-preview-nav-label-621 {
+    min-width:92px;
+    text-align:center;
+    color:#334155;
+    font-size:13px;
+    font-weight:900;
+}
+@media (max-width:700px) {
+    .admin-daily-preview-overlay-621 { padding:0; align-items:stretch; }
+    .admin-daily-preview-modal-621 { width:100%; max-height:100vh; height:100%; border-radius:0; }
+    .admin-daily-preview-head-621 { padding:14px 15px; }
+    .admin-daily-preview-title-621 strong { font-size:17px; }
+    .admin-daily-preview-meta-621 { padding:12px 15px; }
+    .admin-daily-preview-student-621 { font-size:16px; }
+    .admin-daily-preview-body-621 { padding:14px 15px 10px; flex:1; }
+    .admin-daily-preview-textarea-621 { min-height:52vh; max-height:none; }
+    .admin-daily-preview-footer-621 {
+        grid-template-columns:1fr 1fr;
+        padding:12px 15px 16px;
     }
-  }
+    .admin-daily-preview-nav-621 { grid-column:1 / -1; grid-row:1; }
+    .admin-daily-preview-btn-621.dark { grid-column:1; }
+    .admin-daily-preview-btn-621:not(.nav):not(.dark) { grid-column:2; }
+}
+</style>
 
-  function buildPreview620_() {
-    if (typeof adminIsFullAdmin === 'function' && !adminIsFullAdmin()) {
-      alert('일일평가 발송 미리보기와 발송은 관리자 권한에서만 가능합니다.');
-      return false;
+<script id="ulim-admin-daily-preview-modal-script-621">
+(function(){
+    'use strict';
+    if (window.__ULIM_ADMIN_DAILY_PREVIEW_MODAL_621__) return;
+    window.__ULIM_ADMIN_DAILY_PREVIEW_MODAL_621__ = true;
+
+    const state = {
+        rows: [],
+        index: 0,
+        recipientTypes: [],
+        sendChannel: 'alimtalk',
+        channelLabel: '알림톡',
+        drafts: Object.create(null),
+        beforeOpenOverflow: ''
+    };
+
+    function text_(v) { return String(v == null ? '' : v); }
+    function trim_(v) { return text_(v).trim(); }
+    function esc_(v) {
+        return text_(v)
+            .replace(/&/g,'&amp;')
+            .replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;')
+            .replace(/"/g,'&quot;')
+            .replace(/'/g,'&#39;');
     }
 
-    const rows = typeof adminGetSelectedDailyRows === 'function'
-      ? adminGetSelectedDailyRows()
-      : [];
-    const recipientTypes = typeof adminGetRecipientTypes === 'function'
-      ? adminGetRecipientTypes('daily')
-      : [];
-    const preview = getPreview620_();
-
-    if (!preview) return false;
-    if (!rows.length) {
-      alert('저장/발송할 일일평가 내용이 없습니다.');
-      return false;
-    }
-    if (!recipientTypes.length) {
-      alert('수신 대상을 선택해주세요.');
-      return false;
+    function adminScope_() {
+        const info = window.adminInfo || (typeof adminInfo !== 'undefined' ? adminInfo : null) || {};
+        return trim_(info.uid || info.accountUid || info.id || info.loginId || info.name || 'full-admin');
     }
 
-    const sendChannel = typeof adminGetSendChannel === 'function'
-      ? adminGetSendChannel('daily')
-      : 'alimtalk';
-    const channelLabel = typeof adminGetSendChannelLabel === 'function'
-      ? adminGetSendChannelLabel(sendChannel)
-      : sendChannel;
-
-    preview.textContent = rows.map(function (row) {
-      const studentName = row.studentName || row.name || '';
-      return '[' + studentName + ']\n' +
-        '발송방식: ' + channelLabel + '\n' +
-        '수신대상: ' + recipientTypes.join(', ') + '\n' +
-        (row.evaluation || '') + '\n' +
-        '- 울림연기학원';
-    }).join('\n\n--------------------\n\n');
-
-    return true;
-  }
-
-  // 같은 버튼을 누를 때 열기/닫기가 번갈아 동작합니다.
-  window.adminPreviewDailyEvalMessages = function () {
-    if (isPreviewOpen620_()) {
-      setPreviewOpen620_(false);
-      return;
+    function storageKey_() {
+        return 'ulim_admin_daily_preview_edits_621::' + adminScope_();
     }
 
-    if (buildPreview620_()) {
-      setPreviewOpen620_(true);
-      const preview = getPreview620_();
-      if (preview && typeof preview.scrollIntoView === 'function') {
-        preview.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
+    function loadEdits_() {
+        try {
+            const parsed = JSON.parse(sessionStorage.getItem(storageKey_()) || '{}');
+            return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch (e) {
+            return {};
+        }
     }
-  };
 
-  window.adminCloseDailyEvalPreview = function () {
-    setPreviewOpen620_(false);
-  };
+    let edits = loadEdits_();
+    window.adminDailyPreviewEdits621 = edits;
 
-  function initPreviewToggle620_() {
-    const preview = getPreview620_();
-    if (preview) {
-      preview.style.display = 'none';
-      preview.setAttribute('aria-hidden', 'true');
+    function persistEdits_() {
+        try { sessionStorage.setItem(storageKey_(), JSON.stringify(edits)); } catch (e) {}
     }
-    setPreviewOpen620_(false);
-  }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initPreviewToggle620_, { once: true });
-  } else {
-    initPreviewToggle620_();
-  }
+    function normalizeClass_(v) {
+        try {
+            if (typeof adminCleanClassNameOnly_ === 'function') return trim_(adminCleanClassNameOnly_(v));
+        } catch (e) {}
+        return trim_(v).replace(/\s+/g,' ');
+    }
+
+    function exactIdentity_(row) {
+        try {
+            if (typeof adminDailyEvalExactKey === 'function') return trim_(adminDailyEvalExactKey(row));
+        } catch (e) {}
+        return [
+            trim_(row && (row.studentIdentityKey || row.identityKey)),
+            trim_(row && (row.studentNo || row.attendanceNo)),
+            normalizeClass_(row && row.className),
+            trim_(row && (row.studentName || row.name)),
+            trim_(row && row.studentPhone).replace(/[^0-9]/g,'')
+        ].join('|');
+    }
+
+    function rowKey_(row) {
+        row = row || {};
+        const date = trim_(row.date || document.getElementById('adminDailyEvalDate')?.value || '');
+        const cls = normalizeClass_(row.className || document.getElementById('adminDailyEvalClass')?.value || '');
+        return [date, cls, exactIdentity_(row)].join('||');
+    }
+
+    function sameStudent_(a, b) {
+        if (!a || !b) return false;
+        const ka = exactIdentity_(a);
+        const kb = exactIdentity_(b);
+        if (ka && kb && ka === kb) return true;
+        return trim_(a.studentName || a.name) === trim_(b.studentName || b.name)
+            && normalizeClass_(a.className) === normalizeClass_(b.className);
+    }
+
+    function extractParts_(evaluation) {
+        try {
+            if (typeof adminExtractDailyEvalParts_ === 'function') {
+                return adminExtractDailyEvalParts_({ evaluation: evaluation });
+            }
+        } catch (e) {}
+        return { lessonContent:'', lessonAttitude:'', teacherComment:'' };
+    }
+
+    function applyEditToRow_(row, edit) {
+        if (!edit) return row;
+        const out = Object.assign({}, row, {
+            evaluation: text_(edit.evaluation)
+        });
+        if (Object.prototype.hasOwnProperty.call(edit, 'lessonContent')) out.lessonContent = text_(edit.lessonContent);
+        if (Object.prototype.hasOwnProperty.call(edit, 'lessonAttitude')) out.lessonAttitude = text_(edit.lessonAttitude);
+        if (Object.prototype.hasOwnProperty.call(edit, 'teacherComment')) out.teacherComment = text_(edit.teacherComment);
+        out.__dailyPreviewCustom621 = true;
+        return out;
+    }
+
+    function findSourceRow_(row) {
+        let list = [];
+        try { list = Array.isArray(adminDailyEvalRows) ? adminDailyEvalRows : []; } catch (e) { list = []; }
+        return list.find(function(source){ return sameStudent_(source, row); }) || null;
+    }
+
+    function sourceMessageStillValid_(selectedRow, sourceRow) {
+        if (!sourceRow || !trim_(sourceRow.evaluation)) return false;
+        return trim_(selectedRow.lessonContent) === trim_(sourceRow.lessonContent)
+            && trim_(selectedRow.lessonAttitude) === trim_(sourceRow.lessonAttitude)
+            && trim_(selectedRow.teacherComment) === trim_(sourceRow.teacherComment);
+    }
+
+    /* 최종 저장/발송 직전에 학생별 수정문구를 payload에 덮어씁니다. */
+    const previousGetSelected_ = window.adminGetSelectedDailyRows;
+    if (typeof previousGetSelected_ === 'function') {
+        window.adminGetSelectedDailyRows = function(){
+            const rows = previousGetSelected_.apply(this, arguments) || [];
+            edits = loadEdits_();
+            window.adminDailyPreviewEdits621 = edits;
+            return rows.map(function(row){
+                const key = rowKey_(row);
+                if (edits[key]) return applyEditToRow_(row, edits[key]);
+
+                /* 서버에서 불러온 학생별 전체문구가 있고 세부 입력값이 바뀌지 않았다면 그대로 유지합니다. */
+                const source = findSourceRow_(row);
+                if (sourceMessageStillValid_(row, source)) {
+                    return Object.assign({}, row, { evaluation: text_(source.evaluation) });
+                }
+                return row;
+            });
+        };
+    }
+
+    function ensureModal_() {
+        let overlay = document.getElementById('adminDailyPreviewOverlay621');
+        if (overlay) return overlay;
+
+        overlay = document.createElement('div');
+        overlay.id = 'adminDailyPreviewOverlay621';
+        overlay.className = 'admin-daily-preview-overlay-621';
+        overlay.setAttribute('role','dialog');
+        overlay.setAttribute('aria-modal','true');
+        overlay.setAttribute('aria-labelledby','adminDailyPreviewTitle621');
+        overlay.innerHTML = `
+            <div class="admin-daily-preview-modal-621">
+                <div class="admin-daily-preview-head-621">
+                    <div class="admin-daily-preview-title-621">
+                        <strong id="adminDailyPreviewTitle621">일일평가 발송 미리보기</strong>
+                        <span>선택한 학생을 좌우로 넘기며 학생별 발송문구를 수정할 수 있습니다.</span>
+                    </div>
+                    <button type="button" class="admin-daily-preview-close-621" id="adminDailyPreviewClose621" aria-label="닫기">×</button>
+                </div>
+                <div class="admin-daily-preview-meta-621">
+                    <div>
+                        <div class="admin-daily-preview-student-621" id="adminDailyPreviewStudent621"></div>
+                        <div class="admin-daily-preview-submeta-621" id="adminDailyPreviewSubmeta621"></div>
+                    </div>
+                    <div class="admin-daily-preview-page-621" id="adminDailyPreviewPage621"></div>
+                </div>
+                <div class="admin-daily-preview-body-621">
+                    <div class="admin-daily-preview-label-621">
+                        <span>실제 발송 전체 문구</span>
+                        <span class="admin-daily-preview-saved-621" id="adminDailyPreviewSaved621"></span>
+                    </div>
+                    <textarea id="adminDailyPreviewText621" class="admin-daily-preview-textarea-621" spellcheck="false"></textarea>
+                    <div class="admin-daily-preview-help-621">
+                        수정 내용은 현재 표시된 학생에게만 적용됩니다. 실제 시트 저장 또는 발송은 기존의 <b>평가 저장</b>·<b>저장 후 발송</b> 버튼에서 완료됩니다.
+                    </div>
+                    <div class="admin-daily-preview-status-621" id="adminDailyPreviewStatus621"></div>
+                </div>
+                <div class="admin-daily-preview-footer-621">
+                    <button type="button" class="admin-daily-preview-btn-621 dark" id="adminDailyPreviewReset621">기본문구로 되돌리기</button>
+                    <div class="admin-daily-preview-nav-621">
+                        <button type="button" class="admin-daily-preview-btn-621 nav" id="adminDailyPreviewPrev621" aria-label="이전 학생">‹</button>
+                        <span class="admin-daily-preview-nav-label-621" id="adminDailyPreviewNavLabel621"></span>
+                        <button type="button" class="admin-daily-preview-btn-621 nav" id="adminDailyPreviewNext621" aria-label="다음 학생">›</button>
+                    </div>
+                    <button type="button" class="admin-daily-preview-btn-621" id="adminDailyPreviewSave621">현재 학생 문구 저장</button>
+                </div>
+            </div>`;
+        document.body.appendChild(overlay);
+
+        overlay.querySelector('#adminDailyPreviewClose621').addEventListener('click', closeModal_);
+        overlay.querySelector('#adminDailyPreviewPrev621').addEventListener('click', function(){ move_(-1); });
+        overlay.querySelector('#adminDailyPreviewNext621').addEventListener('click', function(){ move_(1); });
+        overlay.querySelector('#adminDailyPreviewSave621').addEventListener('click', function(){ saveCurrent_(true); });
+        overlay.querySelector('#adminDailyPreviewReset621').addEventListener('click', resetCurrent_);
+        overlay.addEventListener('click', function(e){ if (e.target === overlay) closeModal_(); });
+        return overlay;
+    }
+
+    function currentRow_() { return state.rows[state.index] || null; }
+
+    function currentAppliedMessage_(row) {
+        if (!row) return '';
+        const key = rowKey_(row);
+        if (edits[key]) return text_(edits[key].evaluation);
+        return text_(row.evaluation);
+    }
+
+    function captureDraft_() {
+        const row = currentRow_();
+        const textarea = document.getElementById('adminDailyPreviewText621');
+        if (!row || !textarea) return;
+        state.drafts[rowKey_(row)] = textarea.value;
+    }
+
+    function hasUnsavedCurrent_() {
+        const row = currentRow_();
+        const textarea = document.getElementById('adminDailyPreviewText621');
+        if (!row || !textarea) return false;
+        return text_(textarea.value) !== currentAppliedMessage_(row);
+    }
+
+    function render_() {
+        const row = currentRow_();
+        if (!row) return;
+        const total = state.rows.length;
+        const key = rowKey_(row);
+        const draft = Object.prototype.hasOwnProperty.call(state.drafts, key)
+            ? state.drafts[key]
+            : currentAppliedMessage_(row);
+        const studentName = trim_(row.studentName || row.name) || '학생';
+        const cls = normalizeClass_(row.className);
+        const date = trim_(row.date);
+        const status = trim_(row.attendanceStatus || row.status || row.specialStatus);
+
+        document.getElementById('adminDailyPreviewStudent621').textContent = studentName;
+        document.getElementById('adminDailyPreviewSubmeta621').textContent = [
+            date && ('수업일 ' + date),
+            cls && ('반 ' + cls),
+            status && ('출결 ' + status),
+            '발송방식 ' + state.channelLabel,
+            '수신대상 ' + state.recipientTypes.join(', ')
+        ].filter(Boolean).join(' · ');
+        document.getElementById('adminDailyPreviewPage621').textContent = (state.index + 1) + ' / ' + total;
+        document.getElementById('adminDailyPreviewNavLabel621').textContent = (state.index + 1) + '번째 학생';
+        document.getElementById('adminDailyPreviewText621').value = draft;
+        document.getElementById('adminDailyPreviewSaved621').textContent = edits[key] ? '학생별 수정문구 저장됨' : '';
+        document.getElementById('adminDailyPreviewStatus621').textContent = '';
+        document.getElementById('adminDailyPreviewPrev621').disabled = state.index <= 0;
+        document.getElementById('adminDailyPreviewNext621').disabled = state.index >= total - 1;
+    }
+
+    function move_(delta) {
+        captureDraft_();
+        const next = state.index + delta;
+        if (next < 0 || next >= state.rows.length) return;
+        state.index = next;
+        render_();
+        setTimeout(function(){ document.getElementById('adminDailyPreviewText621')?.focus(); }, 0);
+    }
+
+    function updateUnderlyingRow_(row, edit) {
+        let list = [];
+        try { list = Array.isArray(adminDailyEvalRows) ? adminDailyEvalRows : []; } catch (e) { list = []; }
+        let matchedIndex = -1;
+        const next = list.map(function(source, idx){
+            if (!sameStudent_(source, row)) return source;
+            matchedIndex = idx;
+            return Object.assign({}, source, {
+                evaluation: edit.evaluation,
+                lessonContent: edit.lessonContent,
+                lessonAttitude: edit.lessonAttitude,
+                teacherComment: edit.teacherComment,
+                __dailyPreviewCustom621: true
+            });
+        });
+        try { adminDailyEvalRows = next; } catch (e) {}
+        try { window.adminDailyEvalRows = next; } catch (e) {}
+
+        if (matchedIndex >= 0) {
+            const tr = document.querySelector('#adminDailyEvalTableWrap tr[data-daily-index="' + matchedIndex + '"]');
+            if (tr) {
+                const attitude = tr.querySelector('.admin-eval-attitude');
+                const comment = tr.querySelector('.admin-eval-comment');
+                if (attitude) attitude.value = edit.lessonAttitude;
+                if (comment) comment.value = edit.teacherComment;
+            }
+        }
+    }
+
+    function saveCurrent_(showAlert) {
+        const row = currentRow_();
+        const textarea = document.getElementById('adminDailyPreviewText621');
+        if (!row || !textarea) return false;
+        const message = trim_(textarea.value);
+        if (!message) {
+            alert('발송 문구를 입력해주세요.');
+            textarea.focus();
+            return false;
+        }
+
+        const parts = extractParts_(message);
+        const hasLessonLabel = /▶\s*이번주\s*수업/.test(message);
+        const hasAttitudeLabel = /▶\s*수업\s*활동\s*및\s*태도/.test(message);
+        const hasCommentLabel = /▶\s*선생님\s*전달\s*사항/.test(message);
+        const key = rowKey_(row);
+        const edit = {
+            evaluation: message,
+            lessonContent: hasLessonLabel ? text_(parts.lessonContent) : text_(row.lessonContent),
+            lessonAttitude: hasAttitudeLabel ? text_(parts.lessonAttitude) : text_(row.lessonAttitude),
+            teacherComment: hasCommentLabel ? text_(parts.teacherComment) : text_(row.teacherComment),
+            updatedAt: Date.now(),
+            studentName: trim_(row.studentName || row.name),
+            date: trim_(row.date),
+            className: normalizeClass_(row.className)
+        };
+        edits[key] = edit;
+        persistEdits_();
+        state.drafts[key] = message;
+        state.rows[state.index] = applyEditToRow_(row, edit);
+        updateUnderlyingRow_(row, edit);
+
+        const saved = document.getElementById('adminDailyPreviewSaved621');
+        const status = document.getElementById('adminDailyPreviewStatus621');
+        if (saved) saved.textContent = '학생별 수정문구 저장됨';
+        if (status) status.textContent = trim_(row.studentName || row.name) + ' 학생 문구가 저장되어 평가 저장·발송에 반영됩니다.';
+        if (showAlert === true) {
+            setTimeout(function(){ if (status) status.textContent = ''; }, 2800);
+        }
+        return true;
+    }
+
+    function resetCurrent_() {
+        const row = currentRow_();
+        if (!row) return;
+        const key = rowKey_(row);
+        delete edits[key];
+        delete state.drafts[key];
+        persistEdits_();
+
+        let fresh = '';
+        try {
+            const cloned = Object.assign({}, row);
+            delete cloned.__dailyPreviewCustom621;
+            if (typeof adminBuildDailyEvalMessageFromParts === 'function') fresh = adminBuildDailyEvalMessageFromParts(cloned);
+        } catch (e) {}
+        if (!fresh) fresh = text_(row.evaluation);
+        const resetParts = extractParts_(fresh);
+        const resetEdit = {
+            evaluation: fresh,
+            lessonContent: /▶\s*이번주\s*수업/.test(fresh) ? text_(resetParts.lessonContent) : text_(row.lessonContent),
+            lessonAttitude: /▶\s*수업\s*활동\s*및\s*태도/.test(fresh) ? text_(resetParts.lessonAttitude) : text_(row.lessonAttitude),
+            teacherComment: /▶\s*선생님\s*전달\s*사항/.test(fresh) ? text_(resetParts.teacherComment) : text_(row.teacherComment)
+        };
+        state.rows[state.index] = Object.assign({}, row, resetEdit, { __dailyPreviewCustom621:false });
+        state.drafts[key] = fresh;
+        updateUnderlyingRow_(row, resetEdit);
+        /* 기본문구 복원은 별도 학생 수정값으로 취급하지 않습니다. */
+        delete edits[key];
+        persistEdits_();
+        render_();
+        document.getElementById('adminDailyPreviewStatus621').textContent = '현재 학생의 별도 수정문구를 해제했습니다.';
+    }
+
+    function closeModal_() {
+        const overlay = document.getElementById('adminDailyPreviewOverlay621');
+        if (!overlay || !overlay.classList.contains('open')) return;
+        if (hasUnsavedCurrent_() && !confirm('현재 학생 문구에 저장하지 않은 수정이 있습니다. 저장하지 않고 닫을까요?')) return;
+        overlay.classList.remove('open');
+        document.body.style.overflow = state.beforeOpenOverflow || '';
+    }
+
+    function openModal_(rows, recipientTypes, sendChannel, channelLabel) {
+        const overlay = ensureModal_();
+        edits = loadEdits_();
+        window.adminDailyPreviewEdits621 = edits;
+        state.rows = rows.map(function(row){
+            const edit = edits[rowKey_(row)];
+            return edit ? applyEditToRow_(row, edit) : row;
+        });
+        state.index = 0;
+        state.recipientTypes = recipientTypes.slice();
+        state.sendChannel = sendChannel;
+        state.channelLabel = channelLabel;
+        state.drafts = Object.create(null);
+        state.beforeOpenOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        overlay.classList.add('open');
+        render_();
+        setTimeout(function(){ document.getElementById('adminDailyPreviewText621')?.focus(); }, 0);
+    }
+
+    window.adminPreviewDailyEvalMessages = function(){
+        if (typeof adminIsFullAdmin === 'function' && !adminIsFullAdmin()) {
+            return alert('일일평가 발송 미리보기와 발송은 관리자 권한에서만 가능합니다.');
+        }
+        if (!trim_(window.adminToken || (typeof adminToken !== 'undefined' ? adminToken : ''))) {
+            return alert('관리자 로그인이 필요합니다.');
+        }
+        const rows = typeof window.adminGetSelectedDailyRows === 'function' ? window.adminGetSelectedDailyRows() : [];
+        const recipientTypes = typeof adminGetRecipientTypes === 'function' ? adminGetRecipientTypes('daily') : [];
+        if (!rows.length) return alert('체크한 학생 중 저장/발송할 일일평가 내용이 없습니다.');
+        if (!recipientTypes.length) return alert('수신 대상을 선택해주세요.');
+        const sendChannel = typeof adminGetSendChannel === 'function' ? adminGetSendChannel('daily') : 'alimtalk';
+        const channelLabel = typeof adminGetSendChannelLabel === 'function' ? adminGetSendChannelLabel(sendChannel) : sendChannel;
+        openModal_(rows, recipientTypes, sendChannel, channelLabel);
+    };
+
+    document.addEventListener('keydown', function(e){
+        const overlay = document.getElementById('adminDailyPreviewOverlay621');
+        if (!overlay || !overlay.classList.contains('open')) return;
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            closeModal_();
+            return;
+        }
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+            e.preventDefault();
+            saveCurrent_(true);
+            return;
+        }
+        if (e.altKey && e.key === 'ArrowLeft') {
+            e.preventDefault();
+            move_(-1);
+        } else if (e.altKey && e.key === 'ArrowRight') {
+            e.preventDefault();
+            move_(1);
+        }
+    });
+
+    console.log('[ULIM 6.21] 관리자 일일평가 학생별 발송 미리보기 팝업 활성화');
 })();
 </script>
 
