@@ -2495,7 +2495,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
             <div class="admin-btn-row">
               <button type="button" class="admin-btn blue" onclick="adminLoadDailyEvalStudents()">현재 반 학생 불러오기</button>
               <button type="button" class="admin-btn" onclick="adminSaveDailyEvaluations(false)">평가 저장</button>
-              <button type="button" class="admin-btn orange admin-full-only" onclick="adminPreviewDailyEvalMessages()">발송 미리보기</button>
+              <button type="button" id="adminDailyEvalPreviewToggleBtn" class="admin-btn orange admin-full-only" onclick="adminPreviewDailyEvalMessages()" aria-controls="adminDailyEvalPreview" aria-expanded="false">발송 미리보기 열기</button>
               <button type="button" class="admin-btn red admin-full-only" onclick="adminSaveDailyEvaluations(true)">저장 후 발송</button>
             </div>
             <div id="adminDailyEvalTableWrap" class="admin-table-wrap"></div>
@@ -25401,6 +25401,122 @@ body.teacher-mode #ulimReliableSyncPill614 {
   else start616_();
 
   console.log('[ULIM 6.16] 일반 강사 출석 로컬/전송 문구 완전 숨김 활성화');
+})();
+</script>
+
+
+<!-- 6.20 일일평가 발송 미리보기 열기/닫기 토글 -->
+<script id="ulim-daily-eval-preview-toggle-620">
+(function () {
+  'use strict';
+
+  function getPreview620_() {
+    return document.getElementById('adminDailyEvalPreview');
+  }
+
+  function getToggleButton620_() {
+    return document.getElementById('adminDailyEvalPreviewToggleBtn');
+  }
+
+  function isPreviewOpen620_() {
+    const preview = getPreview620_();
+    if (!preview) return false;
+    return window.getComputedStyle(preview).display !== 'none';
+  }
+
+  function setPreviewOpen620_(open) {
+    const preview = getPreview620_();
+    const button = getToggleButton620_();
+    if (!preview) return;
+
+    preview.style.display = open ? 'block' : 'none';
+    preview.setAttribute('aria-hidden', open ? 'false' : 'true');
+
+    if (button) {
+      button.textContent = open ? '발송 미리보기 닫기' : '발송 미리보기 열기';
+      button.setAttribute('aria-expanded', open ? 'true' : 'false');
+      button.classList.toggle('gray', open);
+      button.classList.toggle('orange', !open);
+    }
+  }
+
+  function buildPreview620_() {
+    if (typeof adminIsFullAdmin === 'function' && !adminIsFullAdmin()) {
+      alert('일일평가 발송 미리보기와 발송은 관리자 권한에서만 가능합니다.');
+      return false;
+    }
+
+    const rows = typeof adminGetSelectedDailyRows === 'function'
+      ? adminGetSelectedDailyRows()
+      : [];
+    const recipientTypes = typeof adminGetRecipientTypes === 'function'
+      ? adminGetRecipientTypes('daily')
+      : [];
+    const preview = getPreview620_();
+
+    if (!preview) return false;
+    if (!rows.length) {
+      alert('저장/발송할 일일평가 내용이 없습니다.');
+      return false;
+    }
+    if (!recipientTypes.length) {
+      alert('수신 대상을 선택해주세요.');
+      return false;
+    }
+
+    const sendChannel = typeof adminGetSendChannel === 'function'
+      ? adminGetSendChannel('daily')
+      : 'alimtalk';
+    const channelLabel = typeof adminGetSendChannelLabel === 'function'
+      ? adminGetSendChannelLabel(sendChannel)
+      : sendChannel;
+
+    preview.textContent = rows.map(function (row) {
+      const studentName = row.studentName || row.name || '';
+      return '[' + studentName + ']\n' +
+        '발송방식: ' + channelLabel + '\n' +
+        '수신대상: ' + recipientTypes.join(', ') + '\n' +
+        (row.evaluation || '') + '\n' +
+        '- 울림연기학원';
+    }).join('\n\n--------------------\n\n');
+
+    return true;
+  }
+
+  // 같은 버튼을 누를 때 열기/닫기가 번갈아 동작합니다.
+  window.adminPreviewDailyEvalMessages = function () {
+    if (isPreviewOpen620_()) {
+      setPreviewOpen620_(false);
+      return;
+    }
+
+    if (buildPreview620_()) {
+      setPreviewOpen620_(true);
+      const preview = getPreview620_();
+      if (preview && typeof preview.scrollIntoView === 'function') {
+        preview.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+  };
+
+  window.adminCloseDailyEvalPreview = function () {
+    setPreviewOpen620_(false);
+  };
+
+  function initPreviewToggle620_() {
+    const preview = getPreview620_();
+    if (preview) {
+      preview.style.display = 'none';
+      preview.setAttribute('aria-hidden', 'true');
+    }
+    setPreviewOpen620_(false);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initPreviewToggle620_, { once: true });
+  } else {
+    initPreviewToggle620_();
+  }
 })();
 </script>
 
