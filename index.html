@@ -26064,5 +26064,160 @@ body.teacher-mode #ulimReliableSyncPill614 {
 })();
 </script>
 
+
+<script id="ulim-logout-return-initial-screen-6-30">
+/* =========================================================
+   6.30 로그아웃 후 초기 로그인 화면 복귀
+   - 학생 로그아웃: 서버 세션 종료/로컬 정리 후 학생 로그인 초기화면 표시
+   - 교직원 로그아웃: 확실한 전송 대기 후 학생 로그인 초기화면 표시
+   - 이전 탭/로그인 모드 복원값 제거
+   ========================================================= */
+(function () {
+  'use strict';
+
+  if (window.__ULIM_LOGOUT_RETURN_INITIAL_630__) return;
+  window.__ULIM_LOGOUT_RETURN_INITIAL_630__ = true;
+
+  function removeRouteState630_() {
+    [
+      'ulimActiveTabId',
+      'ulimLastMode',
+      'ULIM_LAST_ACTIVE_TAB',
+      'ULIM_EXPLICIT_LOGOUT_IN_PROGRESS'
+    ].forEach(function (key) {
+      try { localStorage.removeItem(key); } catch (ignore) {}
+      try {
+        if (key !== 'ULIM_EXPLICIT_LOGOUT_IN_PROGRESS') {
+          sessionStorage.removeItem(key);
+        }
+      } catch (ignore) {}
+    });
+  }
+
+  function closeOpenLayers630_() {
+    [
+      'noticeOverlay',
+      'adminDailyPreviewOverlay621'
+    ].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      try { el.classList.remove('open'); } catch (ignore) {}
+      el.style.display = 'none';
+    });
+
+    try { document.body.style.overflow = ''; } catch (ignore) {}
+  }
+
+  function resetToInitialScreen630_() {
+    removeRouteState630_();
+    closeOpenLayers630_();
+
+    try {
+      document.body.classList.remove(
+        'admin-mode',
+        'teacher-mode',
+        'full-admin-mode',
+        'admin-booting'
+      );
+    } catch (ignore) {}
+
+    /* 다음 로그인 후에는 항상 첫 번째 탭부터 시작합니다. */
+    try {
+      document.querySelectorAll('.tab').forEach(function (tab) {
+        tab.classList.remove('active');
+      });
+      document.querySelectorAll('.tab-content').forEach(function (panel) {
+        panel.classList.remove('active');
+      });
+
+      const firstTab = document.querySelector('.tab[data-tab="tab1"]');
+      const firstPanel = document.getElementById('tab1');
+      if (firstTab) firstTab.classList.add('active');
+      if (firstPanel) firstPanel.classList.add('active');
+    } catch (ignore) {}
+
+    try {
+      if (typeof renderStudentAccountBar_ === 'function') {
+        renderStudentAccountBar_();
+      }
+    } catch (ignore) {}
+
+    try {
+      if (typeof showStudentLoginPanel === 'function') {
+        showStudentLoginPanel();
+      }
+    } catch (ignore) {}
+
+    /* 중복 패치나 비동기 처리 이후에도 초기화면을 최종 강제합니다. */
+    const overlay = document.getElementById('loginOverlay');
+    const wrapper = document.querySelector('.wrapper');
+
+    if (overlay) overlay.style.display = 'flex';
+    if (wrapper) wrapper.style.display = 'none';
+
+    const adminLoginBox = document.getElementById('adminLoginBox');
+    const adminDashboard = document.getElementById('adminDashboard');
+    if (adminLoginBox) adminLoginBox.style.display = 'none';
+    if (adminDashboard) adminDashboard.style.display = 'none';
+
+    const nameInput = document.getElementById('studentNameInput');
+    const passwordInput = document.getElementById('phoneLast4Input');
+    if (nameInput) nameInput.value = '';
+    if (passwordInput) passwordInput.value = '';
+
+    try { window.scrollTo(0, 0); } catch (ignore) {}
+    setTimeout(function () {
+      const currentOverlay = document.getElementById('loginOverlay');
+      const currentWrapper = document.querySelector('.wrapper');
+      if (currentOverlay) currentOverlay.style.display = 'flex';
+      if (currentWrapper) currentWrapper.style.display = 'none';
+      try { document.getElementById('studentNameInput')?.focus(); } catch (ignore) {}
+    }, 0);
+  }
+
+  window.ulimReturnToInitialScreen630_ = resetToInitialScreen630_;
+
+  const originalStudentLogout630_ = window.studentSecureLogout;
+  if (typeof originalStudentLogout630_ === 'function') {
+    window.studentSecureLogout = function () {
+      const beforeToken =
+        String(localStorage.getItem('studentSessionToken') || '') ||
+        String(sessionStorage.getItem('studentSessionToken') || '');
+
+      const result = originalStudentLogout630_.apply(this, arguments);
+
+      const explicitLogout =
+        sessionStorage.getItem('ULIM_EXPLICIT_LOGOUT_IN_PROGRESS') === 'Y';
+      const afterToken =
+        String(localStorage.getItem('studentSessionToken') || '') ||
+        String(sessionStorage.getItem('studentSessionToken') || '');
+
+      /* 확인창에서 취소했을 때는 초기화면으로 이동하지 않습니다. */
+      if (explicitLogout || (beforeToken && !afterToken)) {
+        resetToInitialScreen630_();
+      }
+      return result;
+    };
+
+    try { studentSecureLogout = window.studentSecureLogout; } catch (ignore) {}
+  }
+
+  const originalAdminLogout630_ = window.adminLogout;
+  if (typeof originalAdminLogout630_ === 'function') {
+    window.adminLogout = async function () {
+      try {
+        return await originalAdminLogout630_.apply(this, arguments);
+      } finally {
+        resetToInitialScreen630_();
+      }
+    };
+
+    try { adminLogout = window.adminLogout; } catch (ignore) {}
+  }
+
+  console.log('[ULIM 6.30] 로그아웃 후 초기 로그인 화면 복귀 활성화');
+})();
+</script>
+
 </body>
 </html>
