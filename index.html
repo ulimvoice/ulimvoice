@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- 6.30 연습실 예약 학생/교직원 공용 인증 수정 -->
 <!-- 6.07 학생 코멘트 열람 시 상단 알림만 해제 + 달력 ★ 유지 + 새 평가 재알림 + 6.06 기능 유지 -->
 <!-- 6.04 동명이인 + 중복 학생번호 고유식별키 매칭 + 6.03 기능 유지 -->
 <!-- 6.03 동명이인 출석부 정상행 우선/누락방지 + 6.02 기능 유지 -->
@@ -8581,6 +8582,7 @@ function removeLocalRoomReservationById(id) {
 function applyRoomReservationSuccessLocally(date, room, hour, data) {
     const serverReservation = (data && (data.reservation || data.record || data.item || data.data)) || {};
     const id = extractReservationIdFromRoomResponse(data);
+    const actor = getRoomReservationActor630_();
 
     const reservation = Object.assign({}, serverReservation, {
         id: id || String(serverReservation.id || ""),
@@ -8588,11 +8590,13 @@ function applyRoomReservationSuccessLocally(date, room, hour, data) {
         room,
         startHour: Number(hour),
         endHour: Number(hour) + 1,
-        studentName,
-        phoneLast4,
-        instructorName,
+        studentName: String(serverReservation.studentName || actor.name || ''),
+        phoneLast4: '',
+        instructorName: String(serverReservation.instructorName || actor.instructorName || actor.name || ''),
         status: serverReservation.status || "예약",
-        pending: !id
+        pending: !id,
+        mine: true,
+        actorType: actor.type || String(serverReservation.actorType || '')
     });
 
     upsertLocalRoomReservation(reservation);
@@ -8799,9 +8803,17 @@ function renderRoomTimeTable(dateObj) {
             const reservation = roomReservationMap[slotKey];
 
             if (reservation) {
+                const actor = getRoomReservationActor630_();
                 const isMine =
-                    String(reservation.studentName || "").trim() === String(studentName || "").trim() &&
-                    String(reservation.phoneLast4 || "").trim() === String(phoneLast4 || "").trim();
+                    reservation.mine === true ||
+                    (
+                        actor.type === 'student' &&
+                        String(reservation.studentName || "").trim() === String(actor.name || "").trim() &&
+                        (
+                            !String(reservation.phoneLast4 || "").trim() ||
+                            String(reservation.phoneLast4 || "").trim() === String(actor.phoneLast4 || "").trim()
+                        )
+                    );
 
                 const statusText = normalizeStatusForMatch(reservation.status);
                 const displayText = statusText === "관리자차단" ? "사용불가" :
@@ -8863,8 +8875,9 @@ function renderRoomTimeTable(dateObj) {
 async function reserveRoomSlot(date, room, hour) {
     hour = Number(hour);
 
-    if (!studentName || studentName === "게스트") {
-        alert("학생 로그인 후 예약할 수 있습니다.");
+    const roomActor = getRoomReservationActor630_();
+    if (!roomActor.authenticated) {
+        alert("학생 또는 교직원 로그인 후 예약할 수 있습니다.");
         return;
     }
 
@@ -12159,23 +12172,118 @@ uploadAudioToDriveAndLog = function(vocalId, sentenceText, base64Data, mimeType,
     return __ulimOriginalUploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeType, action, extraMeta);
 };
 
+function getRoomAdminInfo630_() {
+    try {
+        if (typeof adminInfo !== 'undefined' && adminInfo) return adminInfo;
+    } catch (e) {}
+
+    try {
+        const raw = localStorage.getItem('adminInfo');
+        return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function getRoomAdminToken630_() {
+    try {
+        if (typeof adminToken !== 'undefined' && adminToken) return String(adminToken);
+    } catch (e) {}
+    try {
+        return String(localStorage.getItem('adminToken') || '');
+    } catch (e) {
+        return '';
+    }
+}
+
+function getRoomReservationActor630_() {
+    const staffToken = getRoomAdminToken630_();
+    const staffInfo = getRoomAdminInfo630_();
+
+    // 교직원 로그인 중에는 학생 로그인 흔적이 남아 있어도 교직원 본인 명의로 예약합니다.
+    if (staffToken && staffInfo) {
+        const name = String(staffInfo.name || staffInfo.id || '교직원').trim();
+        const phone4 = String(staffInfo.phone || '').replace(/[^0-9]/g, '').slice(-4);
+        const identity = String(staffInfo.accountUid || staffInfo.id || name || 'staff')
+            .replace(/[^0-9A-Za-z가-힣_-]/g, '_');
+
+        return {
+            authenticated: true,
+            type: 'staff',
+            name: name,
+            phoneLast4: phone4,
+            instructorName: name,
+            identity: 'staff_' + identity,
+            params: { adminToken: staffToken }
+        };
+    }
+
+    const token = getStudentSessionToken_();
+    if (token) {
+        const name = String(
+            (typeof studentName !== 'undefined' && studentName) ||
+            localStorage.getItem('studentName') ||
+            ''
+        ).trim();
+
+        return {
+            authenticated: true,
+            type: 'student',
+            name: name,
+            phoneLast4: String(
+                (typeof phoneLast4 !== 'undefined' && phoneLast4) ||
+                localStorage.getItem('phoneLast4') ||
+                ''
+            ).trim(),
+            instructorName: String(
+                (typeof instructorName !== 'undefined' && instructorName) ||
+                localStorage.getItem('instructorName') ||
+                ''
+            ).trim(),
+            identity: 'student_' + token.slice(0, 16),
+            params: { studentSessionToken: token }
+        };
+    }
+
+    return {
+        authenticated: false,
+        type: '',
+        name: '',
+        phoneLast4: '',
+        instructorName: '',
+        identity: 'public',
+        params: {}
+    };
+}
+
 const __ulimOriginalRoomJsonp = window.roomJsonp || roomJsonp;
 roomJsonp = function(params, options = {}) {
     params = Object.assign({}, params || {});
+
     if (
         params.action === 'getRoomReservations' ||
         params.action === 'reserveRoom' ||
         params.action === 'cancelRoom'
     ) {
-        params.studentSessionToken = getStudentSessionToken_();
+        const actor = getRoomReservationActor630_();
+
+        delete params.studentSessionToken;
+        delete params.sessionToken;
+        delete params.adminToken;
         delete params.phoneLast4;
+
+        Object.keys(actor.params || {}).forEach(function(key) {
+            params[key] = actor.params[key];
+        });
     }
+
     return __ulimOriginalRoomJsonp(params, options);
 };
 
 function getRoomCacheKey(year, month) {
-    const sessionKey = getStudentSessionToken_() ? getStudentSessionToken_().slice(0, 12) : 'public';
-    return `${year}-${String(month).padStart(2, '0')}-${sessionKey}`;
+    const actor = getRoomReservationActor630_();
+    const actorKey = String(actor.identity || 'public').slice(0, 48);
+    return `${year}-${String(month).padStart(2, '0')}-${actorKey}`;
 }
 
 function getRoomLocalStorageKey(cacheKey) {
