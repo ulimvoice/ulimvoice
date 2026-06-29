@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- 6.30 연습실 예약 교직원 인증 최종 수정: adminInfo 복원 중에도 adminToken 우선 전달 -->
 <!-- 6.30 연습실 예약 학생/교직원 공용 인증 수정 -->
 <!-- 6.07 학생 코멘트 열람 시 상단 알림만 해제 + 달력 ★ 유지 + 새 평가 재알림 + 6.06 기능 유지 -->
 <!-- 6.04 동명이인 + 중복 학생번호 고유식별키 매칭 + 6.03 기능 유지 -->
@@ -12200,19 +12201,45 @@ function getRoomReservationActor630_() {
     const staffToken = getRoomAdminToken630_();
     const staffInfo = getRoomAdminInfo630_();
 
-    // 교직원 로그인 중에는 학생 로그인 흔적이 남아 있어도 교직원 본인 명의로 예약합니다.
-    if (staffToken && staffInfo) {
-        const name = String(staffInfo.name || staffInfo.id || '교직원').trim();
-        const phone4 = String(staffInfo.phone || '').replace(/[^0-9]/g, '').slice(-4);
-        const identity = String(staffInfo.accountUid || staffInfo.id || name || 'staff')
+    /*
+     * 6.30 최종 수정:
+     * 교직원 세션 확인 과정에서 adminInfo가 잠시 비워질 수 있으므로
+     * adminToken만 존재해도 GAS에 교직원 토큰을 전달합니다.
+     * 실제 계정명·권한 검증은 GAS requireAdmin_이 수행합니다.
+     */
+    if (staffToken) {
+        const info = staffInfo && typeof staffInfo === 'object' ? staffInfo : {};
+        const name = String(
+            info.name ||
+            info.adminName ||
+            info.id ||
+            info.adminId ||
+            '교직원'
+        ).trim();
+
+        const phone4 = String(info.phone || '')
+            .replace(/[^0-9]/g, '')
+            .slice(-4);
+
+        const rawIdentity = String(
+            info.accountUid ||
+            info.uid ||
+            info.adminUid ||
+            info.id ||
+            info.adminId ||
+            staffToken.slice(0, 18) ||
+            'staff'
+        );
+
+        const identity = rawIdentity
             .replace(/[^0-9A-Za-z가-힣_-]/g, '_');
 
         return {
             authenticated: true,
             type: 'staff',
-            name: name,
+            name: name || '교직원',
             phoneLast4: phone4,
-            instructorName: name,
+            instructorName: name || '교직원',
             identity: 'staff_' + identity,
             params: { adminToken: staffToken }
         };
@@ -26324,6 +26351,33 @@ body.teacher-mode #ulimReliableSyncPill614 {
   }
 
   console.log('[ULIM 6.30] 로그아웃 후 초기 로그인 화면 복귀 활성화');
+})();
+</script>
+
+
+<script id="ulim-room-auth-diagnostic-6-30-final">
+(function () {
+  'use strict';
+  if (window.__ULIM_ROOM_AUTH_DIAGNOSTIC_630_FINAL__) return;
+  window.__ULIM_ROOM_AUTH_DIAGNOSTIC_630_FINAL__ = true;
+
+  const original = window.getRoomReservationActor630_;
+  if (typeof original !== 'function') return;
+
+  window.getRoomReservationActor630_ = function () {
+    const actor = original.apply(this, arguments);
+    try {
+      console.log('[ULIM ROOM AUTH 6.30 FINAL]', {
+        authenticated: !!(actor && actor.authenticated),
+        type: actor && actor.type ? actor.type : '',
+        hasAdminToken: !!(actor && actor.params && actor.params.adminToken),
+        hasStudentToken: !!(actor && actor.params && actor.params.studentSessionToken)
+      });
+    } catch (ignore) {}
+    return actor;
+  };
+
+  try { getRoomReservationActor630_ = window.getRoomReservationActor630_; } catch (ignore) {}
 })();
 </script>
 
