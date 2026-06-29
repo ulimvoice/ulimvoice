@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- 6.30 연습실 예약 교직원 인증 실제 요청 최종 수정: 후순위 5-53 roomJsonp 덮어쓰기 보정 -->
 <!-- 6.30 연습실 예약 교직원 인증 최종 수정: adminInfo 복원 중에도 adminToken 우선 전달 -->
 <!-- 6.30 연습실 예약 학생/교직원 공용 인증 수정 -->
 <!-- 6.07 학생 코멘트 열람 시 상단 알림만 해제 + 달력 ★ 유지 + 새 평가 재알림 + 6.06 기능 유지 -->
@@ -16032,15 +16033,58 @@ ${ruleSummary}`, 'success');
 
   function normalizeRoomParams_5_53(params) {
     const p = Object.assign({}, params || {});
-    if (p.action === 'getRoomReservations' || p.action === 'reserveRoom' || p.action === 'cancelRoom') {
-      try {
-        if (typeof getStudentSessionToken_ === 'function') {
-          const token = getStudentSessionToken_();
-          if (token) p.studentSessionToken = token;
-        }
-      } catch(e) {}
+
+    if (
+      p.action === 'getRoomReservations' ||
+      p.action === 'reserveRoom' ||
+      p.action === 'cancelRoom'
+    ) {
+      /*
+       * 6.30 최종 수정:
+       * 이 5-53 패치가 뒤에서 roomJsonp를 다시 덮어쓰기 때문에,
+       * 앞쪽 교직원 인증 패치가 실제 요청에 반영되지 않던 문제를 수정합니다.
+       */
+      delete p.studentSessionToken;
+      delete p.sessionToken;
+      delete p.adminToken;
       delete p.phoneLast4;
+
+      let actor = null;
+
+      try {
+        if (typeof getRoomReservationActor630_ === 'function') {
+          actor = getRoomReservationActor630_();
+        }
+      } catch (e) {
+        actor = null;
+      }
+
+      if (actor && actor.authenticated && actor.params) {
+        Object.keys(actor.params).forEach(function(key) {
+          const value = actor.params[key];
+          if (value !== undefined && value !== null && String(value).trim() !== '') {
+            p[key] = value;
+          }
+        });
+      } else {
+        // 구버전/예외 환경에서는 학생 세션을 보조로 유지합니다.
+        try {
+          if (typeof getStudentSessionToken_ === 'function') {
+            const token = getStudentSessionToken_();
+            if (token) p.studentSessionToken = token;
+          }
+        } catch (e) {}
+      }
+
+      try {
+        console.log('[ULIM ROOM REQUEST AUTH 6.30 FINAL]', {
+          action: p.action || '',
+          hasAdminToken: !!p.adminToken,
+          hasStudentToken: !!p.studentSessionToken
+        });
+      } catch (e) {}
     }
+
     return p;
   }
 
