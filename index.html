@@ -1,8 +1,12 @@
 <!DOCTYPE html>
+<!-- 7.04 1단계 웹DB OFF
+     - 서버 GAS에서 웹DB 조회/동기화를 중지하고 원본 시트 + CacheService만 사용
+     - 웹DB 시트는 아직 삭제하지 않음
+     - 이 index는 직전 일일평가 실제시트 자동반영 수정본과 기능 동일 -->
 <!-- 7.04 저장 흐름 수정
      - 출석부 [선택 즉시 반영], 일일평가 [평가 저장]/[저장 후 발송], 연습평가 [평가 저장]은
        버튼 클릭 후 실제 시트 저장 완료를 확인할 때까지 전경 처리합니다.
-     - 출석 상태/메모 및 평가 입력 변경은 즉시 로컬 저장 후 마지막 변경 1분 뒤 백그라운드 시트 반영합니다.
+     - 출석 상태/메모 및 평가 입력 변경은 즉시 로컬 저장 후 마지막 변경 1분 뒤 실제 원본 시트에 백그라운드 반영합니다.
      - 관리자 API GET 호출은 Apps Script CORS 차단을 피하도록 JSONP 방식으로 통일합니다. -->
 <!-- 6.30 연습실 예약 교직원 인증 실제 요청 최종 수정: 후순위 5-53 roomJsonp 덮어쓰기 보정 -->
 <!-- 6.30 연습실 예약 교직원 인증 최종 수정: adminInfo 복원 중에도 adminToken 우선 전달 -->
@@ -19,6 +23,8 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<meta name="ulim-build" content="20260704-db-off-phase1">
+<script type="text/javascript" nonce="f8dc9b1bc916490d96064afeeb0" src="//local.adguard.org?ts=1783153082016&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000ac8072098a9b45cc7e2cb591%26fn%3Dindex_7_04_1%25EB%258B%25A8%25EA%25B3%2584_DB%25EC%25A1%25B0%25ED%259A%258C%25EB%258F%2599%25EA%25B8%25B0%25ED%2599%2594_OFF.html%26cd%3Dattachment%26ts%3D495320%26p%3Dfs%26cid%3D1%26sig%3D601674a25ab260e2f868c85e62cd5e06c6a2cef6ecdeffbf3b7d6efa4711fc1f%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script>window.__ULIM_WEB_DB_MODE_704__ = 'OFF';</script>
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램 7.04</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://script.google.com">
@@ -24845,13 +24851,17 @@ body {
       _:Date.now()
     };
     const text=JSON.stringify(body);
-    await fetch(GET_API_URL,{
-      method:'POST',
-      mode:'no-cors',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:text,
-      keepalive:text.length<60000
-    });
+    if(typeof window.ulimPostAdminForm704_==='function'){
+      await window.ulimPostAdminForm704_(body);
+    }else{
+      await fetch(GET_API_URL,{
+        method:'POST',
+        mode:'no-cors',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:text,
+        keepalive:text.length<60000
+      });
+    }
   }
 
   async function applyServerState(job,status){
@@ -26528,6 +26538,60 @@ body.teacher-mode #ulimReliableSyncPill614 {
     return String(prefix || 'REQ') + '-' + Date.now() + '-' + Math.random().toString(36).slice(2);
   }
 
+  function postAdminForm704(fields) {
+    return new Promise((resolve, reject) => {
+      if (!GET_API_URL || !String(GET_API_URL).includes('script.google.com/macros/s/')) {
+        reject(new Error('서버 연결 주소를 확인하지 못했습니다.'));
+        return;
+      }
+
+      const frameName = '__ulimPost704_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+      const iframe = document.createElement('iframe');
+      const form = document.createElement('form');
+      let cleaned = false;
+
+      iframe.name = frameName;
+      iframe.style.display = 'none';
+      iframe.setAttribute('aria-hidden', 'true');
+
+      form.method = 'POST';
+      form.action = GET_API_URL;
+      form.target = frameName;
+      form.enctype = 'application/x-www-form-urlencoded';
+      form.acceptCharset = 'UTF-8';
+      form.style.display = 'none';
+
+      Object.keys(fields || {}).forEach(key => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = key;
+        input.value = fields[key] == null ? '' : String(fields[key]);
+        form.appendChild(input);
+      });
+
+      const cleanup = () => {
+        if (cleaned) return;
+        cleaned = true;
+        try { form.remove(); } catch (ignore) {}
+        try { iframe.remove(); } catch (ignore) {}
+      };
+
+      document.body.appendChild(iframe);
+      document.body.appendChild(form);
+
+      try {
+        form.submit();
+        setTimeout(resolve, 120);
+        setTimeout(cleanup, 120000);
+      } catch (error) {
+        cleanup();
+        reject(error);
+      }
+    });
+  }
+
+  window.ulimPostAdminForm704_ = postAdminForm704;
+
   async function directAdminWrite704(operation, payload, options) {
     options = options || {};
     const token = currentAdminToken704();
@@ -26535,7 +26599,7 @@ body.teacher-mode #ulimReliableSyncPill614 {
     if (!navigator.onLine) throw new Error('인터넷 연결을 확인한 뒤 다시 시도해주세요.');
 
     const requestId = options.requestId || requestId704('FG704');
-    const body = JSON.stringify({
+    const postFields = {
       action: 'adminReliableWrite',
       requestId,
       operation,
@@ -26543,24 +26607,36 @@ body.teacher-mode #ulimReliableSyncPill614 {
       payloadJson: JSON.stringify(payload || {}),
       forceRetry: options.forceRetry ? '1' : '0',
       _: Date.now()
-    });
+    };
 
     if (!options.background && options.loadingMessage && typeof showLoading === 'function') {
       showLoading(options.loadingMessage);
     }
 
     try {
-      await fetch(GET_API_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body,
-        keepalive: false
-      });
+      // fetch(no-cors)는 Apps Script 리다이렉트·보안 프로그램 환경에서 본문이 유실될 수 있어
+      // 숨김 form POST를 기본 전송 방식으로 사용합니다.
+      await postAdminForm704(postFields);
 
       const startedAt = Date.now();
       const timeoutMs = Math.max(15000, Number(options.timeoutMs || 90000));
       let lastState = null;
+      let retriedPost = false;
+      let triedJsonpFallback = false;
+
+      const finishResult = result => {
+        result = result || {};
+        if (result.status && result.status !== 'success') {
+          throw new Error(result.message || '저장 처리에 실패했습니다.');
+        }
+        if (typeof ulimInvalidateAfterWriteAction_ === 'function') {
+          if (operation === 'attendance') ulimInvalidateAfterWriteAction_('adminSaveAttendance');
+          if (operation === 'dailyEvaluations') ulimInvalidateAfterWriteAction_('adminSaveDailyEvaluations');
+          if (operation === 'dailyAutoSync') ulimInvalidateAfterWriteAction_('adminSaveDailyEvaluations');
+          if (operation === 'practiceEvaluation') ulimInvalidateAfterWriteAction_('adminSavePracticeEvaluation');
+        }
+        return Object.assign({ status: 'success', requestId }, result);
+      };
 
       while (Date.now() - startedAt < timeoutMs) {
         let data = null;
@@ -26581,20 +26657,48 @@ body.teacher-mode #ulimReliableSyncPill614 {
         lastState = status || data;
 
         if (status && status.state === 'complete') {
-          const result = status.result || {};
-          if (result.status && result.status !== 'success') {
-            throw new Error(result.message || '저장 처리에 실패했습니다.');
-          }
-          if (typeof ulimInvalidateAfterWriteAction_ === 'function') {
-            if (operation === 'attendance') ulimInvalidateAfterWriteAction_('adminSaveAttendance');
-            if (operation === 'dailyEvaluations') ulimInvalidateAfterWriteAction_('adminSaveDailyEvaluations');
-            if (operation === 'practiceEvaluation') ulimInvalidateAfterWriteAction_('adminSavePracticeEvaluation');
-          }
-          return Object.assign({ status: 'success', requestId }, result);
+          return finishResult(status.result || {});
         }
 
         if (status && status.state === 'failed') {
           throw new Error(status.message || (status.result && status.result.message) || '저장 처리에 실패했습니다.');
+        }
+
+        if (status && status.state === 'owner_mismatch') {
+          throw new Error('저장 요청 계정과 현재 로그인 계정이 다릅니다. 다시 로그인해주세요.');
+        }
+
+        const elapsed = Date.now() - startedAt;
+
+        // 요청행이 생성되지 않았으면 동일 요청ID로 form POST를 한 번 더 보냅니다.
+        if ((!status || status.state === 'not_found') && elapsed >= 2500 && !retriedPost) {
+          retriedPost = true;
+          postFields._ = Date.now();
+          await postAdminForm704(postFields);
+        }
+
+        // 작은 요청은 GET/JSONP 직접 실행으로 한 번 더 보강합니다.
+        // 동일 요청ID라 이미 처리됐다면 서버에서 중복 저장하지 않습니다.
+        if ((!status || status.state === 'not_found') && elapsed >= 5000 && !triedJsonpFallback) {
+          const queryLength = new URLSearchParams(postFields).toString().length;
+          if (queryLength <= 14000) {
+            triedJsonpFallback = true;
+            const direct = await window.adminApi('adminReliableWrite', Object.assign({}, postFields, {
+              noCache: '1',
+              forceRefresh: '1'
+            }));
+            if (direct && direct.state === 'complete') {
+              return finishResult(direct.result || {});
+            }
+            if (direct && direct.state === 'failed') {
+              throw new Error(direct.message || (direct.result && direct.result.message) || '저장 처리에 실패했습니다.');
+            }
+          }
+        }
+
+        // not_found가 계속되면 실제 저장이 시작되지 않은 상태이므로 오래 기다리지 않습니다.
+        if ((!status || status.state === 'not_found') && elapsed >= 15000) {
+          throw new Error('저장 요청이 서버에 접수되지 않았습니다. GAS를 새 버전으로 배포한 뒤 다시 시도해주세요.');
         }
 
         await sleep704(status && status.state === 'processing' ? 350 : 500);
@@ -26767,20 +26871,38 @@ body.teacher-mode #ulimReliableSyncPill614 {
     dailyAutoTimers704.delete(key);
   }
 
-  async function postDailyAutoDraft704(draft) {
+  async function backupDailyAutoDraft704(draft) {
     if (!draft || !currentAdminToken704()) return false;
-    await fetch(GET_API_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({
-        action: 'adminSaveDailyEvalAutoDraft',
-        adminToken: currentAdminToken704(),
-        draftJson: JSON.stringify(draft),
-        _: Date.now()
-      })
+    await postAdminForm704({
+      action: 'adminSaveDailyEvalAutoDraft',
+      adminToken: currentAdminToken704(),
+      draftJson: JSON.stringify(draft),
+      _: Date.now()
     });
     return true;
+  }
+
+  function clearSyncedLocalDailyDraft704(draft) {
+    try {
+      const key = currentDailyDraftKey704();
+      if (!key) return;
+      const raw = localStorage.getItem(key);
+      if (!raw) return;
+      const current = JSON.parse(raw);
+      if (String(current && current.savedAtClient || '') === String(draft && draft.savedAtClient || '')) {
+        localStorage.removeItem(key);
+      }
+    } catch (ignore) {}
+  }
+
+  async function syncDailyAutoDraft704(draft) {
+    if (!draft || !currentAdminToken704()) return false;
+    return directAdminWrite704('dailyAutoSync', {
+      draftJson: JSON.stringify(draft)
+    }, {
+      background: true,
+      timeoutMs: 90000
+    });
   }
 
   window.ulimScheduleDailyEvalSheetSync704_ = function () {
@@ -26790,7 +26912,7 @@ body.teacher-mode #ulimReliableSyncPill614 {
     if (oldTimer) clearTimeout(oldTimer);
 
     const status = document.getElementById('adminDailyDraftStatus');
-    if (status) status.textContent = '로컬 저장 완료 · 마지막 변경 1분 후 시트 자동저장';
+    if (status) status.textContent = '로컬 저장 완료 · 마지막 변경 1분 후 실제 일일평가 시트 반영';
 
     const timer = setTimeout(async () => {
       dailyAutoTimers704.delete(key);
@@ -26800,11 +26922,17 @@ body.teacher-mode #ulimReliableSyncPill614 {
           ? window.ulimCollectDailyEvalDraft704_()
           : null;
         if (!draft) return;
-        if (status) status.textContent = '자동저장 시트 반영 중...';
-        await postDailyAutoDraft704(draft);
-        if (status) status.textContent = '자동저장 시트 반영 완료';
+        if (status) status.textContent = '일일평가 실제 시트 자동 반영 중...';
+        const data = await syncDailyAutoDraft704(draft);
+        clearSyncedLocalDailyDraft704(draft);
+        if (status) status.textContent = (data && data.message) || '일일평가 실제 시트 자동 반영 완료';
       } catch (error) {
-        if (status) status.textContent = '자동저장 대기 · 1분 후 재시도';
+        try {
+          if (draft) await backupDailyAutoDraft704(draft);
+        } catch (backupError) {
+          console.warn('[ULIM 7.04] 일일평가 복구용 자동저장 실패', backupError);
+        }
+        if (status) status.textContent = '실제 시트 반영 실패 · 로컬/복구본 유지 · 1분 후 재시도';
         const retry = setTimeout(() => {
           dailyAutoTimers704.delete(key);
           window.ulimScheduleDailyEvalSheetSync704_();
@@ -26820,17 +26948,12 @@ body.teacher-mode #ulimReliableSyncPill614 {
     cancelDailyAuto704();
     const ctx = currentDailyContext704();
     try {
-      await fetch(GET_API_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({
-          action: 'adminClearDailyEvalAutoDraft',
-          adminToken: currentAdminToken704(),
-          date: ctx.date,
-          className: ctx.className,
-          _: Date.now()
-        })
+      await postAdminForm704({
+        action: 'adminClearDailyEvalAutoDraft',
+        adminToken: currentAdminToken704(),
+        date: ctx.date,
+        className: ctx.className,
+        _: Date.now()
       });
     } catch (ignore) {}
   }
@@ -26940,6 +27063,9 @@ body.teacher-mode #ulimReliableSyncPill614 {
         try {
           if (localKey) localStorage.setItem(localKey, JSON.stringify(data.draft));
         } catch (ignore) {}
+        if (typeof window.ulimScheduleDailyEvalSheetSync704_ === 'function') {
+          window.ulimScheduleDailyEvalSheetSync704_();
+        }
       }
     } catch (error) {
       console.warn('[ULIM 7.04] 일일평가 자동저장본 복구 실패', error);
