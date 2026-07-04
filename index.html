@@ -28,7 +28,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="ulim-build" content="20260704-db-off-phase1">
-<script type="text/javascript" nonce="f8dc9b1bc916490d96064afeeb0" src="//local.adguard.org?ts=1783153427217&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000005f9c7209a89556e265b13a18%26fn%3Dindex_7_04_2%25EB%258B%25A8%25EA%25B3%2584_%25EC%259D%25BC%25EC%259D%25BC%25ED%258F%2589%25EA%25B0%2580%25EC%259E%2590%25EB%258F%2599%25EC%25A0%2580%25EC%259E%25A5%25EC%258B%259C%25ED%258A%25B8_%25EC%25A0%259C%25EA%25B1%25B0.html%26cd%3Dattachment%26ts%3D495320%26p%3Dfs%26cid%3D1%26sig%3D69fd1aabb51f1c7f106eefd443150a22b896b4e0d4dbfdc5d9a307e384839e46%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script>window.__ULIM_WEB_DB_MODE_704__ = 'OFF';</script>
+<script type="text/javascript" nonce="f8dc9b1bc916490d96064afeeb0" src="//local.adguard.org?ts=1783153427217&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000ea3c7209bf3b2d3e3f3960c7%26fn%3Dindex_7_04_3%25EB%258B%25A8%25EA%25B3%2584_AI%25EB%25B6%2584%25EC%2584%259D%25EC%2595%2588%25EB%2582%25B4_%25EC%25B6%259C%25EC%2584%259D%25EB%2582%25A0%25EC%25A7%259C%25EC%25A0%2595%25ED%2599%2595%25EB%25A7%25A4%25EC%25B9%25AD.html%26cd%3Dattachment%26ts%3D495320%26p%3Dfs%26cid%3D1%26sig%3Dae578eb9205cd2ee0ff48e97ce3f4af47293156bff628430b05c041c1c7af4fc%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script>window.__ULIM_WEB_DB_MODE_704__ = 'OFF';</script>
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램 7.04</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://script.google.com">
@@ -6474,7 +6474,7 @@ function adminInitDates() {
 function getAdminClassListCacheKey(date) {
     const role = adminRoleText() || 'unknown';
     const name = (adminInfo && (adminInfo.name || adminInfo.id)) || 'unknown';
-    return `ulim_admin_classes_v2_${adminToken}_${date}_${role}_${name}`;
+    return `ulim_admin_classes_v3_exactdate_${adminToken}_${date}_${role}_${name}`;
 }
 
 function readAdminClassListCache(key) {
@@ -6496,6 +6496,60 @@ function writeAdminClassListCache(key, classes) {
     } catch (e) {}
 }
 
+function adminClassListContainsExact704_(className) {
+    const target = normalizeClassSearchText(className || '');
+    if (!target || target === normalizeClassSearchText('전체반')) return true;
+    return (adminClassList || []).some(item =>
+        normalizeClassSearchText(item && item.className || '') === target
+    );
+}
+
+function adminClearInvalidClassSelection704_(loadedDate) {
+    const dateKey = String(loadedDate || '').trim();
+    const targets = [
+        {
+            dateId: 'adminAttendanceDate',
+            inputId: 'adminAttendanceClass',
+            displayId: 'adminAttendanceClassDisplay',
+            emptyText: '반 목록에서 선택하거나 검색하세요',
+            type: 'attendance'
+        },
+        {
+            dateId: 'adminDailyEvalDate',
+            inputId: 'adminDailyEvalClass',
+            displayId: 'adminDailyEvalClassDisplay',
+            emptyText: '반 목록에서 선택하거나 검색하세요',
+            type: 'daily'
+        }
+    ];
+
+    targets.forEach(target => {
+        const dateEl = document.getElementById(target.dateId);
+        if (!dateEl || String(dateEl.value || '').trim() !== dateKey) return;
+
+        const input = document.getElementById(target.inputId);
+        const selected = String(input && input.value || '').trim();
+        if (!selected || selected === '전체반' || adminClassListContainsExact704_(selected)) return;
+
+        input.value = '';
+        const display = document.getElementById(target.displayId);
+        if (display) {
+            display.textContent = target.emptyText;
+            display.classList.add('empty');
+        }
+
+        if (target.type === 'attendance') {
+            adminAttendanceRecords = [];
+            if (typeof adminRenderAttendanceTable === 'function') adminRenderAttendanceTable();
+            const summary = document.getElementById('adminAttendanceSummary');
+            if (summary) summary.textContent = '선택한 날짜에는 출석부에 등록된 수업일이 없습니다.';
+        } else {
+            adminDailyEvalRows = [];
+            if (typeof adminRenderDailyEvalTable === 'function') adminRenderDailyEvalTable();
+        }
+    });
+}
+
 async function adminLoadClassList(dateOverride = '', force = false) {
     if (!adminToken) return;
     try {
@@ -6511,15 +6565,22 @@ async function adminLoadClassList(dateOverride = '', force = false) {
                 adminClassList = adminFilterClassListForRole(cached || []);
                 adminClassListLoadedKey = cacheKey;
                 adminRenderClassSelectors();
+                adminClearInvalidClassSelection704_(date);
                 return;
             }
         }
 
-        const data = await adminApi('adminGetClassList', { adminToken, date, force: force ? '1' : '' });
+        const data = await adminApi('adminGetClassList', {
+            adminToken,
+            date,
+            force: force ? '1' : '',
+            exactDateVersion: '704'
+        });
         adminClassList = adminFilterClassListForRole(data.classes || []);
         adminClassListLoadedKey = cacheKey;
         writeAdminClassListCache(cacheKey, adminClassList);
         adminRenderClassSelectors();
+        adminClearInvalidClassSelection704_(date);
     } catch (e) {
         console.warn('수업 목록 로딩 오류:', e);
     }
@@ -9926,6 +9987,54 @@ function pronUpdateVoiceScore() {
 표준발음 참고: ${converted ? `[${converted}]` : "먼저 문장을 입력하세요."}`, "success");
 }
 
+function showAiAnalysisStartNotice704_(modeLabel) {
+    const label = String(modeLabel || 'AI 분석').trim();
+    let notice = document.getElementById('ulimAiAnalysisStartNotice704');
+    if (!notice) {
+        notice = document.createElement('div');
+        notice.id = 'ulimAiAnalysisStartNotice704';
+        notice.setAttribute('role', 'status');
+        notice.setAttribute('aria-live', 'polite');
+        Object.assign(notice.style, {
+            position: 'fixed',
+            left: '50%',
+            top: '18px',
+            transform: 'translate(-50%, -18px)',
+            zIndex: '2147483647',
+            maxWidth: 'calc(100vw - 32px)',
+            padding: '14px 20px',
+            borderRadius: '14px',
+            background: 'rgba(30, 41, 59, .96)',
+            color: '#fff',
+            fontSize: '15px',
+            fontWeight: '800',
+            lineHeight: '1.45',
+            textAlign: 'center',
+            boxShadow: '0 12px 32px rgba(15, 23, 42, .28)',
+            opacity: '0',
+            transition: 'opacity .18s ease, transform .18s ease',
+            pointerEvents: 'none'
+        });
+        document.body.appendChild(notice);
+    }
+
+    notice.textContent = `${label}을 시작합니다. 완료될 때까지 잠시 기다려주세요.`;
+    notice.style.display = 'block';
+    requestAnimationFrame(() => {
+        notice.style.opacity = '1';
+        notice.style.transform = 'translate(-50%, 0)';
+    });
+
+    clearTimeout(window.__ulimAiAnalysisStartNoticeTimer704);
+    window.__ulimAiAnalysisStartNoticeTimer704 = setTimeout(() => {
+        notice.style.opacity = '0';
+        notice.style.transform = 'translate(-50%, -18px)';
+        setTimeout(() => {
+            if (notice.style.opacity === '0') notice.style.display = 'none';
+        }, 220);
+    }, 2600);
+}
+
 function pronRunGeneralAnalysis() {
     const source = document.getElementById("pronInputText")?.value.trim() || "";
     if (!source) {
@@ -9936,7 +10045,9 @@ function pronRunGeneralAnalysis() {
         alert("먼저 녹음을 완료해주세요.");
         return;
     }
+    showAiAnalysisStartNotice704_('일반 AI 분석');
     pronShowGeneralAnalysisUi();
+    pronSetAdvancedStatus("일반 AI 분석을 시작합니다. 완료될 때까지 잠시 기다려주세요.");
     pronRunWhisperTranscription();
 }
 
@@ -14178,6 +14289,7 @@ async function runTrainingFinalAiAnalysisFromButton() {
     const ok = confirm('AI 분석은 하루 1회만 사용할 수 있습니다. 이미 사용했다면 리미의 간단 분석으로 전환됩니다. 진행할까요?');
     if (!ok) return;
 
+    showAiAnalysisStartNotice704_('AI 분석');
     window.trainingFinalAiInProgress = true;
     window.trainingFinalAiActiveRequestId = buildTrainingFinalRequestId_();
 
@@ -14370,6 +14482,7 @@ async function pronRunEtriAdvancedAnalysis() {
         return;
     }
 
+    showAiAnalysisStartNotice704_('고급 AI 분석');
     pronAdvancedIsRunning_5_32 = true;
     pronAdvancedFallbackShown_5_32 = false;
     pronSetAdvancedButtonsLocked_5_32(true);
@@ -19249,7 +19362,7 @@ ${ruleSummary}`, 'success');
             for (let i = sessionStorage.length - 1; i >= 0; i--) {
                 const key = sessionStorage.key(i);
                 if (!key) continue;
-                if (key.indexOf('ulim_admin_api_v54::') === 0 || key.indexOf('ulim_admin_classes_v2_') === 0) {
+                if (key.indexOf('ulim_admin_api_v54::') === 0 || key.indexOf('ulim_admin_classes_v3_exactdate_') === 0) {
                     sessionStorage.removeItem(key);
                 }
             }
@@ -24477,7 +24590,7 @@ body {
         if (!key) continue;
         if (
           key.indexOf('ulim_admin_api_v54::') === 0 ||
-          key.indexOf('ulim_admin_classes_v2_') === 0 ||
+          key.indexOf('ulim_admin_classes_v3_exactdate_') === 0 ||
           key.indexOf('ulim_daily_template_') === 0
         ) {
           sessionStorage.removeItem(key);
@@ -27141,5 +27254,6 @@ body.teacher-mode #ulimReliableSyncPill614 {
 })();
 </script>
 
+<script>window.__ULIM_EXACT_ATTENDANCE_DATE_704__ = true; window.__ULIM_AI_START_NOTICE_704__ = true;</script>
 </body>
 </html>
