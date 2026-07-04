@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+<!-- 7.04 일일평가 자동저장 시트 제거
+     - 입력 변경은 브라우저 localStorage에 즉시 저장
+     - 마지막 변경 1분 후 실제 일일평가 시트에 직접 반영
+     - 서버 자동저장 보조 시트 조회/저장/정리 호출 제거 -->
 <!-- 7.04 1단계 웹DB OFF
      - 서버 GAS에서 웹DB 조회/동기화를 중지하고 원본 시트 + CacheService만 사용
      - 웹DB 시트는 아직 삭제하지 않음
@@ -24,7 +28,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="ulim-build" content="20260704-db-off-phase1">
-<script type="text/javascript" nonce="f8dc9b1bc916490d96064afeeb0" src="//local.adguard.org?ts=1783153082016&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000ac8072098a9b45cc7e2cb591%26fn%3Dindex_7_04_1%25EB%258B%25A8%25EA%25B3%2584_DB%25EC%25A1%25B0%25ED%259A%258C%25EB%258F%2599%25EA%25B8%25B0%25ED%2599%2594_OFF.html%26cd%3Dattachment%26ts%3D495320%26p%3Dfs%26cid%3D1%26sig%3D601674a25ab260e2f868c85e62cd5e06c6a2cef6ecdeffbf3b7d6efa4711fc1f%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script>window.__ULIM_WEB_DB_MODE_704__ = 'OFF';</script>
+<script type="text/javascript" nonce="f8dc9b1bc916490d96064afeeb0" src="//local.adguard.org?ts=1783153427217&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000005f9c7209a89556e265b13a18%26fn%3Dindex_7_04_2%25EB%258B%25A8%25EA%25B3%2584_%25EC%259D%25BC%25EC%259D%25BC%25ED%258F%2589%25EA%25B0%2580%25EC%259E%2590%25EB%258F%2599%25EC%25A0%2580%25EC%259E%25A5%25EC%258B%259C%25ED%258A%25B8_%25EC%25A0%259C%25EA%25B1%25B0.html%26cd%3Dattachment%26ts%3D495320%26p%3Dfs%26cid%3D1%26sig%3D69fd1aabb51f1c7f106eefd443150a22b896b4e0d4dbfdc5d9a307e384839e46%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script>window.__ULIM_WEB_DB_MODE_704__ = 'OFF';</script>
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램 7.04</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://script.google.com">
@@ -26871,15 +26875,12 @@ body.teacher-mode #ulimReliableSyncPill614 {
     dailyAutoTimers704.delete(key);
   }
 
+  window.__ULIM_DAILY_AUTOSAVE_SHEET_MODE_704__ = 'REMOVED';
+
   async function backupDailyAutoDraft704(draft) {
-    if (!draft || !currentAdminToken704()) return false;
-    await postAdminForm704({
-      action: 'adminSaveDailyEvalAutoDraft',
-      adminToken: currentAdminToken704(),
-      draftJson: JSON.stringify(draft),
-      _: Date.now()
-    });
-    return true;
+    // 서버 자동저장 보조 시트는 사용하지 않습니다.
+    // 실패한 내용은 localStorage에 남고 다음 재시도에서 실제 일일평가 시트로 직접 반영됩니다.
+    return false;
   }
 
   function clearSyncedLocalDailyDraft704(draft) {
@@ -26927,12 +26928,7 @@ body.teacher-mode #ulimReliableSyncPill614 {
         clearSyncedLocalDailyDraft704(draft);
         if (status) status.textContent = (data && data.message) || '일일평가 실제 시트 자동 반영 완료';
       } catch (error) {
-        try {
-          if (draft) await backupDailyAutoDraft704(draft);
-        } catch (backupError) {
-          console.warn('[ULIM 7.04] 일일평가 복구용 자동저장 실패', backupError);
-        }
-        if (status) status.textContent = '실제 시트 반영 실패 · 로컬/복구본 유지 · 1분 후 재시도';
+        if (status) status.textContent = '실제 시트 반영 실패 · 로컬 저장본 유지 · 1분 후 재시도';
         const retry = setTimeout(() => {
           dailyAutoTimers704.delete(key);
           window.ulimScheduleDailyEvalSheetSync704_();
@@ -26945,17 +26941,9 @@ body.teacher-mode #ulimReliableSyncPill614 {
   };
 
   async function clearDailyAutoDraft704() {
+    // 서버 자동저장 시트는 제거되었습니다. 예약 타이머만 정리합니다.
     cancelDailyAuto704();
-    const ctx = currentDailyContext704();
-    try {
-      await postAdminForm704({
-        action: 'adminClearDailyEvalAutoDraft',
-        adminToken: currentAdminToken704(),
-        date: ctx.date,
-        className: ctx.className,
-        _: Date.now()
-      });
-    } catch (ignore) {}
+    return true;
   }
 
   function updateDailyRowsAfterSave704(rows) {
@@ -27035,40 +27023,13 @@ body.teacher-mode #ulimReliableSyncPill614 {
     }
   };
 
-  async function restoreServerDailyDraft704() {
+  async function restoreLocalDailyDraft704() {
     if (!currentAdminToken704()) return;
-    if (typeof window.ulimApplyDailyEvalDraft704_ !== 'function') return;
-    const ctx = currentDailyContext704();
-    if (!ctx.date || !ctx.className) return;
-
-    try {
-      const localKey = typeof window.ulimGetDailyEvalLocalDraftKey704_ === 'function'
-        ? window.ulimGetDailyEvalLocalDraftKey704_()
-        : '';
-      if (localKey && localStorage.getItem(localKey)) {
-        window.ulimScheduleDailyEvalSheetSync704_();
-        return;
-      }
-
-      const data = await window.adminApi('adminGetDailyEvalAutoDraft', {
-        adminToken: currentAdminToken704(),
-        date: ctx.date,
-        className: ctx.className,
-        noCache: '1',
-        forceRefresh: '1'
-      });
-
-      if (data && data.draft && Array.isArray(data.draft.rows) && data.draft.rows.length) {
-        window.ulimApplyDailyEvalDraft704_(data.draft);
-        try {
-          if (localKey) localStorage.setItem(localKey, JSON.stringify(data.draft));
-        } catch (ignore) {}
-        if (typeof window.ulimScheduleDailyEvalSheetSync704_ === 'function') {
-          window.ulimScheduleDailyEvalSheetSync704_();
-        }
-      }
-    } catch (error) {
-      console.warn('[ULIM 7.04] 일일평가 자동저장본 복구 실패', error);
+    const localKey = typeof window.ulimGetDailyEvalLocalDraftKey704_ === 'function'
+      ? window.ulimGetDailyEvalLocalDraftKey704_()
+      : '';
+    if (localKey && localStorage.getItem(localKey) && typeof window.ulimScheduleDailyEvalSheetSync704_ === 'function') {
+      window.ulimScheduleDailyEvalSheetSync704_();
     }
   }
 
@@ -27076,7 +27037,7 @@ body.teacher-mode #ulimReliableSyncPill614 {
   if (typeof previousLoadDaily704 === 'function') {
     window.adminLoadDailyEvalStudents = async function () {
       const result = await previousLoadDaily704.apply(this, arguments);
-      setTimeout(restoreServerDailyDraft704, 300);
+      setTimeout(restoreLocalDailyDraft704, 300);
       return result;
     };
   }
