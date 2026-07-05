@@ -1,4 +1,11 @@
 <!DOCTYPE html>
+<!-- 7.06 선택형 자동 업데이트 2026.07.06.706.03
+     - 앱을 처음 열 때 index 버전 1회 확인
+     - 학생/교직원 로그인 성공 후 index 버전 1회 확인
+     - 상단 로고 클릭 시 버전 확인 후 강제 새로고침
+     - 1분/주기적 확인 및 화면복귀 감시는 사용하지 않음
+     - GAS는 기존 웹앱을 새 버전으로 배포하면 다음 API 요청부터 적용 -->
+
 <!-- 7.04 일일평가 자동저장 시트 제거
      - 입력 변경은 브라우저 localStorage에 즉시 저장
      - 마지막 변경 1분 후 실제 일일평가 시트에 직접 반영
@@ -27,9 +34,9 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260704-db-off-phase1">
-<script type="text/javascript" nonce="f8dc9b1bc916490d96064afeeb0" src="//local.adguard.org?ts=1783153427217&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_00000000ea3c7209bf3b2d3e3f3960c7%26fn%3Dindex_7_04_3%25EB%258B%25A8%25EA%25B3%2584_AI%25EB%25B6%2584%25EC%2584%259D%25EC%2595%2588%25EB%2582%25B4_%25EC%25B6%259C%25EC%2584%259D%25EB%2582%25A0%25EC%25A7%259C%25EC%25A0%2595%25ED%2599%2595%25EB%25A7%25A4%25EC%25B9%25AD.html%26cd%3Dattachment%26ts%3D495320%26p%3Dfs%26cid%3D1%26sig%3Dae578eb9205cd2ee0ff48e97ce3f4af47293156bff628430b05c041c1c7af4fc%26v%3D0&amp;app=whale.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=0"></script><script>window.__ULIM_WEB_DB_MODE_704__ = 'OFF';</script>
-<title>울림 성우·스피치·연기학원 통합 연습 프로그램 7.04</title>
+<meta name="ulim-build" content="20260706-latest-open-login-logo-70603">
+<script>window.__ULIM_WEB_DB_MODE_704__ = 'OFF';</script>
+<title>울림 성우·스피치·연기학원 통합 연습 프로그램 7.06</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://script.google.com">
 <link rel="dns-prefetch" href="//script.google.com">
@@ -1904,7 +1911,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
 
 <header>
     <div class="header-content">
-        <a href="#" onclick="return ulimRefreshFromLogo612(event);" aria-label="울림앱 새로고침" title="새로고침" style="outline: none; text-decoration: none; cursor: pointer;">
+        <a href="#" onclick="return ulimRefreshFromLogo612(event);" aria-label="울림앱 버전 확인 및 새로고침" title="버전 확인 및 새로고침" style="outline: none; text-decoration: none; cursor: pointer;">
             <img src="appdata/logo.png" class="logo-img" alt="울림연기학원" onerror="this.style.display='none';" id="logoImg">
         </a><h1 class="header-title">울림연기학원 연습 프로그램</h1>
     </div>
@@ -5278,100 +5285,247 @@ window.onload = async function() {
 /* 정리됨: 중복 함수 hideLoading (기존 4740행 정의 제거) */
 
 
-/* ===========================
-   🔄 PWA 업데이트 확인 설정
-   - 하루 1회만 업데이트 확인
-   - 새 버전 발견 시 확인창 표시
-   - 확인 시 캐시 우회 새로고침
-   =========================== */
-const ULIM_APP_VERSION = "2026.06.25.614.01";
-const ULIM_UPDATE_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
-const ULIM_UPDATE_LAST_CHECK_KEY = "ulimUpdateLastCheckAt";
-let ulimUpdatePromptShown = false;
+/* =========================================================
+   7.06 선택형 index 버전 확인
+   - 앱 실행 시 1회
+   - 학생/교직원 로그인 성공 후 1회
+   - 상단 로고 클릭 시 확인 후 새로고침
+   - GAS 버전 폴링 없음
+   ========================================================= */
+const ULIM_APP_VERSION = "2026.07.06.706.03";
+const ULIM_INDEX_BUILD_META = "20260706-latest-open-login-logo-70603";
 
-function buildUlimCacheBustUrl() {
-    const url = new URL(window.location.href);
-    url.searchParams.set("v", String(Date.now()));
-    return url.toString();
+window.__ULIM_APP_VERSION__ = ULIM_APP_VERSION;
+window.__ULIM_INDEX_BUILD_META__ = ULIM_INDEX_BUILD_META;
+window.__ULIM_VERSION_CHECK_MODE__ = "OPEN_LOGIN_LOGO_ONLY";
+
+let ulimVersionChecking706 = false;
+let ulimVersionReloading706 = false;
+
+function getCurrentUlimBuild706_() {
+    const meta = document.querySelector('meta[name="ulim-build"]');
+    return String((meta && meta.content) || ULIM_INDEX_BUILD_META || "").trim();
 }
 
-function showUlimUpdatePrompt(message) {
-    if (ulimUpdatePromptShown) return;
-    ulimUpdatePromptShown = true;
+function parseRemoteUlimBuild706_(source) {
+    const text = String(source || "");
+    const metaMatch = text.match(
+        /<meta\s+name=["']ulim-build["']\s+content=["']([^"']+)["'][^>]*>/i
+    );
+    if (metaMatch && metaMatch[1]) return String(metaMatch[1]).trim();
 
-    const ok = window.confirm(message || "울림 앱의 새 버전이 있습니다. 지금 업데이트하시겠습니까?");
-    if (ok) {
-        window.location.href = buildUlimCacheBustUrl();
-    }
+    const versionMatch = text.match(
+        /const\s+ULIM_APP_VERSION\s*=\s*["']([^"']+)["']/
+    );
+    return versionMatch && versionMatch[1]
+        ? String(versionMatch[1]).trim()
+        : "";
 }
 
-async function checkUlimIndexVersion() {
-    try {
-        const url = new URL(window.location.href);
-        url.searchParams.set("updateCheck", String(Date.now()));
+function getUlimVersionStatusBox706_() {
+    let box = document.getElementById("ulimVersionStatus706");
+    if (box) return box;
 
-        const response = await fetch(url.toString(), {
-            cache: "no-store"
-        });
-
-        if (!response.ok) return;
-
-        const html = await response.text();
-        const match = html.match(/const\s+ULIM_APP_VERSION\s*=\s*["']([^"']+)["']/);
-        const remoteVersion = match ? match[1] : "";
-
-        if (remoteVersion && remoteVersion !== ULIM_APP_VERSION) {
-            showUlimUpdatePrompt("울림 앱의 새 버전이 있습니다. 지금 업데이트하시겠습니까?");
-        }
-    } catch (err) {
-        console.log("[PWA] index 업데이트 확인 실패:", err);
-    }
+    box = document.createElement("div");
+    box.id = "ulimVersionStatus706";
+    box.style.position = "fixed";
+    box.style.left = "50%";
+    box.style.bottom = "24px";
+    box.style.transform = "translateX(-50%)";
+    box.style.zIndex = "2147483647";
+    box.style.maxWidth = "calc(100vw - 32px)";
+    box.style.padding = "12px 18px";
+    box.style.borderRadius = "999px";
+    box.style.background = "rgba(20,72,45,.96)";
+    box.style.color = "#fff";
+    box.style.fontSize = "14px";
+    box.style.fontWeight = "800";
+    box.style.textAlign = "center";
+    box.style.boxShadow = "0 8px 24px rgba(0,0,0,.25)";
+    box.style.display = "none";
+    document.body.appendChild(box);
+    return box;
 }
 
-function shouldCheckUlimUpdateToday() {
-    const last = Number(localStorage.getItem(ULIM_UPDATE_LAST_CHECK_KEY) || "0");
-    return !last || Date.now() - last > ULIM_UPDATE_CHECK_INTERVAL_MS;
+function showUlimVersionStatus706_(message) {
+    const box = getUlimVersionStatusBox706_();
+    box.textContent = String(message || "");
+    box.style.display = "block";
 }
 
-async function checkUlimUpdateOnceDaily(force = false) {
+function hideUlimVersionStatus706_(delay) {
+    window.setTimeout(function () {
+        const box = document.getElementById("ulimVersionStatus706");
+        if (box) box.style.display = "none";
+    }, Number(delay || 900));
+}
+
+async function updateUlimServiceWorker706_() {
     if (!("serviceWorker" in navigator)) return;
 
-    if (!force && !shouldCheckUlimUpdateToday()) return;
-    localStorage.setItem(ULIM_UPDATE_LAST_CHECK_KEY, String(Date.now()));
-
-    await checkUlimIndexVersion();
-
     try {
-        const registration = await navigator.serviceWorker.register("/ulimvoice/firebase-messaging-sw.js");
-        console.log("Service Worker Registered");
+        const registration = await navigator.serviceWorker.register(
+            "/ulimvoice/firebase-messaging-sw.js",
+            { updateViaCache: "none" }
+        );
 
         if (registration.waiting) {
-            showUlimUpdatePrompt("울림 앱 업데이트가 준비되었습니다. 지금 적용하시겠습니까?");
-            return;
+            registration.waiting.postMessage({ type: "SKIP_WAITING" });
         }
-
-        registration.addEventListener("updatefound", function () {
-            const newWorker = registration.installing;
-            if (!newWorker) return;
-
-            newWorker.addEventListener("statechange", function () {
-                if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
-                    showUlimUpdatePrompt("울림 앱 업데이트가 준비되었습니다. 지금 적용하시겠습니까?");
-                }
-            });
-        });
 
         await registration.update();
     } catch (err) {
-        console.error("SW registration/update failed:", err);
+        console.log("[ULIM VERSION] Service Worker 갱신 생략:", err);
     }
 }
 
-if ("serviceWorker" in navigator) {
-    window.addEventListener("load", function () {
-        checkUlimUpdateOnceDaily(false);
-    });
+function buildUlimFreshUrl706_(version, source) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("v", String(version || Date.now()));
+    url.searchParams.set("refresh", String(Date.now()));
+    url.searchParams.set("source", String(source || "version"));
+    url.searchParams.delete("__ulim_version_probe");
+    url.searchParams.delete("updateCheck");
+    return url.toString();
 }
+
+async function fetchRemoteUlimBuild706_() {
+    const probeUrl = new URL("./index.html", window.location.href);
+    probeUrl.searchParams.set("__ulim_version_probe", String(Date.now()));
+
+    const response = await fetch(probeUrl.toString(), {
+        method: "GET",
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: {
+            "Cache-Control": "no-cache, no-store, max-age=0",
+            "Pragma": "no-cache"
+        }
+    });
+
+    if (!response.ok) {
+        throw new Error("버전 확인 HTTP " + response.status);
+    }
+
+    const remoteHtml = await response.text();
+    return parseRemoteUlimBuild706_(remoteHtml);
+}
+
+async function reloadUlimWithVersion706_(version, source, message) {
+    if (ulimVersionReloading706) return;
+    ulimVersionReloading706 = true;
+
+    showUlimVersionStatus706_(message || "최신 버전을 적용하고 있습니다…");
+
+    try {
+        await updateUlimServiceWorker706_();
+    } catch (ignore) {}
+
+    window.setTimeout(function () {
+        window.location.replace(buildUlimFreshUrl706_(version, source));
+    }, 450);
+}
+
+async function checkUlimIndexVersion706_(options) {
+    options = options || {};
+
+    if (ulimVersionChecking706 || ulimVersionReloading706) {
+        return { checked: false, reason: "running" };
+    }
+
+    ulimVersionChecking706 = true;
+
+    const source = String(options.source || "manual");
+    const forceReload = options.forceReload === true;
+    const showProgress = options.showProgress === true;
+
+    try {
+        if (showProgress) {
+            showUlimVersionStatus706_("최신 버전을 확인하고 있습니다…");
+        }
+
+        await updateUlimServiceWorker706_();
+
+        const currentBuild = getCurrentUlimBuild706_();
+        const remoteBuild = await fetchRemoteUlimBuild706_();
+
+        if (remoteBuild && remoteBuild !== currentBuild) {
+            await reloadUlimWithVersion706_(
+                remoteBuild,
+                source,
+                "새 버전을 적용하고 있습니다…"
+            );
+
+            return {
+                checked: true,
+                updateAvailable: true,
+                currentBuild: currentBuild,
+                remoteBuild: remoteBuild
+            };
+        }
+
+        if (forceReload) {
+            await reloadUlimWithVersion706_(
+                remoteBuild || currentBuild || Date.now(),
+                source,
+                "최신 버전으로 화면을 새로고침합니다…"
+            );
+        } else if (showProgress) {
+            showUlimVersionStatus706_("최신 버전입니다.");
+            hideUlimVersionStatus706_(900);
+        }
+
+        return {
+            checked: true,
+            updateAvailable: false,
+            currentBuild: currentBuild,
+            remoteBuild: remoteBuild || currentBuild
+        };
+    } catch (err) {
+        console.log("[ULIM VERSION] index 버전 확인 실패:", err);
+
+        if (forceReload) {
+            await reloadUlimWithVersion706_(
+                Date.now(),
+                source,
+                "화면을 새로고침합니다…"
+            );
+        } else if (showProgress) {
+            showUlimVersionStatus706_("버전 확인이 지연되고 있습니다.");
+            hideUlimVersionStatus706_(1200);
+        }
+
+        return {
+            checked: false,
+            error: err && err.message ? err.message : String(err)
+        };
+    } finally {
+        ulimVersionChecking706 = false;
+    }
+}
+
+window.__ULIM_CHECK_VERSION__ = checkUlimIndexVersion706_;
+
+function checkUlimVersionAfterLogin706_(loginType) {
+    window.setTimeout(function () {
+        if (typeof window.__ULIM_CHECK_VERSION__ !== "function") return;
+
+        window.__ULIM_CHECK_VERSION__({
+            source: String(loginType || "login"),
+            forceReload: false,
+            showProgress: false
+        });
+    }, 100);
+}
+
+window.addEventListener("load", function () {
+    window.__ULIM_CHECK_VERSION__({
+        source: "app-open",
+        forceReload: false,
+        showProgress: false
+    });
+}, { once: true });
+
 </script>
 <script>
 // 로그인 및 인증 오버레이 스크립트
@@ -10424,7 +10578,8 @@ window.registerRoomPushTokenManual = async function () {
     }
 
     const registration = await navigator.serviceWorker.register(
-  "/ulimvoice/firebase-messaging-sw.js"
+  "/ulimvoice/firebase-messaging-sw.js",
+  { updateViaCache: "none" }
 );
 
 const token = await getToken(messaging, {
@@ -12247,6 +12402,11 @@ async function authenticate(name, password) {
             }
 
             showMainContent(true);
+
+            // 7.06 학생 로그인 성공 후 index 버전 1회 확인
+            if (typeof checkUlimVersionAfterLogin706_ === "function") {
+                checkUlimVersionAfterLogin706_("student-login");
+            }
         } else {
             clearStudentSecureSession_();
             alert((result && result.message) || "로그인에 실패했습니다.");
@@ -12575,6 +12735,11 @@ async function adminLogin() {
         }
 
         await adminLoadInitialData();
+
+        // 7.06 교직원 로그인 성공 후 index 버전 1회 확인
+        if (typeof checkUlimVersionAfterLogin706_ === "function") {
+            checkUlimVersionAfterLogin706_("staff-login");
+        }
 
         try {
             if (window.registerRoomPushTokenAfterAdminLogin) window.registerRoomPushTokenAfterAdminLogin();
@@ -24325,10 +24490,22 @@ body {
       logo.setAttribute('aria-busy', 'true');
     }
 
-    // localStorage/sessionStorage의 로그인 정보는 삭제하지 않고 현재 페이지를 다시 읽습니다.
-    window.setTimeout(function(){
-      window.location.reload();
-    }, 80);
+    if (typeof window.__ULIM_CHECK_VERSION__ === 'function') {
+      window.__ULIM_CHECK_VERSION__({
+        source: 'logo',
+        forceReload: true,
+        showProgress: true
+      }).finally(function () {
+        refreshing = false;
+      });
+    } else {
+      // 구버전 호환: 버전 확인 함수가 없을 때도 캐시 우회 새로고침
+      const url = new URL(window.location.href);
+      url.searchParams.set('v', String(Date.now()));
+      url.searchParams.set('refresh', String(Date.now()));
+      window.location.replace(url.toString());
+    }
+
     return false;
   };
 
@@ -24339,12 +24516,12 @@ body {
     const logo = document.getElementById('logoImg');
     if (anchor) {
       anchor.setAttribute('href', '#');
-      anchor.setAttribute('aria-label', '울림앱 새로고침');
-      anchor.setAttribute('title', '새로고침');
+      anchor.setAttribute('aria-label', '울림앱 버전 확인 및 새로고침');
+      anchor.setAttribute('title', '버전 확인 및 새로고침');
     }
     if (logo) {
       logo.setAttribute('role', 'button');
-      logo.setAttribute('aria-label', '울림앱 새로고침');
+      logo.setAttribute('aria-label', '울림앱 버전 확인 및 새로고침');
     }
 
     console.log('[ULIM]', VERSION, '모바일 당겨서 새로고침 차단 / 로고 새로고침 활성화');
