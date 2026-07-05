@@ -1,5 +1,9 @@
 <!DOCTYPE html>
-<!-- 7.06 연습일지 학생목록/카드팝업 2026.07.06.706.04
+<!-- 7.06.05 연습일지 학생목록 오류 수정
+     - 팝업 내부 전용 practiceStudentKey706 함수를 외부 조회 요약에서 호출하던 범위 오류 수정
+     - 학생 수 계산을 외부 의존성 없는 독립 로직으로 변경 -->
+
+<!-- 7.06 연습일지 학생목록/카드팝업 2026.07.06.706.05
      - 조회 결과에는 학생명만 표시
      - 학생명 클릭 시 분석표와 강사평가를 카드 팝업으로 표시
      - 주/월 조회에서 같은 학생의 여러 업로드를 이전/다음 카드로 탐색
@@ -40,7 +44,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260706-practice-student-modal-70604">
+<meta name="ulim-build" content="20260706-practice-student-modal-fix-70605">
 <script>window.__ULIM_WEB_DB_MODE_704__ = 'OFF';</script>
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램 7.06</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -5298,8 +5302,8 @@ window.onload = async function() {
    - 상단 로고 클릭 시 확인 후 새로고침
    - GAS 버전 폴링 없음
    ========================================================= */
-const ULIM_APP_VERSION = "2026.07.06.706.04";
-const ULIM_INDEX_BUILD_META = "20260706-practice-student-modal-70604";
+const ULIM_APP_VERSION = "2026.07.06.706.05";
+const ULIM_INDEX_BUILD_META = "20260706-practice-student-modal-fix-70605";
 
 window.__ULIM_APP_VERSION__ = ULIM_APP_VERSION;
 window.__ULIM_INDEX_BUILD_META__ = ULIM_INDEX_BUILD_META;
@@ -20702,9 +20706,27 @@ ${ruleSummary}`, 'success');
             const summary = document.getElementById('adminVocalPracticeSummary');
             if (summary) {
                 const fallbackText = data && data.fallbackMode ? ' · 날짜별 복구조회' : '';
-                const studentCount = typeof practiceStudentGroups706 !== 'undefined'
-                    ? practiceStudentGroups706.length
-                    : new Set(adminVocalPracticeLogs.map(function(log){ return practiceStudentKey706(log); })).size;
+                // 7.06.05 수정:
+                // 이 코드는 연습평가 팝업 IIFE 바깥에 있으므로
+                // 내부 전용 practiceStudentKey706()를 호출하지 않습니다.
+                const studentKeys706 = new Set(
+                    adminVocalPracticeLogs.map(function(log) {
+                        const name = String(log && log.studentName || '').trim();
+                        const identity = String(
+                            log && (
+                                log.studentIdentityKey ||
+                                log.studentUid ||
+                                log.studentNo ||
+                                log.phoneLast4
+                            ) || ''
+                        ).trim();
+
+                        return identity
+                            ? identity + '|' + name
+                            : 'NAME|' + name;
+                    })
+                );
+                const studentCount = studentKeys706.size;
                 summary.textContent = `${range.label || '선택 범위'} · 학생 ${studentCount}명 · 업로드 ${adminVocalPracticeLogs.length}건${fallbackText}`;
             }
         } catch (err) {
