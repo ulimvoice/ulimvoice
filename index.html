@@ -4,7 +4,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260706-production-clean-70606">
+<meta name="ulim-build" content="20260706-past-script-spacing-fix-70607">
 <script>window.__ULIM_WEB_DB_MODE_704__ = 'OFF';</script>
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램 7.06</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -4713,7 +4713,11 @@ function sanitizePastQuestionScriptText_(rawText) {
         break;
     }
 
-    return lines.join('\n').trim();
+    return lines
+      .join('\n')
+      .replace(/^\s*\n+/, '')
+      .replace(/\n[ \t]*\n[ \t]*\n+/g, '\n\n')
+      .trim();
 }
 
 async function rollPastQuestion(gender) {
@@ -5028,8 +5032,8 @@ window.onload = async function() {
 };
 
 
-const ULIM_APP_VERSION = "2026.07.06.706.06";
-const ULIM_INDEX_BUILD_META = "20260706-production-clean-70606";
+const ULIM_APP_VERSION = "2026.07.06.706.07";
+const ULIM_INDEX_BUILD_META = "20260706-past-script-spacing-fix-70607";
 
 window.__ULIM_APP_VERSION__ = ULIM_APP_VERSION;
 window.__ULIM_INDEX_BUILD_META__ = ULIM_INDEX_BUILD_META;
@@ -13253,7 +13257,7 @@ function adminRenderVocalPracticeLogs() {
         return `
             <div class="practice-log-card ${hasComment ? 'has-comment' : ''}">
                 <div class="practice-log-title">${ulimAdminEsc_(log.studentName)} ${typeBadge} ${hasComment ? '★' : ''}</div>
-                <div class="practice-log-text"><b>${sentenceLabel}</b><br>${ulimAdminEsc_(isPast && typeof window.ulimCleanPastSentence598 === 'function' ? window.ulimCleanPastSentence598(log.sentence || '') : (log.sentence || ''))}</div>
+                <div class="practice-log-text ulim-practice-script706"><b class="ulim-practice-script-label706">${sentenceLabel}</b><span class="ulim-practice-script-body706">${ulimAdminEsc_(isPast && typeof window.ulimCleanPastSentence598 === 'function' ? window.ulimCleanPastSentence598(log.sentence || '') : (log.sentence || ''))}</span></div>
                 ${log.aiComment ? `<div class="practice-log-text" style="margin-top:8px;"><b>AI 코멘트</b><br>${ulimAdminEsc_(log.aiComment)}</div>` : ''}
                 ${audio}
                 <div style="margin-top:10px;">
@@ -21960,6 +21964,21 @@ ${ruleSummary}`, 'success');
     box-shadow:0 8px 24px rgba(15,23,42,.06);
 }
 .ulim-practice-detail-card706 .practice-log-text { margin-top:10px; }
+.ulim-practice-script706 {
+    white-space:normal !important;
+}
+.ulim-practice-script-label706 {
+    display:block;
+    margin:0 0 4px;
+    line-height:1.35;
+}
+.ulim-practice-script-body706 {
+    display:block;
+    margin:0;
+    white-space:pre-wrap;
+    line-height:1.6;
+    word-break:keep-all;
+}
 .ulim-practice-file-link706 {
     display:inline-flex;
     align-items:center;
@@ -22308,10 +22327,7 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
             <span class="practice-log-type-badge ${badgeClass}">${esc(typeLabel)}</span>
             ${practiceHasFinal706(log) ? ' ★' : ''}
           </div>
-          <div class="practice-log-text">
-            <b>${esc(sentenceLabel)}</b><br>
-            ${esc(displaySentence(log))}
-          </div>
+          <div class="practice-log-text ulim-practice-script706"><b class="ulim-practice-script-label706">${esc(sentenceLabel)}</b><span class="ulim-practice-script-body706">${esc(displaySentence(log))}</span></div>
           ${aiHtml}
           ${audioHtml}
           ${scoreEditor(log,idx)}
