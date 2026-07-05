@@ -1,11 +1,10 @@
 <!DOCTYPE html>
-<!-- 7.06.05 연습일지 학생목록 오류 수정
-     - 팝업 내부 전용 practiceStudentKey706 함수를 외부 조회 요약에서 호출하던 범위 오류 수정
-     - 학생 수 계산을 외부 의존성 없는 독립 로직으로 변경 -->
+
+
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260706-practice-student-modal-fix-70605">
+<meta name="ulim-build" content="20260706-production-clean-70606">
 <script>window.__ULIM_WEB_DB_MODE_704__ = 'OFF';</script>
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램 7.06</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -21,9 +20,6 @@
 <link rel="manifest" href="./manifest-index.json">
 <meta name="theme-color" content="#2ecc71">
 <style>
-/* ===========================
-   기본 스타일 (생략)
-   =========================== */
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f5f7fb; margin: 0; color: #333; display: flex; flex-direction: column; min-height: 100vh; }
 .wrapper { max-width: 1200px; width: 95%; margin: 0 auto; flex: 1; padding: 20px 0; }
 header { background: #fff; padding: 15px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; }
@@ -70,9 +66,9 @@ footer b { color: #fff; font-weight: 700; }
 .mini-char-card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; font-size: 13px; border:1px solid #eee; }
 .mini-char-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; background:#ddd; }
 .mini-char-info { padding: 10px; }
-.train-origin-text { 
-    font-size: 20px; font-weight: 700; color: #333; text-align: center; 
-    margin-bottom: 25px; word-break: keep-all; line-height: 1.5; 
+.train-origin-text {
+    font-size: 20px; font-weight: 700; color: #333; text-align: center;
+    margin-bottom: 25px; word-break: keep-all; line-height: 1.5;
     min-height: 30px; padding: 15px; background: #e8f5e9; border-radius: 12px; border: 1px solid #c8e6c9;
 }
 .train-card { background: #fff; border: 2px solid #eee; border-radius: 20px; padding: 30px 15px; text-align: center; margin-bottom: 20px; }
@@ -127,23 +123,15 @@ audio { width: 100%; height: 40px; }
     #tab4 .btn-row #pastMaleBtn { order: 1; }
     #tab4 .btn-row #pastFemaleBtn { order: 2; }
     #tab4 .btn-row #pastCustomBtn { order: 3; flex-basis: 100%; min-width: 100%; }
-}/* ===========================
-   기본 스타일 (생략)
-   =========================== */
-/* ... 기존 스타일 ... */
-
-/* 🟢 추가할 스타일: 로고 링크의 파란색 줄(아웃라인) 제거 */
-.header-content a, .header-content a:focus, .header-content a:active {
-    outline: none !important; /* 포커스/클릭 시 아웃라인 제거 */
-    text-decoration: none; /* 밑줄 제거 */
-    display: inline-block; /* 링크 영역을 깔끔하게 정리 */
 }
 
-/* ... 기존 스타일 ... */
+.header-content a, .header-content a:focus, .header-content a:active {
+    outline: none !important;
+    text-decoration: none;
+    display: inline-block;
+}
 
-/* ===========================
-   🏢 연습실 예약 추가 스타일
-   =========================== */
+
 .room-reservation-guide {
     background:#f0fdf4;
     border:1px solid #dcfce7;
@@ -333,9 +321,6 @@ audio { width: 100%; height: 40px; }
     }
 }
 
-/* ===========================
-   📢 구글시트 연동 공지사항 팝업
-   =========================== */
 .notice-overlay {
     position: fixed;
     inset: 0;
@@ -500,9 +485,6 @@ audio { width: 100%; height: 40px; }
     }
 }
 
-/* ===========================
-   🔐 교직원 전용
-   =========================== */
 .admin-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -655,9 +637,6 @@ audio { width: 100%; height: 40px; }
     }
 }
 
-/* ===========================
-   🔐 관리자 v2 추가 스타일
-   =========================== */
 .admin-class-chip {
     border:1px solid #d1d5db;
     background:#fff;
@@ -763,7 +742,6 @@ audio { width: 100%; height: 40px; }
     margin-top:8px;
 }
 
-/* 관리자 권한 판별 전 깜빡임 방지: 기본은 관리자 전용 UI를 숨김 */
 .admin-full-only { display: none !important; }
 body.full-admin-mode .admin-recipient-row.admin-full-only { display: flex !important; }
 body.full-admin-mode button.admin-full-only,
@@ -821,9 +799,6 @@ body.admin-mode .admin-only-tab { display:block !important; }
 }
 
 
-/* ===========================
-   📝 일일평가 3분리 입력칸
-   =========================== */
 .daily-eval-parts {
     display: grid;
     grid-template-columns: 1fr;
@@ -907,9 +882,6 @@ body.admin-mode .admin-only-tab { display:block !important; }
 }
 
 
-/* ===========================
-   🎙️ 표준발음 자동치환
-   =========================== */
 .pron-wrap {
     display: grid;
     grid-template-columns: 1fr;
@@ -1281,9 +1253,6 @@ body.admin-mode .admin-only-tab { display:block !important; }
 }
 
 
-/* ===========================
-   📘 발성 연습일지 체크 / 학생 코멘트 표시
-   =========================== */
 .practice-log-card {
   border: 1px solid #e5e7eb;
   border-radius: 16px;
@@ -1342,17 +1311,10 @@ body.admin-mode .admin-only-tab { display:block !important; }
 }
 
 
-/* ===========================
-   ✅ 강사 출석 O/X 즉시반영 추가 스타일
-   =========================== */
 .admin-status-badge.attendance-late { background:#fef3c7; color:#92400e; }
 .admin-status-badge.attendance-etc { background:#e0f2fe; color:#075985; }
 
 
-
-/* ===========================
-   🏫 강의실 사용체크 시간표 UI
-   =========================== */
 .classroom-usage-form-grid {
     display:grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -1446,9 +1408,6 @@ body.admin-mode .admin-only-tab { display:block !important; }
 }
 
 
-/* ===========================
-   ⚡ 5-4 속도개선: 렌더링 범위 최적화
-   =========================== */
 .tab-content {
     contain: layout paint style;
 }
@@ -1460,9 +1419,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
     content-visibility: auto;
     contain-intrinsic-size: 700px;
 }
-
 </style>
-
 
 
 <style id="rimi-aiicon-style">
@@ -1470,8 +1427,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
 .rimi-aiicon{width:28px;height:28px;display:inline-block;object-fit:cover;border-radius:8px;image-rendering:pixelated;image-rendering:crisp-edges;box-shadow:0 2px 6px rgba(0,0,0,.12);flex:0 0 auto;}
 @media (max-width:640px){
   .rimi-aiicon{width:24px;height:24px;border-radius:6px;}
-}
-</style>
+}</style>
 
 
 <style id="rimi-ai-loading-style">
@@ -1490,16 +1446,10 @@ body.admin-mode .admin-only-tab { display:block !important; }
   .ai-loading-gif{width:90px; height:86px;}
   .ai-loading-title{font-size:14px;}
   .ai-loading-desc{font-size:11px;}
-}
-</style>
+}</style>
 
 
 <style id="rimi-ai-button-loading-style">
-/* =========================================================
-   5-28 리미 분석 중 GIF를 보라색 AI 버튼 안에 표시
-   - 기존 초록 분석 중 박스 숨김
-   - 분석 중일 때 보라색 버튼 내부에 rimi_analyzing.gif 표시
-   ========================================================= */
 #aiLoadingVisual {
     display: none !important;
 }
@@ -1526,17 +1476,10 @@ body.admin-mode .admin-only-tab { display:block !important; }
         height: 68px;
         border-radius: 16px;
     }
-}
-</style>
-
+}</style>
 
 
 <style id="rimi-training-eval-card-style-5-61">
-/* =========================================================
-   5.61 발성훈련 리미 평가창 카드 UI
-   - PC/모바일 모두 보기 좋은 구조화 평가창
-   - 기존 textContent 결과도 자동 카드화
-   ========================================================= */
 #sttResult.rimi-eval-rendered {
     background: transparent !important;
     border: none !important;
@@ -1760,14 +1703,10 @@ body.admin-mode .admin-only-tab { display:block !important; }
         height: 40px;
         border-radius: 14px;
     }
-}
-</style>
+}</style>
 
 
 <style id="vocalPracticeCalendarStyle580">
-/* =========================================================
-   5.81 강사 발성연습일지 달력 일/주/월 조회 복구
-   ========================================================= */
 .vocal-calendar-wrap {
     background:#f8fafc;
     border:1px solid #e5e7eb;
@@ -1875,8 +1814,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
     .vocal-calendar-grid { grid-template-columns:42px repeat(7, minmax(28px, 1fr)); gap:3px; }
     .vocal-calendar-dow, .vocal-calendar-week, .vocal-calendar-day { min-height:31px; font-size:12px; border-radius:8px; }
     .vocal-calendar-nav, .vocal-calendar-title { padding:8px 9px; font-size:13px; }
-}
-</style>
+}</style>
 </head>
 <body>
 
@@ -1888,7 +1826,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
     </div>
 </header>
 
-    <!-- 로그인 오버레이 -->
+
     <div id="loginOverlay" style="
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
         background: #f5f7fb; z-index: 10000; display: none; flex-direction: column;
@@ -1912,15 +1850,14 @@ body.admin-mode .admin-only-tab { display:block !important; }
        <div style="margin-top: 40px; text-align: center;">
     <p style="font-size: 14px; color: #888; margin-bottom: 15px;">울림 연기학원의 다양한 소식을 만나보세요!</p>
     <a href="https://www.youtube.com/@ulimvoice" target="_blank" style="margin: 0 10px;"><img src="https://img.icons8.com/color/40/000000/youtube-play.png" alt="YouTube" style="vertical-align: middle;"></a>
-    
+
     <a href="https://www.instagram.com/ulimvoice" target="_blank" style="margin: 0 10px;"><img src="https://img.icons8.com/fluent/40/000000/instagram-new.png" alt="Instagram" style="vertical-align: middle;"></a>
-    
+
    <a href="https://blog.naver.com/ulimvoice" target="_blank" style="margin: 0 10px;"><img src="https://img.icons8.com/color/40/000000/blogger.png" alt="Blog" style="vertical-align: middle;"></a>
 </div>
     </div>
 
 
-<!-- 📢 학생 로그인 후 공지사항 팝업 -->
 <div id="noticeOverlay" class="notice-overlay">
     <div class="notice-modal">
         <div class="notice-header">
@@ -1928,7 +1865,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
         </div>
 
         <div id="noticeBody" class="notice-body">
-            <!-- 공지 자동 삽입 -->
+
         </div>
 
         <div class="notice-footer">
@@ -2015,7 +1952,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
         <button class="btn-gen" style="flex: 2;" onclick="trainNew()">✨ 새 문장 뽑기</button>
         <button class="btn-save" id="btnComplete" style="flex: 1; background: #2980b9; display: none;" onclick="completeTraining()">✅ 연습 완료</button>
       </div>
-      
+
       <button onclick="toggleCalendar()" style="width:100%; padding:10px; margin-top:5px; background:#ddd; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
         📅 연습 기록 보기/숨기기
       </button>
@@ -2026,7 +1963,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
           </div>
         <p style="font-size:12px; color:#aaa; text-align:center; margin-top:10px;">(O: 완료, X: 미완료)</p>
       </div>
-      
+
       <div id="train_card" class="train-card">
         <p style="color:#aaa;">'새 문장 뽑기'를 눌러주세요.</p>
       </div>
@@ -2070,14 +2007,14 @@ body.admin-mode .admin-only-tab { display:block !important; }
                 <span class="section-title">📂 내 녹음 확인</span>
                 <audio id="myAudio" controls src="" style="width:100%;"></audio>
                 <div class="time-info">
-                    내 시간: <span id="myTime" class="time-val">0.0s</span> 
+                    내 시간: <span id="myTime" class="time-val">0.0s</span>
                     <span style="font-weight:normal; color:#aaa; margin-left:10px;">(프로: <span id="proTime">0.0s</span>)</span>
                 </div>
-               
+
             </div>
         </div>
       </div>
-      
+
       <div class="train-nav" style="margin-top:20px;">
         <button id="btn_prev" onclick="trainPrev()" disabled>⬅ 이전</button>
         <div id="step_indicator" style="font-weight:bold; color:#2ecc71; font-size:18px;">STEP 0</div>
@@ -2087,21 +2024,21 @@ body.admin-mode .admin-only-tab { display:block !important; }
   </div>
 
 <div id="recordDisplayBox" style="
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-    background: rgba(0,0,0,0.7); display: none; justify-content: center; 
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.7); display: none; justify-content: center;
     align-items: center; z-index: 9999;
 ">
     <div style="
-        background: white; padding: 30px; border-radius: 20px; max-width: 400px; 
+        background: white; padding: 30px; border-radius: 20px; max-width: 400px;
         width: 90%; box-shadow: 0 4px 30px rgba(0,0,0,0.5);
     ">
         <h3 id="recordDisplayDate" style="color: #2980b9; margin-top: 0;">기록 상세</h3>
         <p id="recordDisplayContent" style="
-            background: #f8f8f8; padding: 15px; border-radius: 10px; 
+            background: #f8f8f8; padding: 15px; border-radius: 10px;
             font-size: 16px; line-height: 1.5; word-break: break-all;
         ">선택된 날짜의 기록이 여기에 표시됩니다.</p>
         <button onclick="document.getElementById('recordDisplayBox').style.display='none';" style="
-            width: 100%; padding: 10px; background: #e74c3c; color: white; border: none; 
+            width: 100%; padding: 10px; background: #e74c3c; color: white; border: none;
             border-radius: 10px; margin-top: 20px; cursor: pointer; font-weight: bold;
         ">닫기</button>
     </div>
@@ -2150,7 +2087,6 @@ body.admin-mode .admin-only-tab { display:block !important; }
 
     </div>
   </div>
-
 
 
   <div class="tab-content" id="tabPronunciation">
@@ -2268,7 +2204,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
           <input type="password" id="adminPwInput" placeholder="비밀번호">
         </div>
         <button type="button" class="admin-btn" style="width:100%;" onclick="adminLogin()">교직원 로그인</button>
-    
+
       </div>
 
       <div id="adminDashboard" style="display:none;">
@@ -2531,13 +2467,12 @@ body.admin-mode .admin-only-tab { display:block !important; }
         </div>
 
 
-
         <div id="adminPanelClassroomUsage" class="admin-panel">
           <div class="admin-card">
             <h3 style="margin-top:0;">강의실 사용체크</h3>
             <p style="font-size:14px; color:#666; line-height:1.6; margin-top:-4px;">
               강의실별 사용 현황을 시간표 형태로 확인하고, 현재 사용 중인 강의실을 체크합니다.<br>
-              같은 날짜·같은 시간·같은 강의실은 중복 체크되지 않습니다. 
+              같은 날짜·같은 시간·같은 강의실은 중복 체크되지 않습니다.
             </p>
 
             <div class="classroom-usage-form-grid">
@@ -2740,12 +2675,6 @@ body.admin-mode .admin-only-tab { display:block !important; }
     Copyright © 울림연기학원. All rights reserved.
 </footer>
 <script>
-/* ===========================
-   📲 PWA 설치 안내창
-   - index.html 전용
-   - tablet.html과 별도 설치를 위해 manifest-index.json 사용
-   - "다시는 보지 않기"는 브라우저 localStorage에 저장
-   =========================== */
 let deferredPrompt = null;
 const PWA_HIDE_KEY = "ULIM_INDEX_PWA_HIDE";
 
@@ -2791,24 +2720,16 @@ function hidePwaInstallForever() {
     closePwaInstallPopup();
 }
 
-// 🟢 헤더 로고 클릭 시 로그인 오버레이를 띄우는 함수 (추가)
 function showLoginOverlay() {
-    // 메인 컨텐츠 숨기기
     const wrapper = document.querySelector('.wrapper');
     if (wrapper) wrapper.style.display = 'none';
-    
-    // 로그인 오버레이 표시
+
     const overlay = document.getElementById('loginOverlay');
     if (overlay) overlay.style.display = 'flex';
 
-    // 주소창에 #login 해시를 추가하여 새로고침 시에도 오버레이 유지 가능 (선택 사항)
-    // window.location.hash = '#login';
 }
 
 
-// 강사 Drive 폴더ID는 학생 브라우저에 저장하지 않습니다.
-// 연습완료 업로드 시 GAS가 담당강사명을 기준으로
-// 학생부(관리자용) [관리자] 시트 G열(강사폴더ID)을 조회합니다.
 localStorage.removeItem('instructorFolderId');
 let studentName = localStorage.getItem('studentName') || '';
 let instructorName = localStorage.getItem('instructorName') || '기본';
@@ -2817,31 +2738,18 @@ let studentNo = localStorage.getItem('studentNo') || '';
 let studentSessionToken = localStorage.getItem('studentSessionToken') || '';
 let studentMustChangePassword = localStorage.getItem('studentMustChangePassword') === 'Y';
 let instructorFolderId = '';
-// =========================================================================================
-// ⭐ 1. GAS URL 정의 (제공해주신 배포 주소로 설정 완료) ⭐
-// =========================================================================================
 
-// 학생부 GAS URL (인증 및 강사 정보 조회)
-const GET_API_URL = 'https://script.google.com/macros/s/AKfycbyS3QUvrjNbwvaw92_g-QKQyN3Yito8DAdpAjxUzfnsuVf3Ce7ccuaXIv651U7FnYF4/exec'; 
+const GET_API_URL = 'https://script.google.com/macros/s/AKfycbyS3QUvrjNbwvaw92_g-QKQyN3Yito8DAdpAjxUzfnsuVf3Ce7ccuaXIv651U7FnYF4/exec';
 
-// 연습일지/기출문제 업로드 GAS URL
-// 기출문제 탭도 발성훈련 업로드와 반드시 같은 배포 주소를 사용합니다.
 const VOCAL_TRAINING_UPLOAD_URL = GET_API_URL;
 const GOOGLE_APP_SCRIPT_URL = VOCAL_TRAINING_UPLOAD_URL; // 기존 발성훈련 업로드 함수 호환용
 const PAST_QUESTION_UPLOAD_URL = VOCAL_TRAINING_UPLOAD_URL;
 
 
-// =========================================================================================
-// ⭐ 2. 학생/강사 정보 및 공통 유틸리티 ⭐
-// =========================================================================================
-
-
-
-let currentFilenameBase = `${instructorName}_${studentName}_${phoneLast4}`; 
+let currentFilenameBase = `${instructorName}_${studentName}_${phoneLast4}`;
 
 function pick(a){return a[Math.floor(Math.random()*a.length)];}
 
-// 이미지 다운로드를 처리하는 공통 함수
 function downloadImage(dataUrl, filename='울림_미션.png') {
     const link = document.createElement('a');
     link.download = filename;
@@ -2852,7 +2760,6 @@ function downloadImage(dataUrl, filename='울림_미션.png') {
     alert("이미지 파일 다운로드를 시작합니다!");
 }
 
-// 탭 로직
 document.querySelectorAll('.tab').forEach(t => {
     t.onclick = () => {
         document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
@@ -2863,15 +2770,6 @@ document.querySelectorAll('.tab').forEach(t => {
 });
 
 
-// =========================================================================================
-// ⭐ 3. 학생 인증 로직 (checkStudentName, promptAndAuthenticate) ⭐
-// =========================================================================================
-
-// 페이지 로드 시 학생 이름 및 인증 확인
-/* 정리됨: 중복 함수 checkStudentName (기존 2492행 정의 제거) */
-
-
-// 인증 프롬프트 및 GAS 인증 요청 함수
 async function promptAndAuthenticate() {
     let name = prompt("학생 이름을 입력해주세요.");
     let phone = prompt("출결번호 (휴대폰 번호 뒤 네 자리)를 입력해주세요.");
@@ -2888,7 +2786,6 @@ async function promptAndAuthenticate() {
         localStorage.setItem('studentNo', studentNo);
         return;
     }
-    // GAS 인증 API 호출 (GET_API_URL 사용)
    const url = `${GET_API_URL}?name=${encodeURIComponent(name)}&phoneLast4=${phone}`;
     try {
         const response = await fetch(url);
@@ -2902,11 +2799,9 @@ async function promptAndAuthenticate() {
             instructorName = result.instructor;
             phoneLast4 = result.phoneLast4;
             studentNo = result.studentNo || result.attendanceNo || result.no || '';
-            // 강사 폴더ID는 더 이상 프론트에서 저장하지 않습니다.
             instructorFolderId = '';
             localStorage.removeItem('instructorFolderId');
 
-                // ✅ 정상적인 성공 처리
             localStorage.setItem('studentName', studentName);
             localStorage.setItem('instructorName', instructorName);
             localStorage.setItem('phoneLast4', phoneLast4);
@@ -2928,22 +2823,13 @@ async function promptAndAuthenticate() {
         localStorage.setItem('instructorName', instructorName);
     }
 }
-// 파일명 베이스를 전역 변수에 저장 (강사이름_학생이름_출결4자리)
 function updateFilenameConstants() {
     const filenameBase = `${instructorName}_${studentName}_${phoneLast4}`;
-    
-    // 최종 파일명 베이스 설정 (특수문자 및 공백 제거)
+
     currentFilenameBase = filenameBase.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_\uAC00-\uD7A3]/g, '');
 }
 
 
-// =========================================================================================
-// ⭐ 4. GAS 통신 함수 (Base64 인코딩 및 업로드 로직 포함) ⭐
-// =========================================================================================
-
-// Blob 데이터를 Base64 문자열로 변환하는 함수
-// 주의: 브라우저/코덱에 따라 Base64 안에 URL-safe 문자(-, _)가 섞일 수 있으므로
-// 프론트에서 엄격한 정규식 검사를 하지 않습니다. 최종 정규화/검증은 GAS에서 처리합니다.
 function blobToBase64(blob) {
     return new Promise((resolve, reject) => {
         if (!blob || typeof blob.size !== 'number') {
@@ -2964,7 +2850,6 @@ function blobToBase64(blob) {
                 const commaIndex = result.indexOf(',');
                 let base64String = commaIndex >= 0 ? result.slice(commaIndex + 1) : result;
 
-                // 줄바꿈/공백만 제거합니다. +, /, =, -, _ 등은 GAS에서 안전 보정합니다.
                 base64String = String(base64String || '').replace(/\s/g, '');
 
                 if (!base64String) {
@@ -2988,9 +2873,6 @@ function blobToBase64(blob) {
     });
 }
 
-// 녹음 파일/결과영상을 드라이브에 업로드하고 연습일지에 링크를 기록하는 함수
-// 중요: POST는 no-cors로 보내므로 응답을 직접 읽을 수 없습니다.
-// 대신 requestId를 함께 보내고, 이후 JSONP로 GAS의 업로드 결과를 조회합니다.
 function createVocalUploadRequestId_() {
     const rand = Math.random().toString(36).slice(2, 10);
     return 'VOCAL_' + Date.now() + '_' + rand;
@@ -3017,7 +2899,6 @@ async function waitForVocalTrainingUploadResult_(requestId, timeoutMs = 60000) {
             }
             lastMessage = (result && result.message) || '';
         } catch (err) {
-            // pending 조회 중 일시적 실패는 잠깐 더 기다립니다.
             lastMessage = err && err.message ? err.message : String(err);
         }
         await new Promise(resolve => setTimeout(resolve, 2500));
@@ -3081,14 +2962,7 @@ async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeT
         body: JSON.stringify(payload)
     });
 
-    console.log('Drive upload request sent:', requestId);
 
-    // 빠른 완료 처리:
-    // 파일 업로드 자체는 no-cors POST로 이미 서버에 전달됩니다.
-    // 여기서 60~90초 동안 업로드 결과를 기다리면 실제 파일이 먼저 생성되어도
-    // 학생 화면에는 로딩창이 오래 남습니다.
-    // 따라서 최대 7초만 실제 생성 여부를 확인하고,
-    // 그 안에 확인되지 않으면 '요청 접수'로 처리해 화면을 즉시 종료합니다.
     try {
         return await waitForVocalTrainingUploadResult_(requestId, 7000);
     } catch (checkErr) {
@@ -3103,8 +2977,6 @@ async function uploadAudioToDriveAndLog(vocalId, sentenceText, base64Data, mimeT
     }
 }
 
-// 파일 업로드 없이 메타데이터만 전송하는 함수입니다.
-// 현재 연습완료 흐름은 실제 파일 업로드 성공 후 서버가 발성훈련연습일지에 직접 기록합니다.
 async function sendToGoogleSheet(vocalId, sentenceText, action) {
     if (!GOOGLE_APP_SCRIPT_URL || !GOOGLE_APP_SCRIPT_URL.includes('script.google.com/macros/s/')) {
         console.warn("Google Apps Script URL이 설정되지 않아 데이터 전송을 건너뜁니다.");
@@ -3137,15 +3009,11 @@ async function sendToGoogleSheet(vocalId, sentenceText, action) {
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify(payload)
         });
-        console.log('Vocal training meta logging attempted:', requestId);
     } catch (error) {
         console.error('Google Sheet meta logging failed:', error);
     }
 }
 
-// =========================================================================================
-// ⭐ 5. 탭 1 (상황극) 로직 ⭐
-// =========================================================================================
 
 const defaultEtude = { colors: [], places: [], emotions: [], relations: [], actions: [], lines: [] };
 const eData = (typeof etudeData !== 'undefined') ? etudeData : defaultEtude;
@@ -3169,7 +3037,7 @@ async function rollScene(){
     const newR = locks.relation ? currentData.r : pick(eData.relations || []);
     const newA = locks.action ? currentData.a : pick(eData.actions || []);
     const newL = locks.line ? currentData.l : pick(eData.lines || []);
-    
+
     currentData = {c:newC, p:newP, e:newE, r:newR, a:newA, l:newL};
 
     const promises = [];
@@ -3179,7 +3047,7 @@ async function rollScene(){
     if(!locks.relation && eData.relations) promises.push(spinText('relationDisplay', eData.relations, newR, 1800));
     if(!locks.action && eData.actions) promises.push(spinText('actionDisplay', eData.actions, newA, 2200));
     if(!locks.line && eData.lines) promises.push(spinText('lineDisplay', eData.lines, newL, 2600));
-    
+
     await Promise.all(promises);
     btn.disabled = false;
 }
@@ -3200,16 +3068,16 @@ function spinColor(val, dur){
         const text = document.getElementById('colorText');
         const start = Date.now();
         const int = setInterval(()=>{
-            if(Date.now()-start > dur){ 
-                clearInterval(int); 
-                bg.style.backgroundColor=val.code; 
-                text.textContent=val.name; 
-                r(); 
+            if(Date.now()-start > dur){
+                clearInterval(int);
+                bg.style.backgroundColor=val.code;
+                text.textContent=val.name;
+                r();
             }
-            else { 
-                const t=pick(eData.colors || []); 
-                bg.style.backgroundColor=t.code; 
-                text.textContent=t.name; 
+            else {
+                const t=pick(eData.colors || []);
+                bg.style.backgroundColor=t.code;
+                text.textContent=t.name;
             }
         }, 50);
     });
@@ -3233,7 +3101,6 @@ function saveScene(){
     document.getElementById("missionGrid").prepend(div);
 }
 
-// 상황극 미션을 이미지로 저장 및 공유하는 함수
 function shareSceneAsImage() {
     const targetElement = document.querySelector('.scene-main-card');
 
@@ -3268,61 +3135,49 @@ function shareSceneAsImage() {
 }
 
 
-// =========================================================================================
-// ⭐ 6. 탭 2 (캐릭터) 로직 ⭐
-// =========================================================================================
-
 let currentChar = null;
 function rollCharacter(gender) {
-    // 임시 데이터 (이미지 없을때 대비)
     const list = gender === 'male' ? [{name:"남성캐릭터", job:"직업", desc:"설명", id:1}] : [{name:"여성캐릭터", job:"직업", desc:"설명", id:1}];
-    const char = pick(list); 
+    const char = pick(list);
     currentChar = char; // 캐릭터 정보 저장
 
     const imgEl = document.getElementById("charImgDisplay");
     const placeholderEl = document.querySelector(".char-placeholder");
-    
-    // 로컬 경로 테스트용 (랜덤 이미지 경로)
-    const folder = gender === 'male' ? 'male' : 'female';
-    const newSrc = `appdata/character/${folder}/${Math.floor(Math.random()*10)+1}.jpg`; 
 
-    // 이미지 로드 완료 후 표시
+    const folder = gender === 'male' ? 'male' : 'female';
+    const newSrc = `appdata/character/${folder}/${Math.floor(Math.random()*10)+1}.jpg`;
+
     imgEl.onload = function(){
         placeholderEl.style.display = 'none';
         this.style.display = 'block';
     };
     imgEl.onerror = function(){
-        // 이미지 로드 실패 시 플레이스홀더 표시
         this.style.display = 'none';
         placeholderEl.style.display = 'block';
     };
-    
+
     imgEl.src = newSrc; // 새로운 이미지 경로 설정
-    
-    // 텍스트 랜덤
+
     document.getElementById("charNameDisplay").textContent = "랜덤 캐릭터";
     document.getElementById("charJobDisplay").textContent = "랜덤 직업";
     document.getElementById("charDescDisplay").textContent = "새로운 캐릭터가 소환되었습니다.";
 }
 
-// 수정된 saveCharacter() 함수: 이미지와 이름을 복제하여 저장 그리드에 추가
 function saveCharacter(){
     const charName = document.getElementById("charNameDisplay").textContent;
     const charImgSrc = document.getElementById("charImgDisplay").src;
     const isImageVisible = document.getElementById("charImgDisplay").style.display !== 'none';
-    
+
     if (charName === "캐릭터 이름") {
         return alert("먼저 '남자 뽑기' 또는 '여자 뽑기'를 진행해주세요!");
     }
-    
+
     const div = document.createElement("div"); div.className="mini-char-card";
-    
+
     let imageHtml;
     if (isImageVisible && charImgSrc && charImgSrc.includes('appdata/character')) {
-        // 이미지가 정상적으로 표시될 때만 mini-char-img를 사용
         imageHtml = `<img src="${charImgSrc}" class="mini-char-img" alt="${charName}">`;
     } else {
-        // 이미지가 없거나 로드되지 않았을 때는 회색 배경 유지
         imageHtml = `<div class="mini-char-img" style="display:flex; justify-content:center; align-items:center; color:#fff; font-size:10px;">이미지 없음</div>`;
     }
 
@@ -3332,11 +3187,10 @@ function saveCharacter(){
             ${charName}
         </div>
     `;
-    
+
     document.getElementById("charSaveGrid").prepend(div);
 }
 
-// 캐릭터 미션을 이미지로 저장 및 공유하는 함수
 function shareCharacterAsImage() {
     const targetElement = document.querySelector('#characterCard');
     const charName = document.getElementById("charNameDisplay").textContent;
@@ -3344,15 +3198,13 @@ function shareCharacterAsImage() {
     if (charName === "캐릭터 이름") {
         return alert("먼저 '남자 뽑기' 또는 '여자 뽑기'를 진행해야 이미지 저장이 가능합니다!");
     }
-    
+
     const charImg = document.getElementById("charImgDisplay");
-    
-    // 이미지가 아직 로드되지 않았으면 대기 (안전성 강화)
+
     if(charImg.style.display === 'none' || !charImg.complete) {
         return alert("이미지가 아직 로드되지 않았습니다. 잠시 후 다시 시도해주세요.");
     }
-    
-    // html2canvas 실행
+
     html2canvas(targetElement, {
         allowTaint: true,
         useCORS: true,
@@ -3362,7 +3214,6 @@ function shareCharacterAsImage() {
         const filename = `울림_캐릭터_미션_${charName}.png`;
 
         if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([], filename, {type: 'image/png'})] })) {
-            // Web Share API 지원 시 공유
             canvas.toBlob(function(blob) {
                 const filesArray = [new File([blob], filename, {type: 'image/png'})];
                 navigator.share({
@@ -3376,7 +3227,6 @@ function shareCharacterAsImage() {
                 });
             }, 'image/png');
         } else {
-            // 지원하지 않을 시 다운로드
             downloadImage(imageURL, filename);
         }
     }).catch(error => {
@@ -3386,21 +3236,15 @@ function shareCharacterAsImage() {
 }
 
 
-// =========================================================================================
-// ⭐ 7. 탭 3 (발성훈련) 로직 ⭐
-// =========================================================================================
-
 let step=0, currentTrainObj=null;
 let mediaRecorder, audioChunks = [], isRecording = false, startTime;
 let recognition;
 let recognitionResult = "";
 let lastRecordedBlob = null; // 녹음된 오디오 Blob 저장 변수
 
-// 0. 시스템 진단 (기존 코드 유지)
 const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 const isSpeechSupported = ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
 
-// 1. 유사도 계산 (기존 코드 유지)
 function getSimilarity(s1, s2) {
     const longer = s1.length > s2.length ? s1 : s2;
     const shorter = s1.length > s2.length ? s2 : s1;
@@ -3428,17 +3272,16 @@ function editDistance(s1, s2) {
     return costs[s2.length];
 }
 
-// 2. 음성인식 초기화 (기존 코드 유지)
 if (isSpeechSupported && !isIOS) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SpeechRecognition();
     recognition.lang = 'ko-KR';
     recognition.interimResults = false;
-    recognition.continuous = false; 
+    recognition.continuous = false;
 
     recognition.onresult = function(event) {
         recognitionResult = event.results[0][0].transcript;
-        updateRecognitionUI(); 
+        updateRecognitionUI();
     };
     recognition.onerror = function(event) { console.log("STT error:", event.error); };
 }
@@ -3450,9 +3293,9 @@ function updateRecognitionUI() {
         const inputClean = recognitionResult.replace(/[^가-힣]/g, '');
         const similarity = getSimilarity(targetClean, inputClean);
         const badge = document.getElementById('accBadge');
-        if (similarity >= 0.7) { 
+        if (similarity >= 0.7) {
             badge.className = 'accuracy-badge acc-good'; badge.textContent = '완벽합니다! (70%↑)';
-        } else if (similarity >= 0.3) { 
+        } else if (similarity >= 0.3) {
             badge.className = 'accuracy-badge acc-soso'; badge.textContent = '통과 (30%↑)';
         } else {
             badge.className = 'accuracy-badge acc-bad'; badge.textContent = '다시 시도';
@@ -3471,32 +3314,22 @@ function extractVowels(s){
     return out;
 }
 
-// 훈련 데이터 및 로컬 저장소 관련 함수
 const defaultVocalData = [{ id: 1, text: "데이터 로딩중...", pron: "...", audio: "" }];
 let trainDataList = (typeof vocalData !== 'undefined') ? vocalData : defaultVocalData;
 
-// 발성훈련 문장 조회 속도 개선용 클라이언트 캐시
-// 같은 학생/기기에서 짧은 시간 안에 발성훈련탭을 다시 열면 GAS 재조회 없이 즉시 표시합니다.
 const VOCAL_TRAINING_CLIENT_CACHE_TTL_MS = 10 * 60 * 1000;
 const VOCAL_TRAINING_CLIENT_CACHE_PREFIX = 'ulim_vocal_training_sentence_cache_v2_';
 
-// [1] 저장된 문장 ID를 로컬 스토리지에서 불러옴
 function getSavedVocalIds() {
     const ids = localStorage.getItem('savedVocalIds');
     return ids ? new Set(JSON.parse(ids)) : new Set();
 }
 
-// [2] 출석 및 문장 기록을 로컬 스토리지에서 불러옴 (Map 형태로 반환)
 function getVocalRecords() {
     const records = localStorage.getItem('vocalRecords');
     return records ? new Map(JSON.parse(records)) : new Map();
 }
 
-
-// [2-1] 서버 기반 100일 발성훈련 문장 관리
-// - 학생번호/이름+전화번호 기준으로 이전에 완료한 문장을 서버에서 제외합니다.
-// - 100일 주기마다 서버가 새로운 랜덤 100문장을 생성해 내려줍니다.
-/* 정리됨: 중복 함수 getTrainingStudentIdentity_ (기존 3114행 정의 제거) */
 
 function getTrainingStudentIdentityCacheKey_() {
     const ident = getTrainingStudentIdentity_();
@@ -3646,7 +3479,6 @@ async function recordServerTrainingSentenceComplete_() {
     }
 }
 
-// [3] 문장 저장 및 연습 완료 기록 (✅ 연습 완료 버튼 클릭 시)
 async function completeTraining() {
     const btnComplete = document.getElementById('btnComplete');
 
@@ -3763,8 +3595,6 @@ async function completeTraining() {
 }
 
 
-
-
 function resetTrainingProAudioUi_(message) {
     const proAudio = document.getElementById("proAudio");
     const proTime = document.getElementById("proTime");
@@ -3789,8 +3619,6 @@ async function safeSetTrainingProAudio_(audioUrl) {
     resetTrainingProAudioUi_(url ? "확인중" : "예시 없음");
     if (!url) return;
 
-    // GitHub Pages에서 없는 mp3를 audio.src에 바로 넣으면 콘솔 404와 오류 안내가 같이 튀는 문제가 있어
-    // 먼저 fetch로 존재 여부만 확인한 뒤, 실제 audio 태그에 넣습니다.
     try {
         const res = await fetch(url, { method: "GET", cache: "no-store" });
         if (!res || !res.ok) {
@@ -3820,8 +3648,7 @@ async function safeSetTrainingProAudio_(audioUrl) {
 
 async function trainNew(){
     if(typeof vocalData !== 'undefined') trainDataList = vocalData;
-    
-    // 새 문장 뽑을 때 달력 숨기기
+
     document.getElementById('calendarDisplayArea').style.display = 'none';
 
     try {
@@ -3852,7 +3679,7 @@ async function trainNew(){
     step=1;
     document.getElementById("btn_prev").disabled = true;
     document.getElementById("btn_next").disabled = false;
-    document.getElementById("train_origin").textContent = currentTrainObj.text; 
+    document.getElementById("train_origin").textContent = currentTrainObj.text;
     document.getElementById("recordBox").style.display = 'none';
     safeSetTrainingProAudio_(currentTrainObj.audio || "");
     lastRecordedBlob = null;
@@ -3861,26 +3688,24 @@ async function trainNew(){
     renderTrain();
 }
 
-// 단계 이동 함수
-function trainPrev(){ 
+function trainPrev(){
     if(step>1) {
-        step--; 
+        step--;
         renderTrain();
-    } 
+    }
 }
-function trainNext(){ 
+function trainNext(){
     if(step<6) {
-        step++; 
+        step++;
         renderTrain();
     }
 }
 
-// 버튼 활성화/비활성화 및 UI 렌더링
 function renderTrain(){
     const box = document.getElementById("train_card");
     const ind = document.getElementById("step_indicator");
-    const btnComplete = document.getElementById('btnComplete'); 
-    
+    const btnComplete = document.getElementById('btnComplete');
+
     const btnPrev = document.getElementById("btn_prev");
     const btnNext = document.getElementById("btn_next");
 
@@ -3899,7 +3724,7 @@ function renderTrain(){
 
     let showText = "";
     if (step <= 2) { showText = extractVowels(currentTrainObj.text); }
-    else if (step <= 6) { showText = currentTrainObj.pron || currentTrainObj.text; } 
+    else if (step <= 6) { showText = currentTrainObj.pron || currentTrainObj.text; }
 
     ind.textContent="STEP "+step;
     box.innerHTML=
@@ -3915,7 +3740,7 @@ function renderTrain(){
     const recStatus = document.getElementById("recStatus");
     const aiSection = document.getElementById("aiSection");
     const recSection = document.getElementById("recSection");
-    
+
     btnComplete.style.display = (step === 6) ? 'flex' : 'none';
 
     if(step === 6) {
@@ -3930,35 +3755,33 @@ function renderTrain(){
     }
 }
 
-// 달력 펼치기/숨기기 토글 함수
 async function toggleCalendar() {
     const calendarArea = document.getElementById('calendarDisplayArea');
     if (calendarArea.style.display === 'none') {
         const today = new Date();
         await loadStudentVocalPracticeLogsForMonth_(today.getFullYear(), today.getMonth());
-        renderCalendar(); 
+        renderCalendar();
         calendarArea.style.display = 'block';
     } else {
-        calendarArea.style.display = 'none'; 
+        calendarArea.style.display = 'none';
     }
 }
 
 
-// 달력 렌더링 로직
 function renderCalendar(year, month) {
     const today = new Date();
     const currentYear = year || today.getFullYear();
-    const currentMonth = month !== undefined ? month : today.getMonth(); 
-    
+    const currentMonth = month !== undefined ? month : today.getMonth();
+
     const firstDay = new Date(currentYear, currentMonth, 1);
     const lastDay = new Date(currentYear, currentMonth + 1, 0);
     const numDays = lastDay.getDate();
-    const startDayOfWeek = firstDay.getDay(); 
-    
-    const records = getVocalRecords(); 
+    const startDayOfWeek = firstDay.getDay();
+
+    const records = getVocalRecords();
     const container = document.getElementById('calendarContainer');
     container.innerHTML = '';
-    
+
     let table = `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
         <button onclick="renderCalendarWithServer_(${currentYear}, ${currentMonth === 0 ? 11 : currentMonth - 1})" style="background:#ddd; border:none; padding:5px 10px; border-radius:5px;">⬅</button>
         <h2 style="font-size: 18px; margin: 0;">${currentYear}. ${currentMonth + 1}</h2>
@@ -3967,7 +3790,7 @@ function renderCalendar(year, month) {
 
     table += '<table style="width: 100%; border-collapse: collapse; text-align: center; font-size: 15px;">';
     table += '<thead><tr style="background: #eee; height: 35px;"><th>일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th></tr></thead><tbody><tr>';
-    
+
     let day = 1;
     let cellCount = 0;
 
@@ -3980,25 +3803,23 @@ function renderCalendar(year, month) {
         if (cellCount % 7 === 0 && cellCount !== 0) {
             table += '</tr><tr>';
         }
-        
+
         const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        
+
         const currentDate = new Date(currentYear, currentMonth, day);
         const todayKey = today.toISOString().slice(0, 10);
-        
+
         const isToday = dateKey === todayKey;
-        const isPastOrToday = currentDate <= today || isToday; 
+        const isPastOrToday = currentDate <= today || isToday;
 
         let statusText = day;
         let background = '#fff';
         let title = dateKey;
         let onClickEvent = '';
-        
-        const record = records.get(dateKey); 
+
+        const record = records.get(dateKey);
         const serverLogs = getStudentVocalPracticeLogsByDate_(dateKey);
         const serverLog = serverLogs.length ? serverLogs[0] : null;
-        // 달력의 ★는 학생이 코멘트를 열어본 뒤에도 유지합니다.
-        // 열람 여부는 상단 "코멘트 도착" 알림에만 사용합니다.
         const hasTeacherComment = serverLogs.some(r => {
             return (Array.isArray(r.teacherEvaluations) && r.teacherEvaluations.some(e => String((e && (e.scoreJson || e.comment)) || '').trim())) || String(r.teacherComment || '').trim();
         });
@@ -4017,19 +3838,19 @@ function renderCalendar(year, month) {
             statusText = `<span style="font-weight:900; color:#ff6b6b;">X</span>`;
             background = '#fde9e9';
             title += '\n[미완료]';
-            onClickEvent = `onclick="displayDayRecord('${dateKey}', false)" style="cursor: pointer;"`; 
+            onClickEvent = `onclick="displayDayRecord('${dateKey}', false)" style="cursor: pointer;"`;
         }
 
         if (isToday) {
-            if (!hasTeacherComment) background = (record || serverLog) ? '#d0e9ff' : '#fffbe5'; 
+            if (!hasTeacherComment) background = (record || serverLog) ? '#d0e9ff' : '#fffbe5';
             statusText = statusText === day ? `<span style="font-weight:900; color:#2980b9;">${day}</span>` : statusText;
-            onClickEvent = `onclick="displayDayRecord('${dateKey}', ${!!(record || serverLog)})" style="cursor: pointer;"`; 
+            onClickEvent = `onclick="displayDayRecord('${dateKey}', ${!!(record || serverLog)})" style="cursor: pointer;"`;
         }
 
         table += `<td ${onClickEvent} style="border: 1px solid #eee; padding: 5px; background: ${background};" title="${title}">`;
         table += statusText;
         table += '</td>';
-        
+
         cellCount++;
     }
 
@@ -4037,13 +3858,12 @@ function renderCalendar(year, month) {
         table += '<td style="border: 1px solid #eee; padding: 5px;"></td>';
         cellCount++;
     }
-    
+
     table += '</tr></tbody></table>';
-    
+
     container.innerHTML = table;
 }
 
-// 문장 상세 기록 팝업
 function displayDayRecord(dateKey, isCompleted) {
     const records = getVocalRecords();
     const record = records.get(dateKey);
@@ -4093,7 +3913,6 @@ function displayDayRecord(dateKey, isCompleted) {
     box.style.display = 'flex';
 }
 
-// AI 체크 또는 녹음 실행을 분기하는 함수
 async function handleAction() {
     if(step === 6) { toggleRecord(); }
 }
@@ -4195,8 +4014,6 @@ function resetBtn() {
 function getBestAudioMimeType_() {
     if (!window.MediaRecorder || !MediaRecorder.isTypeSupported) return '';
 
-    // iPhone/Safari 호환을 위해 MP4 계열을 우선하고,
-    // Chrome/Android에서는 지원 가능한 WebM/Opus로 자동 전환합니다.
     const candidates = [
         'audio/mp4',
         'audio/aac',
@@ -4258,9 +4075,6 @@ function getExtensionFromMime_(mimeType, fallback = 'm4a') {
     return fallback || (isAudio ? 'm4a' : 'mp4');
 }
 
-/****************************************************
- * 5-5 발성훈련 안정화: 로컬 일반 분석 + 1일 1회 완료 제한
- ****************************************************/
 async function analyzeTrainingAudioBlobLocal_(audioBlob) {
     const fallbackDuration = getTrainingRecordedDurationSec_();
     const base = {
@@ -4347,8 +4161,6 @@ function buildTrainingFinalGeneralAnalysisText_(recognized, similarity, metrics)
 표준발음 참고: ${pron || '[문장을 입력하면 표준발음으로 변환합니다.]'}`;
 }
 
-/* 정리됨: 중복 함수 checkVocalTrainingTodayCompletedFromServer_ (기존 3891행 정의 제거) */
-
 
 function buildTrainingAiAnalysisText_(transcript) {
     const source = currentTrainObj ? String(currentTrainObj.text || '') : '';
@@ -4376,11 +4188,6 @@ function buildTrainingAiAnalysisText_(transcript) {
 }
 
 
-
-/**
- * Gemini 최종 AI 분석 실패 시 대체 결과를 만드는 안전 함수입니다.
- * 우선순위: Gemini 성공 결과 → 로컬 AI 분석 결과 → 안전멘트
- */
 function enableVocalTrainingCompleteButton_() {
     const btn = document.getElementById('btnComplete') ||
         document.getElementById('trainingCompleteBtn') ||
@@ -4487,7 +4294,6 @@ async function buildTrainingFinalLocalAiFallbackResult_(audioBlob, originalError
 }
 
 
-
 function buildTrainingFinalSafeFallbackResult_(originalError) {
     const scriptText = currentTrainObj ? String(currentTrainObj.text || '').trim() : '';
     const recognized = String(recognitionResult || '').trim();
@@ -4526,7 +4332,6 @@ function buildTrainingFinalSafeFallbackResult_(originalError) {
 }
 
 
-
 async function buildTrainingFinalFallbackResult_(audioBlob, originalError) {
     try {
         const localResult = await buildTrainingFinalLocalAiFallbackResult_(audioBlob, originalError);
@@ -4545,7 +4350,6 @@ async function ensureTrainingLocalWhisperAnalysis_() {
     }
     return buildTrainingAiAnalysisText_(recognitionResult);
 }
-
 
 
 function wrapCanvasText_(ctx, text, maxWidth) {
@@ -4643,33 +4447,16 @@ async function createTrainingResultVideoBlob_(audioBlob, originalText, analysisT
 let trainingFinalAiPollingTimer = null;
 let trainingFinalAiPollingCount = 0;
 
-/* 정리됨: 중복 함수 buildTrainingFinalRequestId_ (기존 4224행 정의 제거) */
-
 
 function sanitizeTrainingFinalUserMessage_(msg) {
     let text = String(msg || '').trim();
     if (!text) return '';
-    // 학생 화면에는 ETRI 주소, HTTP 코드, fallback 상세 오류를 노출하지 않습니다.
     if (/fallback\s*:|epretx\.etri\.re\.kr|WiseASR|HTTP\s*\d+|ETRI|AI 분석 서버에 연결하지 못했습니다|사용할 수 없는 주소|응답 JSON 파싱 실패/i.test(text)) {
         return '리미가 잠시 확인 중이에요.\n리미는 최선을 다했어요.';
     }
     return text.replace(/\s*\/\s*fallback\s*:.+$/i, '').trim();
 }
 
-/* 정리됨: 중복 함수 getTrainingFinalUserKey_ (기존 4238행 정의 제거) */
-
-
-/* 정리됨: 중복 함수 setTrainingAiLoadingState_ (기존 4247행 정의 제거) */
-
-
-/* 정리됨: 중복 함수 runTrainingFinalAiAnalysisFromButton (기존 4283행 정의 제거) */
-
-
-
-
-/* 정리됨: 중복 함수 runTrainingFinalAiAnalysis_ (기존 4346행 정의 제거) */
-
-/* 정리됨: 중복 함수 pollTrainingFinalAiResult_ (기존 4410행 정의 제거) */
 
 function renderTrainingFinalAiResult_(data) {
     data = data || {};
@@ -4729,7 +4516,6 @@ function renderTrainingFinalAiResult_(data) {
 }
 
 
-
 async function toggleRecord() {
     if(window.location.protocol === 'file:') return alert("서버 환경(http/https)에서만 마이크 사용 및 파일 공유가 가능합니다.");
     if (!isRecording) {
@@ -4745,11 +4531,11 @@ async function toggleRecord() {
             startTime = Date.now();
             isRecording = true;
             const btn = document.getElementById('micBtn');
-            btn.textContent = '⬛'; 
+            btn.textContent = '⬛';
             btn.classList.add('recording');
             document.getElementById('recStatus').textContent = "녹음 중...";
             setTrainingAiLoadingState_(false);
-            document.getElementById('resultBox').style.display='none'; 
+            document.getElementById('resultBox').style.display='none';
             const sttEl = document.getElementById('sttResult');
             const badge = document.getElementById('accBadge');
             if (sttEl) sttEl.textContent = '녹음 중입니다.';
@@ -4757,7 +4543,7 @@ async function toggleRecord() {
             mediaRecorder.addEventListener("dataavailable", e => { if (e.data && e.data.size) audioChunks.push(e.data); });
             mediaRecorder.addEventListener("stop", async () => {
                 const audioBlob = new Blob(audioChunks, { type: getActualRecorderMimeType_(mediaRecorder, options, 'audio/mp4') });
-                lastRecordedBlob = audioBlob; 
+                lastRecordedBlob = audioBlob;
                 const audioUrl = URL.createObjectURL(audioBlob);
                 const audio = document.getElementById('myAudio');
                 audio.src = audioUrl;
@@ -4787,13 +4573,11 @@ async function toggleRecord() {
 }
 if (isSpeechSupported) { recognition.onend = function() { isRecording = false; resetBtn(); }; }
 
-// 발성훈련 녹음 파일 공유 함수 (드라이브 업로드 포함)
 async function shareVocalResult() {
     if (!lastRecordedBlob || !currentTrainObj) {
         return alert("최종녹음을 완료한 뒤 공유할 수 있습니다.");
     }
-    
-    // 인증 확인 및 파일명 베이스 업데이트
+
     if (!currentFilenameBase || instructorName === '기본') {
          await promptAndAuthenticate();
          if (instructorName === '기본') return alert("인증 후 다시 시도해주세요.");
@@ -4802,14 +4586,12 @@ async function shareVocalResult() {
     const originalText = document.getElementById('train_origin').textContent;
     const mimeType = lastRecordedBlob.type;
     let extension = getExtensionFromMime_(mimeType, 'm4a'); // 실제 녹음 MIME 기준 확장자
-    // 부가 정보(예: ;codecs=opus)가 포함되어 있다면 해당 부분만 제거
     if (extension.includes(';')) {
         extension = extension.split(';')[0].trim();
     }
     const sanitizedFilenamePart = currentFilenameBase.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_\uAC00-\uD7A3]/g, '');
     const filename = `울림_발성훈련_${sanitizedFilenamePart}.${extension}`;
-    
-    // 1. 녹음 파일을 Base64로 인코딩 (GAS 전송 준비)
+
     const base64Data = await blobToBase64(lastRecordedBlob).catch(err => {
         console.error("Base64 Encoding Failed:", err);
         alert(`파일 인코딩 중 오류가 발생했습니다. (${err.message}) 전송을 중단합니다.`);
@@ -4818,20 +4600,18 @@ async function shareVocalResult() {
 
     if (!base64Data) return;
 
-    // 2. 구글 드라이브에 업로드 및 시트에 링크 기록
     await uploadAudioToDriveAndLog(
-        currentTrainObj.id, 
-        originalText.substring(0, 30) + "...", 
-        base64Data, 
+        currentTrainObj.id,
+        originalText.substring(0, 30) + "...",
+        base64Data,
         mimeType,
         "녹음 파일 업로드 및 링크 기록"
-    ); 
+    );
 
     alert("녹음 파일 업로드 요청을 보냈습니다.");
-    
-    // 3. (기존) 웹 공유 또는 다운로드 로직
+
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([], filename, {type: mimeType})] })) {
-        
+
         const audioFile = new File([lastRecordedBlob], filename, { type: mimeType });
 
         navigator.share({
@@ -4841,7 +4621,6 @@ async function shareVocalResult() {
         })
         .catch(error => {
             console.error('Sharing failed:', error);
-            // 공유 실패 시 다운로드로 대체
             const audioUrl = URL.createObjectURL(lastRecordedBlob);
             const link = document.createElement('a');
             link.download = filename;
@@ -4862,7 +4641,6 @@ async function shareVocalResult() {
     }
 }
 
-/* --- [탭 4] 기출문제 로직 --- */
 const defaultPast = { male: [], female: [] };
 const pData = (typeof pastQuestionData !== 'undefined') ? pastQuestionData : defaultPast;
 let pastCurrentQuestion = null;
@@ -5043,12 +4821,11 @@ function applyPastCustomScript() {
     syncPastCustomTextToDisplay_(true);
     alert('직접작성 대본이 적용되었습니다.');
 }
-/* --- [탭 4] 기출문제 녹음 기능 --- */
 let pastMediaRecorder, pastAudioChunks = [], isPastRecording = false, pastStartTime;
 
 async function togglePastRecord() {
     if(window.location.protocol === 'file:') return alert("브라우저 보안 정책상 서버 환경(http/https)에서만 마이크 사용이 가능합니다.");
-    
+
     const btn = document.getElementById('pastMicBtn');
     const status = document.getElementById('pastRecStatus');
     const resultBox = document.getElementById('pastResultBox');
@@ -5064,20 +4841,20 @@ async function togglePastRecord() {
         }
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            
+
             const options = pickSupportedAudioRecorderOptions_();
             pastMediaRecorder = new MediaRecorder(stream, options);
 
             pastAudioChunks = [];
-            
+
             pastMediaRecorder.start();
             pastStartTime = Date.now();
             isPastRecording = true;
 
-            btn.textContent = '⬛'; 
+            btn.textContent = '⬛';
             btn.classList.add('recording');
             status.textContent = "녹음 중...";
-            resultBox.style.display = 'none'; 
+            resultBox.style.display = 'none';
 
             pastMediaRecorder.addEventListener("dataavailable", e => pastAudioChunks.push(e.data));
 
@@ -5097,8 +4874,8 @@ async function togglePastRecord() {
                 audioEl.src = audioUrl;
 
                 timeDisplay.textContent = duration.toFixed(1) + "s";
-                
-                resultBox.style.display = 'block'; 
+
+                resultBox.style.display = 'block';
                 const uploadBtn = document.getElementById('pastUploadBtn');
                 const uploadStatus = document.getElementById('pastUploadStatus');
                 if (uploadBtn) {
@@ -5107,7 +4884,7 @@ async function togglePastRecord() {
                     uploadBtn.textContent = '📤 기출 녹음 업로드';
                 }
                 if (uploadStatus) uploadStatus.textContent = '녹음 완료.';
-                
+
                 stream.getTracks().forEach(track => track.stop());
             });
 
@@ -5235,7 +5012,6 @@ ${meta.lines}`;
         alert('기출 녹음 업로드 실패: ' + (err && err.message ? err.message : err));
     }
 }
-// 페이지 로드 시 달력과 현재 문장 초기화
 window.onload = async function() {
     await checkStudentName();  // 인증 먼저 완료
 
@@ -5250,21 +5026,10 @@ window.onload = async function() {
 
     renderCalendar();
 };
-/* 정리됨: 중복 함수 showLoading (기존 4717행 정의 제거) */
 
 
-/* 정리됨: 중복 함수 hideLoading (기존 4740행 정의 제거) */
-
-
-/* =========================================================
-   7.06 선택형 index 버전 확인
-   - 앱 실행 시 1회
-   - 학생/교직원 로그인 성공 후 1회
-   - 상단 로고 클릭 시 확인 후 새로고침
-   - GAS 버전 폴링 없음
-   ========================================================= */
-const ULIM_APP_VERSION = "2026.07.06.706.05";
-const ULIM_INDEX_BUILD_META = "20260706-practice-student-modal-fix-70605";
+const ULIM_APP_VERSION = "2026.07.06.706.06";
+const ULIM_INDEX_BUILD_META = "20260706-production-clean-70606";
 
 window.__ULIM_APP_VERSION__ = ULIM_APP_VERSION;
 window.__ULIM_INDEX_BUILD_META__ = ULIM_INDEX_BUILD_META;
@@ -5346,7 +5111,6 @@ async function updateUlimServiceWorker706_() {
 
         await registration.update();
     } catch (err) {
-        console.log("[ULIM VERSION] Service Worker 갱신 생략:", err);
     }
 }
 
@@ -5453,7 +5217,6 @@ async function checkUlimIndexVersion706_(options) {
             remoteBuild: remoteBuild || currentBuild
         };
     } catch (err) {
-        console.log("[ULIM VERSION] index 버전 확인 실패:", err);
 
         if (forceReload) {
             await reloadUlimWithVersion706_(
@@ -5495,11 +5258,8 @@ window.addEventListener("load", function () {
         forceReload: false,
         showProgress: false
     });
-}, { once: true });
-
-</script>
+}, { once: true });</script>
 <script>
-// 로그인 및 인증 오버레이 스크립트
 function showLoading(message = "처리 중...") {
     let el = document.getElementById("loadingOverlay");
     if (!el) {
@@ -5527,11 +5287,6 @@ function hideLoading() {
     if (el) el.style.display = "none";
 }
 
-// =========================================================================================
-// 📢 구글시트 연동 공지사항 팝업
-// - 학생부 GAS의 action=getNotices 응답을 읽어서 표시합니다.
-// - 공지사항 시트에서 사용여부, 기간, 우선순위로 관리합니다.
-// =========================================================================================
 
 let currentNoticeHideKey = "";
 
@@ -5609,7 +5364,6 @@ async function loadNoticesFromSheet(forceRefresh = false) {
 
 function preloadNoticesFromSheet() {
     loadNoticesFromSheet(false).catch(err => {
-        console.log("공지사항 사전 로딩 실패:", err);
     });
 }
 
@@ -5654,8 +5408,8 @@ function renderNoticeCard(notice) {
 
     if (notice.imageUrl) {
         html += `
-            <img 
-                src="${escapeHtml(notice.imageUrl)}" 
+            <img
+                src="${escapeHtml(notice.imageUrl)}"
                 alt="${escapeHtml(notice.title)}"
             >
         `;
@@ -5664,7 +5418,7 @@ function renderNoticeCard(notice) {
     if (notice.youtubeUrl) {
         html += `
             <div class="notice-youtube-wrap">
-                <iframe 
+                <iframe
                     src="${escapeHtml(notice.youtubeUrl)}"
                     title="${escapeHtml(notice.title)}"
                     allowfullscreen>
@@ -5828,13 +5582,6 @@ function showMainContent(isAuthenticated) {
         setTimeout(showNoticeIfNeeded, 0);
     }
 }
-/* 정리됨: 중복 함수 guestLogin (기존 5170행 정의 제거) */
-
-/* 정리됨: 중복 함수 authenticateStudentFromInputs (기존 5182행 정의 제거) */
-
-/* 정리됨: 중복 함수 authenticate (기존 5193행 정의 제거) */
-
-/* 정리됨: 중복 함수 checkStudentName (기존 5223행 정의 제거) */
 
 
 window.onload = async function() {
@@ -5858,10 +5605,6 @@ window.onload = async function() {
 };
 
 
-
-// =========================================================================================
-// 🔐 관리자 페이지 기능 v2 - 출석부 반영 / 선택 문자 / 일일평가
-// =========================================================================================
 let adminToken = localStorage.getItem('adminToken') || '';
 let adminModeActive = false;
 let adminInfo = (() => {
@@ -5876,8 +5619,6 @@ let adminNoticeClassStudentCache = {};
 let adminRoomReservations = [];
 let adminRoomSelectedMap = {};
 
-// 학생검색 탭 > 전체 공지 발송용 전체 반 목록입니다.
-// 날짜 기준 출석부가 아니라 학원 전체 개설반 기준으로 항상 표시합니다.
 const ADMIN_NOTICE_FIXED_CLASS_LIST = [
   "[김하은T] 토요일 초등 더빙반 (10:30~12:00)",
   "[김하은T] 토요일 청소년 초중급 (12:30~14:30)",
@@ -5916,7 +5657,6 @@ let adminDailyEvalTemplateLoaded = false;
 let adminClassListLoadedKey = '';
 const ADMIN_CLASS_LIST_CACHE_MS = 10 * 60 * 1000;
 const ADMIN_DAILY_TEMPLATE_CACHE_MS = 5 * 60 * 1000;
-// 연습실 예약은 처음 화면이 느리게 뜨는 것을 막기 위해 브라우저 캐시를 길게 두고, 백그라운드에서 갱신합니다.
 const ROOM_RESERVATION_CACHE_MS = 3 * 60 * 1000;
 const ROOM_RESERVATION_STALE_CACHE_MS = 60 * 60 * 1000;
 const roomReservationMemoryCache = {};
@@ -6004,8 +5744,6 @@ function openAdminPage() {
     const dashboard = document.getElementById('adminDashboard');
 
     if (adminToken) {
-        // 새로고침 직후에는 권한 확인 전까지 대시보드를 숨겨서
-        // 강사 계정에 관리자 전용 항목이 잠깐 보이는 현상을 막는다.
         if (loginBox) loginBox.style.display = 'none';
         if (dashboard) dashboard.style.display = adminInfo ? 'block' : 'none';
         adminLoadInitialData();
@@ -6364,11 +6102,6 @@ async function adminApi(action, params = {}) {
 }
 
 
-
-
-
-
-// 긴 한글/줄바꿈 데이터 저장용: Apps Script GET URL 길이 제한과 CORS 오류를 피하기 위해 no-cors POST로 전송합니다.
 async function adminPostNoCors(action, params = {}) {
     const payload = Object.assign({ action, _: Date.now() }, params || {});
     await fetch(GET_API_URL, {
@@ -6384,10 +6117,6 @@ async function adminPostNoCors(action, params = {}) {
 
     return { status: 'success', message: '저장 요청을 보냈습니다. 잠시 후 다시 불러오면 시트 반영 내용을 확인할 수 있습니다.' };
 }
-
-
-
-/* 정리됨: 중복 함수 adminLogin (기존 5749행 정의 제거) */
 
 
 function adminLogout() {
@@ -6435,8 +6164,6 @@ async function adminLoadInitialData() {
         if (loginBox) loginBox.style.display = 'none';
         if (dashboard) dashboard.style.display = 'block';
 
-        // 속도 개선: 로그인 직후에는 무거운 학생목록/출석부 조회를 자동 실행하지 않습니다.
-        // 필요한 탭을 열 때만 해당 데이터를 불러옵니다.
         if (adminIsTeacherMode()) {
             showAdminPanel('adminPanelAttendance');
         }
@@ -6499,7 +6226,6 @@ function adminFindStudentByNoName_(student) {
     let matches = list.filter(s => adminNormalizeKoreanName(s.name || s.studentName || '') === nameKey);
     if (no) matches = matches.filter(s => String(s.studentNo || s.attendanceNo || '').trim() === no);
 
-    // 학생번호도 중복될 수 있으므로 반명과 담당강사까지 확인합니다.
     const classKey = normalizeForClientMatch(student.className || student.currentClass || '');
     const teacherKey = normalizeForClientMatch(student.instructor || student.instructorName || '');
     if (matches.length > 1 && classKey) {
@@ -6780,12 +6506,10 @@ function adminBuildNoticeClassList() {
         }
     }
 
-    // 1) 고정 전체 반 목록: 날짜와 관계없이 항상 먼저 표시
     (ADMIN_NOTICE_FIXED_CLASS_LIST || []).forEach(name => {
         addClass(name, extractTeacherFromClassNameForNotice_(name));
     });
 
-    // 2) 출석부/학생부에서 추가로 발견되는 반도 병합
     (adminClassList || []).forEach(c => addClass(c.className, c.teacher));
 
     (adminStudents || []).forEach(s => {
@@ -6794,7 +6518,6 @@ function adminBuildNoticeClassList() {
             const raw = String(value || '').trim();
             if (!raw) return;
 
-            // 여러 반이 쉼표/줄바꿈으로 들어온 경우도 분리
             raw.split(/\n|,|;/).map(v => v.trim()).filter(Boolean).forEach(part => {
                 addClass(part, teacher);
             });
@@ -6917,9 +6640,6 @@ function adminCloseClassCombosOnOutsideClick(event) {
 document.addEventListener('click', adminCloseClassCombosOnOutsideClick);
 
 
-/* 정리됨: 중복 함수 adminRenderStudentDatalist (기존 6210행 정의 제거) */
-
-
 function adminStudentBelongsToCurrentTeacher(student) {
     if (!adminIsTeacherMode()) return true;
     const teacherKey = adminTeacherKey();
@@ -6936,8 +6656,6 @@ function adminFilteredStudents(inputId) {
     if (!keyword) return base;
     return base.filter(s => [s.name, s.studentNo, s.studentPhone, s.parentPhone, s.instructor, s.className, s.memo, adminStudentStatusLabel(s)].join(' ').toLowerCase().includes(keyword));
 }
-
-/* 정리됨: 중복 함수 adminRenderStudentTable (기존 6233행 정의 제거) */
 
 
 async function adminSendAbsenceForStudent(index) {
@@ -7082,8 +6800,6 @@ function adminNoticeTeacherMatches_(student, selectedClass) {
 }
 
 function adminNoticeGetStudentClassText_(student) {
-    // 학생명단의 현재반/반명 성격 필드만 사용합니다.
-    // 담당강사는 여기서 절대 섞지 않습니다.
     return [
         student.className,
         student.class,
@@ -7120,17 +6836,14 @@ function adminNoticeClassMatchScore_(studentClassText, selectedClass) {
 
         if (!candNorm && !candCoreNorm) return;
 
-        // 완전/포함 매칭
         if (candNorm && selectedNorm && (candNorm === selectedNorm || candNorm.includes(selectedNorm) || selectedNorm.includes(candNorm))) {
             best = Math.max(best, 100);
         }
 
-        // 강사/요일/시간을 제거한 핵심 반명 매칭
         if (candCoreNorm && selectedCoreNorm && (candCoreNorm === selectedCoreNorm || candCoreNorm.includes(selectedCoreNorm) || selectedCoreNorm.includes(candCoreNorm))) {
             best = Math.max(best, 90);
         }
 
-        // 핵심 단어 매칭. 예: 공채입문, 애니메이션더빙, 연기기초B 등
         if (selectedTokens.length > 0) {
             const hit = selectedTokens.filter(t => candNorm.includes(t) || candCoreNorm.includes(t)).length;
             const required = Math.min(2, selectedTokens.length);
@@ -7147,9 +6860,6 @@ function adminNoticeStudentMatchesClass_(student, selectedClass) {
     const selectedNorm = adminNoticeNormalize_(selectedClass);
     if (!selectedNorm || selectedNorm === adminNoticeNormalize_('전체반')) return true;
 
-    // 반 선택은 출석부에서 가져온 반명을 기준으로 하되,
-    // 학생 필터는 학생명단의 현재반/반명 필드와만 비교합니다.
-    // 담당강사명만 같다는 이유로 학생을 포함하지 않습니다.
     const studentClassText = adminNoticeGetStudentClassText_(student);
     if (!adminNoticeNormalize_(studentClassText)) return false;
 
@@ -7247,15 +6957,12 @@ async function adminLoadNoticeTargets(selectAll = true) {
         await adminEnsureStudentsLoaded(false);
 
         if (selectedClass) {
-            // 반 선택 시에는 학생명단의 반명 텍스트가 아니라 출석부 현재반 블록을 기준으로 학생을 불러옵니다.
             adminNoticeTargetRows = await adminLoadStudentsBySelectedClassFromAttendance_(selectedClass, keyword);
 
-            // 출석부 구조가 아직 해당 반을 못 찾는 예외 상황에서는 기존 학생명단 필터로 마지막 보정합니다.
             if (!adminNoticeTargetRows.length) {
                 adminNoticeTargetRows = adminGetNoticeFilteredStudents();
             }
         } else {
-            // 반 미선택 또는 전체반은 학생명단 기준. 이때 강사명 검색은 학생명단의 담당강사와 매칭됩니다.
             adminNoticeTargetRows = adminGetNoticeFilteredStudents();
         }
 
@@ -7302,8 +7009,6 @@ function adminSelectAllNoticeTargets(checked) {
 function adminGetCheckedNoticeTargets() {
     return (adminNoticeTargetRows || []).filter(s => adminNoticeSelectedMap[adminNoticeTargetKey(s)]);
 }
-
-/* 정리됨: 중복 함수 adminRenderNoticeTargetTable (기존 6582행 정의 제거) */
 
 
 function getNoticeRecipientTypes() {
@@ -7474,11 +7179,6 @@ async function adminSendAbsenceForNoticeTargets() {
 }
 
 
-
-
-// =========================================================================================
-// 🏢 관리자 연습실 예약 알림톡 탭 v66
-// =========================================================================================
 function adminGetRoomRecipientTypes() {
     const list = [];
     if (document.getElementById('roomRecipientStudent')?.checked) list.push('학생');
@@ -7514,7 +7214,6 @@ async function adminLoadRoomReservations(showOverlay = true, force = false) {
             });
             rows = Array.isArray(data.reservations) ? data.reservations : [];
         } catch (gasErr) {
-            // 학생부 GAS에서 시트 구조를 인식하지 못하는 경우, 기존 연습실 예약 GAS(JSONP) 데이터로 대체합니다.
             loadedBy = 'roomGas';
             const data = await roomJsonp({ action: 'getRoomReservations', year, month }, { cacheBust: force });
             const all = Array.isArray(data && data.reservations) ? data.reservations : [];
@@ -7775,7 +7474,6 @@ function showAdminPanel(panelId) {
 
     document.querySelectorAll('.admin-panel').forEach(panel => panel.classList.toggle('active', panel.id === panelId));
 
-    // 속도 개선: 탭을 열 때 필요한 데이터만 지연 로딩합니다.
     if (panelId === 'adminPanelStudents' && isFull && !adminStudentsLoaded) {
         adminLoadStudents(false, false);
     } else if (panelId === 'adminPanelStudents' && isFull) {
@@ -7796,7 +7494,6 @@ function showAdminPanel(panelId) {
         adminInitVocalPracticePanel_();
         adminLoadVocalPracticeLogs(false);
     }
-
 
 
     if (panelId === 'adminPanelClassroomUsage') {
@@ -7840,14 +7537,6 @@ async function adminLoadAttendanceSnapshot(showAlert = true) {
     }
 }
 
-/* 정리됨: 중복 함수 adminRenderAttendanceTable (기존 7163행 정의 제거) */
-
-
-/* 정리됨: 중복 함수 adminToggleAttendanceAll (기존 7181행 정의 제거) */
-
-
-/* 정리됨: 중복 함수 adminGetSelectedAttendanceRecords (기존 7185행 정의 제거) */
-
 
 function buildAttendanceMessageText(record) {
     const roomName = record.classroom || record.roomName || record.room || '';
@@ -7869,7 +7558,6 @@ function buildAttendanceMessageText(record) {
     if (effectiveStatus === '반이동') return `${record.studentName} 학생의 반 이동 안내입니다.\n${infoText}\n\n변경된 수업 정보를 확인해주세요.\n- 울림연기학원`;
     return `${record.studentName} 학생 출결 안내입니다.\n${infoText}\n출결상태 : ${effectiveStatus}\n\n출결 상태가 [${effectiveStatus}]로 확인되었습니다.\n- 울림연기학원`;
 }
-
 
 
 function adminGetSendChannel(kind) {
@@ -7907,8 +7595,6 @@ async function adminSendAttendanceMessages() {
     if (!confirm(`선택한 ${records.length}명의 출결 메시지를 [${recipientTypes.join(', ')}]에게 ${channelLabel}으로 발송할까요?`)) return;
     try {
         showLoading(`출결 ${channelLabel} 발송 중...`);
-        // 미리보기에서 본 문구와 실제 발송 문구가 달라지지 않도록
-        // 각 행의 최종 문자문구를 messageText로 함께 GAS에 전달합니다.
         const sendRecords = records.map(r => ({ ...r, messageText: buildAttendanceMessageText(r) }));
         const data = await adminApi('adminSendSelectedAttendanceMessages', { adminToken, recipientTypes: recipientTypes.join(','), sendChannel, records: JSON.stringify(sendRecords) });
         hideLoading();
@@ -8071,7 +7757,6 @@ function adminApplyDailyEvalTemplateReplacements_(template, student) {
 }
 
 
-
 function adminExtractDailyPart_(text, startLabels, endLabels) {
     const source = String(text || '');
     const starts = Array.isArray(startLabels) ? startLabels : [startLabels];
@@ -8166,7 +7851,6 @@ function adminDailyEvalExactKey(row) {
     const phone = String(row.studentPhone || '').replace(/[^0-9]/g, '');
     if (phone.length >= 8) return 'PHONE|' + phone;
 
-    // 학생번호는 전화번호 뒤 4자리처럼 중복될 수 있으므로 단독 키로 사용하지 않습니다.
     const no = String(row.studentNo || row.attendanceNo || '').trim();
     return [
         no ? 'NOCLASSNAME' : 'CLASSNAME',
@@ -8249,7 +7933,6 @@ async function adminLoadDailyEvalStudents() {
         showLoading('출석부 기준 현재 반 학생 불러오는 중...');
         let records = [];
 
-        // 날짜가 있는 출석부 기록이 있으면 출결 상태까지 포함해서 사용합니다.
         try {
             const data = await adminApi('adminGetAttendanceSnapshot', { adminToken, date, className, keyword, statusFilter: '' });
             records = data.records || [];
@@ -8283,7 +7966,6 @@ async function adminLoadDailyEvalStudents() {
             return;
         }
 
-        // 선택한 날짜에 출석 체크 칸이 없어도, 반 선택 시에는 출석부 현재반 블록에서 학생을 읽습니다.
         if (className && className !== '전체반') {
             const roster = await adminApi('adminGetStudentsByClass', { adminToken, className, keyword });
             const students = roster.students || [];
@@ -8329,8 +8011,6 @@ function adminRenderDailyEvalTable() {
     adminBuildDailyRowsFromStudents();
     adminRenderDailyEvalRows();
 }
-
-/* 정리됨: 중복 함수 adminRenderDailyEvalRows (기존 7617행 정의 제거) */
 
 
 function adminToggleDailyAll(checked) {
@@ -8457,11 +8137,6 @@ async function adminSavePayment() {
 }
 
 
-// =========================================================================================
-// ⭐ 9. 연습실 예약 기능 - JSONP 방식(CORS/권한 오류 최소화)
-// =========================================================================================
-// GitHub Pages에서는 Apps Script POST/fetch가 CORS/권한 문제처럼 보일 수 있으므로 JSONP GET 방식만 사용합니다.
-// 새 GAS 배포 주소로 바뀌면 아래 URL만 교체하세요.
 const ROOM_API_URL = GET_API_URL; // 학생부 GAS로 통합: 연습실 예약도 같은 웹앱에서 처리
 
 const ROOM_LIST = [
@@ -8572,7 +8247,6 @@ function roomJsonp(params, options = {}) {
         let timer = null;
         let done = false;
 
-        // JSONP 응답이 즉시 도착해도 안전하도록 cleanup을 콜백 등록 전에 먼저 선언합니다.
         function cleanup() {
             try {
                 if (timer) {
@@ -8635,7 +8309,6 @@ function roomJsonp(params, options = {}) {
 }
 
 
-
 function formatRoomDate(date) {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -8676,11 +8349,6 @@ function normalizeHourForMatch(value) {
     const match = text.match(/(\d{1,2})/);
     return match ? Number(match[1]) : null;
 }
-
-/* 정리됨: 중복 함수 getRoomCacheKey (기존 7946행 정의 제거) */
-
-
-/* 정리됨: 중복 함수 getRoomLocalStorageKey (기존 7950행 정의 제거) */
 
 
 function getRoomSlotKey(date, room, hour) {
@@ -8730,7 +8398,6 @@ function saveRoomReservationCache(cacheKey, data) {
     try {
         localStorage.setItem(getRoomLocalStorageKey(cacheKey), JSON.stringify(payload));
     } catch (e) {
-        // localStorage 용량 초과 시 메모리 캐시만 사용합니다.
     }
 }
 
@@ -8897,13 +8564,11 @@ async function loadRoomReservations(force = false) {
     const now = Date.now();
     let renderedCached = false;
 
-    // 1) 캐시가 있으면 먼저 즉시 렌더링합니다. 이게 체감 로딩 속도를 가장 크게 줄입니다.
     if (cached && now - Number(cached.savedAt || 0) < ROOM_RESERVATION_STALE_CACHE_MS) {
         applyRoomReservationData(cached);
         renderCurrentRoomReservationView();
         renderedCached = true;
 
-        // 충분히 최신이면 GAS 호출 자체를 생략합니다.
         if (now - Number(cached.savedAt || 0) < ROOM_RESERVATION_CACHE_MS) {
             return;
         }
@@ -8931,7 +8596,6 @@ async function loadRoomReservations(force = false) {
     } catch (e) {
         console.error(e);
 
-        // 캐시 화면이 이미 떠 있으면 오류 화면으로 덮어쓰지 않습니다.
         if (renderedCached) return;
 
         calendarEl.innerHTML = `
@@ -9157,8 +8821,6 @@ async function reserveRoomSlot(date, room, hour) {
         if (data && data.status === "success") {
             selectedRoomDate = date;
 
-            // 기존에는 여기서 한 달 전체 예약 현황을 다시 불러와서 느렸습니다.
-            // 이제는 성공한 예약 1건만 화면/캐시에 즉시 반영하고, 최신 전체 데이터는 뒤에서 조용히 갱신합니다.
             applyRoomReservationSuccessLocally(date, room, hour, data);
             renderRoomCalendar();
             renderRoomTimeTable(parseRoomDate(date));
@@ -9202,8 +8864,6 @@ async function cancelRoomReservation(id) {
         });
 
         if (data && data.status === "success") {
-            // 기존에는 취소 후 한 달 전체 예약 현황을 다시 불러와서 느렸습니다.
-            // 이제는 취소된 1건만 화면/캐시에서 즉시 제거하고, 최신 전체 데이터는 뒤에서 조용히 갱신합니다.
             removeLocalRoomReservationById(id);
             renderRoomCalendar();
 
@@ -9231,13 +8891,6 @@ async function cancelRoomReservation(id) {
 }
 
 
-
-/* ===========================
-   🎙️ 한국어 표준발음 자동치환 기능
-   - 직접 입력
-   - 선택형 OCR: Tesseract.js 온라인 로드
-   - 간단 STT/녹음 체크: 브라우저 지원 시 작동
-   =========================== */
 const PRON_CHO = ["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
 const PRON_JUNG = ["ㅏ","ㅐ","ㅑ","ㅒ","ㅓ","ㅔ","ㅕ","ㅖ","ㅗ","ㅘ","ㅙ","ㅚ","ㅛ","ㅜ","ㅝ","ㅞ","ㅟ","ㅠ","ㅡ","ㅢ","ㅣ"];
 const PRON_JONG = ["","ㄱ","ㄲ","ㄳ","ㄴ","ㄵ","ㄶ","ㄷ","ㄹ","ㄺ","ㄻ","ㄼ","ㄽ","ㄾ","ㄿ","ㅀ","ㅁ","ㅂ","ㅄ","ㅅ","ㅆ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
@@ -9258,8 +8911,6 @@ const PRON_CLUSTER_SPLIT = {
     "ㄺ":["ㄹ","ㄱ"], "ㄻ":["ㄹ","ㅁ"], "ㄼ":["ㄹ","ㅂ"], "ㄽ":["ㄹ","ㅅ"], "ㄾ":["ㄹ","ㅌ"], "ㄿ":["ㄹ","ㅍ"], "ㅀ":["ㄹ","ㅎ"], "ㅄ":["ㅂ","ㅅ"]
 };
 const PRON_EXCEPTION_WORDS = {
-    // 국립국어원 표준 발음법 예시와 연습에서 자주 다루는 낱말 위주 예외 사전입니다.
-    // 모르는 낱말은 억지로 바꾸지 않고, 안전한 규칙만 적용합니다.
     "꽃": { out:"꼳", rule:"받침 대표음", desc:"단독 또는 자음 앞에서 ㅊ 받침은 대표음 [ㄷ]으로 납니다." },
     "꽃이": { out:"꼬치", rule:"연음", desc:"받침 ㅊ이 뒤 음절의 빈 초성 자리로 이어져 [치]로 납니다." },
     "꽃을": { out:"꼬츨", rule:"연음", desc:"받침 ㅊ이 조사 '을'로 이어져 [츨]로 납니다." },
@@ -9352,7 +9003,6 @@ const PRON_EXCEPTION_WORDS = {
     "감기": { out:"감기", rule:"주의 단어", desc:"의미와 품사에 따라 발음 판단이 달라질 수 있어 자동 변환하지 않습니다." },
     "신고": { out:"신고", rule:"주의 단어", desc:"의미에 따라 발음이 달라질 수 있어 자동 변환하지 않습니다." }
 };
-// 조사 '의'를 수업용 자연 발음 [에]로 바꾸되, 단어 내부의 '의'는 보호합니다.
 const PRON_PARTICLE_UI_EXCLUDE_WORDS = new Set([
     "의", "의의", "주의", "민주주의", "자유주의", "사회주의", "개인주의",
     "회의", "강의", "문의", "정의", "동의", "합의", "항의", "건의", "토의", "협의", "논의", "상의",
@@ -9745,8 +9395,6 @@ function pronTryParticleUiToE(word, rules) {
     const base = word.slice(0, -1);
     if (!/[가-힣]$/.test(base)) return null;
 
-    // 조사 '의'의 허용 발음 [에]를 우선 적용한 뒤, 앞말 받침과 자연스럽게 연음합니다.
-    // 예: 집의 -> 집에 -> 지베, 빛의 -> 빛에 -> 비체
     const subRules = [];
     const candidate = base + '에';
     const converted = pronApplyGeneralRulesToWord(candidate, subRules);
@@ -9760,26 +9408,21 @@ function pronApplyHieutRules(parts, rules) {
     for (let i = 0; i < parts.length - 1; i++) {
         const a = parts[i], b = parts[i + 1];
         if (a.raw || b.raw || !a.jong) continue;
-        // 표준발음법 제12항 ①②③: ㅎ(ㄶ, ㅀ) 받침 + 뒤 자음
         if (a.jong === "ㅎ" || a.jong === "ㄶ" || a.jong === "ㅀ") {
             if (b.cho === "ㅇ") {
-                // ㅎ 받침이 모음 앞에서 탈락 (ㄶ->ㄴ, ㅀ->ㄹ)
                 const old = pronPartsToString(parts);
                 a.jong = a.jong === "ㅎ" ? "" : (a.jong === "ㄶ" ? "ㄴ" : "ㄹ");
                 const now = pronPartsToString(parts);
                 if (old !== now) pronAddRule(rules, "ㅎ 탈락", old, now, "ㅎ 받침이 모음 앞에서 탈락하거나 약해집니다.");
             } else if ({"ㄱ":"ㅋ", "ㄷ":"ㅌ", "ㅈ":"ㅊ"}[b.cho]) {
-                // ㅎ 받침 + 뒤 평음 ㄱ,ㄷ,ㅈ -> 거센소리 축약
                 const old = pronPartsToString(parts);
                 b.cho = {"ㄱ":"ㅋ", "ㄷ":"ㅌ", "ㅈ":"ㅊ"}[b.cho];
                 a.jong = a.jong === "ㅎ" ? "" : (a.jong === "ㄶ" ? "ㄴ" : "ㄹ");
                 const now = pronPartsToString(parts);
                 if (old !== now) pronAddRule(rules, "ㅎ 축약", old, now, "ㅎ 받침과 뒤 자음이 만나 거센소리로 축약됩니다.");
             }
-        // 표준발음법 제12항 ③: 앞 받침 ㄱ,ㄷ,ㅂ,ㅈ + 뒤 초성 ㅎ -> 거센소리 (각하,맏형,좁히다,맞히다)
         } else if (b.cho === "ㅎ") {
             const aspMap = {"ㄱ":"ㅋ", "ㄷ":"ㅌ", "ㅂ":"ㅍ", "ㅈ":"ㅊ"};
-            // 앞 받침의 대표음으로 확인
             const repMap = {"ㄱ":"ㄱ","ㄲ":"ㄱ","ㄳ":"ㄱ","ㄺ":"ㄱ","ㄷ":"ㄷ","ㅅ":"ㄷ","ㅆ":"ㄷ","ㅈ":"ㄷ","ㅊ":"ㄷ","ㅌ":"ㄷ","ㅂ":"ㅂ","ㅍ":"ㅂ","ㄼ":"ㅂ","ㄿ":"ㅂ","ㅄ":"ㅂ"};
             const jongrep = repMap[a.jong];
             if (jongrep && aspMap[jongrep]) {
@@ -10213,7 +9856,6 @@ async function pronRunWhisperTranscription() {
 }
 
 function pronPollWhisperResult(requestId) {
-    // 로컬 분석 방식에서는 서버 결과 조회를 사용하지 않습니다.
     return;
 }
 
@@ -10236,7 +9878,6 @@ function pronGetDeviceKey() {
     }
     return key;
 }
-/* 정리됨: 중복 함수 pronGetEtriUserKey (기존 9445행 정의 제거) */
 
 function pronTodayKey() {
     const d = new Date();
@@ -10418,16 +10059,6 @@ function pronJsonpRequest(params, timeoutMs = 12000) {
     });
 }
 
-/* 정리됨: 중복 함수 pronRefreshEtriUsage (기존 9598행 정의 제거) */
-
-/* 정리됨: 중복 함수 pronRunEtriAdvancedAnalysis (기존 9612행 정의 제거) */
-
-/* 정리됨: 중복 함수 pronPollEtriResult (기존 9670행 정의 제거) */
-
-/* 정리됨: 중복 함수 pronRenderEtriResult (기존 9704행 정의 제거) */
-
-
-
 
 async function pronStartVoiceCheck() {
     const status = document.getElementById("pronVoiceStatus");
@@ -10518,8 +10149,6 @@ function initializeRoomReservationFeature() {
 }
 
 initializeRoomReservationFeature();
-
-
 </script>
 <script>
 window.registerRoomPushTokenManual = async function () {
@@ -10562,8 +10191,7 @@ const token = await getToken(messaging, {
       return;
   }
     localStorage.setItem("fcmToken", token);
-    console.log("FCM TOKEN =", token);
-     
+
 
     const callbackName = "pushCallback_" + Date.now();
 
@@ -10592,15 +10220,9 @@ const token = await getToken(messaging, {
     console.error(err);
     alert("푸시 알림 등록 오류: " + err.message);
   }
-};
-</script>
+};</script>
 
 <script type="module">
-// ================================================================
-// 울림앱 AI 분석 STT 어댑터
-// - 외부 음성 API를 호출하지 않고 브라우저 안에서 음성인식 모델을 실행합니다.
-// - 첫 실행 시 모델 다운로드가 필요하며, 이후 브라우저 캐시에 재사용됩니다.
-// ================================================================
 const ULIM_WHISPER_CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.6/dist/transformers.min.js';
 let ulimWhisperPipelinePromise = null;
 let ulimWhisperLibPromise = null;
@@ -10693,16 +10315,10 @@ window.UlimLocalWhisper = {
     onStatus && onStatus('AI 분석 완료');
     return { text: String(text || '').trim(), raw: result, model, local: true };
   }
-};
-</script>
+};</script>
 
-<!-- V110 표준발음법 보강 패치: v108+v109 통합, ㅇ 연음 방지, ㅎ 축약/구개음화/어절 경계 보강 -->
+
 <script>
-/* ===========================
-   표준발음 탭 V110 보강 패치
-   - v108 첨부 코드의 ㅎ 축약 장점 + v109의 ㅇ 연음 방지 통합
-   - 국립국어원 표준발음법 제12~15, 17, 18~20, 23항 중심 보강
-   =========================== */
 (function(){
   if (typeof PRON_EXCEPTION_WORDS !== 'undefined') {
     Object.assign(PRON_EXCEPTION_WORDS, {
@@ -10796,7 +10412,6 @@ window.UlimLocalWhisper = {
       const a = parts[i], b = parts[i + 1];
       if (a.raw || b.raw || !a.jong) continue;
 
-      // 뒤 초성 ㅎ: 앞 받침 + ㅎ 축약
       if (b.cho === "ㅎ") {
         const old = pronPartsToString(parts);
         let changed = false;
@@ -10807,7 +10422,6 @@ window.UlimLocalWhisper = {
             a.jong = pair[0];
             b.cho = pair[1];
           } else {
-            // ㄶ/ㅀ + ㅎ은 일반적 조합은 드물지만 ㅎ 성분을 우선 탈락시켜 안전 처리
             a.jong = pair[0];
           }
           changed = true;
@@ -10836,7 +10450,6 @@ window.UlimLocalWhisper = {
         }
       }
 
-      // 앞 받침 ㅎ/ㄶ/ㅀ: 뒤 자음과 결합 또는 ㅎ 탈락
       if (a.jong === "ㅎ" || a.jong === "ㄶ" || a.jong === "ㅀ") {
         const keep = a.jong === "ㅎ" ? "" : (a.jong === "ㄶ" ? "ㄴ" : "ㄹ");
         if (b.cho === "ㅇ") {
@@ -10940,7 +10553,6 @@ window.UlimLocalWhisper = {
         const now = pronPartsToString(parts);
         if (old !== now) pronV110Rule(rules, "비음화", old, now, "받침 ㄱ·ㄷ·ㅂ이 ㄴ·ㅁ 앞에서 각각 ㅇ·ㄴ·ㅁ으로 바뀝니다.");
       }
-      // ㄹ의 비음화: ㄱ/ㅂ 뒤 ㄹ이 올 때 ㄴ으로 시작한 뒤 비음화가 연쇄됩니다. 예: 막론→망논, 협력→혐녁
       if (b.cho === "ㄹ" && (a.jong === "ㄱ" || a.jong === "ㅂ")) {
         const old = pronPartsToString(parts);
         b.cho = "ㄴ";
@@ -11036,9 +10648,7 @@ window.UlimLocalWhisper = {
       b.cho = asp;
       chars[i] = pronCompose(a.cho, a.jung, a.jong);
       chars[j] = pronCompose(b.cho, b.jung, b.jong);
-      // 실제 이어 읽기 발음 표기에서는 해당 ㅎ 축약 구간의 공백을 제거해 한 호흡의 발음형으로 보여 줍니다.
       chars.splice(i + 1, j - i - 1);
-      // 예: 옷 한 벌→오탄벌, 꽃 한 송이→꼬탄송이처럼 '한' 뒤의 단위 명사까지 한 덩어리로 보여 줍니다.
       const mergedHIndex = i + 1;
       if (chars[mergedHIndex + 1] && /\s/.test(chars[mergedHIndex + 1])) {
         const prevComposed = pronDecompose(chars[mergedHIndex]);
@@ -11076,19 +10686,11 @@ window.UlimLocalWhisper = {
     });
     return { converted, rules: cleanedRules };
   };
-})();
-</script>
+})();</script>
 
 
 <script>
 
-/* ===========================
-   표준발음 탭 V111 재점검 패치
-   핵심: 내부 음절 초성 ㅇ을 무조건 연음하지 않음.
-   - 연음은 조사·어미·접미사로 확인되는 경계에서만 적용
-   - ㅇ 받침은 초성으로 이동 금지
-   - '윤영양'처럼 이름+호칭 '양'은 사전 예외로 처리
-   =========================== */
 (function(){
   if (typeof PRON_EXCEPTION_WORDS !== 'undefined') {
     Object.assign(PRON_EXCEPTION_WORDS, {
@@ -11146,8 +10748,6 @@ window.UlimLocalWhisper = {
   }
 
 
-
-  // V111 보강: ㄶ/ㅀ + 모음형식 형태소에서는 ㅎ이 탈락하고 ㄴ/ㄹ이 연음된다. 예: 많아→마나, 싫어→시러.
   window.pronAttachPronouncedSuffix = pronAttachPronouncedSuffix = function(baseOut, suffix) {
     if (!baseOut || !suffix) return baseOut + suffix;
     const parts = pronWordToParts(baseOut + suffix);
@@ -11187,7 +10787,6 @@ window.UlimLocalWhisper = {
       pronApplyHieutRules(parts, rules);
       if (typeof pronApplyAspiratedPalatalization === 'function') pronApplyAspiratedPalatalization(parts, rules);
       pronApplyPalatalization(parts, rules);
-      // V111 핵심: 이 단계에서 pronApplyLiaison을 호출하지 않는다.
       pronApplyFinalRepresentative(parts, rules);
       pronApplyNasalization(parts, rules);
       pronApplyLiquidization(parts, rules);
@@ -11231,7 +10830,6 @@ window.UlimLocalWhisper = {
     if (typeof PRON_PARTICLE_UI_EXCLUDE_WORDS !== 'undefined' && PRON_PARTICLE_UI_EXCLUDE_WORDS.has(word)) return null;
     const base = word.slice(0, -1);
     if (!/[가-힣]$/.test(base)) return null;
-    // 사전 예외가 있는 고유명/호칭 구조는 완성 예외를 우선한다.
     const direct = pronLookupException(word, rules);
     if (direct !== null) return direct;
     const candidate = base + "에";
@@ -11245,7 +10843,6 @@ window.UlimLocalWhisper = {
     for (const suffix of PRON_V111_JOSA_SUFFIXES) {
       if (!word.endsWith(suffix) || word.length <= suffix.length) continue;
       const base = word.slice(0, -suffix.length);
-      // 단순어 오판 방지: 사전에 '주의 단어'로 둔 항목은 쪼개지 않는다.
       const entry = (typeof PRON_EXCEPTION_WORDS !== 'undefined') ? PRON_EXCEPTION_WORDS[word] : null;
       if (entry && entry.rule === "주의 단어") return null;
       return pronV111AttachSuffixSurface(base, suffix, rules, word);
@@ -11268,7 +10865,6 @@ window.UlimLocalWhisper = {
     const particleUi = pronV111TryParticleUiToE(word, rules);
     if (particleUi !== null) return particleUi;
 
-    // 사전 예외 + 조사 연결은 기존 함수를 활용하되, '의'는 위에서 처리한다.
     const dict = pronTryDictionaryWithSuffix(word, rules);
     if (dict !== null) return pronV111ApplyRulesNoInternalLiaison(dict, rules);
 
@@ -11330,12 +10926,6 @@ window.UlimLocalWhisper = {
 })();
 
 
-/* ===========================
-   V112 표준발음 구조 전환 패치
-   - g2pK식 '원칙/수업용 자연' 분리
-   - 내부 연음 재허용, 단 받침 ㅇ 연음 금지
-   - 제15항 실질 형태소·제29항 ㄴ첨가·형태소 경계 예외 사전 보강
-   =========================== */
 (function(){
   if (typeof pronWordToParts !== 'function' || typeof pronPartsToString !== 'function') return;
 
@@ -11363,14 +10953,11 @@ window.UlimLocalWhisper = {
     return cleaned;
   }
 
-  // V112 사전: 규칙만으로는 품사·합성어 경계를 알 수 없는 표준발음 핵심 항목.
   const V112_WORD_EXCEPTIONS = {
-    // 사용자 검증 핵심
     "윤영양": { out:"윤영냥", rule:"ㄴ첨가", desc:"이름+호칭 '양' 경계에서 [냥]으로 발음되는 수업용 고유명 처리입니다." },
     "윤영양의": { out:"윤영냥에", rule:"ㄴ첨가+조사 의 허용 발음", desc:"윤영양[윤영냥] 뒤 관형격 조사 '의'는 수업용 자연 발음 [에]로 표시합니다." },
     "윤영양에는": { out:"윤영냥에는", rule:"ㄴ첨가+연결", desc:"윤영양[윤영냥] 뒤 조사 연결형입니다." },
 
-    // g2pK README 및 표준 규정 빈출
     "맑았는데": { out:"말간는데", rule:"겹받침+비음화", desc:"맑-은 모음 어미 앞에서 [말ㄱ] 계열로 난 뒤 ㄱ이 ㄴ 앞에서 비음화됩니다." },
     "날씨가": { out:"날씨가", rule:"주의 단어", desc:"단어 내부의 된소리 표기는 이미 표기에 반영되어 있습니다." },
     "오늘은": { out:"오느른", rule:"연음", desc:"받침 ㄹ이 조사 '은'으로 이어집니다." },
@@ -11381,7 +10968,6 @@ window.UlimLocalWhisper = {
     "있습니다": { out:"읻씀니다", rule:"받침 대표음+경음화+비음화", desc:"있- 뒤 ㅅ은 된소리되고, ㅂ은 ㄴ 앞에서 비음화합니다." },
     "계산이": { out:"계사니", rule:"연음", desc:"받침 ㄴ이 조사 '이'로 이어집니다." },
 
-    // 제15항 실질 형태소 계열
     "밭아래": { out:"바다래", rule:"제15항 실질 형태소", desc:"받침 뒤 실질 형태소 '아래'가 이어져 대표음으로 바꾸어 뒤 음절 첫소리로 옮깁니다." },
     "밭아래에": { out:"바다래에", rule:"제15항 실질 형태소", desc:"밭 아래[바다래] 계열입니다." },
     "맛없다": { out:"마덥따", rule:"제15항 실질 형태소", desc:"맛+없다는 원칙 [마덥따]이며 [마싣따]도 허용됩니다." },
@@ -11395,7 +10981,6 @@ window.UlimLocalWhisper = {
     "값어치": { out:"가버치", rule:"제15항 실질 형태소", desc:"값+어치에서 겹받침의 대표 계열 ㅂ이 뒤로 옮겨집니다." },
     "값있는": { out:"가빈는", rule:"제15항+비음화", desc:"값+있는에서 ㅂ이 뒤로 옮겨지고, 뒤 받침은 ㄴ 앞에서 비음화됩니다." },
 
-    // 제12항 ㅎ 축약·탈락 보강
     "가득하다": { out:"가드카다", rule:"ㅎ 축약", desc:"ㄱ 받침 뒤 ㅎ이 이어져 [ㅋ]으로 축약됩니다." },
     "숱하다": { out:"수타다", rule:"ㅎ 축약", desc:"ㅌ 계열 받침과 ㅎ이 만나 [ㅌ]으로 납니다." },
     "좋아합니다": { out:"조아함니다", rule:"ㅎ 탈락+비음화", desc:"좋아는 [조아], 합니다는 [함니다]로 납니다." },
@@ -11414,7 +10999,6 @@ window.UlimLocalWhisper = {
     "입학": { out:"이팍", rule:"ㅎ 축약", desc:"ㅂ+ㅎ이 [ㅍ]으로 축약됩니다." },
     "급하다": { out:"그파다", rule:"ㅎ 축약", desc:"ㅂ+ㅎ이 [ㅍ]으로 축약됩니다." },
 
-    // 제29항 ㄴ첨가 및 사잇소리 계열
     "막일": { out:"망닐", rule:"ㄴ첨가+비음화", desc:"합성어 경계에서 ㄴ이 첨가되고 ㄱ이 ㄴ 앞에서 [ㅇ]으로 비음화합니다." },
     "삯일": { out:"상닐", rule:"ㄴ첨가+비음화", desc:"ㄳ은 대표음 ㄱ이 된 뒤 ㄴ 앞에서 [ㅇ]으로 비음화합니다." },
     "색연필": { out:"생년필", rule:"ㄴ첨가+비음화", desc:"색+연필에서 ㄴ첨가 후 ㄱ이 ㄴ 앞에서 [ㅇ]으로 비음화합니다." },
@@ -11433,7 +11017,6 @@ window.UlimLocalWhisper = {
     "야금야금": { out:"야금냐금", rule:"ㄴ첨가 허용", desc:"야금야금은 [야금냐금/야그먀금]이 가능합니다." },
     "욜랑욜랑": { out:"욜랑뇰랑", rule:"ㄴ첨가 허용", desc:"욜랑욜랑은 [욜랑뇰랑/욜랑욜랑]이 가능합니다." },
 
-    // 형태소·품사 문맥 경음화/주의
     "신고": { out:"신고", rule:"주의 단어", desc:"명사 '신고'는 [신고], 용언 '신고'는 문맥에 따라 [신꼬]가 됩니다." },
     "혼인": { out:"호닌", rule:"ㄴ첨가/연음 관용", desc:"혼인은 [호닌]으로 처리합니다." },
     "혼인신고": { out:"호닌신고", rule:"문맥 주의", desc:"명사구 '혼인 신고'에서 신고는 [신고]로 둡니다." }
@@ -11444,7 +11027,6 @@ window.UlimLocalWhisper = {
   }
 
 
-  // V113: 우리말배움터 실측 결과 기반 보강 사전
   const V113_WORD_EXCEPTIONS = {
     "우리의": { out:"우리에/우리이", rule:"조사 의 허용 발음", desc:"우리말배움터 단어 단독 결과는 [우리에/우리이]처럼 복수 허용 발음을 표시합니다." },
     "민주주의의": { out:"민주주이에", rule:"ㅢ 발음+조사 의 허용 발음", desc:"비첫음절 ㅢ는 [이]로, 뒤 관형격 조사 의는 [에]로 처리합니다." },
@@ -11482,8 +11064,6 @@ window.UlimLocalWhisper = {
   };
 
 
-
-  // V113: pronunciation.nara-speller.co.kr 실측 대조값 기반 구/문장 보강
   const V113_PHRASE_EXCEPTIONS = {
     "우리의 생각은": { out:"우리이 생가근", rule:"우리말배움터 대조값", desc:"문장 입력 시 우리말배움터는 '우리의'를 [우리이]로 출력했습니다." },
     "회의의 결과": { out:"회이에 결과", rule:"우리말배움터 대조값", desc:"회의의 결과 실측 출력입니다." },
@@ -11501,7 +11081,6 @@ window.UlimLocalWhisper = {
   };
   Object.keys(V113_PHRASE_EXCEPTIONS).forEach(k => { V112_PHRASE_EXCEPTIONS[k] = V113_PHRASE_EXCEPTIONS[k]; });
 
-  // 받침 ㅇ은 초성으로 연음하지 않는다. ㄶ/ㅀ은 모음 앞에서 ㅎ이 탈락하고 ㄴ/ㄹ이 연음된다.
   window.pronAttachPronouncedSuffix = pronAttachPronouncedSuffix = function(baseOut, suffix) {
     if (!baseOut || !suffix) return String(baseOut || '') + String(suffix || '');
     const parts = pronWordToParts(baseOut + suffix);
@@ -11596,7 +11175,6 @@ window.UlimLocalWhisper = {
     const ui = v112TryParticleUiToE(word, rules, mode);
     if (ui !== null) return ui;
 
-    // 사전+조사 연결. 원칙 모드에서는 '나의→나에'류는 배제한다.
     if (mode === 'natural' && typeof pronTryDictionaryWithSuffix === 'function') {
       const dict = pronTryDictionaryWithSuffix(word, rules);
       if (dict !== null) return v112ApplyRules(dict, rules);
@@ -11655,7 +11233,6 @@ window.UlimLocalWhisper = {
     };
   };
 
-  // 표준발음 탭 출력은 원칙 표준발음과 수업용 자연 발음이 다를 때 둘 다 표시한다.
   if (typeof pronConvertInput === 'function') {
     window.pronConvertInput = pronConvertInput = function() {
       const input = document.getElementById("pronInputText");
@@ -11683,10 +11260,6 @@ window.UlimLocalWhisper = {
 })();
 
 
-
-/* ===========================
-   발성훈련 단일 연습로그 / 코멘트 연동
-   =========================== */
 let studentVocalPracticeLogMap = new Map();
 let studentVocalPracticeLoadedKey = '';
 let adminVocalPracticeLogs = [];
@@ -11708,8 +11281,6 @@ async function renderCalendarWithServer_(year, month) {
 function getStudentVocalPracticeLogsByDate_(dateKey) {
     return studentVocalPracticeLogMap.get(dateKey) || [];
 }
-
-/* 정리됨: 중복 함수 loadStudentVocalPracticeLogsForMonth_ (기존 11014행 정의 제거) */
 
 
 function adminInitVocalPracticePanel_() {
@@ -11735,8 +11306,6 @@ async function adminLoadVocalPracticeLogs(showOverlay = true) {
     }
 }
 
-/* 정리됨: 중복 함수 adminRenderVocalPracticeLogs (기존 11069행 정의 제거) */
-
 
 async function adminSaveVocalPracticeComment(index) {
     const log = adminVocalPracticeLogs[index];
@@ -11759,16 +11328,6 @@ async function adminSaveVocalPracticeComment(index) {
     }
 }
 
-
-
-
-/* =========================================================
-   울림앱 2차 패치 - 교직원 화면 출석체크 O/X → 출석부 즉시 반영
-   적용 위치:
-   1) index.html의 기존 관리자 페이지 스크립트 영역 아래쪽에 그대로 붙여넣기
-   2) 기존 adminRenderAttendanceTable / adminGetSelectedAttendanceRecords / adminSaveAttendance가 있더라도
-      이 코드가 뒤에서 같은 이름으로 덮어쓰기 때문에 삭제하지 않아도 됩니다.
-   ========================================================= */
 
 function adminEscapeAttendanceHtml_(value) {
     if (typeof escapeHtml === 'function') return escapeHtml(value);
@@ -11812,7 +11371,6 @@ function adminAttendanceStatusOptions_(current) {
         ['휴원', '휴원']
     ];
 
-    // 기존 출석부에 보강/신규/반이동이 들어와 있는 경우 선택값을 보존합니다.
     ['보강', '신규', '반이동'].forEach(v => {
         if (selected === v && !base.some(opt => opt[0] === v)) base.push([v, v]);
     });
@@ -11841,8 +11399,6 @@ function adminSetAttendanceSaveState_(idx, text, isError = false) {
     }
 }
 
-/* 정리됨: 중복 함수 adminRenderAttendanceTable (기존 11211행 정의 제거) */
-
 
 function adminToggleAttendanceAll(checked) {
     document.querySelectorAll('.admin-att-check').forEach(ch => ch.checked = checked);
@@ -11864,7 +11420,6 @@ function adminUpdateAttendanceRecordFromRow_(idx) {
     base.attendanceStatus = base.status;
     base.memo = memo;
 
-    // 화면 조회 기준 날짜/반명이 누락된 레코드 보정
     base.date = base.date || document.getElementById('adminAttendanceDate')?.value || getTodayInputValue();
     base.className = base.className || document.getElementById('adminAttendanceClass')?.value || '';
 
@@ -11925,7 +11480,6 @@ async function adminSaveAttendanceFromTable(silent = false) {
     return adminSaveAttendanceRecords_(records, silent);
 }
 
-// 기존 버튼 onclick="adminSaveAttendance()"가 있어도 동작하도록 호환 이름 유지
 async function adminSaveAttendance(silent = false) {
     return adminSaveAttendanceFromTable(silent);
 }
@@ -11969,11 +11523,6 @@ async function adminSaveAttendanceRecords_(records, silent = false) {
 }
 
 
-
-
-/* =========================================================
-   울림앱 4차 - 교직원 화면 강의실 사용체크 시간표 UI
-   ========================================================= */
 let ADMIN_CLASSROOM_USAGE_ROOMS = ["2강의실", "3강의실", "녹음실", "4강의실", "5강의실", "신체훈련실"];
 let ADMIN_CLASSROOM_USAGE_INSTRUCTORS = [];
 let adminClassroomUsageOptionsLoadedDate = '';
@@ -12209,7 +11758,6 @@ async function adminSaveClassroomUsageFromForm(silentConfirm = false, forceOverr
 }
 
 
-
 async function adminReleaseClassroomUsage(recordId) {
     if (!adminToken) return alert('로그인이 필요합니다.');
     if (!recordId) return alert('해제할 기록을 찾지 못했습니다.');
@@ -12243,13 +11791,10 @@ async function adminReleaseClassroomUsage(recordId) {
 }
 
 
-
-
 </script>
 
 
 <script>
-/* 5-7 사용자 노출 문구 안전필터: 개발자용 연결/설정 문구를 일반 안내문으로 변환 */
 (function () {
   if (window.__ulimUserMessageSanitizerInstalled) return;
   window.__ulimUserMessageSanitizerInstalled = true;
@@ -12284,18 +11829,10 @@ async function adminReleaseClassroomUsage(recordId) {
   }
 
   window.sanitizeUlimUserMessage = sanitizeUlimUserMessage;
-})();
-</script>
+})();</script>
 
 
 <script>
-/* =========================================================
-   5-8 1차 보안패치
-   - 학생명 + 비밀번호 로그인
-   - 초기 비밀번호: 전화번호 뒤 4자리
-   - 학생 세션토큰 기반 요청
-   - 전화뒤4자리/학생UID는 브라우저에 저장하지 않음
-   ========================================================= */
 
 function getStudentSessionToken_() {
     return studentSessionToken || localStorage.getItem('studentSessionToken') || '';
@@ -12319,7 +11856,6 @@ function setStudentSecureSession_(result) {
     studentSessionToken = result.sessionToken || '';
     studentMustChangePassword = !!result.mustChangePassword;
 
-    // 보안상 전화뒤4자리/내부 학생UID는 브라우저에 저장하지 않습니다.
     phoneLast4 = '';
     studentNo = '';
 
@@ -12374,7 +11910,6 @@ async function authenticate(name, password) {
 
             showMainContent(true);
 
-            // 7.06 학생 로그인 성공 후 index 버전 1회 확인
             if (typeof checkUlimVersionAfterLogin706_ === "function") {
                 checkUlimVersionAfterLogin706_("student-login");
             }
@@ -12388,8 +11923,6 @@ async function authenticate(name, password) {
         alert(e.message || "로그인 처리 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.");
     }
 }
-
-/* 정리됨: 중복 함수 changeStudentPasswordByPrompt (기존 11823행 정의 제거) */
 
 
 async function checkStudentName() {
@@ -12499,12 +12032,6 @@ function getRoomReservationActor630_() {
     const staffToken = getRoomAdminToken630_();
     const staffInfo = getRoomAdminInfo630_();
 
-    /*
-     * 6.30 최종 수정:
-     * 교직원 세션 확인 과정에서 adminInfo가 잠시 비워질 수 있으므로
-     * adminToken만 존재해도 GAS에 교직원 토큰을 전달합니다.
-     * 실제 계정명·권한 검증은 GAS requireAdmin_이 수행합니다.
-     */
     if (staffToken) {
         const info = staffInfo && typeof staffInfo === 'object' ? staffInfo : {};
         const name = String(
@@ -12649,19 +12176,10 @@ function loadStudentVocalPracticeLogsForMonth_(year, month, force = false) {
     } catch (err) {
         console.warn('학생 연습일지 서버 조회 실패:', err);
     }
-}
-
-</script>
+}</script>
 
 
 <script>
-/* =========================================================
-   5-9 2차 보안패치
-   - 강사/관리자 계정 비밀번호 Hash + Salt 저장
-   - 로그인 실패 제한
-   - adminToken 세션버전 검증
-   - 강사/관리자 비밀번호 변경
-   ========================================================= */
 
 function setAdminSecureSession_(data) {
     adminToken = data.adminToken || '';
@@ -12707,7 +12225,6 @@ async function adminLogin() {
 
         await adminLoadInitialData();
 
-        // 7.06 교직원 로그인 성공 후 index 버전 1회 확인
         if (typeof checkUlimVersionAfterLogin706_ === "function") {
             checkUlimVersionAfterLogin706_("staff-login");
         }
@@ -12784,7 +12301,6 @@ async function changeAdminPasswordByPrompt(force = false, knownCurrentPassword =
     }
 }
 
-// 기존 adminLoadInitialData가 세션을 확인할 때 보안세션의 mustChangePassword를 반영하도록 보조 처리
 const __ulimOriginalAdminLoadInitialData = window.adminLoadInitialData || adminLoadInitialData;
 adminLoadInitialData = async function() {
     await __ulimOriginalAdminLoadInitialData();
@@ -12797,17 +12313,10 @@ adminLoadInitialData = async function() {
             }
         }
     } catch (ignore) {}
-};
-
-</script>
+};</script>
 
 
 <script>
-/* =========================================================
-   5-11 표준발음 AI 분석 사용량 학생별 제한 패치
-   - 기존: 전화뒤4자리 또는 기기ID 기반으로 떨어질 수 있음
-   - 변경: studentSessionToken을 서버로 보내고, 서버에서 학생UID 기준으로 1일 제한 계산
-   ========================================================= */
 
 function pronGetStudentSessionTokenForUsage_() {
     if (typeof getStudentSessionToken_ === 'function') return getStudentSessionToken_() || '';
@@ -12818,8 +12327,6 @@ function pronGetStudentSessionTokenForUsage_() {
 function pronGetEtriUserKey() {
     const token = pronGetStudentSessionTokenForUsage_();
     if (token) {
-        // 실제 학생UID는 서버에서만 계산합니다.
-        // 프론트 localStorage 캐시 분리용으로만 세션토큰 앞부분을 사용합니다.
         return ('SESSION_' + token.slice(0, 18)).replace(/[^0-9A-Za-z_\-]/g, '_');
     }
 
@@ -12856,20 +12363,11 @@ async function pronRefreshEtriUsage() {
     }
 }
 
-/* 정리됨: 중복 함수 pronRunEtriAdvancedAnalysis (기존 12218행 정의 제거) */
-
-
-/* 정리됨: 중복 함수 pronRenderEtriResult (기존 12293행 정의 제거) */
 
 </script>
 
 
 <script>
-/* =========================================================
-   5-13 학생 비밀번호 변경 적용 보정
-   - 비밀번호 변경 후 서버가 새 studentSessionToken을 내려주면 즉시 반영
-   - 기존 세션버전 무효화로 인해 변경 직후 세션이 끊기는 문제 방지
-   ========================================================= */
 
 async function changeStudentPasswordByPrompt(force = false, knownCurrentPassword = '') {
     const token = getStudentSessionToken_ ? getStudentSessionToken_() : (studentSessionToken || localStorage.getItem('studentSessionToken') || '');
@@ -12949,14 +12447,10 @@ async function changeStudentPasswordByPrompt(force = false, knownCurrentPassword
         alert(err.message || "비밀번호 변경 중 문제가 발생했습니다.");
         return false;
     }
-}
-</script>
+}</script>
 
 
 <style>
-/* =========================================================
-   5-14 학생 계정 버튼 UI
-   ========================================================= */
 .ulim-student-account-bar {
     position: fixed;
     top: 12px;
@@ -13024,15 +12518,9 @@ async function changeStudentPasswordByPrompt(force = false, knownCurrentPassword
         flex-basis: 100%;
         text-align: center;
     }
-}
-</style>
+}</style>
 
 <script>
-/* =========================================================
-   5-14 학생 계정 버튼 UI + 비밀번호 찾기
-   - 우측 상단: 학생 로그인/로그아웃/비밀번호 찾기/비밀번호 변경
-   - 비밀번호 찾기는 학생 셀프 초기화를 하지 않고 관리자 승인 요청만 접수
-   ========================================================= */
 
 function ulimIsStudentLoggedIn_() {
     const token = (typeof getStudentSessionToken_ === 'function')
@@ -13160,7 +12648,6 @@ async function findStudentPasswordByPrompt() {
     }
 }
 
-// 기존 로그인/비밀번호 변경 성공 후 버튼 상태 갱신
 const __ulimV514OriginalSetStudentSecureSession = window.setStudentSecureSession_;
 if (typeof __ulimV514OriginalSetStudentSecureSession === 'function') {
     window.setStudentSecureSession_ = function(result) {
@@ -13180,27 +12667,14 @@ if (typeof __ulimV514OriginalShowMainContent === 'function') {
 
 window.addEventListener('DOMContentLoaded', function() {
     setTimeout(renderStudentAccountBar_, 300);
-});
-</script>
+});</script>
 
 
 <script>
-/* =========================================================
-   5-15 비밀번호 찾기 위치 조정
-   - 우측 상단 미로그인 버튼: 학생 로그인만 표시
-   - 첫 로그인 화면: 비밀번호 재설정 요청 버튼 표시
-   ========================================================= */
-window.__ulimPasswordFindMovedToLoginScreen = true;
-</script>
+window.__ulimPasswordFindMovedToLoginScreen = true;</script>
 
 
 <style>
-/* =========================================================
-   5-16 모바일 교직원 화면 가독성 개선
-   - 표가 좁게 찌그러져 글자가 세로로 보이는 현상 방지
-   - 출석부/일일평가 표는 모바일에서 카드형으로 전환
-   - 강의실 사용표/예약표는 가로 스크롤 유지
-   ========================================================= */
 @media (max-width: 700px) {
     body {
         overflow-x: hidden;
@@ -13481,15 +12955,9 @@ window.__ulimPasswordFindMovedToLoginScreen = true;
     body.teacher-mode .ulim-student-account-bar {
         display: none !important;
     }
-}
-</style>
+}</style>
 
 <script>
-/* =========================================================
-   5-16 모바일 교직원 화면 가독성 개선 스크립트
-   - admin-table의 th 값을 td data-label로 넣어 카드형 모바일 표시
-   - 교직원 화면에서는 학생 계정바가 하단을 가리지 않도록 숨김
-   ========================================================= */
 function ulimEnhanceAdminMobileTables_() {
     document.querySelectorAll('#tabAdmin table.admin-table').forEach(table => {
         const labels = Array.from(table.querySelectorAll('thead th')).map((th, idx) => {
@@ -13582,17 +13050,10 @@ function ulimRefreshStudentAccountBarVisibility_() {
     }
 
     setInterval(run, 1500);
-})();
-</script>
+})();</script>
 
 
 <script>
-/* =========================================================
-   5-17 담당강사 항목 UI 제거
-   - 관리자/교직원 전용의 표/카드에서 담당강사 컬럼 제거
-   - 출석체크, 일일평가, 발성 연습일지, 공지 대상, 전체 학생목록에 적용
-   - 내부 필터/권한 판단에는 instructor 값을 계속 사용
-   ========================================================= */
 
 function ulimAdminEsc_(value) {
     if (typeof escapeHtml === 'function') return escapeHtml(value);
@@ -13707,8 +13168,6 @@ function adminRenderNoticeTargetTable() {
     ulimAdminAfterRender_();
 }
 
-/* 정리됨: 중복 함수 adminRenderAttendanceTable (기존 13171행 정의 제거) */
-
 
 function adminRenderDailyEvalRows(message = '') {
     const wrap = document.getElementById('adminDailyEvalTableWrap');
@@ -13753,7 +13212,7 @@ function adminRenderDailyEvalRows(message = '') {
                     <textarea class="daily-eval-part-textarea admin-eval-attitude" placeholder="수업 활동 및 태도를 입력하세요.">${ulimAdminEsc_(parts.lessonAttitude)}</textarea>
                     <div class="daily-eval-part-label">선생님 전달 사항</div>
                     <textarea class="daily-eval-part-textarea admin-eval-comment" placeholder="학부모님께 전달할 사항을 입력하세요.">${ulimAdminEsc_(parts.teacherComment)}</textarea>
-                  
+
                 </div>
             </td>
         </tr>`;
@@ -13806,16 +13265,10 @@ function adminRenderVocalPracticeLogs() {
             </div>
         `;
     }).join('');
-}
-
-// 5-17 이후에도 기존 데이터 안의 instructor 값은 내부 필터/권한/저장에 계속 사용합니다.
-</script>
+}</script>
 
 
 <style>
-/* =========================================================
-   5-18 출석체크 O/X 버튼 복구 및 색상 개선
-   ========================================================= */
 .admin-att-action-wrap {
     display: flex;
     gap: 7px;
@@ -13883,16 +13336,9 @@ function adminRenderVocalPracticeLogs() {
         min-width: 120px;
         font-size: 15px;
     }
-}
-</style>
+}</style>
 
 <script>
-/* =========================================================
-   5-18 출석체크 작동 복구
-   - 5-17에서 제거된 담당강사 컬럼은 유지하지 않음
-   - O/X onclick은 기존 즉시반영 함수 adminQuickSetAttendance로 연결
-   - adminSetAttendanceRowStatus / adminSyncAttendanceRowStatus 호환 함수도 추가
-   ========================================================= */
 
 function adminAttendanceButtonSelectedClass_(status, target) {
     const normalized = adminNormalizeAttendanceStatusForUi_(status || '');
@@ -13906,7 +13352,6 @@ async function adminSetAttendanceRowStatus(idx, status) {
         return adminQuickSetAttendance(idx, status);
     }
 
-    // 혹시 이전 즉시저장 함수가 없는 배포에서도 최소한 화면값은 바뀌게 하는 안전장치
     const row = document.querySelector(`#adminAttendanceTableWrap tr[data-att-index="${idx}"]`);
     if (!row) return;
 
@@ -14006,52 +13451,22 @@ function adminRenderAttendanceTable() {
 
     wrap.innerHTML = html;
     if (typeof ulimAdminAfterRender_ === 'function') ulimAdminAfterRender_();
-}
-</script>
+}</script>
 
 
 <script>
-/* =========================================================
-   5-19 표준발음 분석 멘트 리미 명칭 정리
-   - 우리미 → 리미
-   - 일반 분석 완료 → 리미의 간단 분석!
-   - 리미 AI 분석 완료 → 리미의 정밀 진단 완료!
-   - 첨부된 불필요 문구 제거 버전 index를 기준으로 반영
-   ========================================================= */
-window.__ulimRimiPronunciationMentTextPatch = true;
-</script>
+window.__ulimRimiPronunciationMentTextPatch = true;</script>
 
 
 <script>
-/* =========================================================
-   5-27 리미 분석 중 GIF 외부 asset 적용
-   - GIF 내장 base64 제거
-   - 사용 경로: assets/rimi_analyzing.gif
-   - GitHub Pages에서는 index.html 옆 assets 폴더에 rimi_analyzing.gif 업로드
-   ========================================================= */
-window.__ulimRimiAnalyzingAssetVersion = "5-27";
-</script>
+window.__ulimRimiAnalyzingAssetVersion = "5-27";</script>
 
 
 <script>
-/* =========================================================
-   5-28 리미 분석 중 버튼 내부 표시 보정
-   - 보라색 AI 버튼 안에 assets/rimi_analyzing.gif 표시
-   - 하단 초록 분석 중 박스는 숨김 처리
-   ========================================================= */
-window.__ulimRimiAnalyzingInsideButtonVersion = "5-28";
-</script>
+window.__ulimRimiAnalyzingInsideButtonVersion = "5-28";</script>
 
 
 <script>
-/* =========================================================
-   5-29 리미 분석 중 중복등록/무한분석 방지 패치
-   - 분석 실행 중 재클릭 방지
-   - 학생 세션토큰을 분석/완료확인 API에 전달
-   - 캐시 삭제 후에도 DEV 키가 아니라 서버에서 학생UID/출결번호 기준으로 처리 가능하게 보정
-   - limit / timeout / error 시 분석 중 UI 확실히 해제
-   - 리미 GIF는 보라색 AI 버튼 안에만 표시
-   ========================================================= */
 window.__ulimTrainingAiDuplicateFixVersion = "5-29";
 window.trainingFinalAiInProgress = false;
 window.trainingFinalAiActiveRequestId = '';
@@ -14109,7 +13524,6 @@ function setTrainingAiLoadingState_(isLoading) {
     const sttEl = document.getElementById('sttResult');
     const badge = document.getElementById('accBadge');
 
-    // 5-29: 아래쪽 초록 분석 중 박스는 쓰지 않고, 보라색 AI 버튼 안에만 GIF를 표시합니다.
     if (loadingVisual) {
         loadingVisual.classList.remove('show');
         loadingVisual.style.display = 'none';
@@ -14144,9 +13558,6 @@ function buildTrainingFinalRequestId_() {
 }
 
 function getTrainingFinalUserKey_() {
-    // 보안패치 이후 브라우저에는 전화뒤4자리/학생UID를 저장하지 않습니다.
-    // 따라서 서버가 studentSessionToken으로 학생을 식별하게 하고,
-    // 클라이언트 userKey는 보조값으로만 사용합니다.
     const no = (typeof studentNo !== 'undefined' && studentNo) ? studentNo : (localStorage.getItem('studentNo') || '');
     const name = (typeof studentName !== 'undefined' && studentName) ? studentName : (localStorage.getItem('studentName') || '게스트');
     const token = (typeof getStudentSessionToken_ === 'function') ? getStudentSessionToken_() : (localStorage.getItem('studentSessionToken') || '');
@@ -14313,10 +13724,7 @@ function pollTrainingFinalAiResult_(requestId) {
     });
 }
 
-/* 정리됨: 중복 함수 runTrainingFinalAiAnalysisFromButton (기존 13828행 정의 제거) */
 
-
-/* 새 녹음 시작/완료 이후에도 혹시 남은 분석 중 상태 제거 */
 window.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('click', (ev) => {
         const target = ev.target;
@@ -14325,17 +13733,10 @@ window.addEventListener('DOMContentLoaded', () => {
             if (!window.trainingFinalAiInProgress) setTrainingAiLoadingState_(false);
         }
     }, true);
-});
-</script>
+});</script>
 
 
 <script>
-/* =========================================================
-   5-30 리미 정밀 진단 30초 타임아웃 → 로컬 간단 분석 전환
-   - 제미나이/서버 정밀 진단이 30초 이상 걸리면 즉시 로컬 분석 표시
-   - 로컬 분석 생성도 지연되지 않도록 6초 안전 타임아웃 적용
-   - 분석 중 GIF/버튼 상태는 로컬 분석 표시 후 반드시 해제
-   ========================================================= */
 window.__ulimTrainingAi30SecFallbackVersion = "5-30";
 const TRAINING_AI_ADVANCED_TIMEOUT_MS_5_30 = 30000;
 const TRAINING_AI_LOCAL_FALLBACK_TIMEOUT_MS_5_30 = 6000;
@@ -14496,28 +13897,14 @@ async function runTrainingFinalAiAnalysisFromButton() {
             btn.style.opacity = '1';
         }
     }
-}
-</script>
+}</script>
 
 
 <script>
-/* =========================================================
-   5-31 안내
-   - 30초 후 로컬 분석 전환은 5-30 index 로직 유지
-   - 로그인/조회 막힘은 5-31 GAS의 잠금 분리로 해결
-   ========================================================= */
-window.__ulimTrainingAiLockFixVersion = "5-31";
-</script>
-
+window.__ulimTrainingAiLockFixVersion = "5-31";</script>
 
 
 <script>
-/* =========================================================
-   5-32 표준발음/발성훈련 Gemini 지연·중복신청 안전패치
-   - AI 분석 30초 초과 시 로컬 분석 자동 표시
-   - 캐시삭제/중복클릭/중복요청 시 무한로딩 방지
-   - Gemini limit/error/not_found/pending 장기화 시 버튼과 화면 상태 무조건 복구
-   ========================================================= */
 const PRON_GEMINI_HARD_TIMEOUT_MS_5_32 = 30000;
 let pronAdvancedIsRunning_5_32 = false;
 let pronAdvancedHardTimer_5_32 = null;
@@ -14761,17 +14148,10 @@ ${converted ? "[" + converted + "]" : "먼저 문장을 입력하세요."}
 
 표준발음 점검 대상:
 ${ruleSummary}`, isFallback ? "success" : "success");
-}
-</script>
-
+}</script>
 
 
 <script>
-/* =========================================================
-   5-35 시스템문구 완전 차단 + 강사/관리자 AI 분석 허용 패치
-   - 학생/일반강사 화면에 GAS/API/배포/토큰/코드 등 내부 문구를 노출하지 않음
-   - 학생 로그인 없이 강사/관리자 로그인 상태에서도 발성훈련 AI 분석/표준발음 AI 분석 사용 가능
-   ========================================================= */
 (function(){
   window.ULIM_PATCH_5_35_SYSTEM_MESSAGE_AND_ADMIN_AI = true;
 
@@ -14810,7 +14190,6 @@ ${ruleSummary}`, isFallback ? "success" : "success");
     if (type) el.classList.add(type);
     el.textContent = safe || '';
   };
-  // 전역 이름으로 직접 호출되는 경우도 보정
   try { pronSetAdvancedStatus = window.pronSetAdvancedStatus; } catch(e) {}
 
   window.getUlimActiveUserContext_5_35 = function() {
@@ -14913,7 +14292,6 @@ ${ruleSummary}`, isFallback ? "success" : "success");
   };
   try { pronRefreshEtriUsage = window.pronRefreshEtriUsage; } catch(e) {}
 
-  // 표준발음 AI 분석: 학생 세션이 없어도 강사/관리자 세션으로 요청 가능
   window.pronRunEtriAdvancedAnalysis = async function() {
     if (typeof pronAdvancedIsRunning_5_32 !== 'undefined' && pronAdvancedIsRunning_5_32) {
       window.pronSetAdvancedStatus('이미 분석 중입니다. 잠시만 기다려주세요.');
@@ -14988,16 +14366,10 @@ ${ruleSummary}`, isFallback ? "success" : "success");
     }
   };
   try { pronRunEtriAdvancedAnalysis = window.pronRunEtriAdvancedAnalysis; } catch(e) {}
-})();
-</script>
+})();</script>
 
 
 <script>
-/* =========================================================
-   5-36 리미 유머문구 + 관리자 상세오류 분리 패치
-   - 학생/일반강사: GAS/API/Gemini/토큰 등 내부 문구 대신 리미 유머 안내문 표시
-   - 관리자: 오류 원문, errorDetail, requestId, status/source 등 상세 진단 표시
-   ========================================================= */
 (function(){
   window.ULIM_PATCH_5_36_LIMI_FUNNY_AND_ADMIN_DETAIL = true;
 
@@ -15053,7 +14425,6 @@ ${ruleSummary}`, isFallback ? "success" : "success");
     const msg = String(message || '').trim();
     if (!msg) return ulimPickLimiMessage_5_36(seed);
     if (ulimLooksInternal_5_36(msg)) return ulimPickLimiMessage_5_36(seed || msg);
-    // AI/분석 실패 계열은 학생·강사에게 리미 톤으로 통일
     if (/(AI 분석|정밀 진단|분석|결과|조회|지연|실패|오류|서비스|연결|로컬 분석|간단 확인|사용량|잔여횟수)/i.test(msg)) {
       if (!/(먼저|녹음|문장|로그인|이미 분석 중|읽을 문장)/.test(msg)) return ulimPickLimiMessage_5_36(seed || msg);
     }
@@ -15082,7 +14453,6 @@ ${ruleSummary}`, isFallback ? "success" : "success");
   }
   window.ulimAdminErrorDetailText_5_36 = ulimAdminErrorDetailText_5_36;
 
-  // 5-35의 안전문구 함수를 권한별로 재정의: 관리자는 원문 유지, 학생/강사는 리미 문구
   window.ulimSafeUserMessage_5_35 = function(message, fallback) {
     if (ulimIsFullAdmin_5_36()) return String(message || fallback || '').trim();
     return ulimPublicAiMessage_5_36(message, fallback || message);
@@ -15103,7 +14473,6 @@ ${ruleSummary}`, isFallback ? "success" : "success");
     if (!el) return;
     let text = String(message || '');
     if (text && !ulimIsFullAdmin_5_36()) {
-      // 완료 결과 전체는 그대로 둔다. 안내/오류 줄만 리미 문구로 바꾸기 위해 내부문구 포함 시만 치환한다.
       if (ulimLooksInternal_5_36(text) || (/실패|오류|서비스|연결|지연|대체|로컬 분석|잔여횟수.*확인하지 못/i.test(text) && !/리미의 .*완료/.test(text))) {
         text = ulimPublicAiMessage_5_36(text);
       }
@@ -15115,7 +14484,6 @@ ${ruleSummary}`, isFallback ? "success" : "success");
   };
   try { pronSetAdvancedStatus = window.pronSetAdvancedStatus; } catch(e) {}
 
-  // 로컬 fallback 사유를 학생/강사에게는 리미 유머문구로 저장
   if (typeof window.pronBuildLocalAdvancedFallback_5_32 !== 'function' && typeof pronBuildLocalAdvancedFallback_5_32 === 'function') {
     window.pronBuildLocalAdvancedFallback_5_32 = pronBuildLocalAdvancedFallback_5_32;
   }
@@ -15129,7 +14497,6 @@ ${ruleSummary}`, isFallback ? "success" : "success");
   };
   try { pronBuildLocalAdvancedFallback_5_32 = window.pronBuildLocalAdvancedFallback_5_32; } catch(e) {}
 
-  // 결과 렌더링: fallback일 때 관리자만 상세오류, 학생/강사는 리미 문구
   window.pronRenderEtriResult = function(data) {
     data = data || {};
     const recognized = data.recognized || (typeof pronLastSttText !== 'undefined' ? pronLastSttText : '') || '인식 결과 없음';
@@ -15163,7 +14530,6 @@ ${ruleSummary}`, isFallback ? "success" : "success");
   };
   try { pronRenderEtriResult = window.pronRenderEtriResult; } catch(e) {}
 
-  // 폴링 오류/서버 fallback 사유 처리도 권한별로 분리
   window.pronPollEtriResult = function(requestId) {
     if (typeof pronEtriPollingTimer !== 'undefined' && pronEtriPollingTimer) {
       clearTimeout(pronEtriPollingTimer);
@@ -15219,7 +14585,6 @@ ${ruleSummary}`, isFallback ? "success" : "success");
   };
   try { pronPollEtriResult = window.pronPollEtriResult; } catch(e) {}
 
-  // 5-35에서 덮어쓴 표준발음 시작 함수의 안내문도 유머문구/관리자 상세 사유로 교체
   const oldPronRun_5_36 = window.pronRunEtriAdvancedAnalysis || (typeof pronRunEtriAdvancedAnalysis === 'function' ? pronRunEtriAdvancedAnalysis : null);
   if (oldPronRun_5_36) {
     window.pronRunEtriAdvancedAnalysis = async function() {
@@ -15233,18 +14598,10 @@ ${ruleSummary}`, isFallback ? "success" : "success");
     };
     try { pronRunEtriAdvancedAnalysis = window.pronRunEtriAdvancedAnalysis; } catch(e) {}
   }
-})();
-</script>
+})();</script>
 
 
 <script>
-/* =========================================================
-   5-47 발성훈련/표준발음 분석 제한·오류문구 운영 패치
-   - 발성훈련: AI 분석 없이도 연습완료 가능
-   - 발성훈련: AI/ETRI 제한·실패 시 일반 분석으로 표시하고 연습완료 허용
-   - 학생/일반강사: STT/ETRI 내부 오류문구 숨김
-   - 관리자: 상세오류 보존
-   ========================================================= */
 (function(){
   window.__ULIM_PATCH_5_47_TRAINING_PRON_LIMIT_SAFE = true;
 
@@ -15613,7 +14970,6 @@ ${ruleSummary}`, isFallback ? "success" : "success");
   };
   try { completeTraining = window.completeTraining; } catch(e) {}
 
-  /* ---------- 표준발음 탭: STT/AI 분석 문구 운영 처리 ---------- */
 
   const oldPronUpdateVoiceScore_5_47 = window.pronUpdateVoiceScore || (typeof pronUpdateVoiceScore === 'function' ? pronUpdateVoiceScore : null);
   window.pronUpdateVoiceScore = function() {
@@ -15798,17 +15154,10 @@ ${ruleSummary}`, 'success');
   };
   try { pronPollEtriResult = window.pronPollEtriResult; } catch(e) {}
 
-})();
-</script>
-
+})();</script>
 
 
 <script id="ulim-session-persistence-patch-5-49">
-/* =========================================================
-   5-49 세션유지 패치
-   - 새로고침/AI 분석/네트워크 지연으로 학생·강사·관리자 세션이 지워지지 않도록 방어
-   - 실제 로그아웃 버튼을 누를 때만 localStorage 세션 삭제
-   ========================================================= */
 (function () {
   if (window.__ulimSessionPersistencePatch549Installed) return;
   window.__ulimSessionPersistencePatch549Installed = true;
@@ -16056,7 +15405,6 @@ ${ruleSummary}`, 'success');
   };
 
   window.addEventListener('pageshow', function () {
-    // iOS Safari/Chrome의 bfcache 복귀 또는 AI 분석 뒤 화면 재활성화 시 세션을 다시 화면에 반영합니다.
     setTimeout(function () {
       syncStudentGlobalsFromLocal_();
       const token = getToken_();
@@ -16069,16 +15417,10 @@ ${ruleSummary}`, 'success');
   });
 
   log_('설치 완료', PATCH_VERSION);
-})();
-</script>
+})();</script>
 
 
 <script>
-/* =========================================================
-   5-51 표준발음 탭 버튼명 복구
-   - 표준발음 탭 버튼은 사용자 요청대로 일반 분석/고급 분석 유지
-   - 공개 오류 안내 문구 정리 안전망은 유지
-   ========================================================= */
 (function(){
   try {
     document.addEventListener('DOMContentLoaded', function(){
@@ -16090,14 +15432,9 @@ ${ruleSummary}`, 'success');
       } catch(e) {}
     });
   } catch(e) {}
-})();
-</script>
+})();</script>
 
 <script>
-/* =========================================================
-   5-50 공개 오류 안내 용어 안전망
-   - 서버/이전 캐시에서 특정 단계명이 섞여 와도 화면 출력 직전 정리합니다.
-   ========================================================= */
 (function(){
   window.__ULIM_PATCH_5_50_PUBLIC_ERROR_WORDING_GUARD = true;
   function sanitize_5_50(value) {
@@ -16138,17 +15475,10 @@ ${ruleSummary}`, 'success');
     };
     try { pronSetAdvancedStatus = window.pronSetAdvancedStatus; } catch(e) {}
   }
-})();
-</script>
+})();</script>
 
 
 <script>
-/* =========================================================
-   5-52 로그인 복구 패치
-   - 로그인/인증 문구는 AI 오류문구 필터를 타지 않게 분리
-   - 학생/강사/관리자 세션은 로그아웃 버튼 클릭 전까지 보존
-   - 5.51의 AI 안내문구 정리는 유지하되 로그인 실패를 리미 문구로 바꾸지 않음
-   ========================================================= */
 (function(){
   window.__ULIM_PATCH_5_52_LOGIN_RECOVERY = true;
 
@@ -16303,20 +15633,12 @@ ${ruleSummary}`, 'success');
   };
 
   window.addEventListener('pageshow', function(){ restoreStudentGlobalsFromStorage_5_52(); });
-})();
-</script>
+})();</script>
 
 
 <script>
-/* =========================================================
-   5-53 연습실 예약 로딩 복구 패치
-   - Chrome/모바일에서 JSONP <script> 로딩이 막히는 경우를 방지
-   - 연습실 예약 API는 fetch(JSON) 우선, 실패 시 기존 JSONP로 보조 시도
-   - 학생 세션 토큰은 유지하고, 로그아웃은 로그아웃 버튼 클릭 시에만 처리
-   ========================================================= */
 (function(){
   const ROOM_PATCH_VERSION_5_53 = '2026.06.06.054.01';
-  console.log('[ULIM 5.54] room/audio/session patch loaded', ROOM_PATCH_VERSION_5_53);
 
   const __ulimPreviousRoomJsonp_5_53 = (typeof roomJsonp === 'function') ? roomJsonp : null;
   const __roomInflight_5_53 = {};
@@ -16343,11 +15665,6 @@ ${ruleSummary}`, 'success');
       p.action === 'reserveRoom' ||
       p.action === 'cancelRoom'
     ) {
-      /*
-       * 6.30 최종 수정:
-       * 이 5-53 패치가 뒤에서 roomJsonp를 다시 덮어쓰기 때문에,
-       * 앞쪽 교직원 인증 패치가 실제 요청에 반영되지 않던 문제를 수정합니다.
-       */
       delete p.studentSessionToken;
       delete p.sessionToken;
       delete p.adminToken;
@@ -16371,7 +15688,6 @@ ${ruleSummary}`, 'success');
           }
         });
       } else {
-        // 구버전/예외 환경에서는 학생 세션을 보조로 유지합니다.
         try {
           if (typeof getStudentSessionToken_ === 'function') {
             const token = getStudentSessionToken_();
@@ -16381,11 +15697,6 @@ ${ruleSummary}`, 'success');
       }
 
       try {
-        console.log('[ULIM ROOM REQUEST AUTH 6.30 FINAL]', {
-          action: p.action || '',
-          hasAdminToken: !!p.adminToken,
-          hasStudentToken: !!p.studentSessionToken
-        });
       } catch (e) {}
     }
 
@@ -16398,7 +15709,6 @@ ${ruleSummary}`, 'success');
     if (/^</.test(raw)) throw new Error('예약 응답을 확인하지 못했습니다.');
     try { return JSON.parse(raw); } catch(jsonErr) {}
 
-    // 혹시 JSONP 문자열로 돌아온 경우도 안전하게 파싱합니다.
     const m = raw.match(/^[\w.$]+\((.*)\);?$/s);
     if (m && m[1]) {
       try { return JSON.parse(m[1]); } catch(e) {}
@@ -16436,7 +15746,6 @@ ${ruleSummary}`, 'success');
     if (canReuseInflight && __roomInflight_5_53[stableKey]) return __roomInflight_5_53[stableKey];
 
     const task = roomFetchJson_5_53(normalized, options).catch(function(fetchErr){
-      // fetch가 CORS/브라우저 정책으로 막히는 환경에서는 기존 JSONP를 보조로 사용합니다.
       if (typeof __ulimPreviousRoomJsonp_5_53 === 'function') {
         return __ulimPreviousRoomJsonp_5_53(normalized, options).catch(function(jsonpErr){
           console.warn('[ULIM room 5.53] fetch/jsonp both failed', fetchErr, jsonpErr);
@@ -16455,7 +15764,6 @@ ${ruleSummary}`, 'success');
   };
   try { roomJsonp = window.roomJsonp; } catch(e) {}
 
-  // 연습실 탭 진입 시 캐시된 실패 상태를 다시 읽지 않도록 한 번 더 새로고침합니다.
   window.addEventListener('pageshow', function(){
     try {
       const activeRoom = document.querySelector && document.querySelector('#tabRoom.active');
@@ -16464,21 +15772,12 @@ ${ruleSummary}`, 'success');
       }
     } catch(e) {}
   });
-})();
-</script>
-
+})();</script>
 
 
 <script>
-/* =========================================================
-   5-56 발성훈련 100일 문장 조회 + 로컬 fallback 복구 패치
-   - 구글시트 100일 문장 조회를 먼저 시도
-   - 실패/지연/배포 미반영/시트 미생성 시 로컬 appdata/vocalization/data.js 문장으로 즉시 대체
-   - 학생 화면을 막지 않고, 원인은 console에 남김
-   ========================================================= */
 (function(){
   const ULIM_VOCAL_FALLBACK_PATCH_VERSION = '2026.06.06.056.01';
-  console.log('[ULIM 5.56] 발성훈련 100일 문장 조회 + 로컬 fallback 복구 적용', ULIM_VOCAL_FALLBACK_PATCH_VERSION);
 
   function getVocalStudentIdentity_5_56() {
     if (typeof getTrainingStudentIdentity_ === 'function') {
@@ -16613,18 +15912,10 @@ ${ruleSummary}`, 'success');
     }
   };
   try { trainNew = window.trainNew; } catch(e) {}
-})();
-</script>
+})();</script>
 
 
 <script id="ulim-student-session-final-guard-5-57">
-/* =========================================================
-   5-57 학생 세션 최종 보호 패치
-   - 학생 로그인은 localStorage 기준으로 즉시 복구
-   - 새로고침 / iOS 백그라운드 복귀 / AI분석 / 서버 일시 오류로 로그아웃 금지
-   - 로그아웃 버튼 클릭 시에만 학생 세션 삭제
-   - 서버 세션 확인은 백그라운드로만 수행하고, 실패해도 localStorage를 지우지 않음
-   ========================================================= */
 (function () {
   if (window.__ULIM_STUDENT_SESSION_FINAL_GUARD_557__) return;
   window.__ULIM_STUDENT_SESSION_FINAL_GUARD_557__ = true;
@@ -16751,7 +16042,6 @@ ${ruleSummary}`, 'success');
     }
   }
 
-  // 학생 세션 getter는 항상 localStorage를 우선 확인합니다.
   window.getStudentSessionToken_ = function () {
     try { if (studentSessionToken) return studentSessionToken; } catch (e) {}
     return getLocal_557('studentSessionToken');
@@ -16763,7 +16053,6 @@ ${ruleSummary}`, 'success');
   };
   try { ulimIsStudentLoggedIn_ = window.ulimIsStudentLoggedIn_; } catch (e) {}
 
-  // 자동 clear 방지. force=true 또는 명시적 로그아웃 플래그에서만 실제 삭제를 허용합니다.
   const originalClearStudentSecureSession_557 = window.clearStudentSecureSession_;
   window.clearStudentSecureSession_ = function (force) {
     if (force === true || isExplicitLogout_557()) {
@@ -16782,7 +16071,6 @@ ${ruleSummary}`, 'success');
   };
   try { clearStudentSecureSession_ = window.clearStudentSecureSession_; } catch (e) {}
 
-  // 학생 로그아웃은 이 함수에서만 실제 삭제합니다.
   const originalStudentSecureLogout_557 = window.studentSecureLogout;
   window.studentSecureLogout = function () {
     if (!confirm('학생 로그아웃할까요?')) return;
@@ -16833,7 +16121,6 @@ ${ruleSummary}`, 'success');
   };
   try { studentSecureLogout = window.studentSecureLogout; } catch (e) {}
 
-  // 로그인 함수도 실패 시 세션을 삭제하지 않도록 최종 고정합니다.
   window.authenticate = async function (name, password) {
     name = String(name || '').trim();
     password = String(password || '').trim();
@@ -16885,7 +16172,6 @@ ${ruleSummary}`, 'success');
   };
   try { authenticateStudentFromInputs = window.authenticateStudentFromInputs; } catch (e) {}
 
-  // 페이지 진입 시 localStorage에 토큰이 있으면 먼저 로그인 화면으로 복구하고, 서버 확인은 뒤에서만 합니다.
   window.checkStudentName = async function () {
     if (hasUsableStudentSession_557()) {
       showLoggedInScreenFromLocal_557();
@@ -16925,16 +16211,13 @@ ${ruleSummary}`, 'success');
     }
   });
 
-  // 설치 직후 이미 localStorage 세션이 있으면 즉시 화면 반영
   if (hasUsableStudentSession_557()) {
     showLoggedInScreenFromLocal_557();
     verifyStudentSessionInBackground_557();
   }
 
   log_557('최종 세션 보호 패치 설치 완료', PATCH_VERSION);
-})();
-</script>
-
+})();</script>
 
 
 <script id="ulim-session-final-guard-5-58">
@@ -17011,7 +16294,6 @@ ${ruleSummary}`, 'success');
     const nextNo = String(result.studentNo || result.attendanceNo || old.no || '').trim();
     const token = String(result.sessionToken || old.token || '').trim();
 
-    // 서버 세션 확인 중 UID/출결번호가 다른 응답이 오면, 현재 로그인 학생명을 덮어쓰지 않습니다.
     if (!opts.forceLogin) {
       if (old.uid && nextUid && old.uid !== nextUid) {
         console.warn('[ULIM session 5.58] 학생UID 불일치 응답 차단', old.uid, nextUid);
@@ -17310,17 +16592,10 @@ ${ruleSummary}`, 'success');
   if (hasAdminSession()) { showAdminFromLocal(); verifyAdminInBackground(); }
 
   log('전계정 세션 고정 패치 설치 완료', PATCH_VERSION);
-})();
-</script>
-
+})();</script>
 
 
 <style id="ulim-attendance-ui-5-59">
-/* =========================================================
-   5.59 학생부 출석체크 UI 정리
-   - PC: 선택 / 학생명 / 출석체크 / 현재상태 / 특이사항 / 메모
-   - 모바일: 스크린샷처럼 카드형 세로 배치
-   ========================================================= */
 #adminAttendanceTableWrap .ulim-attendance-table-559 {
   min-width: 720px;
   table-layout: auto;
@@ -17469,8 +16744,7 @@ ${ruleSummary}`, 'success');
   #adminAttendanceTableWrap .ulim-attendance-actions-559 .admin-btn {
     flex: 1 1 100%;
   }
-}
-</style>
+}</style>
 
 <script id="ulim-attendance-ui-5-59-script">
 (function () {
@@ -17557,19 +16831,10 @@ ${ruleSummary}`, 'success');
     if (typeof ulimAdminAfterRender_ === 'function') ulimAdminAfterRender_();
   };
 
-  console.log('[ULIM attendance UI 5.59] 출석체크 UI 패치 적용 완료');
-})();
-</script>
-
+})();</script>
 
 
 <script id="ulim-vocal-training-5-60-random-window-and-message-patch">
-/* =========================================================
-   5.60 발성훈련 문장구간 랜덤 / 안내문구 정리 / AI 1회 제한 처리
-   - 문장 구간 산정은 GAS에서 처리합니다.
-   - AI 1회 사용 완료 시 버튼 클릭은 리미의 간단 분석으로 전환합니다.
-   - 연습완료는 하루 1회만 허용하며, AI 분석 없이도 경고 후 진행 가능합니다.
-   ========================================================= */
 (function(){
   if (window.__ULIM_VOCAL_560_PATCH__) return;
   window.__ULIM_VOCAL_560_PATCH__ = true;
@@ -17660,10 +16925,7 @@ ${ruleSummary}`, 'success');
   };
   try { renderTrainingFinalAiLimitState_ = window.renderTrainingFinalAiLimitState_; } catch(e) {}
 
-  console.log('[ULIM 5.60] 발성훈련 랜덤 구간/문구 정리 패치 적용 완료', window.ULIM_VOCAL_PATCH_VERSION);
-})();
-</script>
-
+})();</script>
 
 
 <script id="ulim-rimi-training-eval-card-patch-5-61">
@@ -17912,10 +17174,7 @@ ${ruleSummary}`, 'success');
     try { renderTrainingFinalAiResult_ = window.renderTrainingFinalAiResult_; } catch(e) {}
   }
 
-  console.log('[ULIM 5.61] 리미 평가창 카드 UI 패치 적용 완료', window.ULIM_RIMI_EVAL_UI_VERSION);
-})();
-</script>
-
+})();</script>
 
 
 <script id="ulim-training-etri-linked-version-5-62">
@@ -17936,10 +17195,7 @@ ${ruleSummary}`, 'success');
     try { renderTrainingFinalAiResult_ = window.renderTrainingFinalAiResult_; } catch(e) {}
   }
 
-  console.log('[ULIM 5.62] 발성훈련 ETRI 연동 패치 적용 완료', window.ULIM_TRAINING_ETRI_VERSION);
-})();
-</script>
-
+})();</script>
 
 
 <style id="ulim-pron-rimi-card-ui-5-65-style">
@@ -17993,8 +17249,7 @@ ${ruleSummary}`, 'success');
         padding: 12px;
         border-radius: 16px;
     }
-}
-</style>
+}</style>
 
 <script id="ulim-pron-card-and-tab-persist-5-65">
 (function(){
@@ -18223,7 +17478,6 @@ ${ruleSummary}`, 'success');
     const raw = String(message || '');
     const el = document.getElementById('pronAdvancedStatus');
 
-    // 고급 분석 실행 중에는 내부 STT 단계에서 만들어지는 일반 분석 결과를 화면에 먼저 띄우지 않는다.
     if (window.__ulimPronRequestedMode565 === 'advanced' && /리미의\s*간단\s*분석/i.test(raw) && !/정밀|발음평가|리미가\s*확인/.test(raw)) {
       if (el) {
         el.classList.remove('rimi-eval-rendered', 'error', 'success');
@@ -18333,10 +17587,7 @@ ${ruleSummary}`, 'success');
     if (saved) window.ulimActivateTab565_(saved, false);
   }, 1200);
 
-  console.log('[ULIM 5.65] 표준발음 카드 UI/탭 유지 패치 적용 완료', window.ULIM_PRON_CARD_UI_VERSION);
-})();
-</script>
-
+})();</script>
 
 
 <script id="ulim-tab-persist-no-flicker-5-66">
@@ -18403,7 +17654,6 @@ ${ruleSummary}`, 'success');
     return true;
   };
 
-  // 5.65 패치의 지연 실행 setTimeout이 호출하더라도 새 방식으로 동작하게 연결합니다.
   window.ulimActivateTab565_ = window.ulimActivateTab566_;
 
   function installTabClickHandlers566_() {
@@ -18436,7 +17686,6 @@ ${ruleSummary}`, 'success');
 
     const wrapper = document.querySelector('.wrapper');
     if (wrapper) {
-      // 탭을 먼저 결정한 뒤 화면을 보이게 해서 새로고침 때 상황극 탭이 잠깐 보이는 현상을 막습니다.
       wrapper.style.visibility = 'hidden';
       wrapper.style.display = 'flex';
       wrapper.style.flexDirection = 'column';
@@ -18517,9 +17766,7 @@ ${ruleSummary}`, 'success');
     }
   });
 
-  console.log('[ULIM 5.66] 새로고침 탭 깜빡임 방지 패치 적용 완료', window.ULIM_TAB_PERSIST_VERSION);
-})();
-</script>
+})();</script>
 
 
 <script id="ulim-student-identity-lock-5-67">
@@ -18594,8 +17841,6 @@ ${ruleSummary}`, 'success');
     if (old.uid && nextUid && old.uid !== nextUid) return '학생UID 불일치';
     if (old.no && nextNo && old.no !== nextNo) return '출결번호 불일치';
 
-    // 핵심: 과거 패치 때문에 UID/출결번호가 비어 있는 기기라도,
-    // 새로고침 확인 응답이 현재 표시 중인 학생명과 다르면 절대 덮어쓰지 않습니다.
     if (old.name && nextName && normName(old.name) !== normName(nextName)) return '학생명 불일치';
 
     return '';
@@ -18633,7 +17878,6 @@ ${ruleSummary}`, 'success');
     return true;
   }
 
-  // localStorage 직접 덮어쓰기 방어: 과거 비동기 세션 확인 코드가 다른 이름을 쓰려 해도 차단합니다.
   if (!window.__ULIM_LOCALSTORAGE_STUDENT_NAME_GUARD_567__) {
     window.__ULIM_LOCALSTORAGE_STUDENT_NAME_GUARD_567__ = true;
     Storage.prototype.setItem = function(key, value){
@@ -18651,7 +17895,6 @@ ${ruleSummary}`, 'success');
     };
   }
 
-  // 기존 setStudentSecureSession_까지 UID/출결번호/이름 검증 경유로 고정합니다.
   window.setStudentSecureSession_ = function(result){
     return savePinnedStudentSession(result || {}, { forceLogin:false });
   };
@@ -18731,7 +17974,6 @@ ${ruleSummary}`, 'success');
       try { data = JSON.parse(text); } catch(err) { throw new Error('로그인 응답을 확인하지 못했습니다.'); }
       if (!res.ok) throw new Error((data && data.message) || '로그인 연결이 지연되고 있습니다.');
       if (data && data.status === 'success' && data.sessionToken) {
-        // 명시적 로그인은 다른 학생으로 바꾸는 정상 경로이므로 force 저장을 허용합니다.
         savePinnedStudentSession(data, { forceLogin:true });
         try { if (typeof hideLoading === 'function') hideLoading(); } catch(e) {}
         alert(`${getLocal('studentName') || name}님 로그인되었습니다.`);
@@ -18809,10 +18051,7 @@ ${ruleSummary}`, 'success');
     if (hasPinned()) setTimeout(function(){ showPinnedStudent(); verifyPinnedStudent(); }, 20);
   });
 
-  console.log('[ULIM 5.67] 학생 UID/출결번호/이름 세션 고정 패치 적용 완료');
-})();
-</script>
-
+})();</script>
 
 
 <script id="ulim-rimi-analysis-message-fix-5-69">
@@ -18976,22 +18215,11 @@ ${ruleSummary}`, 'success');
   }
 
   if (window.ULIM_DEBUG === true) {
-    console.log('[ULIM 5.69] 리미 분석중/끝표시 문구 보정 패치 적용 완료', window.ULIM_RIMI_ANALYSIS_MESSAGE_FIX_VERSION);
   }
-})();
-</script>
-
+})();</script>
 
 
 <script id="ulim-vocal-training-5-71-local-stt-gemini-ai-only-step6-upload">
-/* =========================================================
-   5.71 발성훈련 AI 분석 단일화
-   - 발성훈련 탭은 기존처럼 [AI 분석] 버튼 하나만 사용합니다.
-   - 발성훈련 AI 분석은 ETRI를 호출하지 않고 로컬 STT + Gemini 조합으로만 처리합니다.
-   - Gemini 호출 실패/지연/제한 시에는 로컬 분석만 화면에 표시합니다.
-   - 분석 진행 중에는 인식결과없음 대신 "분석중..."을 표시합니다.
-   - 별도 연습완료 버튼은 숨기고, STEP6에서 [다음] 클릭 시 연습완료/업로드를 진행합니다.
-   ========================================================= */
 (function(){
   if (window.__ULIM_VOCAL_571_AI_ONLY__) return;
   window.__ULIM_VOCAL_571_AI_ONLY__ = true;
@@ -19431,20 +18659,10 @@ ${ruleSummary}`, 'success');
   setTimeout(install571_, 1200);
   setTimeout(install571_, 2200);
 
-  if (window.ULIM_DEBUG === true) console.log('[ULIM 5.71] 발성훈련 AI 단일 버튼/로컬 STT+Gemini/로컬 fallback/STEP6 업로드 패치 적용 완료');
-})();
-</script>
+})();</script>
 
 
 <script>
-/* =========================================================
-   5.79 교직원 화면 보안/일일평가 로컬 자동임시저장 패치
-   - 공용 PC에서 이전 강사 데이터 즉시 제거
-   - 일일평가 [이번주 수업] 반별 공통 입력화
-   - 일일평가 수동 임시저장 버튼 제거
-   - 입력/변경 즉시 강사별 localStorage 자동 임시저장
-   - 구글시트 임시저장 호출 제거
-   ========================================================= */
 (function() {
     if (window.__ULIM_DAILY_EVAL_574_PATCH__) return;
     window.__ULIM_DAILY_EVAL_574_PATCH__ = true;
@@ -19506,7 +18724,6 @@ ${ruleSummary}`, 'success');
     }
 
     function clearAdminSensitiveScreen_(reason) {
-        try { console.log('[ULIM 5.79] clear admin screen:', reason || ''); } catch (ignore) {}
 
         try {
             adminStudents = [];
@@ -19571,9 +18788,6 @@ ${ruleSummary}`, 'success');
         const targetRow = rows.find(row => row.innerHTML.indexOf('adminLoadDailyEvalStudents') !== -1);
         if (!targetRow) return;
 
-        // 5.79: 수동 임시저장/불러오기 버튼은 표시하지 않습니다.
-        // 입력이 발생하면 강사별 localStorage에만 즉시 자동 임시저장합니다.
-        // 구글시트/GAS 임시저장 호출은 사용하지 않습니다.
 
         Array.from(targetRow.querySelectorAll('button')).forEach(function(btn) {
             const label = String(btn.textContent || '').replace(/\s/g, '');
@@ -20334,12 +19548,6 @@ ${ruleSummary}`, 'success');
 })();
 
 
-/* =========================================================
-   5.81 강사 발성연습일지 달력 일/주/월 조회 복구 패치
-   - 날짜 칸 클릭: 하루 조회
-   - 주차 칸 클릭: 해당 주 조회
-   - 월 제목 클릭: 해당 월 조회
-   ========================================================= */
 (function(){
     const VOCAL_RANGE_DEFAULT_SCOPE = 'day';
     let vocalCalendarViewYear = null;
@@ -20409,24 +19617,19 @@ ${ruleSummary}`, 'success');
             noCache: true
         };
 
-        // 일간은 기존 단일 날짜 조회가 가장 가볍고 안정적입니다.
         if (scope === 'day') {
             const dayData = await adminApi('adminGetVocalPracticeLogs', commonParams);
             return Object.assign({}, dayData, { logs: Array.isArray(dayData.logs) ? dayData.logs : [] });
         }
 
-        // 1차: 새 GAS의 dateFrom/dateTo 범위 조회를 우선 사용합니다.
         const rangeData = await adminApi('adminGetVocalPracticeLogs', commonParams);
         const rangeLogs = Array.isArray(rangeData.logs) ? rangeData.logs : [];
         const rangeReady = String(rangeData.scope || '') === scope && String(rangeData.dateFrom || '') === String(commonParams.dateFrom || '') && String(rangeData.dateTo || '') === String(commonParams.dateTo || '');
 
-        // 새 GAS가 정상 배포되어 범위 응답을 돌려주고, 결과가 있으면 바로 사용합니다.
         if (rangeReady && rangeLogs.length > 0) {
             return Object.assign({}, rangeData, { logs: rangeLogs });
         }
 
-        // 2차 안전장치: 구버전 GAS가 배포되어 있거나 범위 조회가 0건으로 잘못 떨어질 때,
-        // 날짜별 조회는 작동한다는 점을 이용해 선택 범위를 하루씩 조회해 합칩니다.
         const keys = rangeDateKeys_(commonParams.dateFrom, commonParams.dateTo, scope === 'month' ? 35 : 10);
         if (!keys.length) return Object.assign({}, rangeData, { logs: rangeLogs });
 
@@ -20667,9 +19870,6 @@ ${ruleSummary}`, 'success');
             const summary = document.getElementById('adminVocalPracticeSummary');
             if (summary) {
                 const fallbackText = data && data.fallbackMode ? ' · 날짜별 복구조회' : '';
-                // 7.06.05 수정:
-                // 이 코드는 연습평가 팝업 IIFE 바깥에 있으므로
-                // 내부 전용 practiceStudentKey706()를 호출하지 않습니다.
                 const studentKeys706 = new Set(
                     adminVocalPracticeLogs.map(function(log) {
                         const name = String(log && log.studentName || '').trim();
@@ -20712,15 +19912,10 @@ ${ruleSummary}`, 'success');
     document.addEventListener('DOMContentLoaded', function(){
         if (document.getElementById('adminPanelVocalPractice')) ensureVocalPracticeCalendarUi_();
     });
-})();
-</script>
-
+})();</script>
 
 
 <style>
-/* =========================================================
-   5.86 학생 연습기록: 발성/기출 분리 + 업로드 링크 표시
-   ========================================================= */
 .practice-record-toggle-btn {
     width: 100%;
     padding: 11px;
@@ -20776,15 +19971,9 @@ ${ruleSummary}`, 'success');
 }
 .practice-log-card.student-view p {
     margin: 8px 0;
-}
-</style>
+}</style>
 
 <script>
-/* =========================================================
-   5.86 학생 연습기록: 발성훈련/기출문제 분리 + 업로드 링크 표시
-   - 단일 연습로그 시트는 유지
-   - 학생 화면에서 recordType/vocalId/aiSource/sentence 기준으로 발성/기출 분리
-   ========================================================= */
 (function(){
     const PATCH_VERSION = '5.86-student-practice-split-upload-link';
 
@@ -20820,14 +20009,12 @@ ${ruleSummary}`, 'success');
         return /기출|past_question|pastquestion|PAST_/i.test(text);
     }
 
-    // 5.98 화면 표시 전용: 저장 원본은 유지하고 기출문제 Drive 메타 첫 줄만 숨깁니다.
     function cleanPastSentence598_(value) {
         const lines = String(value == null ? '' : value).replace(/\r\n/g, '\n').split('\n');
         if (!lines.length) return '';
         const driveTag = /^\s*\[기출문제\s*(?:[-_ ]\s*)?드라이브\]\s*/i;
         if (driveTag.test(lines[0])) {
             lines[0] = lines[0].replace(driveTag, '').trim();
-            // f1~f100, m1~m100 및 확장자 표시는 화면에서만 제거합니다.
             lines[0] = lines[0].replace(/^[fm]\s*0*\d{1,3}(?:\.(?:docx|gdoc|txt))?\s*/i, '').trim();
             if (!lines[0]) lines.shift();
         }
@@ -20884,14 +20071,12 @@ ${ruleSummary}`, 'success');
         });
     }
 
-    // 달력의 ★는 열람 여부와 무관하게 최종 강사평가가 존재하면 계속 유지합니다.
     function hasTeacherComment586_(logs) {
         return (logs || []).some(function(log){
             return hasTeacherEvaluation586_(log);
         });
     }
 
-    // 상단 "코멘트 도착" 알림은 아직 열람하지 않은 새 평가가 있을 때만 표시합니다.
     function hasUnreadTeacherComment586_(logs) {
         return (logs || []).some(function(log){
             if (!hasTeacherEvaluation586_(log)) return false;
@@ -21353,13 +20538,10 @@ ${ruleSummary}`, 'success');
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install586_);
     else install586_();
 
-    console.log('[울림앱 패치 적용]', PATCH_VERSION);
-})();
-</script>
+})();</script>
 
 
 <script id="ulimHiddenAdminAccess587">
-/* 5.87 학생 화면에서는 교직원 로그인 버튼을 노출하지 않고, 관리자/강사는 숨은 진입만 사용 */
 (function(){
   if (window.__ULIM_HIDDEN_ADMIN_ACCESS_587__) return;
   window.__ULIM_HIDDEN_ADMIN_ACCESS_587__ = true;
@@ -21394,16 +20576,9 @@ ${ruleSummary}`, 'success');
       }
     });
   });
-})();
-</script>
+})();</script>
 
 <script id="ulim-auth-gate-auto-login-5-92">
-/* =========================================================
-   5.92 교직원 진입 권한 잠금 + 자동로그인 선택
-   - 교직원 로그인 화면 진입만으로 일반 탭 권한이 풀리지 않도록 차단
-   - 학생/교직원 로그인 화면에 자동 로그인 유지 체크박스 추가
-   - 체크 해제 시 세션 저장소만 사용하여 앱/브라우저 종료 후 자동 로그아웃
-   ========================================================= */
 (function(){
   if (window.__ULIM_AUTH_GATE_AUTO_LOGIN_592__) return;
   window.__ULIM_AUTH_GATE_AUTO_LOGIN_592__ = true;
@@ -21447,7 +20622,6 @@ ${ruleSummary}`, 'success');
     return safeGet(sessionStorage, COMMON_MODE_KEY) || safeGet(localStorage, COMMON_MODE_KEY) || '';
   }
 
-  // 기존 코드가 localStorage.getItem(...)으로 세션을 읽어도 자동로그인 해제 세션을 사용할 수 있게 보강합니다.
   Storage.prototype.getItem = function(key){
     if (this === localStorage) {
       if (isStudentKey(key)) {
@@ -21468,7 +20642,6 @@ ${ruleSummary}`, 'success');
     return prevGetItem.call(this, key);
   };
 
-  // 자동로그인 해제 상태에서 기존 코드가 localStorage에 저장하려 해도 sessionStorage로 우회합니다.
   Storage.prototype.setItem = function(key, value){
     if (this === localStorage) {
       if (isStudentKey(key) && !studentAutoOn()) {
@@ -22043,20 +21216,10 @@ ${ruleSummary}`, 'success');
   setTimeout(boot592, 300);
   setTimeout(boot592, 1200);
 
-  console.log('[ULIM 5.92] 교직원 권한 잠금/자동로그인 선택 패치 적용 완료');
-})();
-</script>
-
+})();</script>
 
 
 <script id="ulim-attendance-local-queue-5-94">
-/* =========================================================
-   5.94 강사/관리자 출석체크 로컬 우선 + 1분 백그라운드 반영
-   - O/X/상태/메모 변경은 즉시 localStorage에 저장
-   - 마지막 변경 60초 후 동일 계정의 변경건을 묶어 GAS에 일괄 반영
-   - 오프라인/전송 실패 시 로컬 유지 후 1분 간격 재시도
-   - 선택 저장 버튼은 즉시 서버 반영
-   ========================================================= */
 (function () {
   'use strict';
 
@@ -22073,9 +21236,6 @@ ${ruleSummary}`, 'success');
   let isFlushing = false;
   const memoTimers = {};
 
-  // top-level `let adminToken/adminInfo/adminAttendanceRecords`는 window 속성이 아닙니다.
-  // 기존 5.94 패치가 window.adminToken/window.adminInfo만 확인해 강사 로그인 상태를
-  // 놓치던 문제를 방지하기 위해 실제 전역 변수와 저장소를 함께 조회합니다.
   function adminTokenValue_() {
     try {
       if (typeof adminToken !== 'undefined' && String(adminToken || '').trim()) {
@@ -22627,14 +21787,10 @@ ${ruleSummary}`, 'success');
     }, 500);
   }
 
-  console.log('[ULIM 5.99] 강사 출석체크 세션 인식 수정 + 로컬 1분 반영 적용 완료', VERSION);
-})();
-
-</script>
+})();</script>
 
 
 <style id="ulim-ai-learning-eval-style-595">
-/* 5.97 발성/표준발음/기출문제 강사평가 공개 + 기출문제 AI평가 숨김 */
 .ulim-practice-type-standard{background:#ecfeff!important;color:#0e7490!important;}
 .ulim-eval-editor{margin-top:14px;padding:16px;border:1px solid #dbeafe;border-radius:18px;background:linear-gradient(180deg,#f8fbff,#fff);}
 .ulim-eval-editor.past-private{border-color:#ddd6fe;background:linear-gradient(180deg,#faf5ff,#fff);}
@@ -22669,8 +21825,7 @@ ${ruleSummary}`, 'success');
 .ulim-pron-record-btn{width:100%;border:0;border-radius:12px;padding:12px;background:#2563eb;color:#fff;font-weight:950;cursor:pointer;}
 .ulim-pron-save-status{margin-top:8px;font-size:12px;font-weight:850;color:#475569;min-height:18px;}
 .ulim-pron-record-list{display:none;margin-top:12px;}
-@media(max-width:700px){.ulim-score-grid,.ulim-student-score-list{grid-template-columns:1fr}.ulim-eval-editor{padding:13px}.ulim-score-btn{flex:1;max-width:48px}.ulim-student-eval-head{align-items:flex-start}.ulim-average-badge{min-width:54px;height:54px}}
-</style>
+@media(max-width:700px){.ulim-score-grid,.ulim-student-score-list{grid-template-columns:1fr}.ulim-eval-editor{padding:13px}.ulim-score-btn{flex:1;max-width:48px}.ulim-student-eval-head{align-items:flex-start}.ulim-average-badge{min-width:54px;height:54px}}</style>
 
 
 <style id="ulim-practice-student-modal-style-706">
@@ -22873,8 +22028,7 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
         min-width:92px;
         padding:10px;
     }
-}
-</style>
+}</style>
 
 <script id="ulim-ai-learning-eval-runtime-595">
 (function(){
@@ -23343,8 +22497,6 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
   }
   window.ulimBuildStudentEvaluationCard595=buildStudentEval;
 
-  // 학생 평가카드는 각 기록 렌더러에서 한 번만 출력합니다.
-  // 기존 MutationObserver 추가삽입 방식은 동일 평가표가 두 번 표시되는 원인이므로 사용하지 않습니다.
   const observer=new MutationObserver(()=>{
     document.querySelectorAll('.practice-log-card.student-view').forEach(card=>{
       if(card.querySelector('.ulim-student-eval-card'))card.dataset.eval595='1';
@@ -23352,10 +22504,7 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
   });
   if(document.body)observer.observe(document.body,{childList:true,subtree:true});
 
-  // 6.09 표준발음 학생 연습기록은 달력 형태로 제공합니다.
-  // 단, 고급 분석을 요청한 녹음만 Drive/시트에 기록하고 강사평가 대상으로 사용합니다.
   function ensurePronTools(){
-    // 표준발음 달력 UI는 6.09 전용 스크립트에서 생성합니다.
   }
 
   let pronUploadRunning=false;
@@ -23388,7 +22537,6 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
     try{pronRunGeneralAnalysis=window.pronRunGeneralAnalysis;}catch(e){}
   }
 
-  // 표준발음 고급 분석 완료 시 같은 녹음은 한 번만 백그라운드 업로드/기록
   async function uploadPronRecord(message){
     const recorded=(typeof pronRecordedBlob!=='undefined'?pronRecordedBlob:window.pronRecordedBlob);if(pronUploadRunning||!recorded||!pronAdvancedRecordRequested609)return;
     const source=document.getElementById('pronInputText')?.value.trim()||'';if(!source)return;
@@ -23433,19 +22581,10 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
   }
   const cleanupPracticeMetaObserver601=new MutationObserver(m=>{m.forEach(x=>x.addedNodes.forEach(n=>{if(n&&n.nodeType===1)cleanupPracticeMeta601(n);}));});
   if(document.body){cleanupPracticeMeta601(document);cleanupPracticeMetaObserver601.observe(document.body,{childList:true,subtree:true});}
-  console.log('[ULIM 6.01] 강사별 독립평가 + 평가표 중복 제거 + 문장ID/Drive 안내문구 제거',VERSION);
-})();
-</script>
-
+})();</script>
 
 
 <script id="ulim-daily-eval-pending-attendance-6-00">
-/* =========================================================
-   6.00 일일평가에 로컬 출석상태 즉시 반영
-   - 출석체크가 1분 백그라운드 대기 중이어도 일일평가에는 즉시 표시
-   - 날짜 + 반 + 학생번호/학생명 기준으로 로컬 대기열을 병합
-   - 평가 저장/미리보기에도 동일한 최신 출석상태 사용
-   ========================================================= */
 (function () {
   'use strict';
 
@@ -23685,23 +22824,10 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
     if (event.key && event.key.indexOf(STORAGE_PREFIX) === 0) setTimeout(refreshVisibleStatus600_, 0);
   });
 
-  console.log('[ULIM 6.00] 일일평가 로컬 출석상태 즉시 반영 패치 적용 완료');
-})();
-</script>
-
+})();</script>
 
 
 <script id="ulim-practice-read-speed-606">
-/* =========================================================
-   6.07 학생 연습기록 열람 알림 분리 + 달력 고속화
-   - 학생이 평가 기록을 열면 상단 "코멘트 도착" 알림과 노란 강조만 해제
-   - 달력의 ★는 최종 강사평가 존재 표시로 계속 유지
-   - 강사가 새 최종평가를 저장하면 서버 열람상태가 초기화되어 알림이 다시 표시
-   - 서버 [학생열람여부]를 백그라운드 갱신
-   - 월별 기록을 sessionStorage에 5분 캐시
-   - 달력은 먼저 즉시 표시하고 서버 새로고침은 백그라운드 실행
-   - 동일 월 중복 요청 병합
-   ========================================================= */
 (function(){
   'use strict';
   if (window.__ULIM_PRACTICE_READ_SPEED_606__) return;
@@ -23916,7 +23042,6 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
         });
       });
     } catch(e) {}
-    // 현재 화면에 로드된 월 캐시도 갱신합니다.
     try {
       const ym = loadedYm();
       writeCache(ym.year, ym.month, allLogs());
@@ -23924,8 +23049,6 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
   }
 
   function clearVisibleUnreadNotice(){
-    // 현재 열려 있는 기록 카드의 "새 평가" 강조만 즉시 제거합니다.
-    // 점수/코멘트 내용과 달력 ★는 그대로 유지합니다.
     document.querySelectorAll('.practice-log-card.student-view.has-comment').forEach(function(card){
       card.classList.remove('has-comment');
       const title = card.querySelector('.practice-log-title');
@@ -23983,10 +23106,8 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
     };
   }
 
-  // 6.08 표준발음 학생 연습기록 목록은 사용하지 않습니다.
   window.ulimTogglePronPracticeRecords595=function(){};
 
-  // 로그인 직후 달력 데이터를 낮은 우선순위로 미리 불러옵니다.
   const prefetch=function(){
     if(!token())return;
     const now=new Date();
@@ -24003,11 +23124,7 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
   });
 
   setTimeout(refreshUnreadIndicators,500);
-  console.log('[울림앱 패치 적용]',VERSION);
-})();
-</script>
-
-
+})();</script>
 
 
 <script id="ulim-pron-advanced-calendar-609">
@@ -24142,21 +23259,11 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){ensureUi();updateButton();});else{ensureUi();updateButton();}
   setTimeout(function(){ensureUi();updateButton();},700);
-  console.log('[ULIM]',VERSION);
-})();
-</script>
+})();</script>
 <style id="ulim-pron-advanced-calendar-style-609">
-.ulim-pron-calendar-tools609{margin-top:16px;padding-top:14px;border-top:1px dashed #d1d5db}.ulim-pron-calendar-toggle609{width:100%;border:0;border-radius:12px;padding:13px 14px;background:#e5e7eb;color:#374151;font-weight:900;cursor:pointer}.ulim-pron-calendar-toggle609.has-comment{background:#facc15;color:#78350f;box-shadow:0 3px 0 rgba(120,53,15,.18)}.ulim-pron-calendar-save609{min-height:20px;margin:7px 2px 0;font-size:12px;color:#166534;font-weight:800}.ulim-pron-calendar-area609{margin-top:12px;border:1px solid #dbeafe;border-radius:16px;padding:12px;background:#f8fafc}.ulim-pron-calendar-head609{display:grid;grid-template-columns:42px 1fr 42px;align-items:center;gap:8px}.ulim-pron-calendar-head609 strong{text-align:center;font-size:16px;color:#1e3a8a}.ulim-pron-calendar-head609 button{border:0;border-radius:10px;background:#fff;padding:9px;font-size:20px;font-weight:900;cursor:pointer}.ulim-pron-calendar-week609,.ulim-pron-calendar-grid609{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}.ulim-pron-calendar-week609{margin-top:10px}.ulim-pron-calendar-week609 span{text-align:center;font-size:12px;font-weight:900;color:#64748b;padding:4px}.ulim-pron-calendar-grid609{margin-top:4px}.ulim-pron-calendar-grid609 .empty{min-height:44px}.ulim-pron-day609{min-height:48px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:#374151}.ulim-pron-day609 b{font-size:14px;color:#16a34a}.ulim-pron-day609.has-eval{background:#fff7cc;border-color:#facc15}.ulim-pron-day609.has-eval b{color:#b45309}.ulim-pron-day609.today{outline:2px solid #60a5fa}.ulim-pron-day609.active{background:#dbeafe;border-color:#3b82f6}.ulim-pron-calendar-guide609{text-align:center;margin:9px 0 0;font-size:11px;color:#64748b}.ulim-pron-day-detail609{margin-top:12px}.ulim-pron-day-detail609 h4{margin:0 0 10px;color:#1e3a8a}.ulim-pron-audio-link609{display:inline-block;background:#2563eb;color:#fff!important;text-decoration:none;padding:9px 12px;border-radius:9px;font-weight:900}.ulim-pron-day-detail609 .practice-log-text{margin-top:10px;white-space:pre-wrap;line-height:1.6}.ulim-pron-day-detail609 .practice-log-card{margin-bottom:12px}@media(max-width:600px){.ulim-pron-calendar-area609{padding:9px}.ulim-pron-calendar-week609,.ulim-pron-calendar-grid609{gap:3px}.ulim-pron-day609{min-height:42px;border-radius:8px;font-size:12px}}
-</style>
+.ulim-pron-calendar-tools609{margin-top:16px;padding-top:14px;border-top:1px dashed #d1d5db}.ulim-pron-calendar-toggle609{width:100%;border:0;border-radius:12px;padding:13px 14px;background:#e5e7eb;color:#374151;font-weight:900;cursor:pointer}.ulim-pron-calendar-toggle609.has-comment{background:#facc15;color:#78350f;box-shadow:0 3px 0 rgba(120,53,15,.18)}.ulim-pron-calendar-save609{min-height:20px;margin:7px 2px 0;font-size:12px;color:#166534;font-weight:800}.ulim-pron-calendar-area609{margin-top:12px;border:1px solid #dbeafe;border-radius:16px;padding:12px;background:#f8fafc}.ulim-pron-calendar-head609{display:grid;grid-template-columns:42px 1fr 42px;align-items:center;gap:8px}.ulim-pron-calendar-head609 strong{text-align:center;font-size:16px;color:#1e3a8a}.ulim-pron-calendar-head609 button{border:0;border-radius:10px;background:#fff;padding:9px;font-size:20px;font-weight:900;cursor:pointer}.ulim-pron-calendar-week609,.ulim-pron-calendar-grid609{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}.ulim-pron-calendar-week609{margin-top:10px}.ulim-pron-calendar-week609 span{text-align:center;font-size:12px;font-weight:900;color:#64748b;padding:4px}.ulim-pron-calendar-grid609{margin-top:4px}.ulim-pron-calendar-grid609 .empty{min-height:44px}.ulim-pron-day609{min-height:48px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:#374151}.ulim-pron-day609 b{font-size:14px;color:#16a34a}.ulim-pron-day609.has-eval{background:#fff7cc;border-color:#facc15}.ulim-pron-day609.has-eval b{color:#b45309}.ulim-pron-day609.today{outline:2px solid #60a5fa}.ulim-pron-day609.active{background:#dbeafe;border-color:#3b82f6}.ulim-pron-calendar-guide609{text-align:center;margin:9px 0 0;font-size:11px;color:#64748b}.ulim-pron-day-detail609{margin-top:12px}.ulim-pron-day-detail609 h4{margin:0 0 10px;color:#1e3a8a}.ulim-pron-audio-link609{display:inline-block;background:#2563eb;color:#fff!important;text-decoration:none;padding:9px 12px;border-radius:9px;font-weight:900}.ulim-pron-day-detail609 .practice-log-text{margin-top:10px;white-space:pre-wrap;line-height:1.6}.ulim-pron-day-detail609 .practice-log-card{margin-bottom:12px}@media(max-width:600px){.ulim-pron-calendar-area609{padding:9px}.ulim-pron-calendar-week609,.ulim-pron-calendar-grid609{gap:3px}.ulim-pron-day609{min-height:42px;border-radius:8px;font-size:12px}}</style>
 
 
-
-<!-- =========================================================
-  6.10 학생용 발성훈련·기출문제·표준발음 달력 디자인 통일
-  - 날짜 숫자 + 상태(O/X/★)를 모든 달력에서 동일하게 표시
-  - 헤더/요일/이동 버튼/오늘/평가/완료 색상 통일
-  - 기존 기록 조회·코멘트 열람·월 캐시 동작은 유지
-========================================================= -->
 <style id="ulim-student-calendar-unified-style-610">
 :root {
   --ulim-cal-bg: #f8fafc;
@@ -24174,7 +23281,6 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
   --ulim-cal-blue-bg: #eff6ff;
 }
 
-/* 세 기록 보기 버튼 공통 */
 #tab3 > .section > button[onclick="toggleCalendar()"],
 #pastPracticeToggleBtn,
 #ulimPronCalendarToggle609 {
@@ -24203,7 +23309,6 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
   color: #713f12 !important;
 }
 
-/* 기존 개별 제목/설명은 공통 달력 안에서 제공 */
 #calendarDisplayArea > h3,
 #calendarDisplayArea > p,
 #pastPracticeCalendarArea > h3,
@@ -24334,7 +23439,6 @@ button.ulim-student-calendar-day610:hover,
   line-height: 1.05;
 }
 
-/* 기록 완료 */
 .ulim-student-calendar-day610.has-record,
 .ulim-pron-day609.has-record {
   background: var(--ulim-cal-green-bg) !important;
@@ -24343,14 +23447,12 @@ button.ulim-student-calendar-day610:hover,
 .ulim-student-calendar-day610.has-record .ulim-cal-marker610,
 .ulim-pron-day609.has-record > b { color: var(--ulim-cal-green) !important; }
 
-/* 미완료: 발성훈련에서만 사용 */
 .ulim-student-calendar-day610.is-missed {
   background: var(--ulim-cal-red-bg) !important;
   border-color: #fecaca !important;
 }
 .ulim-student-calendar-day610.is-missed .ulim-cal-marker610 { color: var(--ulim-cal-red) !important; }
 
-/* 강사 평가 있음 */
 .ulim-student-calendar-day610.has-eval,
 .ulim-pron-day609.has-eval {
   background: var(--ulim-cal-yellow-bg) !important;
@@ -24360,14 +23462,12 @@ button.ulim-student-calendar-day610:hover,
 .ulim-student-calendar-day610.has-eval .ulim-cal-marker610,
 .ulim-pron-day609.has-eval > b { color: var(--ulim-cal-yellow) !important; }
 
-/* 오늘 */
 .ulim-student-calendar-day610.today,
 .ulim-pron-day609.today {
   outline: 2px solid #60a5fa !important;
   outline-offset: 1px;
 }
 
-/* 선택 날짜 */
 .ulim-student-calendar-day610.active,
 .ulim-pron-day609.active {
   background: var(--ulim-cal-blue-bg) !important;
@@ -24387,7 +23487,6 @@ button.ulim-student-calendar-day610:hover,
   line-height: 1.45;
 }
 
-/* 표준발음 세부기록도 달력 카드와 자연스럽게 연결 */
 .ulim-pron-day-detail609 { margin-top: 12px !important; }
 .ulim-pron-day-detail609 h4 { color: #0f172a !important; }
 
@@ -24408,8 +23507,7 @@ button.ulim-student-calendar-day610:hover,
   .ulim-pron-day609 > span { font-size: 11px !important; }
   .ulim-student-calendar-day610 .ulim-cal-marker610,
   .ulim-pron-day609 > b { font-size: 14px !important; }
-}
-</style>
+}</style>
 
 <script id="ulim-student-calendar-unified-script-610">
 (function(){
@@ -24554,18 +23652,9 @@ button.ulim-student-calendar-day610:hover,
     },250);
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init610); else init610();
-  console.log('[ULIM]',VERSION);
-})();
-</script>
+})();</script>
 
 
-
-<!-- =========================================================
-  6.11 모바일 긴 코멘트창 개선 + 뒤로가기로 열린 창 닫기
-  - 기록 상세창 본문만 스크롤하고 닫기 버튼은 항상 화면에 유지
-  - 모바일 상단 X 버튼 추가
-  - Android/PWA 뒤로가기 시 앱 종료 전에 열린 기록창/팝업/달력부터 닫기
-  ========================================================= -->
 <style id="ulim-mobile-layer-style-611">
 html.ulim-layer-open-611,
 body.ulim-layer-open-611 {
@@ -24674,8 +23763,7 @@ body.ulim-layer-open-611 {
   #recordDisplayBox > div > button:not(.ulim-record-close-top-611) {
     margin: 10px 14px calc(12px + env(safe-area-inset-bottom)) !important;
   }
-}
-</style>
+}</style>
 
 <script id="ulim-mobile-layer-history-611">
 (function(){
@@ -24875,7 +23963,6 @@ body.ulim-layer-open-611 {
     setupRecordModal();
     initializeVisibility();
     observeLayers();
-    console.log('[ULIM]', VERSION, '모바일 창 닫기/뒤로가기 처리 활성화');
   }
 
   if (document.readyState === 'loading') {
@@ -24883,17 +23970,9 @@ body.ulim-layer-open-611 {
   } else {
     init();
   }
-})();
-</script>
+})();</script>
 
 
-
-<!-- =========================================================
-  6.12 모바일 당겨서 새로고침 차단 + 상단 학원 로고 새로고침
-  - 모바일 화면 최상단에서 아래로 당겨도 브라우저 새로고침이 실행되지 않음
-  - 상단 학원 로고 1회 클릭 시 현재 로그인 세션을 유지한 채 앱을 새로고침
-  - 로고의 기존 로그인/로그아웃 진입 동작 제거
-  ========================================================= -->
 <style id="ulim-mobile-refresh-style-612">
 html,
 body {
@@ -24912,8 +23991,7 @@ body {
     -webkit-user-select: none;
     touch-action: manipulation;
   }
-}
-</style>
+}</style>
 
 <script id="ulim-mobile-refresh-control-612">
 (function(){
@@ -24969,12 +24047,10 @@ body {
       const deltaY = touch.clientY - touchStartY;
       const deltaX = touch.clientX - touchStartX;
 
-      // 아래로 당기는 세로 제스처만 처리합니다.
       if (deltaY <= 6 || Math.abs(deltaX) >= Math.abs(deltaY)) return;
 
       const innerScroller = findScrollableAncestor612_(event.target);
       if (innerScroller) {
-        // 내부 스크롤 영역이 위쪽 끝에 있을 때 발생하는 바깥쪽 당김만 차단합니다.
         if (innerScroller.scrollTop <= 0) event.preventDefault();
         return;
       }
@@ -25009,7 +24085,6 @@ body {
         refreshing = false;
       });
     } else {
-      // 구버전 호환: 버전 확인 함수가 없을 때도 캐시 우회 새로고침
       const url = new URL(window.location.href);
       url.searchParams.set('v', String(Date.now()));
       url.searchParams.set('refresh', String(Date.now()));
@@ -25034,7 +24109,6 @@ body {
       logo.setAttribute('aria-label', '울림앱 버전 확인 및 새로고침');
     }
 
-    console.log('[ULIM]', VERSION, '모바일 당겨서 새로고침 차단 / 로고 새로고침 활성화');
   }
 
   if (document.readyState === 'loading') {
@@ -25042,18 +24116,10 @@ body {
   } else {
     init612_();
   }
-})();
-</script>
+})();</script>
 
 
 <script id="ulim-admin-account-ui-isolation-6-13">
-/* =========================================================
-   6.13 교직원 계정 전환 시 로컬 화면 완전 분리
-   - 이전 강사의 선택 반/검색어/입력값/표시 결과를 로그인 시작 전에 즉시 제거
-   - 출석/일일평가/공지/연습일지/강의실/연습실 화면 상태 초기화
-   - 강사별 출석 로컬 대기열과 일일평가 임시저장은 기존 계정별 키를 유지
-   - 계정 전환 중 이전 계정의 늦은 서버 응답은 화면 반영 전에 차단
-   ========================================================= */
 (function () {
   'use strict';
 
@@ -25285,8 +24351,6 @@ body {
       }
     } catch (ignore) {}
 
-    // 강사별 로컬 대기열/평가 임시저장 데이터는 삭제하지 않습니다.
-    // 각 키가 accountUid/id/name으로 분리되어 있으므로 현재 로그인한 계정만 읽습니다.
   }
 
   function selectedClassAllowed613_(inputId) {
@@ -25377,7 +24441,6 @@ body {
       })();
       const currentOwner = ownerKey613_();
 
-      // 새 계정이거나 BFCache로 이전 DOM이 복원된 경우 먼저 화면을 비웁니다.
       if (!beforeOwner || (currentOwner && beforeOwner !== currentOwner)) {
         resetAdminAccountUi613_('session-owner-change-613');
       }
@@ -25421,9 +24484,7 @@ body {
     }
   });
 
-  console.log('[ULIM]', VERSION, '교직원 계정별 로컬 화면 분리 활성화');
-})();
-</script>
+})();</script>
 
 
 <style id="ulim-reliable-write-style-6-14">
@@ -25448,17 +24509,9 @@ body {
 }
 @media(max-width:640px){
   #ulimReliableSyncPill614{right:10px;bottom:10px;max-width:calc(100vw - 20px)}
-}
-</style>
+}</style>
 
 <script id="ulim-admin-reliable-write-6-14">
-/* =========================================================
-   6.14 강사페이지 즉시 화면반영 + 확실한 전송
-   - IndexedDB + localStorage 이중 영구 대기열
-   - 요청ID 기반 서버 중복방지 대기열
-   - 앱 종료/로그아웃 전 서버 전송 시도
-   - 서버 미도착 작업은 동일 강사 재로그인 시 자동 재전송
-   ========================================================= */
 (function(){
   'use strict';
   if(window.__ULIM_ADMIN_RELIABLE_WRITE_614__) return;
@@ -26110,28 +25163,18 @@ body {
     },
     jobs:()=>currentJobs().map(j=>Object.assign({},j))
   };
-})();
-</script>
+})();</script>
 
 
 <style id="ulim-reliable-write-message-visibility-6-15">
-/* 일반 강사와 학생에게는 내부 저장·전송 구조를 노출하지 않습니다. */
 body:not(.full-admin-mode) #ulimReliableSyncPill614 {
   display: none !important;
 }
 body.teacher-mode .ulim-eval-sync:not(.error) {
   display: none !important;
-}
-</style>
+}</style>
 
 <script id="ulim-reliable-write-message-visibility-script-6-15">
-/* =========================================================
-   6.15 일반 강사/학생 내부 전송 문구 숨김
-   - 전체관리자만 로컬저장·오프라인·백그라운드 전송 상태를 확인
-   - 일반 강사에게는 정상 처리 중인 기술 문구를 표시하지 않음
-   - 실제 실패만 간단한 '저장 실패'로 표시
-   - 평가 안내는 학생 공개 여부만 간단히 안내
-   ========================================================= */
 (function () {
   'use strict';
 
@@ -26306,19 +25349,15 @@ body.teacher-mode .ulim-eval-sync:not(.error) {
     };
   }
 
-  console.log('[ULIM] 6.15 일반 강사 내부 저장·전송 문구 숨김 활성화');
-})();
-</script>
+})();</script>
 
 
 <style id="ulim-teacher-attendance-technical-status-hide-6-16">
-/* 일반 강사에게는 출석 로컬/전송 내부 상태를 표시하지 않습니다. */
 body.teacher-mode #adminAttendanceSummary[data-ulim-technical-hidden="1"],
 body.teacher-mode [id^="admin-att-save-state-"]:not(.ulim-save-error-visible),
 body.teacher-mode #ulimReliableSyncPill614 {
   display: none !important;
-}
-</style>
+}</style>
 
 <script id="ulim-teacher-attendance-technical-status-hide-script-6-16">
 (function () {
@@ -26440,21 +25479,10 @@ body.teacher-mode #ulimReliableSyncPill614 {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start616_, { once: true });
   else start616_();
 
-  console.log('[ULIM 6.16] 일반 강사 출석 로컬/전송 문구 완전 숨김 활성화');
-})();
-</script>
+})();</script>
 
 
-
-<!-- =========================================================
-     6.21 관리자 일일평가 발송 미리보기 팝업
-     - 관리자(전체관리) 전용
-     - 선택 학생별 좌우 페이지 이동
-     - 학생별 전체 발송문구 수정/저장
-     - 저장된 수정문구를 평가 저장 및 실제 발송 payload에 반영
-     ========================================================= -->
 <style id="ulim-admin-daily-preview-modal-style-621">
-/* 기존 화면 하단 미리보기는 사용하지 않습니다. */
 #adminDailyEvalPreview { display:none !important; }
 
 .admin-daily-preview-overlay-621 {
@@ -26665,8 +25693,7 @@ body.teacher-mode #ulimReliableSyncPill614 {
     .admin-daily-preview-nav-621 { grid-column:1 / -1; grid-row:1; }
     .admin-daily-preview-btn-621.dark { grid-column:1; }
     .admin-daily-preview-btn-621:not(.nav):not(.dark) { grid-column:2; }
-}
-</style>
+}</style>
 
 <script id="ulim-admin-daily-preview-modal-script-621">
 (function(){
@@ -26790,7 +25817,6 @@ body.teacher-mode #ulimReliableSyncPill614 {
             && trim_(selectedRow.teacherComment) === trim_(sourceRow.teacherComment);
     }
 
-    /* 최종 저장/발송 직전에 학생별 수정문구를 payload에 덮어씁니다. */
     const previousGetSelected_ = window.adminGetSelectedDailyRows;
     if (typeof previousGetSelected_ === 'function') {
         window.adminGetSelectedDailyRows = function(){
@@ -26801,7 +25827,6 @@ body.teacher-mode #ulimReliableSyncPill614 {
                 const key = rowKey_(row);
                 if (edits[key]) return applyEditToRow_(row, edits[key]);
 
-                /* 서버에서 불러온 학생별 전체문구가 있고 세부 입력값이 바뀌지 않았다면 그대로 유지합니다. */
                 const source = findSourceRow_(row);
                 if (sourceMessageStillValid_(row, source)) {
                     return Object.assign({}, row, { evaluation: text_(source.evaluation) });
@@ -27027,7 +26052,6 @@ body.teacher-mode #ulimReliableSyncPill614 {
         state.rows[state.index] = Object.assign({}, row, resetEdit, { __dailyPreviewCustom621:false });
         state.drafts[key] = fresh;
         updateUnderlyingRow_(row, resetEdit);
-        /* 기본문구 복원은 별도 학생 수정값으로 취급하지 않습니다. */
         delete edits[key];
         persistEdits_();
         render_();
@@ -27100,18 +26124,10 @@ body.teacher-mode #ulimReliableSyncPill614 {
         }
     });
 
-    console.log('[ULIM 6.21] 관리자 일일평가 학생별 발송 미리보기 팝업 활성화');
-})();
-</script>
+})();</script>
 
 
 <script id="ulim-logout-return-initial-screen-6-30">
-/* =========================================================
-   6.30 로그아웃 후 초기 로그인 화면 복귀
-   - 학생 로그아웃: 서버 세션 종료/로컬 정리 후 학생 로그인 초기화면 표시
-   - 교직원 로그아웃: 확실한 전송 대기 후 학생 로그인 초기화면 표시
-   - 이전 탭/로그인 모드 복원값 제거
-   ========================================================= */
 (function () {
   'use strict';
 
@@ -27161,7 +26177,6 @@ body.teacher-mode #ulimReliableSyncPill614 {
       );
     } catch (ignore) {}
 
-    /* 다음 로그인 후에는 항상 첫 번째 탭부터 시작합니다. */
     try {
       document.querySelectorAll('.tab').forEach(function (tab) {
         tab.classList.remove('active');
@@ -27188,7 +26203,6 @@ body.teacher-mode #ulimReliableSyncPill614 {
       }
     } catch (ignore) {}
 
-    /* 중복 패치나 비동기 처리 이후에도 초기화면을 최종 강제합니다. */
     const overlay = document.getElementById('loginOverlay');
     const wrapper = document.querySelector('.wrapper');
 
@@ -27232,7 +26246,6 @@ body.teacher-mode #ulimReliableSyncPill614 {
         String(localStorage.getItem('studentSessionToken') || '') ||
         String(sessionStorage.getItem('studentSessionToken') || '');
 
-      /* 확인창에서 취소했을 때는 초기화면으로 이동하지 않습니다. */
       if (explicitLogout || (beforeToken && !afterToken)) {
         resetToInitialScreen630_();
       }
@@ -27255,9 +26268,7 @@ body.teacher-mode #ulimReliableSyncPill614 {
     try { adminLogout = window.adminLogout; } catch (ignore) {}
   }
 
-  console.log('[ULIM 6.30] 로그아웃 후 초기 로그인 화면 복귀 활성화');
-})();
-</script>
+})();</script>
 
 
 <script id="ulim-room-auth-diagnostic-6-30-final">
@@ -27272,28 +26283,15 @@ body.teacher-mode #ulimReliableSyncPill614 {
   window.getRoomReservationActor630_ = function () {
     const actor = original.apply(this, arguments);
     try {
-      console.log('[ULIM ROOM AUTH 6.30 FINAL]', {
-        authenticated: !!(actor && actor.authenticated),
-        type: actor && actor.type ? actor.type : '',
-        hasAdminToken: !!(actor && actor.params && actor.params.adminToken),
-        hasStudentToken: !!(actor && actor.params && actor.params.studentSessionToken)
-      });
     } catch (ignore) {}
     return actor;
   };
 
   try { getRoomReservationActor630_ = window.getRoomReservationActor630_; } catch (ignore) {}
-})();
-</script>
+})();</script>
 
 
 <script id="ulim-save-flow-7-04">
-/* =========================================================
-   7.04 저장 흐름 최종 패치
-   1) 명시적 저장 버튼: 실제 GAS 처리 완료까지 전경 대기
-   2) 일반 입력 변경: 로컬 즉시 저장 후 60초 뒤 백그라운드 반영
-   3) Apps Script GET: JSONP로 결과 확인
-   ========================================================= */
 (function () {
   'use strict';
   if (window.__ULIM_SAVE_FLOW_704__) return;
@@ -27418,8 +26416,6 @@ body.teacher-mode #ulimReliableSyncPill614 {
     }
 
     try {
-      // fetch(no-cors)는 Apps Script 리다이렉트·보안 프로그램 환경에서 본문이 유실될 수 있어
-      // 숨김 form POST를 기본 전송 방식으로 사용합니다.
       await postAdminForm704(postFields);
 
       const startedAt = Date.now();
@@ -27474,15 +26470,12 @@ body.teacher-mode #ulimReliableSyncPill614 {
 
         const elapsed = Date.now() - startedAt;
 
-        // 요청행이 생성되지 않았으면 동일 요청ID로 form POST를 한 번 더 보냅니다.
         if ((!status || status.state === 'not_found') && elapsed >= 2500 && !retriedPost) {
           retriedPost = true;
           postFields._ = Date.now();
           await postAdminForm704(postFields);
         }
 
-        // 작은 요청은 GET/JSONP 직접 실행으로 한 번 더 보강합니다.
-        // 동일 요청ID라 이미 처리됐다면 서버에서 중복 저장하지 않습니다.
         if ((!status || status.state === 'not_found') && elapsed >= 5000 && !triedJsonpFallback) {
           const queryLength = new URLSearchParams(postFields).toString().length;
           if (queryLength <= 14000) {
@@ -27500,7 +26493,6 @@ body.teacher-mode #ulimReliableSyncPill614 {
           }
         }
 
-        // not_found가 계속되면 실제 저장이 시작되지 않은 상태이므로 오래 기다리지 않습니다.
         if ((!status || status.state === 'not_found') && elapsed >= 15000) {
           throw new Error('저장 요청이 서버에 접수되지 않았습니다. GAS를 새 버전으로 배포한 뒤 다시 시도해주세요.');
         }
@@ -27678,8 +26670,6 @@ body.teacher-mode #ulimReliableSyncPill614 {
   window.__ULIM_DAILY_AUTOSAVE_SHEET_MODE_704__ = 'REMOVED';
 
   async function backupDailyAutoDraft704(draft) {
-    // 서버 자동저장 보조 시트는 사용하지 않습니다.
-    // 실패한 내용은 localStorage에 남고 다음 재시도에서 실제 일일평가 시트로 직접 반영됩니다.
     return false;
   }
 
@@ -27741,7 +26731,6 @@ body.teacher-mode #ulimReliableSyncPill614 {
   };
 
   async function clearDailyAutoDraft704() {
-    // 서버 자동저장 시트는 제거되었습니다. 예약 타이머만 정리합니다.
     cancelDailyAuto704();
     return true;
   }
@@ -27888,7 +26877,6 @@ body.teacher-mode #ulimReliableSyncPill614 {
     }
 
     if (!finalize) {
-      // 자동 임시저장은 기존 1분 로컬 큐가 처리합니다.
       return false;
     }
 
@@ -27937,9 +26925,7 @@ body.teacher-mode #ulimReliableSyncPill614 {
     if (key) window.ulimScheduleDailyEvalSheetSync704_();
   });
 
-  console.log('[ULIM 7.04] 전경 즉시저장 + 변경 1분 자동반영 패치 활성화');
-})();
-</script>
+})();</script>
 
 <script>window.__ULIM_EXACT_ATTENDANCE_DATE_704__ = true; window.__ULIM_AI_START_NOTICE_704__ = true;</script>
 </body>
