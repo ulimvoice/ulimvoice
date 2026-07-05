@@ -4,7 +4,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260706-past-script-spacing-fix-70607">
+<meta name="ulim-build" content="20260706-past-spacing-session-log-clean-70608">
 <script>window.__ULIM_WEB_DB_MODE_704__ = 'OFF';</script>
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램 7.06</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -3283,7 +3283,7 @@ if (isSpeechSupported && !isIOS) {
         recognitionResult = event.results[0][0].transcript;
         updateRecognitionUI();
     };
-    recognition.onerror = function(event) { console.log("STT error:", event.error); };
+    recognition.onerror = function() {};
 }
 
 function updateRecognitionUI() {
@@ -5032,8 +5032,8 @@ window.onload = async function() {
 };
 
 
-const ULIM_APP_VERSION = "2026.07.06.706.07";
-const ULIM_INDEX_BUILD_META = "20260706-past-script-spacing-fix-70607";
+const ULIM_APP_VERSION = "2026.07.06.706.08";
+const ULIM_INDEX_BUILD_META = "20260706-past-spacing-session-log-clean-70608";
 
 window.__ULIM_APP_VERSION__ = ULIM_APP_VERSION;
 window.__ULIM_INDEX_BUILD_META__ = ULIM_INDEX_BUILD_META;
@@ -13257,7 +13257,7 @@ function adminRenderVocalPracticeLogs() {
         return `
             <div class="practice-log-card ${hasComment ? 'has-comment' : ''}">
                 <div class="practice-log-title">${ulimAdminEsc_(log.studentName)} ${typeBadge} ${hasComment ? '★' : ''}</div>
-                <div class="practice-log-text ulim-practice-script706"><b class="ulim-practice-script-label706">${sentenceLabel}</b><span class="ulim-practice-script-body706">${ulimAdminEsc_(isPast && typeof window.ulimCleanPastSentence598 === 'function' ? window.ulimCleanPastSentence598(log.sentence || '') : (log.sentence || ''))}</span></div>
+                <div class="practice-log-text ulim-practice-script706"><b class="ulim-practice-script-label706">${sentenceLabel}</b><br><span class="ulim-practice-script-body706">${ulimAdminEsc_(isPast && typeof window.ulimCleanPastSentence598 === 'function' ? window.ulimCleanPastSentence598(log.sentence || '') : (log.sentence || ''))}</span></div>
                 ${log.aiComment ? `<div class="practice-log-text" style="margin-top:8px;"><b>AI 코멘트</b><br>${ulimAdminEsc_(log.aiComment)}</div>` : ''}
                 ${audio}
                 <div style="margin-top:10px;">
@@ -15173,9 +15173,7 @@ ${ruleSummary}`, 'success');
   function now_() { return Date.now(); }
   function markExplicitLogout_() { window.__ulimExplicitLogoutUntil = now_() + 2500; }
   function isExplicitLogout_() { return now_() < Number(window.__ulimExplicitLogoutUntil || 0); }
-  function log_() {
-    try { console.log.apply(console, ['[ULIM session 5.49]'].concat(Array.from(arguments))); } catch (e) {}
-  }
+  function log_() {}
 
   document.addEventListener('click', function (event) {
     const btn = event.target && event.target.closest ? event.target.closest('button') : null;
@@ -15955,9 +15953,7 @@ ${ruleSummary}`, 'success');
     return flag || now_557() < Number(window.__ulimExplicitLogoutUntil || 0);
   }
 
-  function log_557() {
-    try { console.log.apply(console, ['[ULIM session 5.57]'].concat(Array.from(arguments))); } catch (e) {}
-  }
+  function log_557() {}
 
   function getLocal_557(key) {
     try { return localStorage.getItem(key) || ''; } catch (e) { return ''; }
@@ -16231,7 +16227,7 @@ ${ruleSummary}`, 'success');
   const PATCH_VERSION = '2026.06.06.559.01';
   window.ULIM_SESSION_PATCH_VERSION = PATCH_VERSION;
 
-  function log(){ try { console.log.apply(console, ['[ULIM session 5.58]'].concat([].slice.call(arguments))); } catch(e) {} }
+  function log(){}
   function getLocal(k){ try { return localStorage.getItem(k) || ''; } catch(e) { return ''; } }
   function setLocal(k,v){ try { if (v !== undefined && v !== null && String(v) !== '') localStorage.setItem(k, String(v)); } catch(e) {} }
   function removeLocal(k){ try { localStorage.removeItem(k); } catch(e) {} }
@@ -17784,7 +17780,7 @@ ${ruleSummary}`, 'success');
   const rawGetItem = Storage.prototype.getItem;
   const rawRemoveItem = Storage.prototype.removeItem;
 
-  function log(){ if (DEBUG && console && console.log) console.log.apply(console, arguments); }
+  function log(){}
   function warn(){ if (DEBUG && console && console.warn) console.warn.apply(console, arguments); }
   function getLocal(key){ try { return rawGetItem.call(localStorage, key) || ''; } catch(e) { return ''; } }
   function setLocal(key, value){ try { rawSetItem.call(localStorage, key, String(value == null ? '' : value)); } catch(e) {} }
@@ -21968,12 +21964,12 @@ ${ruleSummary}`, 'success');
     white-space:normal !important;
 }
 .ulim-practice-script-label706 {
-    display:block;
-    margin:0 0 4px;
+    display:inline;
+    margin:0;
     line-height:1.35;
 }
 .ulim-practice-script-body706 {
-    display:block;
+    display:inline;
     margin:0;
     white-space:pre-wrap;
     line-height:1.6;
@@ -22327,7 +22323,7 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
             <span class="practice-log-type-badge ${badgeClass}">${esc(typeLabel)}</span>
             ${practiceHasFinal706(log) ? ' ★' : ''}
           </div>
-          <div class="practice-log-text ulim-practice-script706"><b class="ulim-practice-script-label706">${esc(sentenceLabel)}</b><span class="ulim-practice-script-body706">${esc(displaySentence(log))}</span></div>
+          <div class="practice-log-text ulim-practice-script706"><b class="ulim-practice-script-label706">${esc(sentenceLabel)}</b><br><span class="ulim-practice-script-body706">${esc(displaySentence(log))}</span></div>
           ${aiHtml}
           ${audioHtml}
           ${scoreEditor(log,idx)}
