@@ -26940,5 +26940,52 @@ body.teacher-mode #ulimReliableSyncPill614 {
 })();</script>
 
 <script>window.__ULIM_EXACT_ATTENDANCE_DATE_704__ = true; window.__ULIM_AI_START_NOTICE_704__ = true;</script>
+
+<script>
+/**
+ * 20260709.1 출석부 UI O/X 전용 정책
+ * - 지각 선택 제거
+ * - 지각/△/늦음으로 들어온 과거값은 출석으로 표시
+ * - 앱 메모 input 값은 기존 저장 흐름대로 record.memo에 포함되어 GAS로 전달
+ */
+window.__ULIM_ATTENDANCE_OX_ONLY_MEMO_REMARKS_20260709__ = '20260709.1-memo-remarks-ox-only-final';
+
+function adminNormalizeAttendanceStatusForUi_(value) {
+    const raw = String(value || '').replace(/\s/g, '').trim();
+    if (!raw || raw === '-' || raw === '미체크' || raw === '미출결') return '미체크';
+    if (/^(O|o|○|ㅇ|출|출석|참석|등원)$/.test(raw)) return '출석';
+    if (/^(X|x|×|✕|결|결석|미등원)$/.test(raw)) return '결석';
+
+    // 지각은 별도 출석상태로 쓰지 않고 출석 처리합니다.
+    if (raw.indexOf('지각') !== -1 || raw.indexOf('늦음') !== -1 || raw === '△') return '출석';
+
+    if (raw.indexOf('휴원') !== -1) return '미체크';
+    if (raw.indexOf('보강') !== -1) return '미체크';
+    if (raw.indexOf('신규') !== -1 || raw.indexOf('첫수업') !== -1) return '미체크';
+    if (raw.indexOf('반이동') !== -1 || raw.indexOf('반변경') !== -1) return '미체크';
+    return '미체크';
+}
+
+function adminAttendanceStatusClass_(status) {
+    const normalized = adminNormalizeAttendanceStatusForUi_(status);
+    if (normalized === '출석') return 'attendance-ok';
+    if (normalized === '결석') return 'attendance-no';
+    return '';
+}
+
+function adminAttendanceStatusOptions_(current) {
+    const selected = adminNormalizeAttendanceStatusForUi_(current);
+    const base = [
+        ['미체크', '- 미체크'],
+        ['출석', 'O 출석'],
+        ['결석', 'X 결석']
+    ];
+
+    return base.map(([value, label]) => {
+        const sel = selected === value ? ' selected' : '';
+        return `<option value="${adminEscapeAttendanceHtml_(value)}"${sel}>${adminEscapeAttendanceHtml_(label)}</option>`;
+    }).join('');
+}
+</script>
 </body>
 </html>
