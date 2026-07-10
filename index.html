@@ -26986,6 +26986,64 @@ function adminAttendanceStatusOptions_(current) {
         return `<option value="${adminEscapeAttendanceHtml_(value)}"${sel}>${adminEscapeAttendanceHtml_(label)}</option>`;
     }).join('');
 }
+<script id="ulim-attendance-cell-note-memo-dirty-20260709-11">
+(function () {
+  const PATCH_VERSION = '20260709.11-cell-note-memo-dirty';
+  if (window.__ULIM_ATT_CELL_NOTE_MEMO_DIRTY_20260709_11__) return;
+  window.__ULIM_ATT_CELL_NOTE_MEMO_DIRTY_20260709_11__ = PATCH_VERSION;
+
+  document.addEventListener('input', function (event) {
+    const input = event.target;
+    if (!input || !input.matches || !input.matches('#adminAttendanceTableWrap input[data-field="memo"]')) return;
+
+    const row = input.closest('tr[data-att-index]');
+    if (!row) return;
+
+    row.dataset.memoDirty = '1';
+    input.dataset.memoDirty = '1';
+
+    const idx = Number(row.dataset.attIndex);
+    if (!Number.isFinite(idx)) return;
+
+    try {
+      if (typeof adminAttendanceRecords !== 'undefined' && adminAttendanceRecords && adminAttendanceRecords[idx]) {
+        adminAttendanceRecords[idx].memo = input.value || '';
+        adminAttendanceRecords[idx].appMemo = input.value || '';
+        adminAttendanceRecords[idx].manualMemo = input.value || '';
+        adminAttendanceRecords[idx].memoDirty = true;
+        adminAttendanceRecords[idx].memoTouched = true;
+        adminAttendanceRecords[idx].__memoDirty70911 = true;
+      }
+    } catch (ignore) {}
+  }, true);
+
+  try {
+    if (typeof adminUpdateAttendanceRecordFromRow_ === 'function' && !adminUpdateAttendanceRecordFromRow_.__cellNoteMemoWrapped70911) {
+      const original = adminUpdateAttendanceRecordFromRow_;
+      const wrapped = function (idx) {
+        const result = original.apply(this, arguments);
+        try {
+          const row = document.querySelector('tr[data-att-index="' + idx + '"]');
+          const input = row ? row.querySelector('input[data-field="memo"]') : null;
+          const dirty = !!(row && row.dataset.memoDirty === '1') || !!(input && input.dataset.memoDirty === '1');
+          if (dirty && typeof adminAttendanceRecords !== 'undefined' && adminAttendanceRecords && adminAttendanceRecords[idx]) {
+            adminAttendanceRecords[idx].memo = input ? (input.value || '') : (adminAttendanceRecords[idx].memo || '');
+            adminAttendanceRecords[idx].appMemo = adminAttendanceRecords[idx].memo;
+            adminAttendanceRecords[idx].manualMemo = adminAttendanceRecords[idx].memo;
+            adminAttendanceRecords[idx].memoDirty = true;
+            adminAttendanceRecords[idx].memoTouched = true;
+            adminAttendanceRecords[idx].__memoDirty70911 = true;
+          }
+        } catch (ignore) {}
+        return result;
+      };
+      wrapped.__cellNoteMemoWrapped70911 = true;
+      adminUpdateAttendanceRecordFromRow_ = wrapped;
+      try { window.adminUpdateAttendanceRecordFromRow_ = wrapped; } catch (ignore) {}
+    }
+  } catch (ignore) {}
+})();
 </script>
+
 </body>
 </html>
