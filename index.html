@@ -26986,62 +26986,132 @@ function adminAttendanceStatusOptions_(current) {
         return `<option value="${adminEscapeAttendanceHtml_(value)}"${sel}>${adminEscapeAttendanceHtml_(label)}</option>`;
     }).join('');
 }
-<script id="ulim-attendance-cell-note-memo-dirty-20260709-11">
+<script id="ulim-attendance-note-special-ui-20260709-12">
 (function () {
-  const PATCH_VERSION = '20260709.11-cell-note-memo-dirty';
-  if (window.__ULIM_ATT_CELL_NOTE_MEMO_DIRTY_20260709_11__) return;
-  window.__ULIM_ATT_CELL_NOTE_MEMO_DIRTY_20260709_11__ = PATCH_VERSION;
+  const PATCH_VERSION = '20260709.12-note-status-special-authoritative-ui';
+  if (window.__ULIM_ATT_NOTE_SPECIAL_UI_20260709_12__) return;
+  window.__ULIM_ATT_NOTE_SPECIAL_UI_20260709_12__ = PATCH_VERSION;
+
+  function esc(v) {
+    if (typeof ulimAdminEsc_ === 'function') return ulimAdminEsc_(v);
+    return String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  }
+
+  function markRecord(idx, fields) {
+    try {
+      if (typeof adminAttendanceRecords !== 'undefined' && adminAttendanceRecords && adminAttendanceRecords[idx]) {
+        Object.assign(adminAttendanceRecords[idx], fields || {});
+      }
+    } catch (ignore) {}
+  }
 
   document.addEventListener('input', function (event) {
     const input = event.target;
-    if (!input || !input.matches || !input.matches('#adminAttendanceTableWrap input[data-field="memo"]')) return;
+    if (!input || !input.matches) return;
 
-    const row = input.closest('tr[data-att-index]');
-    if (!row) return;
+    if (input.matches('#adminAttendanceTableWrap input[data-field="memo"]')) {
+      const row = input.closest('tr[data-att-index]');
+      if (!row) return;
+      const idx = Number(row.dataset.attIndex);
+      row.dataset.memoDirty = '1';
+      input.dataset.memoDirty = '1';
+      markRecord(idx, {
+        memo: input.value || '',
+        appMemo: input.value || '',
+        manualMemo: input.value || '',
+        memoDirty: true,
+        memoTouched: true,
+        __memoDirty712: true
+      });
+    }
 
-    row.dataset.memoDirty = '1';
-    input.dataset.memoDirty = '1';
-
-    const idx = Number(row.dataset.attIndex);
-    if (!Number.isFinite(idx)) return;
-
-    try {
-      if (typeof adminAttendanceRecords !== 'undefined' && adminAttendanceRecords && adminAttendanceRecords[idx]) {
-        adminAttendanceRecords[idx].memo = input.value || '';
-        adminAttendanceRecords[idx].appMemo = input.value || '';
-        adminAttendanceRecords[idx].manualMemo = input.value || '';
-        adminAttendanceRecords[idx].memoDirty = true;
-        adminAttendanceRecords[idx].memoTouched = true;
-        adminAttendanceRecords[idx].__memoDirty70911 = true;
-      }
-    } catch (ignore) {}
+    if (input.matches('#adminAttendanceTableWrap input[data-field="specialStatus"]')) {
+      const row = input.closest('tr[data-att-index]');
+      if (!row) return;
+      const idx = Number(row.dataset.attIndex);
+      row.dataset.specialDirty = '1';
+      input.dataset.specialDirty = '1';
+      markRecord(idx, {
+        specialStatus: input.value || '',
+        specialType: input.value || '',
+        special: input.value || '',
+        specialDirty: true,
+        specialTouched: true,
+        __specialDirty712: true
+      });
+    }
   }, true);
 
-  try {
-    if (typeof adminUpdateAttendanceRecordFromRow_ === 'function' && !adminUpdateAttendanceRecordFromRow_.__cellNoteMemoWrapped70911) {
-      const original = adminUpdateAttendanceRecordFromRow_;
-      const wrapped = function (idx) {
-        const result = original.apply(this, arguments);
-        try {
-          const row = document.querySelector('tr[data-att-index="' + idx + '"]');
-          const input = row ? row.querySelector('input[data-field="memo"]') : null;
-          const dirty = !!(row && row.dataset.memoDirty === '1') || !!(input && input.dataset.memoDirty === '1');
-          if (dirty && typeof adminAttendanceRecords !== 'undefined' && adminAttendanceRecords && adminAttendanceRecords[idx]) {
-            adminAttendanceRecords[idx].memo = input ? (input.value || '') : (adminAttendanceRecords[idx].memo || '');
-            adminAttendanceRecords[idx].appMemo = adminAttendanceRecords[idx].memo;
-            adminAttendanceRecords[idx].manualMemo = adminAttendanceRecords[idx].memo;
-            adminAttendanceRecords[idx].memoDirty = true;
-            adminAttendanceRecords[idx].memoTouched = true;
-            adminAttendanceRecords[idx].__memoDirty70911 = true;
-          }
-        } catch (ignore) {}
-        return result;
-      };
-      wrapped.__cellNoteMemoWrapped70911 = true;
-      adminUpdateAttendanceRecordFromRow_ = wrapped;
-      try { window.adminUpdateAttendanceRecordFromRow_ = wrapped; } catch (ignore) {}
-    }
-  } catch (ignore) {}
+  function decorateSpecialInputs() {
+    try {
+      const rows = document.querySelectorAll('#adminAttendanceTableWrap tr[data-att-index]');
+      rows.forEach(row => {
+        const idx = Number(row.dataset.attIndex);
+        if (!Number.isFinite(idx)) return;
+        const rec = (typeof adminAttendanceRecords !== 'undefined' && adminAttendanceRecords) ? adminAttendanceRecords[idx] : null;
+        if (!rec) return;
+
+        const cells = row.querySelectorAll('td');
+        if (cells.length < 4) return;
+
+        const specialCell = cells[3];
+        if (specialCell.querySelector('input[data-field="specialStatus"]')) return;
+
+        const value = rec.specialStatus || rec.specialType || rec.special || '';
+        specialCell.innerHTML = '<input class="admin-small-input" data-field="specialStatus" value="' + esc(value) + '" placeholder="특이사항">';
+      });
+    } catch (ignore) {}
+  }
+
+  const originalRender = typeof adminRenderAttendanceTable === 'function' ? adminRenderAttendanceTable : null;
+  if (originalRender && !originalRender.__noteSpecialWrapped712) {
+    const wrapped = function () {
+      const result = originalRender.apply(this, arguments);
+      decorateSpecialInputs();
+      return result;
+    };
+    wrapped.__noteSpecialWrapped712 = true;
+    adminRenderAttendanceTable = wrapped;
+    try { window.adminRenderAttendanceTable = wrapped; } catch (ignore) {}
+  }
+
+  const originalUpdate = typeof adminUpdateAttendanceRecordFromRow_ === 'function' ? adminUpdateAttendanceRecordFromRow_ : null;
+  if (originalUpdate && !originalUpdate.__noteSpecialUpdateWrapped712) {
+    const wrappedUpdate = function (idx) {
+      const result = originalUpdate.apply(this, arguments);
+      try {
+        const row = document.querySelector('tr[data-att-index="' + idx + '"]');
+        if (!row) return result;
+        const memoInput = row.querySelector('input[data-field="memo"]');
+        const specialInput = row.querySelector('input[data-field="specialStatus"]');
+
+        const update = {};
+        if (memoInput && (memoInput.dataset.memoDirty === '1' || row.dataset.memoDirty === '1')) {
+          update.memo = memoInput.value || '';
+          update.appMemo = update.memo;
+          update.manualMemo = update.memo;
+          update.memoDirty = true;
+          update.memoTouched = true;
+          update.__memoDirty712 = true;
+        }
+        if (specialInput && (specialInput.dataset.specialDirty === '1' || row.dataset.specialDirty === '1')) {
+          update.specialStatus = specialInput.value || '';
+          update.specialType = update.specialStatus;
+          update.special = update.specialStatus;
+          update.specialDirty = true;
+          update.specialTouched = true;
+          update.__specialDirty712 = true;
+        }
+        markRecord(idx, update);
+      } catch (ignore) {}
+      return result;
+    };
+    wrappedUpdate.__noteSpecialUpdateWrapped712 = true;
+    adminUpdateAttendanceRecordFromRow_ = wrappedUpdate;
+    try { window.adminUpdateAttendanceRecordFromRow_ = wrappedUpdate; } catch (ignore) {}
+  }
+
+  setTimeout(decorateSpecialInputs, 300);
 })();
 </script>
 
