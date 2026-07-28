@@ -4,7 +4,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="cleaned-20260729-classroom-multi-select-final-save-71801">
+<meta name="ulim-build" content="cleaned-20260729-classroom-preview-final-confirm-71901">
 <script>window.__ULIM_WEB_DB_MODE_704__ = 'OFF';</script>
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램 7.06</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -2472,7 +2472,8 @@ body.admin-mode .admin-only-tab { display:block !important; }
             <h3 style="margin-top:0;">강의실 사용체크</h3>
             <p style="font-size:14px; color:#666; line-height:1.6; margin-top:-4px;">
               강의실별 사용 현황을 시간표 형태로 확인합니다.<br>
-              표의 [사용] 버튼을 여러 개 선택한 뒤 [사용 체크 · 최종 저장]을 누르면 한 번에 저장됩니다.
+              표의 [사용] 버튼으로 여러 시간을 선택하면 강사명·수업명·시간이 표에 미리 표시됩니다.<br>
+              실제 시트 저장은 [사용 체크 · 최종확정]을 눌렀을 때만 실행됩니다.
             </p>
 
             <div class="classroom-usage-form-grid">
@@ -2508,7 +2509,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
             </div>
 
             <div class="admin-btn-row">
-              <button type="button" id="adminClassroomUsageSaveButton" class="admin-btn" onclick="adminSaveClassroomUsageFromForm()">사용 체크 · 최종 저장</button>
+              <button type="button" id="adminClassroomUsageSaveButton" class="admin-btn" onclick="adminSaveClassroomUsageFromForm()">사용 체크 · 최종확정</button>
               <button type="button" class="admin-btn orange admin-full-only" onclick="adminSaveClassroomUsageFromForm(false, true)">관리자 배정/용도변경</button>
               <button type="button" class="admin-btn gray" onclick="adminClearClassroomUsageForm()">입력 초기화</button>
               <button type="button" class="admin-btn blue" onclick="adminLoadClassroomUsage(true)">현황 새로고침</button>
@@ -2517,9 +2518,9 @@ body.admin-mode .admin-only-tab { display:block !important; }
             <div class="admin-summary classroom-usage-chip-row">
               <span class="admin-chip" id="adminClassroomUsageSummary">조회 전</span>
               <span class="admin-chip">초록: 사용중</span>
-              <span class="admin-chip">표의 [사용]: 다중 선택/해제</span>
+              <span class="admin-chip">표의 [사용]: 저장 전 사용표시/해제</span>
               <span class="admin-chip" id="adminClassroomUsagePendingSummary">선택 0칸</span>
-              <span class="admin-chip">최종 저장: [사용 체크] 버튼</span>
+              <span class="admin-chip">시트 저장: [사용 체크 · 최종확정]</span>
               <span class="admin-chip admin-full-only">관리자: 사용중 칸 클릭 후 배정/용도변경 가능</span>
             </div>
             <div class="classroom-usage-note">
@@ -12239,12 +12240,151 @@ function adminClassroomIsPending718_(date, room, hour) {
         ];
 }
 
+
+function adminClassroomPendingPreview719_() {
+    const instructorEl =
+        document.getElementById(
+            'adminClassroomUsageInstructor'
+        );
+
+    const classEl =
+        document.getElementById(
+            'adminClassroomUsageClass'
+        );
+
+    const memoEl =
+        document.getElementById(
+            'adminClassroomUsageMemo'
+        );
+
+    const defaultInstructor =
+        (
+            adminInfo &&
+            (
+                adminInfo.name ||
+                adminInfo.id
+            )
+        ) ||
+        '강사 미지정';
+
+    return {
+        instructor:
+            String(
+                instructorEl &&
+                instructorEl.value ||
+                defaultInstructor
+            ).trim() ||
+            defaultInstructor,
+        className:
+            String(
+                classEl &&
+                classEl.value ||
+                ''
+            ).trim(),
+        memo:
+            String(
+                memoEl &&
+                memoEl.value ||
+                ''
+            ).trim()
+    };
+}
+
+function adminClassroomPendingGroupAt719_(
+    date,
+    room,
+    hour
+) {
+    const normalizedRoom =
+        adminClassroomNormalizeRoom718_(
+            room
+        );
+
+    return (
+        adminClassroomBuildGroups718_(
+            adminClassroomPendingSlots718_(
+                date
+            )
+        ).find(group =>
+            adminClassroomNormalizeRoom718_(
+                group.room
+            ) ===
+                normalizedRoom &&
+            Number(group.startHour) <=
+                Number(hour) &&
+            Number(group.endHour) >
+                Number(hour)
+        ) ||
+        {
+            room:
+                room,
+            startHour:
+                Number(hour),
+            endHour:
+                Number(hour) + 1
+        }
+    );
+}
+
+function adminClassroomRefreshPendingPreview719_() {
+    if (
+        adminClassroomPendingSlots718_(
+            adminClassroomUsageDate_()
+        ).length &&
+        typeof adminRenderClassroomUsageTable ===
+            'function'
+    ) {
+        adminRenderClassroomUsageTable();
+    }
+}
+
+function adminClassroomBindPendingPreview719_() {
+    [
+        'adminClassroomUsageInstructor',
+        'adminClassroomUsageClass',
+        'adminClassroomUsageMemo'
+    ].forEach(id => {
+        const element =
+            document.getElementById(id);
+
+        if (
+            !element ||
+            element.dataset
+                .ulimPendingPreview719 ===
+                '1'
+        ) {
+            return;
+        }
+
+        element.dataset
+            .ulimPendingPreview719 =
+            '1';
+
+        element.addEventListener(
+            'input',
+            adminClassroomRefreshPendingPreview719_
+        );
+
+        element.addEventListener(
+            'change',
+            adminClassroomRefreshPendingPreview719_
+        );
+    });
+}
+
 function adminClassroomUpdatePendingSummary718_() {
     const date =
         adminClassroomUsageDate_();
 
     const slots =
-        adminClassroomPendingSlots718_(date);
+        adminClassroomPendingSlots718_(
+            date
+        );
+
+    const groups =
+        adminClassroomBuildGroups718_(
+            slots
+        );
 
     const summary =
         document.getElementById(
@@ -12253,9 +12393,13 @@ function adminClassroomUpdatePendingSummary718_() {
 
     if (summary) {
         summary.textContent =
-            '선택 ' +
-            String(slots.length) +
-            '칸';
+            slots.length
+                ? '저장 전 ' +
+                  String(slots.length) +
+                  '칸 · ' +
+                  String(groups.length) +
+                  '건'
+                : '선택 0칸';
     }
 
     const saveButton =
@@ -12266,10 +12410,10 @@ function adminClassroomUpdatePendingSummary718_() {
     if (saveButton) {
         saveButton.textContent =
             slots.length
-                ? '사용 체크 · 최종 저장 (' +
+                ? '사용 체크 · 최종확정 (' +
                   String(slots.length) +
                   '칸)'
-                : '사용 체크 · 최종 저장';
+                : '사용 체크 · 최종확정';
     }
 }
 
@@ -12656,8 +12800,13 @@ function adminRenderClassroomUsageTable() {
         return;
     }
 
+    adminClassroomBindPendingPreview719_();
+
     const date =
         adminClassroomUsageDate_();
+
+    const preview =
+        adminClassroomPendingPreview719_();
 
     const slotHours =
         adminClassroomUsageHours_()
@@ -12715,21 +12864,21 @@ function adminRenderClassroomUsageTable() {
                             : ''
                     ) +
                     '>' +
-                    '<div>' +
+                    '<div class="ulim-classroom-card-instructor-719">' +
                     escapeHtml(
                         used.instructor ||
                         used.adminName ||
                         '-'
                     ) +
                     '</div>' +
-                    '<div style="font-size:11px; font-weight:700;">' +
+                    '<div class="ulim-classroom-card-purpose-719">' +
                     escapeHtml(
                         used.className ||
                         used.purpose ||
                         '사용중'
                     ) +
                     '</div>' +
-                    '<div style="font-size:11px; color:inherit; opacity:.85;">' +
+                    '<div class="ulim-classroom-card-time-719">' +
                     adminFormatClassroomHour_(
                         used.startHour
                     ) +
@@ -12771,40 +12920,73 @@ function adminRenderClassroomUsageTable() {
                     hour
                 );
 
+            if (selected) {
+                const group =
+                    adminClassroomPendingGroupAt719_(
+                        date,
+                        room,
+                        hour
+                    );
+
+                tableHtml +=
+                    '<td class="classroom-usage-cell-used mine ulim-classroom-pending-card-719" ' +
+                    'onclick="adminQuickClassroomUsage(\'' +
+                    escapeHtml(room) +
+                    '\', ' +
+                    String(hour) +
+                    ')" ' +
+                    'title="클릭하면 선택 해제">' +
+                    '<div class="ulim-classroom-pending-badge-719">저장 전</div>' +
+                    '<div class="ulim-classroom-card-instructor-719">' +
+                    escapeHtml(
+                        preview.instructor
+                    ) +
+                    '</div>' +
+                    '<div class="ulim-classroom-card-purpose-719">' +
+                    escapeHtml(
+                        preview.className ||
+                        '사용 예정'
+                    ) +
+                    '</div>' +
+                    '<div class="ulim-classroom-card-time-719">' +
+                    adminFormatClassroomHour_(
+                        group.startHour
+                    ) +
+                    '~' +
+                    adminFormatClassroomHour_(
+                        group.endHour
+                    ) +
+                    '</div>' +
+                    (
+                        preview.memo
+                            ? '<div class="ulim-classroom-card-memo-719">' +
+                              escapeHtml(
+                                  preview.memo
+                              ) +
+                              '</div>'
+                            : ''
+                    ) +
+                    '<button type="button" class="classroom-usage-release-btn ulim-classroom-pending-remove-719" ' +
+                    'onclick="event.stopPropagation(); adminQuickClassroomUsage(\'' +
+                    escapeHtml(room) +
+                    '\', ' +
+                    String(hour) +
+                    ')">선택 해제</button>' +
+                    '</td>';
+
+                return;
+            }
+
             tableHtml +=
-                '<td class="' +
-                (
-                    selected
-                        ? 'ulim-classroom-pending-cell-718'
-                        : ''
-                ) +
-                '">' +
+                '<td>' +
                 '<button type="button" ' +
-                'class="classroom-usage-empty-btn ' +
-                (
-                    selected
-                        ? 'ulim-classroom-pending-button-718'
-                        : ''
-                ) +
-                '" ' +
-                'aria-pressed="' +
-                (
-                    selected
-                        ? 'true'
-                        : 'false'
-                ) +
-                '" ' +
+                'class="classroom-usage-empty-btn" ' +
+                'aria-pressed="false" ' +
                 'onclick="adminQuickClassroomUsage(\'' +
                 escapeHtml(room) +
                 '\', ' +
                 String(hour) +
-                ')">' +
-                (
-                    selected
-                        ? '선택됨 ✓'
-                        : '사용'
-                ) +
-                '</button>' +
+                ')">사용</button>' +
                 '</td>';
         });
 
@@ -12900,11 +13082,6 @@ function adminQuickClassroomUsage(room, hour) {
     const numericHour =
         Number(hour);
 
-    adminClassroomTogglePending718_(
-        room,
-        numericHour
-    );
-
     const roomEl =
         document.getElementById(
             'adminClassroomUsageRoom'
@@ -12955,6 +13132,11 @@ function adminQuickClassroomUsage(room, hour) {
             '';
     }
 
+    adminClassroomTogglePending718_(
+        room,
+        numericHour
+    );
+
     const selected =
         adminClassroomPendingSlots718_(
             adminClassroomUsageDate_()
@@ -12968,9 +13150,7 @@ function adminQuickClassroomUsage(room, hour) {
     if (summary) {
         summary.textContent =
             selected.length
-                ? '표에서 ' +
-                  String(selected.length) +
-                  '칸 선택됨 · [사용 체크 · 최종 저장]을 누르세요.'
+                ? '표에 저장 전 사용정보가 표시됐습니다. [사용 체크 · 최종확정]을 눌러야 시트에 저장됩니다.'
                 : '선택이 모두 해제됐습니다.';
     }
 }
@@ -25863,7 +26043,7 @@ body {
                 '',
                 '총 ' +
                     String(selectedSlots.length) +
-                    '칸을 시트에 최종 저장할까요?'
+                    '칸을 시트에 최종확정 저장할까요?'
             ].join('\n')
         )
     ) {
@@ -25978,7 +26158,7 @@ body {
 
             if (saveButton) {
                 saveButton.textContent =
-                    '최종 저장 ' +
+                    '최종확정 저장 ' +
                     String(index + 1) +
                     '/' +
                     String(availableGroups.length);
@@ -26136,7 +26316,7 @@ body {
         }
 
         const alertLines = [
-            '강의실 사용체크 처리 완료',
+            '강의실 사용체크 최종확정 완료',
             '',
             '저장 성공: ' +
                 String(successGroups.length) +
@@ -29006,6 +29186,125 @@ body.full-admin-mode #adminPanelRoom .admin-full-only {
   console.log(
     '[ULIM 7.18] 강의실 사용체크 다중 선택 설치:',
     '표에서 여러 칸 선택 / 선택 재클릭 해제 / 최종 버튼 일괄 저장'
+  );
+})();
+</script>
+
+
+<style id="ulim-classroom-preview-final-confirm-7-19">
+.classroom-usage-cell-used.ulim-classroom-pending-card-719 {
+  position: relative;
+  cursor: pointer;
+  background:
+    linear-gradient(145deg, #eef6ff 0%, #dbeafe 100%) !important;
+  color: #1e3a5f !important;
+  box-shadow:
+    inset 0 0 0 2px #60a5fa,
+    0 3px 10px rgba(37, 99, 235, .12) !important;
+  transition:
+    transform .14s ease,
+    box-shadow .14s ease;
+}
+.classroom-usage-cell-used.ulim-classroom-pending-card-719:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 0 0 2px #2563eb,
+    0 6px 16px rgba(37, 99, 235, .18) !important;
+}
+.ulim-classroom-pending-badge-719 {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: -.2px;
+}
+.ulim-classroom-card-instructor-719 {
+  font-size: 13px;
+  line-height: 1.25;
+  font-weight: 900;
+}
+.ulim-classroom-card-purpose-719 {
+  margin-top: 2px;
+  font-size: 11px;
+  line-height: 1.25;
+  font-weight: 750;
+}
+.ulim-classroom-card-time-719 {
+  margin-top: 3px;
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 800;
+  opacity: .88;
+}
+.ulim-classroom-card-memo-719 {
+  max-width: 118px;
+  margin: 3px auto 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  opacity: .78;
+}
+.classroom-usage-release-btn.ulim-classroom-pending-remove-719 {
+  margin-top: 6px;
+  background: #64748b !important;
+}
+#adminClassroomUsageSaveButton {
+  min-width: 190px;
+  font-weight: 900;
+}
+</style>
+
+<script id="ulim-classroom-preview-final-confirm-7-19">
+(function () {
+  'use strict';
+
+  if (
+    window.__ULIM_CLASSROOM_PREVIEW_FINAL_CONFIRM_71901__
+  ) {
+    return;
+  }
+
+  window.__ULIM_CLASSROOM_PREVIEW_FINAL_CONFIRM_71901__ =
+    true;
+
+  const bind = function () {
+    try {
+      if (
+        typeof adminClassroomBindPendingPreview719_ ===
+          'function'
+      ) {
+        adminClassroomBindPendingPreview719_();
+      }
+    } catch (error) {
+      console.warn(
+        '[ULIM 7.19] pending preview bind failed',
+        error
+      );
+    }
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener(
+      'DOMContentLoaded',
+      bind,
+      { once: true }
+    );
+  } else {
+    bind();
+  }
+
+  setTimeout(bind, 700);
+
+  console.log(
+    '[ULIM 7.19] 강의실 저장 전 미리보기 설치:',
+    '기존 카드 형태 강사명·용도·시간 표시 / 서버 중복검사 유지 / 최종확정 버튼에서만 시트 저장'
   );
 })();
 </script>
