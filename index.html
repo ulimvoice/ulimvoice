@@ -4,7 +4,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="cleaned-20260729-uidv2-room-classroom-compat-71301">
+<meta name="ulim-build" content="cleaned-20260729-uidv2-daily-eval-read-fix-71401">
 <script>window.__ULIM_WEB_DB_MODE_704__ = 'OFF';</script>
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램 7.06</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7883,46 +7883,313 @@ function adminBuildUniqueDailyNameMap602_(rows) {
     return unique;
 }
 
+async function adminDailyEvalMatchKeys714_(row) {
+    row = row || {};
+
+    const keys = [];
+    const add = value => {
+        const key = String(value || '').trim();
+        if (key && !keys.includes(key)) keys.push(key);
+    };
+
+    const stableIds = [
+        row.studentIdentityKey,
+        row.identityKey,
+        row.studentUid,
+        row.studentUID,
+        row.uidV2,
+        row.uid
+    ]
+        .map(value => String(value || '').trim())
+        .filter(Boolean);
+
+    stableIds.forEach(value => add('UID|' + value));
+
+    const phone = String(
+        row.studentPhone ||
+        row.phone ||
+        ''
+    ).replace(/[^0-9]/g, '');
+
+    if (phone.length >= 8) {
+        add('PHONE|' + phone);
+        add('PHONE4|' + phone.slice(-4));
+    }
+
+    const no = String(
+        row.studentNo ||
+        row.attendanceNo ||
+        ''
+    ).trim();
+
+    const classKey = normalizeForClientMatch(
+        row.className ||
+        row.class ||
+        ''
+    );
+
+    const nameKey = normalizeForClientMatch(
+        row.studentName ||
+        row.name ||
+        ''
+    );
+
+    if (no && classKey && nameKey) {
+        add(['NOCLASSNAME', no, classKey, nameKey].join('|'));
+    }
+
+    if (no && nameKey) {
+        add(['NONAME', no, nameKey].join('|'));
+    }
+
+    if (classKey && nameKey) {
+        add(['CLASSNAME', classKey, nameKey].join('|'));
+    }
+
+    if (nameKey) {
+        add('NAME|' + nameKey);
+    }
+
+    return keys;
+}
+
+function adminDailyEvalHasSavedContent714_(row) {
+    row = row || {};
+    return !!String([
+        row.evaluation || '',
+        row.lessonContent || '',
+        row.lessonAttitude || '',
+        row.teacherComment || '',
+        row.videoLink || ''
+    ].join('')).trim();
+}
+
+function adminDailyEvalSavedRank714_(row) {
+    row = row || {};
+
+    const savedAt = String(row.savedAt || '').trim();
+    const time = savedAt ? Date.parse(savedAt.replace(' ', 'T')) : 0;
+
+    return {
+        time: Number.isFinite(time) ? time : 0,
+        row: Number(row.savedRow || 0)
+    };
+}
+
+function adminDailyEvalPreferSaved714_(previous, candidate) {
+    if (!previous) return candidate;
+    if (!candidate) return previous;
+
+    const a = adminDailyEvalSavedRank714_(previous);
+    const b = adminDailyEvalSavedRank714_(candidate);
+
+    if (b.time !== a.time) return b.time > a.time ? candidate : previous;
+    return b.row >= a.row ? candidate : previous;
+}
+
 async function adminMergeSavedDailyEvaluations(date, className, keyword = '') {
     if (!adminToken || !adminDailyEvalRows.length) return;
 
     try {
-        const data = await adminApi('adminGetDailyEvaluations', { adminToken, date, className, keyword });
-        const savedRows = data.rows || [];
-        if (!savedRows.length) return;
+        if (typeof ulimClearAdminApiCacheByActions_ === 'function') {
+            ulimClearAdminApiCacheByActions_([
+                'adminGetDailyEvaluations'
+            ]);
+        }
 
-        const exactMap = {};
-        savedRows.forEach(row => { exactMap[adminDailyEvalExactKey(row)] = row; });
-        const uniqueSavedByName = adminBuildUniqueDailyNameMap602_(savedRows);
-        const currentNameCounts = {};
-        (adminDailyEvalRows || []).forEach(row => {
-            const key = adminDailyEvalNameKey(row);
-            currentNameCounts[key] = (currentNameCounts[key] || 0) + 1;
+        const data = await adminApi(
+            'adminGetDailyEvaluations',
+            {
+                adminToken,
+                date,
+                className,
+                keyword,
+                forceRefresh: 'Y',
+                noCache: 'Y'
+            }
+        );
+
+        const savedRows = Array.isArray(data && data.rows)
+            ? data.rows.filter(adminDailyEvalHasSavedContent714_)
+            : [];
+
+        if (!savedRows.length) {
+            console.info(
+                '[ULIM 7.14] 저장 일일평가 조회 0건',
+                {
+                    date,
+                    className,
+                    keyword,
+                    source: data && data.source || '',
+                    count: data && data.count || 0
+                }
+            );
+            return;
+        }
+
+        const keyMap = new Map();
+        const nameLists = new Map();
+
+        savedRows.forEach(saved => {
+            adminDailyEvalMatchKeys714_(saved).forEach(key => {
+                keyMap.set(
+                    key,
+                    adminDailyEvalPreferSaved714_(
+                        keyMap.get(key),
+                        saved
+                    )
+                );
+            });
+
+            const nameKey = normalizeForClientMatch(
+                saved.studentName ||
+                saved.name ||
+                ''
+            );
+
+            if (nameKey) {
+                const list = nameLists.get(nameKey) || [];
+                list.push(saved);
+                nameLists.set(nameKey, list);
+            }
         });
+
+        const uniqueSavedByName = new Map();
+
+        nameLists.forEach((list, nameKey) => {
+            const uniqueStudents = new Map();
+
+            list.forEach(saved => {
+                const identity = (
+                    adminDailyEvalMatchKeys714_(saved)
+                        .find(key => !key.startsWith('NAME|')) ||
+                    'ROW|' + String(saved.savedRow || '')
+                );
+
+                uniqueStudents.set(
+                    identity,
+                    adminDailyEvalPreferSaved714_(
+                        uniqueStudents.get(identity),
+                        saved
+                    )
+                );
+            });
+
+            if (uniqueStudents.size === 1) {
+                uniqueSavedByName.set(
+                    nameKey,
+                    Array.from(uniqueStudents.values())[0]
+                );
+            }
+        });
+
+        let mergedCount = 0;
 
         adminDailyEvalRows = adminDailyEvalRows.map(row => {
-            const no = String(row.studentNo || row.attendanceNo || '').trim();
-            const nameKey = adminDailyEvalNameKey(row);
-            const saved = exactMap[adminDailyEvalExactKey(row)] || (!no && currentNameCounts[nameKey] === 1 ? uniqueSavedByName[nameKey] : null);
-            if (!saved || !saved.evaluation) return row;
+            let saved = null;
+
+            const rowKeys = adminDailyEvalMatchKeys714_(row);
+
+            for (const key of rowKeys) {
+                if (keyMap.has(key)) {
+                    saved = keyMap.get(key);
+                    break;
+                }
+            }
+
+            if (!saved) {
+                const nameKey = normalizeForClientMatch(
+                    row.studentName ||
+                    row.name ||
+                    ''
+                );
+
+                saved = uniqueSavedByName.get(nameKey) || null;
+            }
+
+            if (!saved || !adminDailyEvalHasSavedContent714_(saved)) {
+                return row;
+            }
+
+            mergedCount += 1;
 
             return Object.assign({}, row, {
-                studentNo: row.studentNo || saved.studentNo || '',
-                studentIdentityKey: row.studentIdentityKey || saved.studentIdentityKey || '',
-                evaluation: saved.evaluation,
-                savedAt: saved.savedAt || '',
-                savedBy: saved.adminName || saved.adminId || '',
-                smsResult: saved.smsResult || '',
-                className: row.className || saved.className || '',
-                instructor: row.instructor || saved.instructor || '',
-                videoLink: row.videoLink || saved.videoLink || adminGetVideoLinkForClassName_(row.className || saved.className || ''),
-                lessonContent: saved.lessonContent || row.lessonContent || '',
-                lessonAttitude: saved.lessonAttitude || row.lessonAttitude || '',
-                teacherComment: saved.teacherComment || row.teacherComment || ''
+                studentNo:
+                    row.studentNo ||
+                    saved.studentNo ||
+                    '',
+                studentIdentityKey:
+                    row.studentIdentityKey ||
+                    saved.studentIdentityKey ||
+                    '',
+                evaluation:
+                    saved.evaluation ||
+                    row.evaluation ||
+                    '',
+                savedAt:
+                    saved.savedAt ||
+                    '',
+                savedBy:
+                    saved.adminName ||
+                    saved.adminId ||
+                    '',
+                smsResult:
+                    saved.smsResult ||
+                    '',
+                className:
+                    row.className ||
+                    saved.className ||
+                    '',
+                instructor:
+                    row.instructor ||
+                    saved.instructor ||
+                    '',
+                studentPhone:
+                    row.studentPhone ||
+                    saved.studentPhone ||
+                    '',
+                parentPhone:
+                    row.parentPhone ||
+                    saved.parentPhone ||
+                    '',
+                videoLink:
+                    saved.videoLink ||
+                    row.videoLink ||
+                    adminGetVideoLinkForClassName_(
+                        row.className ||
+                        saved.className ||
+                        ''
+                    ),
+                lessonContent:
+                    saved.lessonContent ||
+                    row.lessonContent ||
+                    '',
+                lessonAttitude:
+                    saved.lessonAttitude ||
+                    row.lessonAttitude ||
+                    '',
+                teacherComment:
+                    saved.teacherComment ||
+                    row.teacherComment ||
+                    ''
             });
         });
+
+        window.adminDailyEvalRows = adminDailyEvalRows;
+
+        console.info(
+            '[ULIM 7.14] 저장 일일평가 병합 완료',
+            {
+                source: data && data.source || '',
+                serverCount: savedRows.length,
+                mergedCount
+            }
+        );
     } catch (e) {
-        console.warn('저장된 일일평가 불러오기 오류:', e);
+        console.warn(
+            '[ULIM 7.14] 저장된 일일평가 불러오기 오류:',
+            e
+        );
     }
 }
 
@@ -27022,6 +27289,21 @@ body.full-admin-mode #adminPanelRoom .admin-full-only {
   console.log(
     '[ULIM 7.13] UIDv2 reservation compatibility installed:',
     VERSION
+  );
+})();
+</script>
+
+
+<script id="ulim-daily-eval-read-fix-7-14">
+(function () {
+  'use strict';
+
+  if (window.__ULIM_DAILY_EVAL_READ_FIX_71401__) return;
+  window.__ULIM_DAILY_EVAL_READ_FIX_71401__ = true;
+
+  console.log(
+    '[ULIM 7.14] 관리자 일일평가 조회 복구 설치:',
+    'UID·전화·학생번호·반명·이름 다중 매칭 / 최신 원본 강제조회'
   );
 })();
 </script>
