@@ -4,7 +4,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="cleaned-20260729-daily-eval-classroom-conflict-fix-71502">
+<meta name="ulim-build" content="cleaned-20260729-daily-eval-promise-match-fix-71601">
 <script>window.__ULIM_WEB_DB_MODE_704__ = 'OFF';</script>
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램 7.06</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7883,7 +7883,7 @@ function adminBuildUniqueDailyNameMap602_(rows) {
     return unique;
 }
 
-async function adminDailyEvalMatchKeys714_(row) {
+function adminDailyEvalMatchKeys714_(row) {
     row = row || {};
 
     const keys = [];
@@ -27803,6 +27803,21 @@ body.full-admin-mode #adminPanelRoom .admin-full-only {
   console.log(
     '[ULIM 7.15] 일일평가·강의실 중복충돌 복구 설치:',
     '평가 원본 독립조회 / 강의실 충돌 terminal 처리 / 반복 alert 차단'
+  );
+})();
+</script>
+
+
+<script id="ulim-daily-eval-promise-fix-7-16">
+(function () {
+  'use strict';
+
+  if (window.__ULIM_DAILY_EVAL_PROMISE_FIX_71601__) return;
+  window.__ULIM_DAILY_EVAL_PROMISE_FIX_71601__ = true;
+
+  console.log(
+    '[ULIM 7.16] 일일평가 매칭 함수 동기화 완료:',
+    'adminDailyEvalMatchKeys714_ returns Array'
   );
 })();
 </script>
