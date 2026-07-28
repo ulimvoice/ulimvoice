@@ -4,7 +4,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="cleaned-20260710-20260706-past-spacing-session-log-clean-70608">
+<meta name="ulim-build" content="cleaned-20260729-uidv2-room-classroom-compat-71301">
 <script>window.__ULIM_WEB_DB_MODE_704__ = 'OFF';</script>
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램 7.06</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -26494,6 +26494,535 @@ body.teacher-mode #ulimReliableSyncPill614 {
   }
 
   setTimeout(decorateSpecialInputs, 300);
+})();
+</script>
+
+
+<style id="ulim-uidv2-reservation-visibility-7-13">
+/*
+ * UIDv2 전환 뒤 교직원 세션의 역할/식별자 표현이 달라도
+ * 연습실 예약 탭과 강의실 사용체크 탭을 정상 노출합니다.
+ */
+body.admin-mode .tab[data-tab="tabRoom"] {
+  display: block !important;
+}
+body.admin-mode .admin-subtab[data-admin-panel="adminPanelClassroomUsage"] {
+  display: inline-block !important;
+}
+body.full-admin-mode .admin-subtab[data-admin-panel="adminPanelRoom"] {
+  display: inline-block !important;
+}
+body.full-admin-mode #adminPanelRoom .admin-full-only {
+  display: revert !important;
+}
+</style>
+
+<script id="ulim-uidv2-reservation-compat-7-13">
+(function () {
+  'use strict';
+
+  if (window.__ULIM_UIDV2_RESERVATION_COMPAT_71301__) return;
+  window.__ULIM_UIDV2_RESERVATION_COMPAT_71301__ = true;
+
+  const VERSION = '2026-07-29.713.01-uidv2-room-classroom-compat';
+  const CUTOVER_SUPERADMIN_PRINCIPAL_UID =
+    'PRN2_01KY8PQY00FHMEBRWGJBR1EQJT';
+
+  function safeStorageGet_(storage, key) {
+    try {
+      return String(storage.getItem(key) || '').trim();
+    } catch (ignore) {
+      return '';
+    }
+  }
+
+  function parseJson_(value) {
+    try {
+      const parsed = JSON.parse(String(value || ''));
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch (ignore) {
+      return null;
+    }
+  }
+
+  function currentAdminToken713_() {
+    try {
+      if (typeof adminToken !== 'undefined' && String(adminToken || '').trim()) {
+        return String(adminToken || '').trim();
+      }
+    } catch (ignore) {}
+
+    return (
+      safeStorageGet_(sessionStorage, 'adminToken') ||
+      safeStorageGet_(localStorage, 'adminToken')
+    );
+  }
+
+  function currentAdminInfo713_() {
+    try {
+      if (
+        typeof adminInfo !== 'undefined' &&
+        adminInfo &&
+        typeof adminInfo === 'object'
+      ) {
+        return adminInfo;
+      }
+    } catch (ignore) {}
+
+    try {
+      if (window.adminInfo && typeof window.adminInfo === 'object') {
+        return window.adminInfo;
+      }
+    } catch (ignore) {}
+
+    return (
+      parseJson_(safeStorageGet_(sessionStorage, 'adminInfo')) ||
+      parseJson_(safeStorageGet_(localStorage, 'adminInfo')) ||
+      {}
+    );
+  }
+
+  function currentFirebaseRuntime713_() {
+    try {
+      return (
+        window.ULIM_FIREBASE_RUNTIME_INSTANCE ||
+        window.__ULIM_FIREBASE_RUNTIME_INSTANCE ||
+        window.__ULIM_FIREBASE_RUNTIME__ ||
+        null
+      );
+    } catch (ignore) {
+      return null;
+    }
+  }
+
+  function currentFirebaseUid713_() {
+    const runtime = currentFirebaseRuntime713_();
+    try {
+      return String(
+        runtime &&
+        runtime.auth &&
+        runtime.auth.currentUser &&
+        runtime.auth.currentUser.uid ||
+        ''
+      ).trim();
+    } catch (ignore) {
+      return '';
+    }
+  }
+
+  function roleCandidates713_(info) {
+    info = info && typeof info === 'object' ? info : {};
+    const runtime = currentFirebaseRuntime713_();
+    const claims =
+      info.claims ||
+      info.customClaims ||
+      info.firebaseClaims ||
+      (runtime && runtime.claims) ||
+      window.__ULIM_FIREBASE_AUTH_CLAIMS ||
+      {};
+
+    return [
+      info.role,
+      info.adminRole,
+      info.firebaseRole,
+      info.permission,
+      claims && claims.role,
+      claims && claims.adminRole
+    ]
+      .map(function (value) {
+        return String(value || '').trim();
+      })
+      .filter(Boolean);
+  }
+
+  function principalUid713_(info) {
+    info = info && typeof info === 'object' ? info : {};
+    const runtimeUid = currentFirebaseUid713_();
+
+    return String(
+      info.principalUidV2 ||
+      info.principalUid ||
+      info.uidV2 ||
+      (
+        /^PRN2_/.test(String(info.uid || '').trim())
+          ? info.uid
+          : ''
+      ) ||
+      (
+        /^PRN2_/.test(runtimeUid)
+          ? runtimeUid
+          : ''
+      ) ||
+      ''
+    ).trim();
+  }
+
+  function isFullAdmin713_() {
+    const info = currentAdminInfo713_();
+
+    try {
+      if (
+        typeof window.__ULIM_ORIGINAL_ADMIN_IS_FULL_713__ === 'function' &&
+        window.__ULIM_ORIGINAL_ADMIN_IS_FULL_713__()
+      ) {
+        return true;
+      }
+    } catch (ignore) {}
+
+    const roles = roleCandidates713_(info);
+    const roleText = roles.join('|').replace(/\s+/g, '');
+
+    if (
+      /superadmin|fulladmin|전체관리|전체관리자|최고관리|관리자|원장|admin/i
+        .test(roleText)
+    ) {
+      return true;
+    }
+
+    return principalUid713_(info) === CUTOVER_SUPERADMIN_PRINCIPAL_UID;
+  }
+
+  function staffSession713_() {
+    const info = currentAdminInfo713_();
+    return !!(
+      currentAdminToken713_() &&
+      info &&
+      typeof info === 'object' &&
+      (
+        info.id ||
+        info.adminId ||
+        info.name ||
+        info.accountUid ||
+        info.principalUidV2
+      )
+    );
+  }
+
+  function setImportantDisplay713_(element, value) {
+    if (!element) return;
+    try {
+      element.style.setProperty('display', value, 'important');
+    } catch (ignore) {
+      element.style.display = value;
+    }
+  }
+
+  function applyReservationVisibility713_() {
+    const staff = staffSession713_();
+    const full = staff && isFullAdmin713_();
+
+    if (!staff) return;
+
+    document.body.classList.add('admin-mode');
+    document.body.classList.toggle('full-admin-mode', full);
+    document.body.classList.toggle('teacher-mode', !full);
+
+    const roomTopTab =
+      document.querySelector('.tab[data-tab="tabRoom"]');
+    const roomTopPanel =
+      document.getElementById('tabRoom');
+    const classroomTab =
+      document.querySelector(
+        '.admin-subtab[data-admin-panel="adminPanelClassroomUsage"]'
+      );
+    const classroomPanel =
+      document.getElementById('adminPanelClassroomUsage');
+    const roomAdminTab =
+      document.querySelector(
+        '.admin-subtab[data-admin-panel="adminPanelRoom"]'
+      );
+    const roomAdminPanel =
+      document.getElementById('adminPanelRoom');
+
+    setImportantDisplay713_(roomTopTab, 'block');
+    if (roomTopPanel) roomTopPanel.style.removeProperty('display');
+
+    setImportantDisplay713_(classroomTab, 'inline-block');
+    if (classroomPanel) classroomPanel.style.removeProperty('display');
+
+    if (full) {
+      setImportantDisplay713_(roomAdminTab, 'inline-block');
+      if (roomAdminPanel) roomAdminPanel.style.removeProperty('display');
+    } else {
+      setImportantDisplay713_(roomAdminTab, 'none');
+      if (
+        roomAdminPanel &&
+        roomAdminPanel.classList.contains('active')
+      ) {
+        roomAdminPanel.classList.remove('active');
+      }
+    }
+
+    if (
+      roomTopTab &&
+      roomTopTab.dataset.uidv2RoomCompat713 !== '1'
+    ) {
+      roomTopTab.dataset.uidv2RoomCompat713 = '1';
+      roomTopTab.addEventListener('click', function () {
+        setTimeout(function () {
+          try {
+            if (typeof loadRoomReservations === 'function') {
+              loadRoomReservations(true);
+            }
+          } catch (error) {
+            console.warn('[ULIM 7.13] room load failed', error);
+          }
+        }, 0);
+      });
+    }
+
+    if (
+      classroomTab &&
+      classroomTab.dataset.uidv2ClassroomCompat713 !== '1'
+    ) {
+      classroomTab.dataset.uidv2ClassroomCompat713 = '1';
+      classroomTab.addEventListener('click', function () {
+        setTimeout(function () {
+          try {
+            if (typeof adminInitClassroomUsagePanel === 'function') {
+              adminInitClassroomUsagePanel();
+            }
+            if (typeof adminLoadClassroomUsage === 'function') {
+              adminLoadClassroomUsage(false);
+            }
+          } catch (error) {
+            console.warn('[ULIM 7.13] classroom load failed', error);
+          }
+        }, 0);
+      });
+    }
+
+    if (
+      full &&
+      roomAdminTab &&
+      roomAdminTab.dataset.uidv2AdminRoomCompat713 !== '1'
+    ) {
+      roomAdminTab.dataset.uidv2AdminRoomCompat713 = '1';
+      roomAdminTab.addEventListener('click', function () {
+        setTimeout(function () {
+          try {
+            if (typeof adminInitDates === 'function') adminInitDates();
+            if (typeof adminLoadRoomReservations === 'function') {
+              adminLoadRoomReservations(false, true);
+            }
+          } catch (error) {
+            console.warn('[ULIM 7.13] admin room load failed', error);
+          }
+        }, 0);
+      });
+    }
+  }
+
+  const originalAdminRoleText713_ =
+    typeof window.adminRoleText === 'function'
+      ? window.adminRoleText
+      : (
+          typeof adminRoleText === 'function'
+            ? adminRoleText
+            : null
+        );
+
+  window.adminRoleText = function () {
+    const info = currentAdminInfo713_();
+    const roles = roleCandidates713_(info);
+
+    if (roles.length) return roles[0];
+
+    if (originalAdminRoleText713_) {
+      try {
+        return String(
+          originalAdminRoleText713_.apply(this, arguments) ||
+          ''
+        ).trim();
+      } catch (ignore) {}
+    }
+
+    return '';
+  };
+
+  try {
+    adminRoleText = window.adminRoleText;
+  } catch (ignore) {}
+
+  const originalAdminIsFull713_ =
+    typeof window.adminIsFullAdmin === 'function'
+      ? window.adminIsFullAdmin
+      : (
+          typeof adminIsFullAdmin === 'function'
+            ? adminIsFullAdmin
+            : null
+        );
+
+  window.__ULIM_ORIGINAL_ADMIN_IS_FULL_713__ =
+    originalAdminIsFull713_;
+
+  window.adminIsFullAdmin = function () {
+    return isFullAdmin713_();
+  };
+
+  try {
+    adminIsFullAdmin = window.adminIsFullAdmin;
+  } catch (ignore) {}
+
+  const originalApplyPermissions713_ =
+    typeof window.applyAdminPermissions === 'function'
+      ? window.applyAdminPermissions
+      : (
+          typeof applyAdminPermissions === 'function'
+            ? applyAdminPermissions
+            : null
+        );
+
+  if (originalApplyPermissions713_) {
+    window.applyAdminPermissions = function () {
+      const result =
+        originalApplyPermissions713_.apply(this, arguments);
+      applyReservationVisibility713_();
+      return result;
+    };
+
+    try {
+      applyAdminPermissions = window.applyAdminPermissions;
+    } catch (ignore) {}
+  }
+
+  const originalEnableTabs713_ =
+    typeof window.adminEnableAllTabsForAdminMode === 'function'
+      ? window.adminEnableAllTabsForAdminMode
+      : (
+          typeof adminEnableAllTabsForAdminMode === 'function'
+            ? adminEnableAllTabsForAdminMode
+            : null
+        );
+
+  if (originalEnableTabs713_) {
+    window.adminEnableAllTabsForAdminMode = function () {
+      const result =
+        originalEnableTabs713_.apply(this, arguments);
+      applyReservationVisibility713_();
+      return result;
+    };
+
+    try {
+      adminEnableAllTabsForAdminMode =
+        window.adminEnableAllTabsForAdminMode;
+    } catch (ignore) {}
+  }
+
+  const originalInitialLoad713_ =
+    typeof window.adminLoadInitialData === 'function'
+      ? window.adminLoadInitialData
+      : (
+          typeof adminLoadInitialData === 'function'
+            ? adminLoadInitialData
+            : null
+        );
+
+  if (originalInitialLoad713_) {
+    window.adminLoadInitialData = async function () {
+      const result =
+        await originalInitialLoad713_.apply(this, arguments);
+      applyReservationVisibility713_();
+      return result;
+    };
+
+    try {
+      adminLoadInitialData = window.adminLoadInitialData;
+    } catch (ignore) {}
+  }
+
+  const originalRoomActor713_ =
+    typeof window.getRoomReservationActor630_ === 'function'
+      ? window.getRoomReservationActor630_
+      : (
+          typeof getRoomReservationActor630_ === 'function'
+            ? getRoomReservationActor630_
+            : null
+        );
+
+  if (originalRoomActor713_) {
+    window.getRoomReservationActor630_ = function () {
+      const actor =
+        originalRoomActor713_.apply(this, arguments) || {};
+
+      if (actor.authenticated) return actor;
+
+      const token = currentAdminToken713_();
+      const info = currentAdminInfo713_();
+
+      if (!token || !staffSession713_()) return actor;
+
+      const name = String(
+        info.name ||
+        info.adminName ||
+        info.id ||
+        info.adminId ||
+        '교직원'
+      ).trim();
+
+      const accountUid = String(
+        info.accountUid ||
+        info.adminUid ||
+        info.id ||
+        info.adminId ||
+        ''
+      ).trim();
+
+      const principalUid = principalUid713_(info);
+
+      return {
+        authenticated: true,
+        type: 'staff',
+        name: name,
+        phoneLast4: String(info.phone || '')
+          .replace(/[^0-9]/g, '')
+          .slice(-4),
+        instructorName: name,
+        identity:
+          'staff_' +
+          String(accountUid || principalUid || name)
+            .replace(/[^0-9A-Za-z가-힣_-]/g, '_'),
+        principalUidV2: principalUid,
+        params: {
+          adminToken: token
+        }
+      };
+    };
+
+    try {
+      getRoomReservationActor630_ =
+        window.getRoomReservationActor630_;
+    } catch (ignore) {}
+  }
+
+  function boot713_() {
+    applyReservationVisibility713_();
+  }
+
+  window.__ULIM_APPLY_RESERVATION_VISIBILITY_713__ =
+    applyReservationVisibility713_;
+
+  if (document.readyState === 'loading') {
+    document.addEventListener(
+      'DOMContentLoaded',
+      boot713_,
+      { once: true }
+    );
+  } else {
+    boot713_();
+  }
+
+  window.addEventListener('pageshow', function () {
+    setTimeout(boot713_, 0);
+  });
+
+  setTimeout(boot713_, 250);
+  setTimeout(boot713_, 1200);
+
+  console.log(
+    '[ULIM 7.13] UIDv2 reservation compatibility installed:',
+    VERSION
+  );
 })();
 </script>
 
