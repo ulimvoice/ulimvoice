@@ -4,7 +4,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="cleaned-20260729-uidv2-daily-eval-read-fix-71401">
+<meta name="ulim-build" content="cleaned-20260729-daily-eval-classroom-conflict-fix-71502">
 <script>window.__ULIM_WEB_DB_MODE_704__ = 'OFF';</script>
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램 7.06</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7987,11 +7987,284 @@ function adminDailyEvalPreferSaved714_(previous, candidate) {
     return b.row >= a.row ? candidate : previous;
 }
 
-async function adminMergeSavedDailyEvaluations(date, className, keyword = '') {
-    if (!adminToken || !adminDailyEvalRows.length) return;
+function adminDailyEvalApplySavedRows715_(savedRows) {
+    savedRows = Array.isArray(savedRows)
+        ? savedRows.filter(adminDailyEvalHasSavedContent714_)
+        : [];
+
+    if (!savedRows.length) {
+        return {
+            serverCount: 0,
+            mergedCount: 0
+        };
+    }
+
+    const keyMap = new Map();
+    const nameLists = new Map();
+
+    savedRows.forEach(saved => {
+        adminDailyEvalMatchKeys714_(saved).forEach(key => {
+            keyMap.set(
+                key,
+                adminDailyEvalPreferSaved714_(
+                    keyMap.get(key),
+                    saved
+                )
+            );
+        });
+
+        const nameKey = normalizeForClientMatch(
+            saved.studentName ||
+            saved.name ||
+            ''
+        );
+
+        if (nameKey) {
+            const list = nameLists.get(nameKey) || [];
+            list.push(saved);
+            nameLists.set(nameKey, list);
+        }
+    });
+
+    const uniqueSavedByName = new Map();
+
+    nameLists.forEach((list, nameKey) => {
+        const uniqueStudents = new Map();
+
+        list.forEach(saved => {
+            const identity = (
+                adminDailyEvalMatchKeys714_(saved)
+                    .find(key => !key.startsWith('NAME|')) ||
+                'ROW|' + String(saved.savedRow || '')
+            );
+
+            uniqueStudents.set(
+                identity,
+                adminDailyEvalPreferSaved714_(
+                    uniqueStudents.get(identity),
+                    saved
+                )
+            );
+        });
+
+        if (uniqueStudents.size === 1) {
+            uniqueSavedByName.set(
+                nameKey,
+                Array.from(uniqueStudents.values())[0]
+            );
+        }
+    });
+
+    if (!Array.isArray(adminDailyEvalRows)) {
+        adminDailyEvalRows = [];
+    }
+
+    /*
+     * 출석부/현재반 명단이 일시적으로 비어 있어도
+     * 저장된 일일평가 원본만으로 화면을 구성합니다.
+     */
+    if (!adminDailyEvalRows.length) {
+        adminDailyEvalRows = savedRows.map(saved => ({
+            date: saved.date || '',
+            className: saved.className || '',
+            studentName:
+                saved.studentName ||
+                saved.name ||
+                '',
+            name:
+                saved.studentName ||
+                saved.name ||
+                '',
+            studentNo: saved.studentNo || '',
+            studentIdentityKey:
+                saved.studentIdentityKey ||
+                '',
+            studentPhone:
+                saved.studentPhone ||
+                '',
+            parentPhone:
+                saved.parentPhone ||
+                '',
+            instructor:
+                saved.instructor ||
+                '',
+            attendanceStatus:
+                saved.attendanceStatus ||
+                '',
+            specialStatus:
+                saved.specialStatus ||
+                '',
+            memo:
+                saved.memo ||
+                '',
+            videoLink:
+                saved.videoLink ||
+                adminGetVideoLinkForClassName_(
+                    saved.className ||
+                    ''
+                ),
+            lessonContent:
+                saved.lessonContent ||
+                '',
+            lessonAttitude:
+                saved.lessonAttitude ||
+                '',
+            teacherComment:
+                saved.teacherComment ||
+                '',
+            evaluation:
+                saved.evaluation ||
+                '',
+            savedAt:
+                saved.savedAt ||
+                '',
+            savedBy:
+                saved.adminName ||
+                saved.adminId ||
+                '',
+            smsResult:
+                saved.smsResult ||
+                ''
+        }));
+
+        window.adminDailyEvalRows =
+            adminDailyEvalRows;
+
+        return {
+            serverCount: savedRows.length,
+            mergedCount: savedRows.length
+        };
+    }
+
+    let mergedCount = 0;
+
+    adminDailyEvalRows = adminDailyEvalRows.map(row => {
+        let saved = null;
+
+        const rowKeys =
+            adminDailyEvalMatchKeys714_(row);
+
+        for (const key of rowKeys) {
+            if (keyMap.has(key)) {
+                saved = keyMap.get(key);
+                break;
+            }
+        }
+
+        if (!saved) {
+            const nameKey =
+                normalizeForClientMatch(
+                    row.studentName ||
+                    row.name ||
+                    ''
+                );
+
+            saved =
+                uniqueSavedByName.get(nameKey) ||
+                null;
+        }
+
+        if (
+            !saved ||
+            !adminDailyEvalHasSavedContent714_(saved)
+        ) {
+            return row;
+        }
+
+        mergedCount += 1;
+
+        return Object.assign({}, row, {
+            studentNo:
+                row.studentNo ||
+                saved.studentNo ||
+                '',
+            studentIdentityKey:
+                row.studentIdentityKey ||
+                saved.studentIdentityKey ||
+                '',
+            evaluation:
+                saved.evaluation ||
+                row.evaluation ||
+                '',
+            savedAt:
+                saved.savedAt ||
+                '',
+            savedBy:
+                saved.adminName ||
+                saved.adminId ||
+                '',
+            smsResult:
+                saved.smsResult ||
+                '',
+            className:
+                row.className ||
+                saved.className ||
+                '',
+            instructor:
+                row.instructor ||
+                saved.instructor ||
+                '',
+            studentPhone:
+                row.studentPhone ||
+                saved.studentPhone ||
+                '',
+            parentPhone:
+                row.parentPhone ||
+                saved.parentPhone ||
+                '',
+            videoLink:
+                saved.videoLink ||
+                row.videoLink ||
+                adminGetVideoLinkForClassName_(
+                    row.className ||
+                    saved.className ||
+                    ''
+                ),
+            lessonContent:
+                saved.lessonContent ||
+                row.lessonContent ||
+                '',
+            lessonAttitude:
+                saved.lessonAttitude ||
+                row.lessonAttitude ||
+                '',
+            teacherComment:
+                saved.teacherComment ||
+                row.teacherComment ||
+                ''
+        });
+    });
+
+    window.adminDailyEvalRows =
+        adminDailyEvalRows;
+
+    return {
+        serverCount: savedRows.length,
+        mergedCount: mergedCount
+    };
+}
+
+async function adminMergeSavedDailyEvaluations(
+    date,
+    className,
+    keyword = ''
+) {
+    if (!adminToken) {
+        return {
+            ok: false,
+            rows: [],
+            error:
+                new Error(
+                    '관리자 로그인이 필요합니다.'
+                )
+        };
+    }
 
     try {
-        if (typeof ulimClearAdminApiCacheByActions_ === 'function') {
+        if (
+            typeof ulimClearAdminApiCacheByActions_ ===
+            'function'
+        ) {
             ulimClearAdminApiCacheByActions_([
                 'adminGetDailyEvaluations'
             ]);
@@ -8009,273 +8282,384 @@ async function adminMergeSavedDailyEvaluations(date, className, keyword = '') {
             }
         );
 
-        const savedRows = Array.isArray(data && data.rows)
-            ? data.rows.filter(adminDailyEvalHasSavedContent714_)
-            : [];
+        const savedRows =
+            Array.isArray(data && data.rows)
+                ? data.rows
+                : [];
 
-        if (!savedRows.length) {
-            console.info(
-                '[ULIM 7.14] 저장 일일평가 조회 0건',
-                {
-                    date,
-                    className,
-                    keyword,
-                    source: data && data.source || '',
-                    count: data && data.count || 0
-                }
+        const applied =
+            adminDailyEvalApplySavedRows715_(
+                savedRows
             );
-            return;
-        }
-
-        const keyMap = new Map();
-        const nameLists = new Map();
-
-        savedRows.forEach(saved => {
-            adminDailyEvalMatchKeys714_(saved).forEach(key => {
-                keyMap.set(
-                    key,
-                    adminDailyEvalPreferSaved714_(
-                        keyMap.get(key),
-                        saved
-                    )
-                );
-            });
-
-            const nameKey = normalizeForClientMatch(
-                saved.studentName ||
-                saved.name ||
-                ''
-            );
-
-            if (nameKey) {
-                const list = nameLists.get(nameKey) || [];
-                list.push(saved);
-                nameLists.set(nameKey, list);
-            }
-        });
-
-        const uniqueSavedByName = new Map();
-
-        nameLists.forEach((list, nameKey) => {
-            const uniqueStudents = new Map();
-
-            list.forEach(saved => {
-                const identity = (
-                    adminDailyEvalMatchKeys714_(saved)
-                        .find(key => !key.startsWith('NAME|')) ||
-                    'ROW|' + String(saved.savedRow || '')
-                );
-
-                uniqueStudents.set(
-                    identity,
-                    adminDailyEvalPreferSaved714_(
-                        uniqueStudents.get(identity),
-                        saved
-                    )
-                );
-            });
-
-            if (uniqueStudents.size === 1) {
-                uniqueSavedByName.set(
-                    nameKey,
-                    Array.from(uniqueStudents.values())[0]
-                );
-            }
-        });
-
-        let mergedCount = 0;
-
-        adminDailyEvalRows = adminDailyEvalRows.map(row => {
-            let saved = null;
-
-            const rowKeys = adminDailyEvalMatchKeys714_(row);
-
-            for (const key of rowKeys) {
-                if (keyMap.has(key)) {
-                    saved = keyMap.get(key);
-                    break;
-                }
-            }
-
-            if (!saved) {
-                const nameKey = normalizeForClientMatch(
-                    row.studentName ||
-                    row.name ||
-                    ''
-                );
-
-                saved = uniqueSavedByName.get(nameKey) || null;
-            }
-
-            if (!saved || !adminDailyEvalHasSavedContent714_(saved)) {
-                return row;
-            }
-
-            mergedCount += 1;
-
-            return Object.assign({}, row, {
-                studentNo:
-                    row.studentNo ||
-                    saved.studentNo ||
-                    '',
-                studentIdentityKey:
-                    row.studentIdentityKey ||
-                    saved.studentIdentityKey ||
-                    '',
-                evaluation:
-                    saved.evaluation ||
-                    row.evaluation ||
-                    '',
-                savedAt:
-                    saved.savedAt ||
-                    '',
-                savedBy:
-                    saved.adminName ||
-                    saved.adminId ||
-                    '',
-                smsResult:
-                    saved.smsResult ||
-                    '',
-                className:
-                    row.className ||
-                    saved.className ||
-                    '',
-                instructor:
-                    row.instructor ||
-                    saved.instructor ||
-                    '',
-                studentPhone:
-                    row.studentPhone ||
-                    saved.studentPhone ||
-                    '',
-                parentPhone:
-                    row.parentPhone ||
-                    saved.parentPhone ||
-                    '',
-                videoLink:
-                    saved.videoLink ||
-                    row.videoLink ||
-                    adminGetVideoLinkForClassName_(
-                        row.className ||
-                        saved.className ||
-                        ''
-                    ),
-                lessonContent:
-                    saved.lessonContent ||
-                    row.lessonContent ||
-                    '',
-                lessonAttitude:
-                    saved.lessonAttitude ||
-                    row.lessonAttitude ||
-                    '',
-                teacherComment:
-                    saved.teacherComment ||
-                    row.teacherComment ||
-                    ''
-            });
-        });
-
-        window.adminDailyEvalRows = adminDailyEvalRows;
 
         console.info(
-            '[ULIM 7.14] 저장 일일평가 병합 완료',
+            '[ULIM 7.15] 저장 일일평가 병합 완료',
             {
-                source: data && data.source || '',
-                serverCount: savedRows.length,
-                mergedCount
+                source:
+                    data &&
+                    data.source ||
+                    '',
+                serverCount:
+                    applied.serverCount,
+                mergedCount:
+                    applied.mergedCount
             }
         );
-    } catch (e) {
+
+        return {
+            ok: true,
+            rows: savedRows,
+            data,
+            serverCount:
+                applied.serverCount,
+            mergedCount:
+                applied.mergedCount
+        };
+    } catch (error) {
         console.warn(
-            '[ULIM 7.14] 저장된 일일평가 불러오기 오류:',
-            e
+            '[ULIM 7.15] 저장 일일평가 원본 조회 오류:',
+            error
         );
+
+        return {
+            ok: false,
+            rows: [],
+            error
+        };
     }
 }
 
 async function adminLoadDailyEvalStudents() {
-    if (!adminToken) return alert('관리자 로그인이 필요합니다.');
-    const date = document.getElementById('adminDailyEvalDate')?.value || getTodayInputValue();
-    const className = document.getElementById('adminDailyEvalClass')?.value.trim() || '';
-    const keyword = document.getElementById('adminDailyEvalFilter')?.value.trim() || '';
-    if (!className && !keyword) return alert('반명 또는 학생명을 입력하거나 반 목록에서 선택해주세요.');
+    if (!adminToken) {
+        return alert(
+            '관리자 로그인이 필요합니다.'
+        );
+    }
+
+    const date =
+        document
+            .getElementById(
+                'adminDailyEvalDate'
+            )
+            ?.value ||
+        getTodayInputValue();
+
+    const className =
+        document
+            .getElementById(
+                'adminDailyEvalClass'
+            )
+            ?.value
+            .trim() ||
+        '';
+
+    const keyword =
+        document
+            .getElementById(
+                'adminDailyEvalFilter'
+            )
+            ?.value
+            .trim() ||
+        '';
+
+    if (!className && !keyword) {
+        return alert(
+            '반명 또는 학생명을 입력하거나 반 목록에서 선택해주세요.'
+        );
+    }
+
+    showLoading(
+        '현재 반 명단과 저장된 일일평가를 불러오는 중...'
+    );
+
+    /*
+     * 날짜/반을 바꿨을 때 직전 조회 학생이 남아
+     * 새 평가와 잘못 병합되지 않도록 먼저 초기화합니다.
+     */
+    adminDailyEvalRows = [];
+    window.adminDailyEvalRows =
+        adminDailyEvalRows;
+
+    let records = [];
+    let sourceMessage = '';
+    let attendanceError = null;
+    let rosterError = null;
+
+    /*
+     * 저장된 일일평가는 출석부 조회와 독립적으로 먼저 요청합니다.
+     * 출석부/현재반 API 하나가 실패해도 시트 평가는 표시됩니다.
+     */
+    const savedPromise =
+        adminMergeSavedDailyEvaluations(
+            date,
+            className,
+            keyword
+        );
 
     try {
-        showLoading('출석부 기준 현재 반 학생 불러오는 중...');
-        let records = [];
+        const snapshot = await adminApi(
+            'adminGetAttendanceSnapshot',
+            {
+                adminToken,
+                date,
+                className,
+                keyword,
+                statusFilter: '',
+                forceRefresh: 'Y',
+                noCache: 'Y'
+            }
+        );
 
-        try {
-            const data = await adminApi('adminGetAttendanceSnapshot', { adminToken, date, className, keyword, statusFilter: '' });
-            records = data.records || [];
-        } catch (snapshotErr) {
-            console.warn('출석 현황 조회 오류, 현재반 명단 조회로 보정:', snapshotErr);
-        }
+        records =
+            Array.isArray(
+                snapshot &&
+                snapshot.records
+            )
+                ? snapshot.records
+                : [];
 
         if (records.length) {
-            hideLoading();
-            adminDailyEvalRows = records.map(r => ({
-                date: r.date || date,
-                className: r.className || className,
-                studentName: r.studentName,
-                name: r.studentName,
-                studentNo: r.studentNo || '',
-                studentIdentityKey: r.studentIdentityKey || '',
-                studentPhone: r.studentPhone || '',
-                parentPhone: r.parentPhone || '',
-                instructor: r.instructor || '',
-                attendanceStatus: r.status || '',
-                specialStatus: r.specialStatus || '',
-                memo: r.memo || '',
-                videoLink: r.videoLink || adminGetVideoLinkForClassName_(r.className || className),
-                lessonContent: '',
-                lessonAttitude: '',
-                teacherComment: '',
-                evaluation: ''
-            }));
-            await adminMergeSavedDailyEvaluations(date, className, keyword);
-            adminRenderDailyEvalRows('출석부 수업일 기준으로 학생을 불러왔습니다.');
-            return;
-        }
+            sourceMessage =
+                snapshot.message ||
+                '출석부 수업일 기준으로 학생을 불러왔습니다.';
 
-        if (className && className !== '전체반') {
-            const roster = await adminApi('adminGetStudentsByClass', { adminToken, className, keyword });
-            const students = roster.students || [];
-            if (students.length) {
-                hideLoading();
-                adminDailyEvalRows = students.map(s => ({
-                    date,
-                    className: s.className || s.currentClass || className,
-                    studentName: s.studentName || s.name,
-                    name: s.name || s.studentName,
-                    studentNo: s.studentNo || '',
-                    studentIdentityKey: s.studentIdentityKey || '',
-                    studentPhone: s.studentPhone || '',
-                    parentPhone: s.parentPhone || '',
-                    instructor: s.instructor || s.instructorName || adminNoticeExtractTeacher_(className) || '',
-                    attendanceStatus: '',
-                    specialStatus: '',
-                    memo: s.memo || '',
-                    videoLink: s.videoLink || adminGetVideoLinkForClassName_(s.className || s.currentClass || className),
+            adminDailyEvalRows =
+                records.map(record => ({
+                    date:
+                        record.date ||
+                        date,
+                    className:
+                        record.className ||
+                        className,
+                    studentName:
+                        record.studentName ||
+                        record.name ||
+                        '',
+                    name:
+                        record.studentName ||
+                        record.name ||
+                        '',
+                    studentNo:
+                        record.studentNo ||
+                        '',
+                    studentIdentityKey:
+                        record.studentIdentityKey ||
+                        '',
+                    studentPhone:
+                        record.studentPhone ||
+                        '',
+                    parentPhone:
+                        record.parentPhone ||
+                        '',
+                    instructor:
+                        record.instructor ||
+                        '',
+                    attendanceStatus:
+                        record.status ||
+                        record.attendanceStatus ||
+                        '',
+                    specialStatus:
+                        record.specialStatus ||
+                        '',
+                    memo:
+                        record.memo ||
+                        '',
+                    videoLink:
+                        record.videoLink ||
+                        adminGetVideoLinkForClassName_(
+                            record.className ||
+                            className
+                        ),
                     lessonContent: '',
                     lessonAttitude: '',
                     teacherComment: '',
                     evaluation: ''
                 }));
-                await adminMergeSavedDailyEvaluations(date, className, keyword);
-                adminRenderDailyEvalRows(roster.message || '출석부 현재반 기준으로 학생을 불러왔습니다.');
-                return;
+        }
+    } catch (error) {
+        attendanceError = error;
+        console.warn(
+            '[ULIM 7.15] 출석 현황 조회 실패:',
+            error
+        );
+    }
+
+    if (
+        !adminDailyEvalRows.length &&
+        className &&
+        className !== '전체반'
+    ) {
+        try {
+            const roster = await adminApi(
+                'adminGetStudentsByClass',
+                {
+                    adminToken,
+                    className,
+                    keyword,
+                    forceRefresh: 'Y',
+                    noCache: 'Y'
+                }
+            );
+
+            const students =
+                Array.isArray(
+                    roster &&
+                    roster.students
+                )
+                    ? roster.students
+                    : [];
+
+            if (students.length) {
+                sourceMessage =
+                    roster.message ||
+                    '출석부 현재반 기준으로 학생을 불러왔습니다.';
+
+                adminDailyEvalRows =
+                    students.map(student => ({
+                        date,
+                        className:
+                            student.className ||
+                            student.currentClass ||
+                            className,
+                        studentName:
+                            student.studentName ||
+                            student.name ||
+                            '',
+                        name:
+                            student.name ||
+                            student.studentName ||
+                            '',
+                        studentNo:
+                            student.studentNo ||
+                            '',
+                        studentIdentityKey:
+                            student.studentIdentityKey ||
+                            '',
+                        studentPhone:
+                            student.studentPhone ||
+                            '',
+                        parentPhone:
+                            student.parentPhone ||
+                            '',
+                        instructor:
+                            student.instructor ||
+                            student.instructorName ||
+                            adminNoticeExtractTeacher_(
+                                className
+                            ) ||
+                            '',
+                        attendanceStatus: '',
+                        specialStatus: '',
+                        memo:
+                            student.memo ||
+                            '',
+                        videoLink:
+                            student.videoLink ||
+                            adminGetVideoLinkForClassName_(
+                                student.className ||
+                                student.currentClass ||
+                                className
+                            ),
+                        lessonContent: '',
+                        lessonAttitude: '',
+                        teacherComment: '',
+                        evaluation: ''
+                    }));
             }
+        } catch (error) {
+            rosterError = error;
+            console.warn(
+                '[ULIM 7.15] 현재반 명단 조회 실패:',
+                error
+            );
+        }
+    }
+
+    if (!adminDailyEvalRows.length) {
+        try {
+            await adminEnsureStudentsLoaded(
+                false
+            );
+
+            adminBuildDailyRowsFromStudents();
+
+            if (adminDailyEvalRows.length) {
+                sourceMessage =
+                    '학생명단 기준으로 표시했습니다.';
+            }
+        } catch (error) {
+            console.warn(
+                '[ULIM 7.15] 학생명단 보정 조회 실패:',
+                error
+            );
+        }
+    }
+
+    const savedResult =
+        await savedPromise;
+
+    /*
+     * savedPromise 시작 시 화면 명단이 비어 있었을 수 있으므로
+     * 현재 명단에 한 번 더 병합합니다.
+     */
+    if (
+        savedResult.ok &&
+        savedResult.rows.length
+    ) {
+        adminDailyEvalApplySavedRows715_(
+            savedResult.rows
+        );
+    }
+
+    hideLoading();
+
+    if (adminDailyEvalRows.length) {
+        const parts = [];
+
+        if (sourceMessage) {
+            parts.push(sourceMessage);
         }
 
-        await adminEnsureStudentsLoaded(false);
-        adminBuildDailyRowsFromStudents();
-        await adminMergeSavedDailyEvaluations(date, className, keyword);
-        hideLoading();
-        adminRenderDailyEvalRows('출석부에서 해당 반 학생을 찾지 못해 학생명단 기준으로 표시했습니다.');
-    } catch (e) {
-        hideLoading();
-        alert(e.message);
+        if (savedResult.ok) {
+            parts.push(
+                '시트 평가 ' +
+                String(
+                    savedResult.serverCount ||
+                    0
+                ) +
+                '건 조회'
+            );
+        } else {
+            parts.push(
+                '저장 평가 조회는 실패했지만 현재 명단을 표시했습니다.'
+            );
+        }
+
+        adminRenderDailyEvalRows(
+            parts.join(' / ')
+        );
+
+        return;
     }
+
+    const errors = [
+        savedResult.error,
+        attendanceError,
+        rosterError
+    ]
+        .filter(Boolean)
+        .map(error =>
+            String(
+                error &&
+                error.message ||
+                error
+            )
+        );
+
+    alert(
+        errors[0] ||
+        '해당 날짜와 반의 학생 또는 일일평가 기록을 찾지 못했습니다.'
+    );
 }
 
 function adminRenderDailyEvalTable() {
@@ -24321,10 +24705,30 @@ body {
       if(!j||!j.id)return;
       if(!merged[j.id]||Number(j.updatedAt||0)>=Number(merged[j.id].updatedAt||0)) merged[j.id]=j;
     });
+    const staleConflictIds=[];
+
     Object.values(merged).forEach(j=>{
+      const classroomConflict=
+        j&&
+        j.operation==='classroomSave'&&
+        j.state==='failed'&&
+        /이미\s*사용중인\s*강의실|이미\s*사용\s*중|다른\s*강사.*먼저|중복\s*체크/i.test(
+          String(j.lastError||'')
+        );
+
+      if(classroomConflict){
+        staleConflictIds.push(j.id);
+        return;
+      }
+
       if(j.state==='sending'&&now()-Number(j.updatedAt||0)>30000)j.state='pending';
       memory.set(j.id,j);
     });
+
+    for(const id of staleConflictIds){
+      await idbDelete(id);
+    }
+
     mirrorWrite();
   }
   async function persist(job){
@@ -24437,6 +24841,29 @@ body {
     }
     if(status.state==='failed'){
       const message=String(status.message||(status.result&&status.result.message)||'전송 실패');
+
+      const classroomConflict=
+        job.operation==='classroomSave'&&
+        /이미\s*사용중인\s*강의실|이미\s*사용\s*중|다른\s*강사.*먼저|중복\s*체크/i.test(message);
+
+      if(classroomConflict){
+        emit(job,'complete',{
+          result:Object.assign(
+            {},
+            status.result||{},
+            {
+              conflict:true,
+              outcome:'occupied_by_other',
+              message
+            }
+          ),
+          message
+        });
+        await removeJob(job.id);
+        renderPill('중복 현황 반영');
+        return true;
+      }
+
       job.lastError=message;
       job.attempts=Number(job.attempts||0)+1;
       if(retryable(message)&&job.attempts<MAX_AUTO_ATTEMPTS){
@@ -24799,17 +25226,74 @@ body {
     if(ui.type==='classroomSave'||ui.type==='classroomRelease'){
       if(d.state==='complete'){
         const records=d.result&&d.result.records;
+        const conflict=!!(d.result&&d.result.conflict);
+
         if(Array.isArray(records))adminClassroomUsageRows=records;
         else adminClassroomUsageRows=(adminClassroomUsageRows||[]).filter(r=>String(r.recordId||'')!==String(ui.optimisticId||''));
+
         adminRenderClassroomUsageTable();
+
         const s=document.getElementById('adminClassroomUsageSummary');
-        if(s)s.textContent=d.message||(d.result&&d.result.message)||'강의실 사용일지 반영 완료';
+
+        if(s){
+          s.textContent=
+            d.message||
+            (d.result&&d.result.message)||
+            (conflict
+              ?'다른 강사가 먼저 체크했습니다. 최신 현황을 반영했습니다.'
+              :'강의실 사용일지 반영 완료');
+        }
+
+        if(conflict){
+          window.__ULIM_CLASSROOM_CONFLICT_NOTICE_715__=
+            window.__ULIM_CLASSROOM_CONFLICT_NOTICE_715__||
+            new Set();
+
+          if(!window.__ULIM_CLASSROOM_CONFLICT_NOTICE_715__.has(job.id)){
+            window.__ULIM_CLASSROOM_CONFLICT_NOTICE_715__.add(job.id);
+            alert(
+              d.message||
+              (d.result&&d.result.message)||
+              '다른 강사가 먼저 해당 강의실을 체크했습니다.'
+            );
+          }
+        }
       }else if(d.state==='failed'){
+        const message=String(d.message||'');
+
+        const conflict=
+          ui.type==='classroomSave'&&
+          /이미\s*사용중인\s*강의실|이미\s*사용\s*중|다른\s*강사.*먼저|중복\s*체크/i.test(message);
+
+        if(conflict){
+          if(Array.isArray(ui.rollback))adminClassroomUsageRows=ui.rollback;
+          adminRenderClassroomUsageTable();
+
+          const s=document.getElementById('adminClassroomUsageSummary');
+          if(s)s.textContent='다른 강사가 먼저 체크했습니다. 최신 현황을 다시 불러옵니다.';
+
+          setTimeout(()=>{
+            if(typeof adminLoadClassroomUsage==='function'){
+              adminLoadClassroomUsage(true);
+            }
+          },500);
+
+          return;
+        }
+
         if(Array.isArray(ui.rollback))adminClassroomUsageRows=ui.rollback;
         adminRenderClassroomUsageTable();
         const s=document.getElementById('adminClassroomUsageSummary');
         if(s)s.textContent='전송 실패 · 기기에 보관됨';
-        alert(d.message||'강의실 사용일지 반영에 실패했습니다. 전송 상태를 눌러 다시 시도해주세요.');
+
+        window.__ULIM_CLASSROOM_FAILED_NOTICE_715__=
+          window.__ULIM_CLASSROOM_FAILED_NOTICE_715__||
+          new Set();
+
+        if(!window.__ULIM_CLASSROOM_FAILED_NOTICE_715__.has(job.id)){
+          window.__ULIM_CLASSROOM_FAILED_NOTICE_715__.add(job.id);
+          alert(d.message||'강의실 사용일지 반영에 실패했습니다. 전송 상태를 눌러 다시 시도해주세요.');
+        }
       }
     }
     if(ui.type==='practiceEvaluation'){
@@ -27304,6 +27788,21 @@ body.full-admin-mode #adminPanelRoom .admin-full-only {
   console.log(
     '[ULIM 7.14] 관리자 일일평가 조회 복구 설치:',
     'UID·전화·학생번호·반명·이름 다중 매칭 / 최신 원본 강제조회'
+  );
+})();
+</script>
+
+
+<script id="ulim-daily-classroom-fix-7-15">
+(function () {
+  'use strict';
+
+  if (window.__ULIM_DAILY_CLASSROOM_FIX_71502__) return;
+  window.__ULIM_DAILY_CLASSROOM_FIX_71502__ = true;
+
+  console.log(
+    '[ULIM 7.15] 일일평가·강의실 중복충돌 복구 설치:',
+    '평가 원본 독립조회 / 강의실 충돌 terminal 처리 / 반복 alert 차단'
   );
 })();
 </script>
