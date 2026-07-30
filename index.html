@@ -12187,11 +12187,6 @@ let adminClassroomUsageRows = [];
 let adminClassroomUsageLoadedDate = '';
 
 async function adminClassroomUsageDateChanged718_() {
-    adminClassroomClearPending718_(
-        '',
-        false
-    );
-
     await adminLoadClassroomUsage(true);
 }
 
@@ -27858,7 +27853,7 @@ body.full-admin-mode #adminPanelRoom .admin-full-only {
 
 <!-- ULIM 7.29: table click commits one hourly slot to Firestore immediately; Sheets syncs in background. -->
 <script>window.ULIM_CLASSROOM_FIRESTORE_FIRST_ENABLED = true;</script>
-<script src="./web/room-classroom-realtime-7.29.js?v=20260730.72901"></script>
+<script src="./web/room-classroom-realtime-7.29.js?v=20260730.72903"></script>
 
 </body>
 </html>
