@@ -2472,8 +2472,8 @@ body.admin-mode .admin-only-tab { display:block !important; }
             <h3 style="margin-top:0;">강의실 사용체크</h3>
             <p style="font-size:14px; color:#666; line-height:1.6; margin-top:-4px;">
               강의실별 사용 현황을 시간표 형태로 확인합니다.<br>
-              표의 [사용] 버튼을 누르면 Google Sheets에 먼저 확정 저장합니다.<br>
-              저장된 시트 현황을 Firestore에 반영하여 다른 사용자 화면에도 실시간 표시합니다. 시트와 Firestore가 다르면 Google Sheets 기록을 우선합니다.
+              표의 [사용] 버튼을 누르면 앱과 다른 사용자 화면에 즉시 ‘시트 확인 중’으로 표시됩니다.<br>
+              Google Sheets의 해당 시간 칸을 잠금 검사한 뒤 시트 최종값으로 Firestore를 확정합니다. 시트와 Firestore가 다르면 항상 Google Sheets 기록을 우선합니다.
             </p>
 
             <div class="classroom-usage-form-grid">
@@ -2518,7 +2518,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
               <span class="admin-chip" id="adminClassroomUsageSummary">조회 전</span>
               <span class="admin-chip">초록: 사용중</span>
               <span class="admin-chip">기준 데이터: Google Sheets</span>
-              <span class="admin-chip">Firestore: 시트 저장 후 실시간 반영</span>
+              <span class="admin-chip">Firestore: 즉시 진행상태 · 시트값으로 최종확정</span>
               <span class="admin-chip admin-full-only">관리자: 사용중 칸 클릭 후 배정/용도변경 가능</span>
             </div>
             <div class="classroom-usage-note">
@@ -12332,9 +12332,11 @@ function adminRenderClassroomUsageTable() {
 
             if (used) {
                 const mine = adminClassroomUsageIsMine_(used);
+                const pending = !!used.pendingRealtime;
+                const pendingLabel = used.pendingOperation === 'release' ? '해제 확인 중' : '시트 확인 중';
                 tableHtml +=
-                    '<td class="classroom-usage-cell-used ' + (mine ? 'mine' : '') + '"' +
-                    (adminIsFullAdmin()
+                    '<td class="classroom-usage-cell-used ' + (mine ? 'mine ' : '') + (pending ? 'pending-7296' : '') + '"' +
+                    (adminIsFullAdmin() && !pending
                         ? ' onclick="adminSelectClassroomUsageRecord(\'' + escapeHtml(used.recordId || '') + '\')"'
                         : '') +
                     '>' +
@@ -12348,10 +12350,11 @@ function adminRenderClassroomUsageTable() {
                     adminFormatClassroomHour_(used.startHour) + '~' +
                     adminFormatClassroomHour_(used.endHour) +
                     '</div>' +
-                    ((mine || adminIsFullAdmin())
+                    (pending ? '<span class="classroom-pending-7296">' + pendingLabel + '</span>' : '') +
+                    (!pending && (mine || adminIsFullAdmin())
                         ? '<button type="button" class="classroom-usage-release-btn" onclick="event.stopPropagation(); adminReleaseClassroomUsage(\'' + escapeHtml(used.recordId || '') + '\')">해제</button>'
                         : '') +
-                    (adminIsFullAdmin()
+                    (!pending && adminIsFullAdmin()
                         ? '<button type="button" class="classroom-usage-release-btn" style="background:#f59e0b;" onclick="event.stopPropagation(); adminSelectClassroomUsageRecord(\'' + escapeHtml(used.recordId || '') + '\')">수정</button>'
                         : '') +
                     '</td>';
@@ -25156,7 +25159,7 @@ body {
   const originalClassroomAdminUpdate614 = window.adminSaveClassroomUsageFromForm;
   window.adminSaveClassroomUsageFromForm = async function(silentConfirm, forceOverride) {
     if (!forceOverride) {
-      return alert('표의 [사용] 버튼을 누르면 Firestore에 즉시 저장됩니다.');
+      return alert('표의 [사용] 버튼을 누르면 즉시 표시되고 Google Sheets 최종값으로 확정됩니다.');
     }
     return originalClassroomAdminUpdate614.call(this, silentConfirm, true);
   };
@@ -25309,8 +25312,8 @@ body {
     await loadJobs();
 
     /*
-     * 7.29부터 강의실 사용체크는 Firestore 즉시 저장만 사용합니다.
-     * 과거 버전에서 남은 classroomSave 백그라운드 작업은 전송하지 않습니다.
+     * 7.29.6부터 강의실 사용체크는 Firestore 임시 진행상태 후
+     * Google Sheets 최종값으로 확정합니다. 과거 classroomSave 대기열은 사용하지 않습니다.
      */
     const oldClassroomSaveJobs=
       currentJobs().filter(
@@ -27852,9 +27855,12 @@ body.full-admin-mode #adminPanelRoom .admin-full-only {
 }
 </style>
 
-<!-- ULIM 7.29: table click commits one hourly slot to Firestore immediately; Sheets syncs in background. -->
-<script>window.ULIM_CLASSROOM_FIRESTORE_FIRST_ENABLED = true;</script>
-<script src="./web/room-classroom-realtime-7.29.5.js?v=20260730.72905"></script>
+<!-- ULIM 7.29.6: optimistic realtime claim; Google Sheets remains canonical. -->
+<script>
+window.ULIM_CLASSROOM_FIRESTORE_FIRST_ENABLED = false;
+window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = true;
+</script>
+<script src="./web/room-classroom-realtime-7.29.6.js?v=20260730.72906"></script>
 
 
 <script id="ulim-classroom-72904-compatibility">
