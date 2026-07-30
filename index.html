@@ -1818,6 +1818,11 @@ body.admin-mode .admin-only-tab { display:block !important; }
     .vocal-calendar-dow, .vocal-calendar-week, .vocal-calendar-day { min-height:31px; font-size:12px; border-radius:8px; }
     .vocal-calendar-nav, .vocal-calendar-title { padding:8px 9px; font-size:13px; }
 }</style>
+
+<!-- ULIM 7.30.0: login/attendance/daily-evaluation connection warm-up -->
+<link rel="preconnect" href="https://script.google.com" crossorigin>
+<link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 </head>
 <body>
 
@@ -27875,5 +27880,9 @@ window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = true;
   }
 })();
 </script>
+
+
+<!-- ULIM 7.30.0: cache-first login shell, attendance and daily evaluation reads. -->
+<script src="./web/staff-performance-7.30.0.js?v=20260730.73000"></script>
 </body>
 </html>
