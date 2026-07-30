@@ -4,7 +4,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="cleaned-20260730-classroom-hourly-slot-72801">
+<meta name="ulim-build" content="cleaned-20260730-classroom-immediate-save-72901">
 <script>window.__ULIM_WEB_DB_MODE_704__ = 'OFF';</script>
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램 7.06</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -2472,8 +2472,8 @@ body.admin-mode .admin-only-tab { display:block !important; }
             <h3 style="margin-top:0;">강의실 사용체크</h3>
             <p style="font-size:14px; color:#666; line-height:1.6; margin-top:-4px;">
               강의실별 사용 현황을 시간표 형태로 확인합니다.<br>
-              표의 [사용] 버튼으로 여러 시간을 선택하면 강사명·수업명·시간이 표에 미리 표시됩니다.<br>
-              실제 시트 저장은 [사용 체크 · 최종확정]을 눌렀을 때만 실행됩니다.
+              표의 [사용] 버튼을 누르면 해당 한 시간 칸이 Firestore에 즉시 저장되어 다른 사용자 화면에도 실시간 반영됩니다.<br>
+              Google Sheets 기록은 별도 확정 없이 백그라운드에서 자동 처리됩니다.
             </p>
 
             <div class="classroom-usage-form-grid">
@@ -2509,7 +2509,6 @@ body.admin-mode .admin-only-tab { display:block !important; }
             </div>
 
             <div class="admin-btn-row">
-              <button type="button" id="adminClassroomUsageSaveButton" class="admin-btn" onclick="adminSaveClassroomUsageFromForm()">사용 체크 · 최종확정</button>
               <button type="button" class="admin-btn orange admin-full-only" onclick="adminSaveClassroomUsageFromForm(false, true)">관리자 배정/용도변경</button>
               <button type="button" class="admin-btn gray" onclick="adminClearClassroomUsageForm()">입력 초기화</button>
               <button type="button" class="admin-btn blue" onclick="adminLoadClassroomUsage(true)">현황 새로고침</button>
@@ -2518,9 +2517,8 @@ body.admin-mode .admin-only-tab { display:block !important; }
             <div class="admin-summary classroom-usage-chip-row">
               <span class="admin-chip" id="adminClassroomUsageSummary">조회 전</span>
               <span class="admin-chip">초록: 사용중</span>
-              <span class="admin-chip">표의 [사용]: 저장 전 사용표시/해제</span>
-              <span class="admin-chip" id="adminClassroomUsagePendingSummary">선택 0칸</span>
-              <span class="admin-chip">시트 저장: [사용 체크 · 최종확정]</span>
+              <span class="admin-chip">표의 [사용]: Firestore 즉시 저장</span>
+              <span class="admin-chip">Google Sheets: 백그라운드 자동 기록</span>
               <span class="admin-chip admin-full-only">관리자: 사용중 칸 클릭 후 배정/용도변경 가능</span>
             </div>
             <div class="classroom-usage-note">
@@ -12188,487 +12186,6 @@ let adminClassroomUsageOptionsLoadedDate = '';
 let adminClassroomUsageRows = [];
 let adminClassroomUsageLoadedDate = '';
 
-window.__ULIM_CLASSROOM_PENDING_SLOTS_718__ =
-    window.__ULIM_CLASSROOM_PENDING_SLOTS_718__ ||
-    Object.create(null);
-
-function adminClassroomNormalizeRoom718_(room) {
-    return String(room || '')
-        .replace(/\s+/g, '')
-        .trim();
-}
-
-function adminClassroomPendingKey718_(date, room, hour) {
-    return [
-        String(date || '').trim(),
-        adminClassroomNormalizeRoom718_(room),
-        String(Number(hour))
-    ].join('|');
-}
-
-function adminClassroomPendingSlots718_(date) {
-    const targetDate =
-        String(date || adminClassroomUsageDate_()).trim();
-
-    return Object.keys(
-        window.__ULIM_CLASSROOM_PENDING_SLOTS_718__
-    )
-        .map(key =>
-            window.__ULIM_CLASSROOM_PENDING_SLOTS_718__[key]
-        )
-        .filter(slot =>
-            slot &&
-            String(slot.date || '') === targetDate
-        )
-        .sort((a, b) =>
-            String(a.room || '').localeCompare(
-                String(b.room || ''),
-                'ko'
-            ) ||
-            Number(a.hour) - Number(b.hour)
-        );
-}
-
-function adminClassroomIsPending718_(date, room, hour) {
-    return !!window
-        .__ULIM_CLASSROOM_PENDING_SLOTS_718__[
-            adminClassroomPendingKey718_(
-                date,
-                room,
-                hour
-            )
-        ];
-}
-
-
-function adminClassroomPendingPreview719_() {
-    const instructorEl =
-        document.getElementById(
-            'adminClassroomUsageInstructor'
-        );
-
-    const classEl =
-        document.getElementById(
-            'adminClassroomUsageClass'
-        );
-
-    const memoEl =
-        document.getElementById(
-            'adminClassroomUsageMemo'
-        );
-
-    const defaultInstructor =
-        (
-            adminInfo &&
-            (
-                adminInfo.name ||
-                adminInfo.id
-            )
-        ) ||
-        '강사 미지정';
-
-    return {
-        instructor:
-            String(
-                instructorEl &&
-                instructorEl.value ||
-                defaultInstructor
-            ).trim() ||
-            defaultInstructor,
-        className:
-            String(
-                classEl &&
-                classEl.value ||
-                ''
-            ).trim(),
-        memo:
-            String(
-                memoEl &&
-                memoEl.value ||
-                ''
-            ).trim()
-    };
-}
-
-function adminClassroomPendingGroupAt719_(
-    date,
-    room,
-    hour
-) {
-    const normalizedRoom =
-        adminClassroomNormalizeRoom718_(
-            room
-        );
-
-    return (
-        adminClassroomBuildGroups718_(
-            adminClassroomPendingSlots718_(
-                date
-            )
-        ).find(group =>
-            adminClassroomNormalizeRoom718_(
-                group.room
-            ) ===
-                normalizedRoom &&
-            Number(group.startHour) <=
-                Number(hour) &&
-            Number(group.endHour) >
-                Number(hour)
-        ) ||
-        {
-            room:
-                room,
-            startHour:
-                Number(hour),
-            endHour:
-                Number(hour) + 1
-        }
-    );
-}
-
-function adminClassroomRefreshPendingPreview719_() {
-    if (
-        adminClassroomPendingSlots718_(
-            adminClassroomUsageDate_()
-        ).length &&
-        typeof adminRenderClassroomUsageTable ===
-            'function'
-    ) {
-        adminRenderClassroomUsageTable();
-    }
-}
-
-function adminClassroomBindPendingPreview719_() {
-    [
-        'adminClassroomUsageInstructor',
-        'adminClassroomUsageClass',
-        'adminClassroomUsageMemo'
-    ].forEach(id => {
-        const element =
-            document.getElementById(id);
-
-        if (
-            !element ||
-            element.dataset
-                .ulimPendingPreview719 ===
-                '1'
-        ) {
-            return;
-        }
-
-        element.dataset
-            .ulimPendingPreview719 =
-            '1';
-
-        element.addEventListener(
-            'input',
-            adminClassroomRefreshPendingPreview719_
-        );
-
-        element.addEventListener(
-            'change',
-            adminClassroomRefreshPendingPreview719_
-        );
-    });
-}
-
-function adminClassroomUpdatePendingSummary718_() {
-    const date =
-        adminClassroomUsageDate_();
-
-    const slots =
-        adminClassroomPendingSlots718_(
-            date
-        );
-
-    const groups =
-        adminClassroomBuildGroups718_(
-            slots
-        );
-
-    const summary =
-        document.getElementById(
-            'adminClassroomUsagePendingSummary'
-        );
-
-    if (summary) {
-        summary.textContent =
-            slots.length
-                ? '저장 전 ' +
-                  String(slots.length) +
-                  '칸 · ' +
-                  String(groups.length) +
-                  '건'
-                : '선택 0칸';
-    }
-
-    const saveButton =
-        document.getElementById(
-            'adminClassroomUsageSaveButton'
-        );
-
-    if (saveButton) {
-        saveButton.textContent =
-            slots.length
-                ? '사용 체크 · 최종확정 (' +
-                  String(slots.length) +
-                  '칸)'
-                : '사용 체크 · 최종확정';
-    }
-}
-
-function adminClassroomClearPending718_(
-    date,
-    render = true
-) {
-    const targetDate =
-        String(date || adminClassroomUsageDate_()).trim();
-
-    Object.keys(
-        window.__ULIM_CLASSROOM_PENDING_SLOTS_718__
-    ).forEach(key => {
-        const slot =
-            window.__ULIM_CLASSROOM_PENDING_SLOTS_718__[
-                key
-            ];
-
-        if (
-            !targetDate ||
-            String(slot && slot.date || '') ===
-                targetDate
-        ) {
-            delete window
-                .__ULIM_CLASSROOM_PENDING_SLOTS_718__[
-                    key
-                ];
-        }
-    });
-
-    adminClassroomUpdatePendingSummary718_();
-
-    if (
-        render &&
-        typeof adminRenderClassroomUsageTable ===
-            'function'
-    ) {
-        adminRenderClassroomUsageTable();
-    }
-}
-
-function adminClassroomRemovePendingSlots718_(
-    slots
-) {
-    (slots || []).forEach(slot => {
-        delete window
-            .__ULIM_CLASSROOM_PENDING_SLOTS_718__[
-                adminClassroomPendingKey718_(
-                    slot.date,
-                    slot.room,
-                    slot.hour
-                )
-            ];
-    });
-
-    adminClassroomUpdatePendingSummary718_();
-}
-
-function adminClassroomReconcilePending718_() {
-    const date =
-        adminClassroomUsageDate_();
-
-    const occupiedKeys =
-        new Set();
-
-    (
-        adminClassroomUsageRows ||
-        []
-    ).forEach(row => {
-        if (
-            String(row.status || '') !==
-                '사용중'
-        ) {
-            return;
-        }
-
-        const start =
-            Number(row.startHour);
-
-        const end =
-            Number(row.endHour);
-
-        for (
-            let hour = start;
-            hour < end;
-            hour += 1
-        ) {
-            occupiedKeys.add(
-                adminClassroomPendingKey718_(
-                    date,
-                    row.room,
-                    hour
-                )
-            );
-        }
-    });
-
-    occupiedKeys.forEach(key => {
-        delete window
-            .__ULIM_CLASSROOM_PENDING_SLOTS_718__[
-                key
-            ];
-    });
-
-    adminClassroomUpdatePendingSummary718_();
-}
-
-function adminClassroomTogglePending718_(
-    room,
-    hour
-) {
-    const date =
-        adminClassroomUsageDate_();
-
-    const numericHour =
-        Number(hour);
-
-    if (
-        adminFindClassroomUsageAt_(
-            room,
-            numericHour
-        )
-    ) {
-        alert(
-            '이미 사용 중인 강의실입니다.'
-        );
-        return;
-    }
-
-    const key =
-        adminClassroomPendingKey718_(
-            date,
-            room,
-            numericHour
-        );
-
-    if (
-        window.__ULIM_CLASSROOM_PENDING_SLOTS_718__[
-            key
-        ]
-    ) {
-        delete window
-            .__ULIM_CLASSROOM_PENDING_SLOTS_718__[
-                key
-            ];
-    } else {
-        window.__ULIM_CLASSROOM_PENDING_SLOTS_718__[
-            key
-        ] = {
-            date:
-                date,
-            room:
-                String(room || '').trim(),
-            hour:
-                numericHour
-        };
-    }
-
-    adminClassroomUpdatePendingSummary718_();
-    adminRenderClassroomUsageTable();
-}
-
-function adminClassroomBuildGroups718_(slots) {
-    const byRoom =
-        new Map();
-
-    (slots || []).forEach(slot => {
-        const room =
-            String(slot.room || '').trim();
-
-        if (!byRoom.has(room)) {
-            byRoom.set(room, []);
-        }
-
-        byRoom.get(room).push(
-            Number(slot.hour)
-        );
-    });
-
-    const groups = [];
-
-    byRoom.forEach((hours, room) => {
-        const sorted =
-            Array.from(new Set(hours))
-                .sort((a, b) => a - b);
-
-        let start = null;
-        let previous = null;
-
-        sorted.forEach(hour => {
-            if (start === null) {
-                start = hour;
-                previous = hour;
-                return;
-            }
-
-            if (hour === previous + 1) {
-                previous = hour;
-                return;
-            }
-
-            groups.push({
-                room,
-                startHour:
-                    start,
-                endHour:
-                    previous + 1
-            });
-
-            start = hour;
-            previous = hour;
-        });
-
-        if (start !== null) {
-            groups.push({
-                room,
-                startHour:
-                    start,
-                endHour:
-                    previous + 1
-            });
-        }
-    });
-
-    return groups.sort((a, b) =>
-        a.startHour - b.startHour ||
-        String(a.room || '').localeCompare(
-            String(b.room || ''),
-            'ko'
-        )
-    );
-}
-
-function adminClassroomGroupSlots718_(
-    date,
-    group
-) {
-    const slots = [];
-
-    for (
-        let hour = Number(group.startHour);
-        hour < Number(group.endHour);
-        hour += 1
-    ) {
-        slots.push({
-            date,
-            room:
-                group.room,
-            hour
-        });
-    }
-
-    return slots;
-}
-
 async function adminClassroomUsageDateChanged718_() {
     adminClassroomClearPending718_(
         '',
@@ -12771,7 +12288,6 @@ async function adminLoadClassroomUsage(showOverlay = true) {
         if (showOverlay) hideLoading();
         adminClassroomUsageRows = Array.isArray(data.records) ? data.records : [];
         adminClassroomUsageLoadedDate = date;
-        adminClassroomReconcilePending718_();
         adminRenderClassroomUsageTable();
         const summary = document.getElementById('adminClassroomUsageSummary');
         if (summary) summary.textContent = data.message || `${date} 사용중 ${adminClassroomUsageRows.length}건`;
@@ -12791,216 +12307,81 @@ function adminFindClassroomUsageAt_(room, hour) {
 }
 
 function adminRenderClassroomUsageTable() {
-    const wrap =
-        document.getElementById(
-            'adminClassroomUsageTableWrap'
-        );
+    const wrap = document.getElementById('adminClassroomUsageTableWrap');
+    if (!wrap) return;
 
-    if (!wrap) {
-        return;
-    }
-
-    adminClassroomBindPendingPreview719_();
-
-    const date =
-        adminClassroomUsageDate_();
-
-    const preview =
-        adminClassroomPendingPreview719_();
-
-    const slotHours =
-        adminClassroomUsageHours_()
-            .slice(0, -1);
-
+    const date = adminClassroomUsageDate_();
+    const slotHours = adminClassroomUsageHours_().slice(0, -1);
     let tableHtml =
         '<table class="classroom-usage-table">' +
         '<thead><tr>' +
         '<th class="classroom-usage-time-head">시간</th>';
 
     ADMIN_CLASSROOM_USAGE_ROOMS.forEach(room => {
-        tableHtml +=
-            '<th>' +
-            escapeHtml(room) +
-            '</th>';
+        tableHtml += '<th>' + escapeHtml(room) + '</th>';
     });
 
-    tableHtml +=
-        '</tr></thead><tbody>';
+    tableHtml += '</tr></thead><tbody>';
 
     slotHours.forEach(hour => {
         tableHtml +=
             '<tr>' +
             '<th class="classroom-usage-time-head">' +
-            adminFormatClassroomHour_(hour) +
-            '~' +
+            adminFormatClassroomHour_(hour) + '~' +
             adminFormatClassroomHour_(hour + 1) +
             '</th>';
 
         ADMIN_CLASSROOM_USAGE_ROOMS.forEach(room => {
-            const used =
-                adminFindClassroomUsageAt_(
-                    room,
-                    hour
-                );
+            const used = adminFindClassroomUsageAt_(room, hour);
 
             if (used) {
-                const mine =
-                    adminClassroomUsageIsMine_(
-                        used
-                    );
-
+                const mine = adminClassroomUsageIsMine_(used);
                 tableHtml +=
-                    '<td class="classroom-usage-cell-used ' +
-                    (mine ? 'mine' : '') +
-                    '"' +
-                    (
-                        adminIsFullAdmin()
-                            ? ' onclick="adminSelectClassroomUsageRecord(\'' +
-                              escapeHtml(
-                                  used.recordId ||
-                                  ''
-                              ) +
-                              '\')"'
-                            : ''
-                    ) +
+                    '<td class="classroom-usage-cell-used ' + (mine ? 'mine' : '') + '"' +
+                    (adminIsFullAdmin()
+                        ? ' onclick="adminSelectClassroomUsageRecord(\'' + escapeHtml(used.recordId || '') + '\')"'
+                        : '') +
                     '>' +
-                    '<div class="ulim-classroom-card-instructor-719">' +
-                    escapeHtml(
-                        used.instructor ||
-                        used.adminName ||
-                        '-'
-                    ) +
+                    '<div class="ulim-classroom-card-instructor-729">' +
+                    escapeHtml(used.instructor || used.adminName || '-') +
                     '</div>' +
-                    '<div class="ulim-classroom-card-purpose-719">' +
-                    escapeHtml(
-                        used.className ||
-                        used.purpose ||
-                        '사용중'
-                    ) +
+                    '<div class="ulim-classroom-card-purpose-729">' +
+                    escapeHtml(used.className || used.purpose || '사용중') +
                     '</div>' +
-                    '<div class="ulim-classroom-card-time-719">' +
-                    adminFormatClassroomHour_(
-                        used.startHour
-                    ) +
-                    '~' +
-                    adminFormatClassroomHour_(
-                        used.endHour
-                    ) +
+                    '<div class="ulim-classroom-card-time-729">' +
+                    adminFormatClassroomHour_(used.startHour) + '~' +
+                    adminFormatClassroomHour_(used.endHour) +
                     '</div>' +
-                    (
-                        mine ||
-                        adminIsFullAdmin()
-                            ? '<button type="button" class="classroom-usage-release-btn" onclick="event.stopPropagation(); adminReleaseClassroomUsage(\'' +
-                              escapeHtml(
-                                  used.recordId ||
-                                  ''
-                              ) +
-                              '\')">해제</button>'
-                            : ''
-                    ) +
-                    (
-                        adminIsFullAdmin()
-                            ? '<button type="button" class="classroom-usage-release-btn" style="background:#f59e0b;" onclick="event.stopPropagation(); adminSelectClassroomUsageRecord(\'' +
-                              escapeHtml(
-                                  used.recordId ||
-                                  ''
-                              ) +
-                              '\')">수정</button>'
-                            : ''
-                    ) +
+                    ((mine || adminIsFullAdmin())
+                        ? '<button type="button" class="classroom-usage-release-btn" onclick="event.stopPropagation(); adminReleaseClassroomUsage(\'' + escapeHtml(used.recordId || '') + '\')">해제</button>'
+                        : '') +
+                    (adminIsFullAdmin()
+                        ? '<button type="button" class="classroom-usage-release-btn" style="background:#f59e0b;" onclick="event.stopPropagation(); adminSelectClassroomUsageRecord(\'' + escapeHtml(used.recordId || '') + '\')">수정</button>'
+                        : '') +
                     '</td>';
-
                 return;
             }
 
-            const selected =
-                adminClassroomIsPending718_(
-                    date,
-                    room,
-                    hour
-                );
-
-            if (selected) {
-                const group =
-                    adminClassroomPendingGroupAt719_(
-                        date,
-                        room,
-                        hour
-                    );
-
-                tableHtml +=
-                    '<td class="classroom-usage-cell-used mine ulim-classroom-pending-card-719" ' +
-                    'onclick="adminQuickClassroomUsage(\'' +
-                    escapeHtml(room) +
-                    '\', ' +
-                    String(hour) +
-                    ')" ' +
-                    'title="클릭하면 선택 해제">' +
-                    '<div class="ulim-classroom-pending-badge-719">저장 전</div>' +
-                    '<div class="ulim-classroom-card-instructor-719">' +
-                    escapeHtml(
-                        preview.instructor
-                    ) +
-                    '</div>' +
-                    '<div class="ulim-classroom-card-purpose-719">' +
-                    escapeHtml(
-                        preview.className ||
-                        '사용 예정'
-                    ) +
-                    '</div>' +
-                    '<div class="ulim-classroom-card-time-719">' +
-                    adminFormatClassroomHour_(
-                        group.startHour
-                    ) +
-                    '~' +
-                    adminFormatClassroomHour_(
-                        group.endHour
-                    ) +
-                    '</div>' +
-                    (
-                        preview.memo
-                            ? '<div class="ulim-classroom-card-memo-719">' +
-                              escapeHtml(
-                                  preview.memo
-                              ) +
-                              '</div>'
-                            : ''
-                    ) +
-                    '<button type="button" class="classroom-usage-release-btn ulim-classroom-pending-remove-719" ' +
-                    'onclick="event.stopPropagation(); adminQuickClassroomUsage(\'' +
-                    escapeHtml(room) +
-                    '\', ' +
-                    String(hour) +
-                    ')">선택 해제</button>' +
-                    '</td>';
-
-                return;
-            }
+            const saving =
+                typeof window.ulimIsClassroomSlotSaving729_ === 'function' &&
+                window.ulimIsClassroomSlotSaving729_(date, room, hour);
 
             tableHtml +=
                 '<td>' +
-                '<button type="button" ' +
-                'class="classroom-usage-empty-btn" ' +
+                '<button type="button" class="classroom-usage-empty-btn" ' +
                 'aria-pressed="false" ' +
-                'onclick="adminQuickClassroomUsage(\'' +
-                escapeHtml(room) +
-                '\', ' +
-                String(hour) +
-                ')">사용</button>' +
+                (saving ? 'disabled aria-busy="true" ' : '') +
+                'onclick="adminQuickClassroomUsage(\'' + escapeHtml(room) + '\', ' + String(hour) + ')">' +
+                (saving ? '저장 중' : '사용') +
+                '</button>' +
                 '</td>';
         });
 
-        tableHtml +=
-            '</tr>';
+        tableHtml += '</tr>';
     });
 
-    tableHtml +=
-        '</tbody></table>';
-
-    wrap.innerHTML =
-        tableHtml;
-
-    adminClassroomUpdatePendingSummary718_();
+    tableHtml += '</tbody></table>';
+    wrap.innerHTML = tableHtml;
 }
 
 function adminSelectClassroomUsageRecord(recordId) {
@@ -13024,135 +12405,44 @@ function adminSelectClassroomUsageRecord(recordId) {
     if (summary) summary.textContent = '선택됨: ' + (used.room || '') + ' ' + adminFormatClassroomHour_(used.startHour) + '~' + adminFormatClassroomHour_(used.endHour) + ' / 수정 후 [관리자 배정/용도변경]';
 }
 
-function adminClearClassroomUsageForm(
-    keepPending = false
-) {
+function adminClearClassroomUsageForm() {
     adminInitClassroomUsagePanel();
 
-    const instructorEl =
-        document.getElementById(
-            'adminClassroomUsageInstructor'
-        );
-
-    const classEl =
-        document.getElementById(
-            'adminClassroomUsageClass'
-        );
-
-    const memoEl =
-        document.getElementById(
-            'adminClassroomUsageMemo'
-        );
+    const instructorEl = document.getElementById('adminClassroomUsageInstructor');
+    const classEl = document.getElementById('adminClassroomUsageClass');
+    const memoEl = document.getElementById('adminClassroomUsageMemo');
 
     if (instructorEl) {
-        instructorEl.value =
-            adminIsFullAdmin()
-                ? ''
-                : (
-                    (
-                        adminInfo &&
-                        (
-                            adminInfo.name ||
-                            adminInfo.id
-                        )
-                    ) ||
-                    ''
-                );
+        instructorEl.value = adminIsFullAdmin()
+            ? ''
+            : ((adminInfo && (adminInfo.name || adminInfo.id)) || '');
     }
-
-    if (classEl) {
-        classEl.value = '';
-    }
-
-    if (memoEl) {
-        memoEl.value = '';
-    }
-
-    if (!keepPending) {
-        adminClassroomClearPending718_(
-            adminClassroomUsageDate_(),
-            true
-        );
-    }
+    if (classEl) classEl.value = '';
+    if (memoEl) memoEl.value = '';
 }
 
-function adminQuickClassroomUsage(room, hour) {
+async function adminQuickClassroomUsage(room, hour) {
     adminInitClassroomUsagePanel();
 
-    const numericHour =
-        Number(hour);
+    const numericHour = Number(hour);
+    const roomEl = document.getElementById('adminClassroomUsageRoom');
+    const startEl = document.getElementById('adminClassroomUsageStart');
+    const endEl = document.getElementById('adminClassroomUsageEnd');
+    const instructorEl = document.getElementById('adminClassroomUsageInstructor');
 
-    const roomEl =
-        document.getElementById(
-            'adminClassroomUsageRoom'
-        );
-
-    const startEl =
-        document.getElementById(
-            'adminClassroomUsageStart'
-        );
-
-    const endEl =
-        document.getElementById(
-            'adminClassroomUsageEnd'
-        );
-
-    const instructorEl =
-        document.getElementById(
-            'adminClassroomUsageInstructor'
-        );
-
-    if (roomEl) {
-        roomEl.value =
-            room;
+    if (roomEl) roomEl.value = room;
+    if (startEl) startEl.value = String(numericHour);
+    if (endEl) endEl.value = String(numericHour + 1);
+    if (instructorEl && !instructorEl.value) {
+        instructorEl.value = (adminInfo && (adminInfo.name || adminInfo.id)) || '';
     }
 
-    if (startEl) {
-        startEl.value =
-            String(numericHour);
+    if (typeof window.ulimCommitClassroomSlot729_ !== 'function') {
+        alert('강의실 실시간 저장 기능을 준비 중입니다. 잠시 후 다시 눌러주세요.');
+        return;
     }
 
-    if (endEl) {
-        endEl.value =
-            String(numericHour + 1);
-    }
-
-    if (
-        instructorEl &&
-        !instructorEl.value
-    ) {
-        instructorEl.value =
-            (
-                adminInfo &&
-                (
-                    adminInfo.name ||
-                    adminInfo.id
-                )
-            ) ||
-            '';
-    }
-
-    adminClassroomTogglePending718_(
-        room,
-        numericHour
-    );
-
-    const selected =
-        adminClassroomPendingSlots718_(
-            adminClassroomUsageDate_()
-        );
-
-    const summary =
-        document.getElementById(
-            'adminClassroomUsageSummary'
-        );
-
-    if (summary) {
-        summary.textContent =
-            selected.length
-                ? '표에 저장 전 사용정보가 표시됐습니다. [사용 체크 · 최종확정]을 눌러야 시트에 저장됩니다.'
-                : '선택이 모두 해제됐습니다.';
-    }
+    return window.ulimCommitClassroomSlot729_(room, numericHour);
 }
 
 async function adminSaveClassroomUsageFromForm(silentConfirm = false, forceOverride = false) {
@@ -25867,513 +25157,13 @@ body {
     }
   };
 
-  function overlapRoom(a,b){
-    return String(a.room||'').replace(/\s/g,'')===String(b.room||'').replace(/\s/g,'') &&
-      Number(a.startHour)<Number(b.endHour)&&Number(b.startHour)<Number(a.endHour);
-  }
-  function pendingClassroomRecord(id,p){
-    return {
-      recordId:'pending:'+id,date:p.date,room:p.room,startHour:Number(p.startHour),endHour:Number(p.endHour),
-      instructor:p.assignedInstructor||p.instructor||ownerName(),adminName:ownerName(),
-      className:p.className||'',purpose:p.className||'',memo:p.memo||'',status:'사용중',
-      _pending614:true,_requestId614:id
-    };
-  }
-
-  window.adminSaveClassroomUsageFromForm = async function(
-    silentConfirm,
-    forceOverride
-) {
-    if (
-        window.__ULIM_CLASSROOM_FOREGROUND_SAVING_717__
-    ) {
-        return;
+  const originalClassroomAdminUpdate614 = window.adminSaveClassroomUsageFromForm;
+  window.adminSaveClassroomUsageFromForm = async function(silentConfirm, forceOverride) {
+    if (!forceOverride) {
+      return alert('표의 [사용] 버튼을 누르면 Firestore에 즉시 저장됩니다.');
     }
-
-    const tokenValue =
-        (
-            typeof adminToken !==
-                'undefined' &&
-            String(
-                adminToken ||
-                ''
-            ).trim()
-        ) ||
-        '';
-
-    if (!tokenValue) {
-        return alert(
-            '로그인이 필요합니다.'
-        );
-    }
-
-    adminInitClassroomUsagePanel();
-
-    const date =
-        adminClassroomUsageDate_();
-
-    const assignedInstructor =
-        document
-            .getElementById(
-                'adminClassroomUsageInstructor'
-            )
-            ?.value
-            .trim() ||
-        '';
-
-    const className =
-        document
-            .getElementById(
-                'adminClassroomUsageClass'
-            )
-            ?.value
-            .trim() ||
-        '';
-
-    const memo =
-        document
-            .getElementById(
-                'adminClassroomUsageMemo'
-            )
-            ?.value
-            .trim() ||
-        '';
-
-    let selectedSlots =
-        adminClassroomPendingSlots718_(
-            date
-        );
-
-    /*
-     * 표에서 선택하지 않은 경우에는 기존 수동 시작/종료 입력도 지원합니다.
-     */
-    if (!selectedSlots.length) {
-        const room =
-            document
-                .getElementById(
-                    'adminClassroomUsageRoom'
-                )
-                ?.value ||
-            '';
-
-        const startHour =
-            Number(
-                document
-                    .getElementById(
-                        'adminClassroomUsageStart'
-                    )
-                    ?.value ||
-                0
-            );
-
-        const endHour =
-            Number(
-                document
-                    .getElementById(
-                        'adminClassroomUsageEnd'
-                    )
-                    ?.value ||
-                0
-            );
-
-        if (
-            !date ||
-            !room ||
-            !startHour ||
-            !endHour
-        ) {
-            return alert(
-                '표에서 사용할 시간을 선택하거나 사용일·강의실·시간을 확인해주세요.'
-            );
-        }
-
-        if (
-            endHour <=
-            startHour
-        ) {
-            return alert(
-                '종료시간은 시작시간보다 늦어야 합니다.'
-            );
-        }
-
-        for (
-            let hour = startHour;
-            hour < endHour;
-            hour += 1
-        ) {
-            selectedSlots.push({
-                date,
-                room,
-                hour
-            });
-        }
-    }
-
-    const requestedGroups =
-        adminClassroomBuildGroups718_(
-            selectedSlots
-        );
-
-    if (!requestedGroups.length) {
-        return alert(
-            '저장할 사용 시간을 선택해주세요.'
-        );
-    }
-
-    const readableGroups =
-        requestedGroups.map(group =>
-            group.room +
-            ' ' +
-            adminFormatClassroomHour_(
-                group.startHour
-            ) +
-            '~' +
-            adminFormatClassroomHour_(
-                group.endHour
-            )
-        );
-
-    if (
-        !silentConfirm &&
-        !confirm(
-            [
-                date,
-                '',
-                ...readableGroups,
-                '',
-                '총 ' +
-                    String(selectedSlots.length) +
-                    '칸을 시트에 최종확정 저장할까요?'
-            ].join('\n')
-        )
-    ) {
-        return;
-    }
-
-    const saveButton =
-        document.getElementById(
-            'adminClassroomUsageSaveButton'
-        );
-
-    window.__ULIM_CLASSROOM_FOREGROUND_SAVING_717__ =
-        true;
-
-    if (saveButton) {
-        saveButton.disabled = true;
-        saveButton.textContent =
-            '최신 현황 확인 중...';
-    }
-
-    const successGroups = [];
-    const conflictGroups = [];
-    const failedGroups = [];
-
-    try {
-        showLoading(
-            '최신 강의실 현황 확인 중...'
-        );
-
-        const latestBefore =
-            await adminApi(
-                'adminGetClassroomUsage',
-                {
-                    adminToken:
-                        tokenValue,
-                    date,
-                    forceRefresh:
-                        'Y',
-                    noCache:
-                        'Y'
-                }
-            );
-
-        adminClassroomUsageRows =
-            Array.isArray(
-                latestBefore &&
-                latestBefore.records
-            )
-                ? latestBefore.records
-                : [];
-
-        adminClassroomUsageLoadedDate =
-            date;
-
-        /*
-         * 서버 최신값 기준으로 이미 차지된 선택은 충돌 그룹으로 분리합니다.
-         */
-        const availableGroups = [];
-
-        requestedGroups.forEach(group => {
-            const overlapping =
-                (
-                    adminClassroomUsageRows ||
-                    []
-                ).some(row =>
-                    String(
-                        row.status ||
-                        ''
-                    ) ===
-                        '사용중' &&
-                    adminClassroomNormalizeRoom718_(
-                        row.room
-                    ) ===
-                        adminClassroomNormalizeRoom718_(
-                            group.room
-                        ) &&
-                    Number(row.startHour) <
-                        Number(group.endHour) &&
-                    Number(group.startHour) <
-                        Number(row.endHour)
-                );
-
-            if (
-                overlapping &&
-                !forceOverride
-            ) {
-                conflictGroups.push(group);
-            } else {
-                availableGroups.push(group);
-            }
-        });
-
-        adminRenderClassroomUsageTable();
-
-        if (
-            typeof window
-                .ulimDirectAdminWrite704_ !==
-            'function'
-        ) {
-            throw new Error(
-                '즉시 저장 모듈을 불러오지 못했습니다. Ctrl+F5 후 다시 시도해주세요.'
-            );
-        }
-
-        for (
-            let index = 0;
-            index < availableGroups.length;
-            index += 1
-        ) {
-            const group =
-                availableGroups[index];
-
-            if (saveButton) {
-                saveButton.textContent =
-                    '최종확정 저장 ' +
-                    String(index + 1) +
-                    '/' +
-                    String(availableGroups.length);
-            }
-
-            const payload = {
-                date,
-                room:
-                    group.room,
-                startHour:
-                    Number(group.startHour),
-                endHour:
-                    Number(group.endHour),
-                assignedInstructor,
-                className,
-                memo,
-                override:
-                    forceOverride
-                        ? '1'
-                        : '0'
-            };
-
-            try {
-                const result =
-                    await window
-                        .ulimDirectAdminWrite704_(
-                            'classroomSave',
-                            payload,
-                            {
-                                loadingMessage:
-                                    group.room +
-                                    ' ' +
-                                    adminFormatClassroomHour_(
-                                        group.startHour
-                                    ) +
-                                    '~' +
-                                    adminFormatClassroomHour_(
-                                        group.endHour
-                                    ) +
-                                    ' 저장 중...',
-                                timeoutMs:
-                                    90000
-                            }
-                        );
-
-                if (
-                    result &&
-                    result.conflict
-                ) {
-                    conflictGroups.push(group);
-                } else {
-                    successGroups.push(group);
-                }
-            } catch (error) {
-                failedGroups.push({
-                    group,
-                    message:
-                        String(
-                            error &&
-                            error.message ||
-                            '저장 실패'
-                        )
-                });
-            }
-        }
-
-        const latestAfter =
-            await adminApi(
-                'adminGetClassroomUsage',
-                {
-                    adminToken:
-                        tokenValue,
-                    date,
-                    forceRefresh:
-                        'Y',
-                    noCache:
-                        'Y'
-                }
-            );
-
-        adminClassroomUsageRows =
-            Array.isArray(
-                latestAfter &&
-                latestAfter.records
-            )
-                ? latestAfter.records
-                : [];
-
-        adminClassroomUsageLoadedDate =
-            date;
-
-        /*
-         * 성공·충돌 항목은 선택에서 제거합니다.
-         * 일반 오류 항목만 남겨 사용자가 최종 저장을 다시 누를 수 있습니다.
-         */
-        [
-            ...successGroups,
-            ...conflictGroups
-        ].forEach(group => {
-            adminClassroomRemovePendingSlots718_(
-                adminClassroomGroupSlots718_(
-                    date,
-                    group
-                )
-            );
-        });
-
-        adminClassroomReconcilePending718_();
-        adminRenderClassroomUsageTable();
-
-        const summary =
-            document.getElementById(
-                'adminClassroomUsageSummary'
-            );
-
-        const resultParts = [
-            '저장 ' +
-                String(successGroups.length) +
-                '건'
-        ];
-
-        if (conflictGroups.length) {
-            resultParts.push(
-                '중복 ' +
-                String(conflictGroups.length) +
-                '건'
-            );
-        }
-
-        if (failedGroups.length) {
-            resultParts.push(
-                '실패 ' +
-                String(failedGroups.length) +
-                '건'
-            );
-        }
-
-        const resultText =
-            resultParts.join(' · ');
-
-        if (summary) {
-            summary.textContent =
-                resultText +
-                (
-                    failedGroups.length
-                        ? ' · 실패한 선택은 화면에 남아 있습니다.'
-                        : ' · 시트 최종 반영 완료'
-                );
-        }
-
-        if (!failedGroups.length) {
-            adminClearClassroomUsageForm(
-                true
-            );
-        }
-
-        const alertLines = [
-            '강의실 사용체크 최종확정 완료',
-            '',
-            '저장 성공: ' +
-                String(successGroups.length) +
-                '건',
-            '다른 강사 선점/중복: ' +
-                String(conflictGroups.length) +
-                '건',
-            '저장 실패: ' +
-                String(failedGroups.length) +
-                '건'
-        ];
-
-        if (failedGroups.length) {
-            alertLines.push(
-                '',
-                '실패한 시간은 선택 상태로 남겨두었습니다.'
-            );
-        }
-
-        alert(
-            alertLines.join('\n')
-        );
-    } catch (error) {
-        try {
-            hideLoading();
-        } catch (ignore) {}
-
-        const summary =
-            document.getElementById(
-                'adminClassroomUsageSummary'
-            );
-
-        if (summary) {
-            summary.textContent =
-                '저장되지 않음 · 선택 상태를 유지했습니다.';
-        }
-
-        alert(
-            error &&
-            error.message ||
-            '강의실 사용체크 저장에 실패했습니다.'
-        );
-    } finally {
-        try {
-            hideLoading();
-        } catch (ignore) {}
-
-        window.__ULIM_CLASSROOM_FOREGROUND_SAVING_717__ =
-            false;
-
-        if (saveButton) {
-            saveButton.disabled = false;
-        }
-
-        adminClassroomUpdatePendingSummary718_();
-    }
-};;;
+    return originalClassroomAdminUpdate614.call(this, silentConfirm, true);
+  };
 
   window.adminReleaseClassroomUsage=async function(recordId){
     if(!token())return alert('로그인이 필요합니다.');
@@ -26404,12 +25194,7 @@ body {
       const date=adminClassroomUsageDate_();
       const jobs=currentJobs().filter(j=>j.ui&&j.ui.date===date&&j.operation==='classroomRelease');
       for(const j of jobs){
-        if(j.operation==='classroomSave'){
-          adminClassroomUsageRows=(adminClassroomUsageRows||[]).filter(r=>!overlapRoom(r,j.payload));
-          adminClassroomUsageRows.push(pendingClassroomRecord(j.id,j.payload));
-        }else if(j.operation==='classroomRelease'){
-          adminClassroomUsageRows=(adminClassroomUsageRows||[]).filter(r=>String(r.recordId||'')!==String(j.payload.recordId||''));
-        }
+        adminClassroomUsageRows=(adminClassroomUsageRows||[]).filter(r=>String(r.recordId||'')!==String(j.payload.recordId||''));
       }
       if(jobs.length)adminRenderClassroomUsageTable();
       return result;
@@ -26461,76 +25246,23 @@ body {
         else if(d.state==='retrying')el.textContent='기기에 보관됨 · 자동 재전송 대기';
       }
     }
-    if(ui.type==='classroomSave'||ui.type==='classroomRelease'){
+    if(ui.type==='classroomRelease'){
       if(d.state==='complete'){
         const records=d.result&&d.result.records;
-        const conflict=!!(d.result&&d.result.conflict);
-
         if(Array.isArray(records))adminClassroomUsageRows=records;
         else adminClassroomUsageRows=(adminClassroomUsageRows||[]).filter(r=>String(r.recordId||'')!==String(ui.optimisticId||''));
-
         adminRenderClassroomUsageTable();
-
         const s=document.getElementById('adminClassroomUsageSummary');
-
-        if(s){
-          s.textContent=
-            d.message||
-            (d.result&&d.result.message)||
-            (conflict
-              ?'다른 강사가 먼저 체크했습니다. 최신 현황을 반영했습니다.'
-              :'강의실 사용일지 반영 완료');
-        }
-
-        if(conflict){
-          window.__ULIM_CLASSROOM_CONFLICT_NOTICE_715__=
-            window.__ULIM_CLASSROOM_CONFLICT_NOTICE_715__||
-            new Set();
-
-          if(!window.__ULIM_CLASSROOM_CONFLICT_NOTICE_715__.has(job.id)){
-            window.__ULIM_CLASSROOM_CONFLICT_NOTICE_715__.add(job.id);
-            alert(
-              d.message||
-              (d.result&&d.result.message)||
-              '다른 강사가 먼저 해당 강의실을 체크했습니다.'
-            );
-          }
-        }
+        if(s)s.textContent=d.message||(d.result&&d.result.message)||'강의실 사용 해제 반영 완료';
       }else if(d.state==='failed'){
-        const message=String(d.message||'');
-
-        const conflict=
-          ui.type==='classroomSave'&&
-          /이미\s*사용중인\s*강의실|이미\s*사용\s*중|다른\s*강사.*먼저|중복\s*체크/i.test(message);
-
-        if(conflict){
-          if(Array.isArray(ui.rollback))adminClassroomUsageRows=ui.rollback;
-          adminRenderClassroomUsageTable();
-
-          const s=document.getElementById('adminClassroomUsageSummary');
-          if(s)s.textContent='다른 강사가 먼저 체크했습니다. 최신 현황을 다시 불러옵니다.';
-
-          setTimeout(()=>{
-            if(typeof adminLoadClassroomUsage==='function'){
-              adminLoadClassroomUsage(true);
-            }
-          },500);
-
-          return;
-        }
-
         if(Array.isArray(ui.rollback))adminClassroomUsageRows=ui.rollback;
         adminRenderClassroomUsageTable();
         const s=document.getElementById('adminClassroomUsageSummary');
-        if(s)s.textContent='전송 실패 · 기기에 보관됨';
-
-        window.__ULIM_CLASSROOM_FAILED_NOTICE_715__=
-          window.__ULIM_CLASSROOM_FAILED_NOTICE_715__||
-          new Set();
-
+        if(s)s.textContent='해제 전송 실패 · 기기에 보관됨';
+        window.__ULIM_CLASSROOM_FAILED_NOTICE_715__=window.__ULIM_CLASSROOM_FAILED_NOTICE_715__||new Set();
         if(!window.__ULIM_CLASSROOM_FAILED_NOTICE_715__.has(job.id)){
           window.__ULIM_CLASSROOM_FAILED_NOTICE_715__.add(job.id);
-          alert(d.message||'강의실 사용일지 반영에 실패했습니다. 전송 상태를 눌러 다시 시도해주세요.');
+          alert(d.message||'강의실 사용 해제 반영에 실패했습니다. 전송 상태를 눌러 다시 시도해주세요.');
         }
       }
     }
@@ -26581,7 +25313,7 @@ body {
     await loadJobs();
 
     /*
-     * 7.17부터 강의실 사용체크는 버튼 foreground 저장만 사용합니다.
+     * 7.29부터 강의실 사용체크는 Firestore 즉시 저장만 사용합니다.
      * 과거 버전에서 남은 classroomSave 백그라운드 작업은 전송하지 않습니다.
      */
     const oldClassroomSaveJobs=
@@ -29099,220 +27831,34 @@ body.full-admin-mode #adminPanelRoom .admin-full-only {
 </script>
 
 
-<style id="ulim-classroom-foreground-save-7-17">
-#adminClassroomUsageSaveButton.ulim-classroom-selected-717 {
-  outline: 4px solid rgba(34, 197, 94, .28);
-  transform: translateY(-1px);
-  transition: outline .18s ease, transform .18s ease;
-}
-#adminClassroomUsageSaveButton:disabled {
-  cursor: wait;
-  opacity: .72;
-}
-</style>
-
-<script id="ulim-classroom-foreground-save-7-17">
-(function () {
-  'use strict';
-
-  if (
-    window.__ULIM_CLASSROOM_FOREGROUND_SAVE_71701__
-  ) {
-    return;
-  }
-
-  window.__ULIM_CLASSROOM_FOREGROUND_SAVE_71701__ =
-    true;
-
-  /*
-   * 이전 버전이 이미 열린 상태에서 남긴 classroomSave 작업도 정리합니다.
-   */
-  setTimeout(function () {
-    try {
-      if (
-        window.ulimReliableWrite614 &&
-        typeof window.ulimReliableWrite614.removeOperations ===
-          'function'
-      ) {
-        window.ulimReliableWrite614.removeOperations([
-          'classroomSave'
-        ]);
-      }
-    } catch (error) {
-      console.warn(
-        '[ULIM 7.17] old classroomSave cleanup failed',
-        error
-      );
-    }
-  }, 700);
-
-  console.log(
-    '[ULIM 7.17] 강의실 사용체크 foreground 저장 설치:',
-    '빈칸 선택만 / 사용 체크 버튼 최종 저장 / classroomSave 백그라운드 큐 미사용'
-  );
-})();
-</script>
-
-
-<style id="ulim-classroom-multi-select-7-18">
-.classroom-usage-table td.ulim-classroom-pending-cell-718 {
-  background: #fff7d6 !important;
-  box-shadow: inset 0 0 0 2px #f59e0b;
-}
-.classroom-usage-empty-btn.ulim-classroom-pending-button-718 {
-  background: #f59e0b !important;
-  color: #fff !important;
-  border-color: #d97706 !important;
-  font-weight: 800 !important;
-}
-#adminClassroomUsagePendingSummary {
-  font-weight: 800;
-}
-</style>
-
-<script id="ulim-classroom-multi-select-7-18">
-(function () {
-  'use strict';
-
-  if (
-    window.__ULIM_CLASSROOM_MULTI_SELECT_71801__
-  ) {
-    return;
-  }
-
-  window.__ULIM_CLASSROOM_MULTI_SELECT_71801__ =
-    true;
-
-  console.log(
-    '[ULIM 7.18] 강의실 사용체크 다중 선택 설치:',
-    '표에서 여러 칸 선택 / 선택 재클릭 해제 / 최종 버튼 일괄 저장'
-  );
-})();
-</script>
-
-
-<style id="ulim-classroom-preview-final-confirm-7-19">
-.classroom-usage-cell-used.ulim-classroom-pending-card-719 {
-  position: relative;
-  cursor: pointer;
-  background:
-    linear-gradient(145deg, #eef6ff 0%, #dbeafe 100%) !important;
-  color: #1e3a5f !important;
-  box-shadow:
-    inset 0 0 0 2px #60a5fa,
-    0 3px 10px rgba(37, 99, 235, .12) !important;
-  transition:
-    transform .14s ease,
-    box-shadow .14s ease;
-}
-.classroom-usage-cell-used.ulim-classroom-pending-card-719:hover {
-  transform: translateY(-1px);
-  box-shadow:
-    inset 0 0 0 2px #2563eb,
-    0 6px 16px rgba(37, 99, 235, .18) !important;
-}
-.ulim-classroom-pending-badge-719 {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 5px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #2563eb;
-  color: #fff;
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: -.2px;
-}
-.ulim-classroom-card-instructor-719 {
+<style id="ulim-classroom-immediate-save-7-29">
+.ulim-classroom-card-instructor-729 {
   font-size: 13px;
   line-height: 1.25;
   font-weight: 900;
 }
-.ulim-classroom-card-purpose-719 {
+.ulim-classroom-card-purpose-729 {
   margin-top: 2px;
   font-size: 11px;
   line-height: 1.25;
   font-weight: 750;
 }
-.ulim-classroom-card-time-719 {
+.ulim-classroom-card-time-729 {
   margin-top: 3px;
   font-size: 11px;
   line-height: 1.2;
   font-weight: 800;
   opacity: .88;
 }
-.ulim-classroom-card-memo-719 {
-  max-width: 118px;
-  margin: 3px auto 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 10px;
-  opacity: .78;
-}
-.classroom-usage-release-btn.ulim-classroom-pending-remove-719 {
-  margin-top: 6px;
-  background: #64748b !important;
-}
-#adminClassroomUsageSaveButton {
-  min-width: 190px;
-  font-weight: 900;
+.classroom-usage-empty-btn[disabled] {
+  cursor: wait;
+  opacity: .65;
 }
 </style>
 
-<script id="ulim-classroom-preview-final-confirm-7-19">
-(function () {
-  'use strict';
-
-  if (
-    window.__ULIM_CLASSROOM_PREVIEW_FINAL_CONFIRM_71901__
-  ) {
-    return;
-  }
-
-  window.__ULIM_CLASSROOM_PREVIEW_FINAL_CONFIRM_71901__ =
-    true;
-
-  const bind = function () {
-    try {
-      if (
-        typeof adminClassroomBindPendingPreview719_ ===
-          'function'
-      ) {
-        adminClassroomBindPendingPreview719_();
-      }
-    } catch (error) {
-      console.warn(
-        '[ULIM 7.19] pending preview bind failed',
-        error
-      );
-    }
-  };
-
-  if (document.readyState === 'loading') {
-    document.addEventListener(
-      'DOMContentLoaded',
-      bind,
-      { once: true }
-    );
-  } else {
-    bind();
-  }
-
-  setTimeout(bind, 700);
-
-  console.log(
-    '[ULIM 7.19] 강의실 저장 전 미리보기 설치:',
-    '기존 카드 형태 강사명·용도·시간 표시 / 서버 중복검사 유지 / 최종확정 버튼에서만 시트 저장'
-  );
-})();
-</script>
-
-
-<!-- ULIM 7.27: classroom Firestore-first commit + asynchronous Sheet synchronization. -->
+<!-- ULIM 7.29: table click commits one hourly slot to Firestore immediately; Sheets syncs in background. -->
 <script>window.ULIM_CLASSROOM_FIRESTORE_FIRST_ENABLED = true;</script>
-<script src="./web/room-classroom-realtime-7.28.js?v=20260730.72801"></script>
+<script src="./web/room-classroom-realtime-7.29.js?v=20260730.72901"></script>
 
 </body>
 </html>
