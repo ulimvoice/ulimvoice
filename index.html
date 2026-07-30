@@ -27868,7 +27868,7 @@ body.full-admin-mode #adminPanelRoom .admin-full-only {
 window.ULIM_CLASSROOM_FIRESTORE_FIRST_ENABLED = false;
 window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = true;
 </script>
-<script src="./web/room-classroom-realtime-7.29.7.js?v=20260730.72907"></script>
+<script src="./web/room-classroom-realtime-7.29.8.js?v=20260731.72908"></script>
 
 
 <script id="ulim-classroom-72907-compatibility">
@@ -27886,6 +27886,34 @@ window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = true;
 <script src="./web/staff-performance-7.30.0.js?v=20260730.73000"></script>
 
 <!-- ULIM 7.31.1: automatic first import and manual Sheets → Firestore refresh before attendance/daily reads. -->
-<script src="./web/staff-firestore-operational-7.31.3.js?v=20260731.73103"></script>
+<script src="./web/staff-firestore-operational-7.31.4.js?v=20260731.73104"></script>
+<script id="ulim-general-teacher-firebase-auth-bootstrap-7-31-4">
+(function(){
+  if (window.__ULIM_GENERAL_TEACHER_FIREBASE_AUTH_BOOTSTRAP_7314__) return;
+  window.__ULIM_GENERAL_TEACHER_FIREBASE_AUTH_BOOTSTRAP_7314__ = true;
+
+  async function boot(reason){
+    try {
+      var room = window.ULIM_ROOM_CLASSROOM_REALTIME_728 || window.ULIM_ROOM_CLASSROOM_REALTIME_727;
+      var token = String((typeof adminToken !== 'undefined' && adminToken) || localStorage.getItem('adminToken') || sessionStorage.getItem('adminToken') || '').trim();
+      if (!token || !room || typeof room.ensureAuthenticated !== 'function') return;
+      var rt = await room.ensureAuthenticated();
+      if ((!rt || !rt.auth || !rt.auth.currentUser) && typeof room.forceReauthenticate === 'function') {
+        await room.forceReauthenticate(reason || 'teacher-bootstrap');
+      }
+    } catch (error) {
+      console.warn('[ULIM 7.31.4 teacher Firebase bootstrap]', error);
+    }
+  }
+
+  window.ulimEnsureStaffFirebaseAuth7314_ = boot;
+  window.addEventListener('pageshow', function(){ setTimeout(function(){ boot('pageshow'); }, 120); });
+  document.addEventListener('visibilitychange', function(){
+    if (document.visibilityState === 'visible') setTimeout(function(){ boot('visible'); }, 80);
+  });
+  setTimeout(function(){ boot('initial'); }, 120);
+})();
+</script>
+
 </body>
 </html>
