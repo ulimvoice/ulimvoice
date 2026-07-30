@@ -4,7 +4,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="cleaned-20260730-classroom-immediate-save-72901">
+<meta name="ulim-build" content="cleaned-20260730-classroom-sheet-direct-72904">
 <script>window.__ULIM_WEB_DB_MODE_704__ = 'OFF';</script>
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램 7.06</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -2472,8 +2472,8 @@ body.admin-mode .admin-only-tab { display:block !important; }
             <h3 style="margin-top:0;">강의실 사용체크</h3>
             <p style="font-size:14px; color:#666; line-height:1.6; margin-top:-4px;">
               강의실별 사용 현황을 시간표 형태로 확인합니다.<br>
-              표의 [사용] 버튼을 누르면 해당 한 시간 칸이 Firestore에 즉시 저장되어 다른 사용자 화면에도 실시간 반영됩니다.<br>
-              Google Sheets 기록은 별도 확정 없이 백그라운드에서 자동 처리됩니다.
+              표의 [사용] 버튼을 누르면 Google Sheets에 먼저 확정 저장합니다.<br>
+              저장된 시트 현황을 Firestore에 반영하여 다른 사용자 화면에도 실시간 표시합니다. 시트와 Firestore가 다르면 Google Sheets 기록을 우선합니다.
             </p>
 
             <div class="classroom-usage-form-grid">
@@ -2517,8 +2517,8 @@ body.admin-mode .admin-only-tab { display:block !important; }
             <div class="admin-summary classroom-usage-chip-row">
               <span class="admin-chip" id="adminClassroomUsageSummary">조회 전</span>
               <span class="admin-chip">초록: 사용중</span>
-              <span class="admin-chip">표의 [사용]: Firestore 즉시 저장</span>
-              <span class="admin-chip">Google Sheets: 백그라운드 자동 기록</span>
+              <span class="admin-chip">기준 데이터: Google Sheets</span>
+              <span class="admin-chip">Firestore: 시트 저장 후 실시간 반영</span>
               <span class="admin-chip admin-full-only">관리자: 사용중 칸 클릭 후 배정/용도변경 가능</span>
             </div>
             <div class="classroom-usage-note">
@@ -6438,6 +6438,7 @@ async function adminLoadClassList(dateOverride = '', force = false) {
         adminRenderClassSelectors();
         adminClearInvalidClassSelection704_(date);
     } catch (e) {
+        if (e && e.code === 'ULIM_STALE_ADMIN_RESPONSE_613') return;
         console.warn('수업 목록 로딩 오류:', e);
     }
 }
@@ -27853,7 +27854,17 @@ body.full-admin-mode #adminPanelRoom .admin-full-only {
 
 <!-- ULIM 7.29: table click commits one hourly slot to Firestore immediately; Sheets syncs in background. -->
 <script>window.ULIM_CLASSROOM_FIRESTORE_FIRST_ENABLED = true;</script>
-<script src="./web/room-classroom-realtime-7.29.js?v=20260730.72903"></script>
+<script src="./web/room-classroom-realtime-7.29.5.js?v=20260730.72905"></script>
 
+
+<script id="ulim-classroom-72904-compatibility">
+(function () {
+  'use strict';
+  window.__ULIM_CLASSROOM_BUILD_72904__ = '2026-07-30.729.04';
+  if (typeof window.adminClassroomClearPending718_ !== 'function') {
+    window.adminClassroomClearPending718_ = function () { return false; };
+  }
+})();
+</script>
 </body>
 </html>
