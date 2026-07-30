@@ -2372,7 +2372,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
             </div>
 
             <div class="admin-btn-row">
-              <button type="button" class="admin-btn blue" onclick="adminLoadAttendanceSnapshot()">출석부 반영</button>
+              <button type="button" class="admin-btn blue" onclick="adminLoadAttendanceSnapshot(true, true)">출석부 반영</button>
               <button type="button" class="admin-btn orange admin-full-only" onclick="adminPreviewAttendanceMessages()">발송 미리보기</button>
               <button type="button" class="admin-btn red admin-full-only" onclick="adminSendAttendanceMessages()">선택 발송</button>
             </div>
@@ -2433,7 +2433,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
               </div>
             </div>
             <div class="admin-btn-row">
-              <button type="button" class="admin-btn blue" onclick="adminLoadDailyEvalStudents()">현재 반 학생 불러오기</button>
+              <button type="button" class="admin-btn blue" onclick="adminLoadDailyEvalStudents(true)">현재 반 학생 불러오기</button>
               <button type="button" class="admin-btn" onclick="adminSaveDailyEvaluations(false)">평가 저장</button>
               <button type="button" class="admin-btn orange admin-full-only" onclick="adminPreviewDailyEvalMessages()">발송 미리보기</button>
               <button type="button" class="admin-btn red admin-full-only" onclick="adminSaveDailyEvaluations(true)">저장 후 발송</button>
@@ -14181,7 +14181,7 @@ function adminRenderAttendanceTable() {
     html += `</tbody></table>
         <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px; flex-wrap:wrap;">
             <button type="button" class="admin-btn" onclick="adminSaveAttendanceFromTable(false)">선택 출석부 저장</button>
-            <button type="button" class="admin-btn gray" onclick="adminLoadAttendanceSnapshot(true)">출석부 다시 불러오기</button>
+            <button type="button" class="admin-btn gray" onclick="adminLoadAttendanceSnapshot(true, true)">출석부 다시 불러오기</button>
         </div>`;
 
     wrap.innerHTML = html;
@@ -17555,7 +17555,7 @@ ${ruleSummary}`, 'success');
     html += `</tbody></table>
       <div class="ulim-attendance-actions-559">
         <button type="button" class="admin-btn" onclick="adminSaveAttendanceFromTable(false)">선택 출석부 저장</button>
-        <button type="button" class="admin-btn gray" onclick="adminLoadAttendanceSnapshot(true)">출석부 다시 불러오기</button>
+        <button type="button" class="admin-btn gray" onclick="adminLoadAttendanceSnapshot(true, true)">출석부 다시 불러오기</button>
       </div>`;
 
     wrap.innerHTML = html;
@@ -27885,7 +27885,7 @@ window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = true;
 <!-- ULIM 7.30.0: cache-first login shell, attendance and daily evaluation reads. -->
 <script src="./web/staff-performance-7.30.0.js?v=20260730.73000"></script>
 
-<!-- ULIM 7.31.0: Firestore operational reads/writes; Sheets sync runs on Cloud Functions after the app closes. -->
-<script src="./web/staff-firestore-operational-7.31.0.js?v=20260731.73100"></script>
+<!-- ULIM 7.31.1: automatic first import and manual Sheets → Firestore refresh before attendance/daily reads. -->
+<script src="./web/staff-firestore-operational-7.31.1.js?v=20260731.73101"></script>
 </body>
 </html>
