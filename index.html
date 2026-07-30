@@ -3,6 +3,9 @@
 
 <html lang="ko">
 <head>
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin data-ulim-classroom-preconnect="7297">
+  <link rel="preconnect" href="https://identitytoolkit.googleapis.com" data-ulim-classroom-preconnect="7297">
+  <link rel="preconnect" href="https://asia-northeast3-ulim-7b09a.cloudfunctions.net" data-ulim-classroom-preconnect="7297">
 <meta charset="UTF-8">
 <meta name="ulim-build" content="cleaned-20260730-classroom-sheet-direct-72904">
 <script>window.__ULIM_WEB_DB_MODE_704__ = 'OFF';</script>
@@ -2511,7 +2514,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
             <div class="admin-btn-row">
               <button type="button" class="admin-btn orange admin-full-only" onclick="adminSaveClassroomUsageFromForm(false, true)">관리자 배정/용도변경</button>
               <button type="button" class="admin-btn gray" onclick="adminClearClassroomUsageForm()">입력 초기화</button>
-              <button type="button" class="admin-btn blue" onclick="adminLoadClassroomUsage(true)">현황 새로고침</button>
+              <button type="button" class="admin-btn blue" onclick="adminLoadClassroomUsage(true, true)">현황 새로고침</button>
             </div>
 
             <div class="admin-summary classroom-usage-chip-row">
@@ -27855,18 +27858,18 @@ body.full-admin-mode #adminPanelRoom .admin-full-only {
 }
 </style>
 
-<!-- ULIM 7.29.6: optimistic realtime claim; Google Sheets remains canonical. -->
+<!-- ULIM 7.29.7: fast persistent-cache load; Google Sheets remains canonical. -->
 <script>
 window.ULIM_CLASSROOM_FIRESTORE_FIRST_ENABLED = false;
 window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = true;
 </script>
-<script src="./web/room-classroom-realtime-7.29.6.js?v=20260730.72906"></script>
+<script src="./web/room-classroom-realtime-7.29.7.js?v=20260730.72907"></script>
 
 
-<script id="ulim-classroom-72904-compatibility">
+<script id="ulim-classroom-72907-compatibility">
 (function () {
   'use strict';
-  window.__ULIM_CLASSROOM_BUILD_72904__ = '2026-07-30.729.04';
+  window.__ULIM_CLASSROOM_BUILD_72907__ = '2026-07-30.729.07';
   if (typeof window.adminClassroomClearPending718_ !== 'function') {
     window.adminClassroomClearPending718_ = function () { return false; };
   }
