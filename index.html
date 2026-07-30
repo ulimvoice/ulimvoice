@@ -27868,7 +27868,7 @@ body.full-admin-mode #adminPanelRoom .admin-full-only {
 window.ULIM_CLASSROOM_FIRESTORE_FIRST_ENABLED = false;
 window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = true;
 </script>
-<script src="./web/room-classroom-realtime-7.29.8.js?v=20260731.72908"></script>
+<script src="./web/room-classroom-realtime-7.29.9.js?v=20260731.72909"></script>
 
 
 <script id="ulim-classroom-72907-compatibility">
@@ -27886,27 +27886,63 @@ window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = true;
 <script src="./web/staff-performance-7.30.0.js?v=20260730.73000"></script>
 
 <!-- ULIM 7.31.1: automatic first import and manual Sheets → Firestore refresh before attendance/daily reads. -->
-<script src="./web/staff-firestore-operational-7.31.4.js?v=20260731.73104"></script>
-<script id="ulim-general-teacher-firebase-auth-bootstrap-7-31-4">
+<script src="./web/staff-firestore-operational-7.31.5.js?v=20260731.73105"></script>
+<script id="ulim-general-teacher-firebase-auth-bootstrap-7-31-5">
 (function(){
-  if (window.__ULIM_GENERAL_TEACHER_FIREBASE_AUTH_BOOTSTRAP_7314__) return;
-  window.__ULIM_GENERAL_TEACHER_FIREBASE_AUTH_BOOTSTRAP_7314__ = true;
+  if (window.__ULIM_GENERAL_TEACHER_FIREBASE_AUTH_BOOTSTRAP_7315__) return;
+  window.__ULIM_GENERAL_TEACHER_FIREBASE_AUTH_BOOTSTRAP_7315__ = true;
 
+  var bootPromise = null;
   async function boot(reason){
-    try {
-      var room = window.ULIM_ROOM_CLASSROOM_REALTIME_728 || window.ULIM_ROOM_CLASSROOM_REALTIME_727;
-      var token = String((typeof adminToken !== 'undefined' && adminToken) || localStorage.getItem('adminToken') || sessionStorage.getItem('adminToken') || '').trim();
-      if (!token || !room || typeof room.ensureAuthenticated !== 'function') return;
-      var rt = await room.ensureAuthenticated();
-      if ((!rt || !rt.auth || !rt.auth.currentUser) && typeof room.forceReauthenticate === 'function') {
-        await room.forceReauthenticate(reason || 'teacher-bootstrap');
+    if (bootPromise) return bootPromise;
+    bootPromise = (async function(){
+      try {
+        var room = window.ULIM_ROOM_CLASSROOM_REALTIME_728 || window.ULIM_ROOM_CLASSROOM_REALTIME_727;
+        var token = String(
+          (typeof adminToken !== 'undefined' && adminToken) ||
+          window.adminToken ||
+          localStorage.getItem('adminToken') ||
+          sessionStorage.getItem('adminToken') || ''
+        ).trim();
+        if (!token || !room || typeof room.ensureAuthenticated !== 'function') return null;
+
+        var rt = typeof room.waitUntilAuthenticated === 'function'
+          ? await room.waitUntilAuthenticated(12000)
+          : await room.ensureAuthenticated();
+        if ((!rt || !rt.auth || !rt.auth.currentUser) && typeof room.forceReauthenticate === 'function') {
+          rt = await room.forceReauthenticate(reason || 'teacher-bootstrap');
+        }
+        if (rt && rt.auth && rt.auth.currentUser) {
+          try { window.dispatchEvent(new CustomEvent('ulim-firebase-auth-ready', { detail: { uid: rt.auth.currentUser.uid, reason: reason || 'teacher-bootstrap' } })); } catch(ignore) {}
+          setTimeout(function(){
+            try { if (typeof adminLoadClassList === 'function') adminLoadClassList('', false); } catch(ignore) {}
+          }, 50);
+        }
+        return rt;
+      } catch (error) {
+        console.warn('[ULIM 7.31.5 teacher Firebase bootstrap]', error);
+        return null;
       }
-    } catch (error) {
-      console.warn('[ULIM 7.31.4 teacher Firebase bootstrap]', error);
-    }
+    })().finally(function(){ bootPromise = null; });
+    return bootPromise;
   }
 
-  window.ulimEnsureStaffFirebaseAuth7314_ = boot;
+  window.ulimEnsureStaffFirebaseAuth7315_ = boot;
+
+  try {
+    var originalSetAdminSecureSession7315 = window.setAdminSecureSession_;
+    if (typeof originalSetAdminSecureSession7315 === 'function' && !originalSetAdminSecureSession7315.__ulim7315Wrapped) {
+      var wrapped = function(data){
+        var result = originalSetAdminSecureSession7315.apply(this, arguments);
+        setTimeout(function(){ boot('admin-session-saved'); }, 0);
+        return result;
+      };
+      wrapped.__ulim7315Wrapped = true;
+      window.setAdminSecureSession_ = wrapped;
+      try { setAdminSecureSession_ = wrapped; } catch(ignore) {}
+    }
+  } catch(ignore) {}
+
   window.addEventListener('pageshow', function(){ setTimeout(function(){ boot('pageshow'); }, 120); });
   document.addEventListener('visibilitychange', function(){
     if (document.visibilityState === 'visible') setTimeout(function(){ boot('visible'); }, 80);
