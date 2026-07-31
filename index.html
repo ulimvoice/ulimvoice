@@ -3,6 +3,21 @@
 
 <html lang="ko">
 <head>
+  <script id="ulim-production-console-silencer-7-34-3-9">
+  (function (global) {
+    'use strict';
+    if (global.__ULIM_PRODUCTION_CONSOLE_SILENCER_73439__) return;
+    global.__ULIM_PRODUCTION_CONSOLE_SILENCER_73439__ = true;
+    const noop = function () {};
+    const target = global.console || (global.console = {});
+    [
+      'log','info','debug','warn','error','trace','table','dir','dirxml',
+      'group','groupCollapsed','groupEnd','time','timeEnd','timeLog',
+      'count','countReset','assert','profile','profileEnd','clear'
+    ].forEach(function (name) { target[name] = noop; });
+  })(window);
+  </script>
+
   <link rel="preconnect" href="https://www.gstatic.com" crossorigin data-ulim-classroom-preconnect="7297">
   <link rel="preconnect" href="https://identitytoolkit.googleapis.com" data-ulim-classroom-preconnect="7297">
   <link rel="preconnect" href="https://asia-northeast3-ulim-7b09a.cloudfunctions.net" data-ulim-classroom-preconnect="7297">
@@ -10,7 +25,7 @@
   <script src="./web/room-classroom-realtime-7.29.16.js?v=20260801.72916"></script>
   <script src="./web/staff-login-firebase-primary-7.32.6.js?v=20260801.73206"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260801-73403-sheet-refresh-editable-directory">
+<meta name="ulim-build" content="20260801-734039-current-status-firestore-first-clean-ui">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2730%27 fill=%27%2322c55e%27/%3E%3Cpath d=%27M32 13a9 9 0 0 0-9 9v11a9 9 0 0 0 18 0V22a9 9 0 0 0-9-9zm-14 19a3 3 0 0 1 6 0v1a8 8 0 0 0 16 0v-1a3 3 0 0 1 6 0v1a14 14 0 0 1-11 13.7V51h7a3 3 0 0 1 0 6H22a3 3 0 0 1 0-6h7v-4.3A14 14 0 0 1 18 33z%27 fill=%27white%27/%3E%3C/svg%3E">
 <script>window.__ULIM_WEB_DB_MODE_704__ = 'OFF';</script>
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램 7.06</title>
@@ -12109,9 +12124,28 @@ function adminUpdateAttendanceRecordFromRow_(idx) {
 
     const status = row.querySelector('select[data-field="status"]')?.value || base.status || '';
     const memo = row.querySelector('input[data-field="memo"]')?.value || base.memo || '';
+    const currentInput = row.querySelector('input[data-field="currentStatus"]');
+    const currentStatusValue = currentInput
+        ? currentInput.value
+        : (base.currentStatus || base.remarkText || base.sheetRemark || '');
+    const currentStatusDirty = !!(
+        base.currentStatusDirty === true ||
+        base.remarkDirty === true ||
+        base.sheetRemarkDirty === true ||
+        base.__currentStatusDirty73439 === true ||
+        row.dataset.currentStatusDirty === '1' ||
+        (currentInput && currentInput.dataset.currentStatusDirty === '1')
+    );
 
     base.status = adminNormalizeAttendanceStatusForUi_(status);
     base.attendanceStatus = base.status;
+    base.currentStatus = currentStatusValue;
+    base.remarkText = currentStatusValue;
+    base.sheetRemark = currentStatusValue;
+    base.currentStatusDirty = currentStatusDirty;
+    base.remarkDirty = currentStatusDirty;
+    base.sheetRemarkDirty = currentStatusDirty;
+    base.__currentStatusDirty73439 = currentStatusDirty;
     base.memo = memo;
 
     base.date = base.date || document.getElementById('adminAttendanceDate')?.value || getTodayInputValue();
@@ -25416,7 +25450,7 @@ body.teacher-mode .ulim-eval-sync:not(.error) {
   window.__ULIM_RELIABLE_MESSAGE_VISIBILITY_615__ = true;
 
   const TECH_PATTERN =
-    /로컬\s*(?:저장|임시저장)|기기에\s*(?:안전하게\s*)?(?:저장|보관)|백그라운드|오프라인\s*저장|전송\s*(?:중|대기|확인\s*필요)|재전송|반영\s*대기|서버\s*충돌\s*확인/i;
+    /Firebase|Firestore|Google\s*Sheets|구글\s*시트|파이어베이스|파이어스토어|동기화|자동적재|원본\s*(?:확인|반영)|인증\s*(?:상태|완료|실패)|UID|캐시|실시간\s*(?:연결|구독)|로컬\s*(?:저장|임시저장)|기기에\s*(?:안전하게\s*)?(?:저장|보관)|백그라운드|오프라인\s*저장|전송\s*(?:중|대기|확인\s*필요)|재전송|반영\s*대기|서버\s*충돌\s*확인/i;
 
   const FAILURE_PATTERN =
     /실패|오류|확인\s*필요/i;
@@ -25599,7 +25633,7 @@ body.teacher-mode #ulimReliableSyncPill614 {
   if (window.__ULIM_TEACHER_ATTENDANCE_TECH_HIDE_616__) return;
   window.__ULIM_TEACHER_ATTENDANCE_TECH_HIDE_616__ = true;
 
-  const TECH_RE = /로컬\s*(?:저장|임시저장)|기기에\s*(?:안전하게\s*)?(?:저장|보관)|백그라운드|오프라인\s*(?:저장|대기)|전송\s*(?:중|대기|확인\s*필요|완료)|재전송|반영\s*(?:대기|중|완료)|서버\s*충돌\s*확인|\d+초|1분\s*후/i;
+  const TECH_RE = /Firebase|Firestore|Google\s*Sheets|구글\s*시트|파이어베이스|파이어스토어|동기화|자동적재|원본\s*(?:확인|반영)|인증\s*(?:상태|완료|실패)|UID|캐시|실시간\s*(?:연결|구독)|로컬\s*(?:저장|임시저장)|기기에\s*(?:안전하게\s*)?(?:저장|보관)|백그라운드|오프라인\s*(?:저장|대기)|전송\s*(?:중|대기|확인\s*필요|완료)|재전송|반영\s*(?:대기|중|완료)|서버\s*충돌\s*확인|\d+초|1분\s*후/i;
   const FAIL_RE = /실패|오류|확인\s*필요/i;
   let sanitizing = false;
 
@@ -27913,9 +27947,9 @@ window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = true;
 <!-- ULIM 7.30.0: cache-first login shell, attendance and daily evaluation reads. -->
 <script src="./web/staff-performance-7.30.1.js?v=20260731.73001"></script>
 
-<!-- ULIM 7.31.13: attendance field mapping + daily blank-clear transport. -->
-<script src="./web/staff-firestore-operational-7.31.13.js?v=20260801.73113"></script>
-<script src="./web/attendance-daily-ui-7.34.3.8.js?v=20260801.734038"></script>
+<!-- ULIM 7.31.14 / 7.34.3.9: editable current status + clean staff UI. -->
+<script src="./web/staff-firestore-operational-7.31.14.js?v=20260801.73114"></script>
+<script src="./web/attendance-daily-ui-7.34.3.9.js?v=20260801.734039"></script>
 
 <!-- ULIM 7.33.1: stable Firebase token guard + clean console baseline. -->
 <script src="./web/staff-account-admin-7.34.3.6.js?v=20260801.734036"></script>
