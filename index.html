@@ -6,8 +6,11 @@
   <link rel="preconnect" href="https://www.gstatic.com" crossorigin data-ulim-classroom-preconnect="7297">
   <link rel="preconnect" href="https://identitytoolkit.googleapis.com" data-ulim-classroom-preconnect="7297">
   <link rel="preconnect" href="https://asia-northeast3-ulim-7b09a.cloudfunctions.net" data-ulim-classroom-preconnect="7297">
+  <!-- ULIM 7.32.1: Firebase session restore begins before the large legacy HTML finishes parsing. -->
+  <script src="./web/room-classroom-realtime-7.29.12.js?v=20260731.72912"></script>
+  <script src="./web/staff-login-firebase-primary-7.32.1.js?v=20260731.73201"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="cleaned-20260730-classroom-sheet-direct-72904">
+<meta name="ulim-build" content="20260731-73201-firebase-primary-ui-fast">
 <script>window.__ULIM_WEB_DB_MODE_704__ = 'OFF';</script>
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램 7.06</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27863,13 +27866,11 @@ body.full-admin-mode #adminPanelRoom .admin-full-only {
 }
 </style>
 
-<!-- ULIM 7.29.7: fast persistent-cache load; Google Sheets remains canonical. -->
+<!-- ULIM 7.29.12: Firebase-primary-preserving realtime; Google Sheets remains classroom canonical. -->
 <script>
 window.ULIM_CLASSROOM_FIRESTORE_FIRST_ENABLED = false;
 window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = true;
 </script>
-<script src="./web/room-classroom-realtime-7.29.11.js?v=20260731.72911"></script>
-<script src="./web/staff-login-firebase-primary-7.32.0.js?v=20260731.73200"></script>
 
 
 <script id="ulim-classroom-72907-compatibility">
@@ -27886,10 +27887,14 @@ window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = true;
 <!-- ULIM 7.30.0: cache-first login shell, attendance and daily evaluation reads. -->
 <script src="./web/staff-performance-7.30.0.js?v=20260730.73000"></script>
 
-<!-- ULIM 7.31.1: automatic first import and manual Sheets → Firestore refresh before attendance/daily reads. -->
-<script src="./web/staff-firestore-operational-7.31.10.js?v=20260731.73110"></script>
+<!-- ULIM 7.31.11: claims-gated attendance/daily realtime listeners. -->
+<script src="./web/staff-firestore-operational-7.31.11.js?v=20260731.73111"></script>
 <script id="ulim-general-teacher-firebase-auth-bootstrap-7-31-5">
 (function(){
+  if (window.__ULIM_STAFF_LOGIN_FIREBASE_PRIMARY_7321__) {
+    window.__ULIM_GENERAL_TEACHER_FIREBASE_AUTH_BOOTSTRAP_7315__ = true;
+    return;
+  }
   if (window.__ULIM_GENERAL_TEACHER_FIREBASE_AUTH_BOOTSTRAP_7315__) return;
   window.__ULIM_GENERAL_TEACHER_FIREBASE_AUTH_BOOTSTRAP_7315__ = true;
 
@@ -27954,7 +27959,7 @@ window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = true;
 
 
 <script id="ulim-login-fast-build-marker-73110">
-window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.731.10';
+window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.732.01';
 </script>
 </body>
 </html>
