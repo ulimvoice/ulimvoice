@@ -7,10 +7,11 @@
   <link rel="preconnect" href="https://identitytoolkit.googleapis.com" data-ulim-classroom-preconnect="7297">
   <link rel="preconnect" href="https://asia-northeast3-ulim-7b09a.cloudfunctions.net" data-ulim-classroom-preconnect="7297">
   <!-- ULIM 7.32.2: Firebase session restore begins before the large legacy HTML finishes parsing. -->
-  <script src="./web/room-classroom-realtime-7.29.13.js?v=20260731.72913"></script>
-  <script src="./web/staff-login-firebase-primary-7.32.2.js?v=20260731.73202"></script>
+  <script src="./web/room-classroom-realtime-7.29.14.js?v=20260731.72914"></script>
+  <script src="./web/staff-login-firebase-primary-7.32.3.js?v=20260731.73203"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260731-73202-explicit-logout-guard">
+<meta name="ulim-build" content="20260731-73300-console-clean-staff-account-admin">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2730%27 fill=%27%2322c55e%27/%3E%3Cpath d=%27M32 13a9 9 0 0 0-9 9v11a9 9 0 0 0 18 0V22a9 9 0 0 0-9-9zm-14 19a3 3 0 0 1 6 0v1a8 8 0 0 0 16 0v-1a3 3 0 0 1 6 0v1a14 14 0 0 1-11 13.7V51h7a3 3 0 0 1 0 6H22a3 3 0 0 1 0-6h7v-4.3A14 14 0 0 1 18 33z%27 fill=%27white%27/%3E%3C/svg%3E">
 <script>window.__ULIM_WEB_DB_MODE_704__ = 'OFF';</script>
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램 7.06</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -6053,6 +6054,23 @@ function ulimAdminJsonpRequest704_(queryParams, timeoutMs = 45000) {
 }
 
 
+function ulimIsLegacySessionExpired7330_(message) {
+    const raw = String(message || '');
+    return /로그인\s*시간이\s*만료|로그인.*만료|세션.*만료|다시\s*로그인|ADMIN_SESSION_EXPIRED|SESSION_EXPIRED/i.test(raw);
+}
+
+function ulimHandleLegacySessionExpired7330_(action, message) {
+    try { adminToken = ''; } catch (ignore) {}
+    try { window.adminToken = ''; } catch (ignore) {}
+    try { localStorage.removeItem('adminToken'); } catch (ignore) {}
+    try { sessionStorage.removeItem('adminToken'); } catch (ignore) {}
+    try {
+        window.dispatchEvent(new CustomEvent('ulim-legacy-session-expired', {
+            detail: { action: String(action || ''), message: String(message || ''), version: '2026-07-31.733.00' }
+        }));
+    } catch (ignore) {}
+}
+
 async function adminApi(action, params = {}) {
     const ttl = ULIM_ADMIN_API_CACHE_TTL[action] || 0;
     const allowCache = ttl > 0 && !params.forceRefresh && !params.noCache;
@@ -6087,6 +6105,14 @@ async function adminApi(action, params = {}) {
 
         if (!data || data.status !== 'success') {
             const rawMessage = (data && data.message) || '';
+            if (ulimIsLegacySessionExpired7330_(rawMessage)) {
+                ulimHandleLegacySessionExpired7330_(action, rawMessage);
+                const expiredError = new Error('기존 GAS 호환 세션이 만료되었습니다. Firebase 로그인은 유지됩니다.');
+                expiredError.code = 'ULIM_LEGACY_SESSION_EXPIRED';
+                expiredError.silent = true;
+                throw expiredError;
+            }
+
             console.warn('[adminApi] app error:', action, rawMessage, data);
 
             if (/GAS|action|라우팅|스크립트|배포|API|JSONP|코드/i.test(rawMessage)) {
@@ -12244,7 +12270,7 @@ async function adminLoadClassroomUsageOptions(force = false) {
         adminClassroomUsageOptionsLoadedDate = date;
         adminRenderClassroomUsageOptionControls_();
     } catch (e) {
-        console.warn('[adminLoadClassroomUsageOptions] failed:', e);
+        if (!(e && e.silent)) console.warn('[adminLoadClassroomUsageOptions] failed:', e);
         adminRenderClassroomUsageOptionControls_();
     }
 }
@@ -27885,10 +27911,13 @@ window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = true;
 
 
 <!-- ULIM 7.30.0: cache-first login shell, attendance and daily evaluation reads. -->
-<script src="./web/staff-performance-7.30.0.js?v=20260730.73000"></script>
+<script src="./web/staff-performance-7.30.1.js?v=20260731.73001"></script>
 
 <!-- ULIM 7.31.11: claims-gated attendance/daily realtime listeners. -->
 <script src="./web/staff-firestore-operational-7.31.11.js?v=20260731.73111"></script>
+
+<!-- ULIM 7.33.0: clean console baseline + Firebase staff account management. -->
+<script src="./web/staff-account-admin-7.33.0.js?v=20260731.73300"></script>
 <script id="ulim-general-teacher-firebase-auth-bootstrap-7-31-5">
 (function(){
   if (window.__ULIM_STAFF_LOGIN_FIREBASE_PRIMARY_7321__) {
@@ -27959,7 +27988,7 @@ window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = true;
 
 
 <script id="ulim-login-fast-build-marker-73110">
-window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.732.01';
+window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 </script>
 </body>
 </html>
