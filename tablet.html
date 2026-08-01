@@ -9,7 +9,7 @@
 <link rel="dns-prefetch" href="https://script.googleusercontent.com">
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<meta name="ulim-tablet-build" content="20260801-734313-server-notify" />
+<meta name="ulim-tablet-build" content="20260802-734315-video-layout-cache-fix" />
 <title>울림연기학원 등하원 체크 2026.06.06.046.01</title>
 <style>
   :root {
@@ -39,7 +39,7 @@
 
   body {
     display: grid;
-    grid-template-columns: minmax(520px, 1fr) minmax(520px, 1fr);
+    grid-template-columns: minmax(430px, 0.94fr) minmax(0, 1.06fr);
     min-height: 100vh;
   }
 
@@ -104,7 +104,7 @@
   .choice-select:focus { border-color: #22c55e; box-shadow: 0 0 0 4px rgba(34,197,94,.14); }
   .choice-help { margin-top: 10px; color: #64748b; font-size: 14px; line-height: 1.45; }
   @keyframes pop { from { transform: scale(.98); opacity: .6; } to { transform: scale(1); opacity: 1; } }
-  @media (max-width: 1024px) {
+  @media (max-width: 760px), (orientation: portrait) and (max-width: 1024px) {
     html, body { overflow-x: hidden; overflow-y: auto; }
     body { display: flex; flex-direction: column; min-height: auto; background: #eef2f7; }
     .left { width: 100%; max-width: 100%; min-height: auto; }
@@ -303,7 +303,7 @@ body {
   }
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 760px), (orientation: portrait) and (max-width: 1024px) {
   html,
   body {
     height: auto;
@@ -336,6 +336,68 @@ body {
   }
 }
 
+
+/* =========================================================
+   7.34.3.15 태블릿 홍보영역 표시 보정
+   - 768~1180px 가로 태블릿은 출결/홍보를 좌우 2단으로 유지
+   - 세로 화면과 소형 화면에서만 위아래 배치
+   - 오른쪽 영상 영역이 화면 아래로 밀리는 현상 방지
+   ========================================================= */
+@media (orientation: landscape) and (min-width: 761px) and (max-width: 1180px) {
+  html,
+  body {
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: hidden;
+  }
+
+  body {
+    display: grid;
+    grid-template-columns: minmax(430px, 47%) minmax(0, 53%);
+    background: #0b1220;
+  }
+
+  .left {
+    width: auto;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .right {
+    width: auto;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .ad-wrap {
+    width: min(94%, 760px);
+    max-width: 94%;
+    transform: none;
+  }
+
+  .ad-title {
+    margin-bottom: 12px;
+    font-size: clamp(24px, 3vw, 34px);
+  }
+
+  .ad-box {
+    min-height: clamp(260px, 55vh, 470px);
+  }
+
+  .ad-box iframe,
+  .ad-box video,
+  .ad-box img {
+    max-height: calc(100dvh - 120px);
+  }
+}
 
 </style>
 </head>
@@ -386,7 +448,7 @@ body {
  * - Google Sheets 출석칸과 알림톡은 기존 백그라운드 처리 유지
  ****************************************************/
 const API_URL = "https://script.google.com/macros/s/AKfycbyS3QUvrjNbwvaw92_g-QKQyN3Yito8DAdpAjxUzfnsuVf3Ce7ccuaXIv651U7FnYF4/exec";
-const TABLET_APP_VERSION = "2026.08.01.7.34.3.13";
+const TABLET_APP_VERSION = "2026.08.02.7.34.3.15";
 const TABLET_DEBUG = false;
 const TABLET_FIREBASE_CONFIG = {
   apiKey: "AIzaSyAW-sqtUQ_mJ6ZS_aV8pTOAKvHTSX-FXUM",
@@ -1320,8 +1382,41 @@ async function loadAds() {
   adIndex = 0; renderAdSlide();
 }
 function defaultSlides() { return [{ type: "공지", title: "홍보 영상", content: "울림연기학원에 오신 것을 환영합니다.", imageUrl: "", videoUrl: "", seconds: 8 }]; }
-function extractYoutubeId(url) { const text = String(url || ""); const m = text.match(/embed\/([^?&/]+)/) || text.match(/[?&]v=([^?&]+)/) || text.match(/youtu\.be\/([^?&/]+)/); return m ? m[1] : ""; }
-function buildYoutubeEmbedUrl(url) { const safeUrl = String(url || ""); const id = extractYoutubeId(safeUrl); const sep = safeUrl.indexOf("?") === -1 ? "?" : "&"; return safeUrl + sep + "autoplay=1&mute=1&loop=1" + (id ? "&playlist=" + encodeURIComponent(id) : ""); }
+function extractYoutubeId(url) {
+  const text = String(url || "").trim();
+  const match = text.match(/(?:youtube(?:-nocookie)?\.com\/(?:embed\/|shorts\/)|youtu\.be\/)([^?&/]+)/i)
+    || text.match(/[?&]v=([^?&/]+)/i);
+  return match && match[1] ? match[1].trim() : "";
+}
+function buildYoutubeEmbedUrl(url) {
+  const id = extractYoutubeId(url);
+  if (!id) return String(url || "").trim();
+  const params = new URLSearchParams({
+    autoplay: "1",
+    mute: "1",
+    loop: "1",
+    playlist: id,
+    playsinline: "1",
+    controls: "0",
+    rel: "0",
+    modestbranding: "1",
+    iv_load_policy: "3"
+  });
+  return "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(id) + "?" + params.toString();
+}
+function requestHtmlVideoPlayback_() {
+  const video = document.getElementById("tabletAdVideo");
+  if (!video) return;
+  video.muted = true;
+  video.defaultMuted = true;
+  const result = video.play();
+  if (result && typeof result.catch === "function") {
+    result.catch(function() {
+      video.controls = true;
+      video.setAttribute("aria-label", "홍보영상 재생");
+    });
+  }
+}
 function renderAdSlide() {
   if (!adSlides.length) adSlides = defaultSlides();
   const slide = adSlides[adIndex] || adSlides[0];
@@ -1331,8 +1426,12 @@ function renderAdSlide() {
   const videoUrl = slide.videoUrl || "";
   const imageUrl = slide.imageUrl || "";
   if (videoUrl) {
-    if (videoUrl.includes("youtube.com/embed/")) box.innerHTML = `<iframe src="${escapeAttr(buildYoutubeEmbedUrl(videoUrl))}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
-    else box.innerHTML = `<video src="${escapeAttr(videoUrl)}" autoplay muted loop playsinline></video>`;
+    if (extractYoutubeId(videoUrl)) {
+      box.innerHTML = `<iframe src="${escapeAttr(buildYoutubeEmbedUrl(videoUrl))}" title="${escapeAttr(slide.title || "홍보 영상")}" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" loading="eager" allowfullscreen></iframe>`;
+    } else {
+      box.innerHTML = `<video id="tabletAdVideo" src="${escapeAttr(videoUrl)}" autoplay muted loop playsinline webkit-playsinline preload="auto"></video>`;
+      requestAnimationFrame(requestHtmlVideoPlayback_);
+    }
   } else if (imageUrl) {
     box.innerHTML = `<img src="${escapeAttr(imageUrl)}" alt="홍보 이미지" onerror="this.parentElement.innerHTML=\`<div class='ad-text'>이미지를 불러오지 못했습니다.</div>\`;">`;
   } else {
@@ -1368,6 +1467,20 @@ setInterval(warmup, 4 * 60 * 1000);
 setInterval(function(){ loadTabletPreload(false); bindTabletSnapshotListener().catch(function() {}); }, 5 * 60 * 1000);
 setInterval(function(){ processLocalPendingAttendanceQueue(); }, 60 * 1000);
 setInterval(function(){ clearStaleTabletLocalData(); }, 5 * 60 * 1000);
+setInterval(function(){ loadAds(); }, 5 * 60 * 1000);
+document.addEventListener("visibilitychange", function() {
+  if (!document.hidden) {
+    loadAds();
+    setTimeout(requestHtmlVideoPlayback_, 120);
+  }
+});
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function() {
+    navigator.serviceWorker.register("./service-worker.js").then(function(registration) {
+      return registration.update();
+    }).catch(function() {});
+  });
+}
 </script>
 </body>
 </html>
