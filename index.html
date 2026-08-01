@@ -25,7 +25,7 @@
   <script src="./web/room-classroom-realtime-7.29.16.js?v=20260801.72916p15"></script>
   <script src="./web/staff-login-firebase-primary-7.32.6.js?v=20260801.73206"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260801-73431310-attendance-cell-isolated-manual-current-status">
+<meta name="ulim-build" content="20260802-73431311-attendance-daily-independent-context">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2730%27 fill=%27%2322c55e%27/%3E%3Cpath d=%27M32 13a9 9 0 0 0-9 9v11a9 9 0 0 0 18 0V22a9 9 0 0 0-9-9zm-14 19a3 3 0 0 1 6 0v1a8 8 0 0 0 16 0v-1a3 3 0 0 1 6 0v1a14 14 0 0 1-11 13.7V51h7a3 3 0 0 1 0 6H22a3 3 0 0 1 0-6h7v-4.3A14 14 0 0 1 18 33z%27 fill=%27white%27/%3E%3C/svg%3E">
 <script>window.__ULIM_WEB_DB_MODE_704__ = 'OFF';</script>
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램 7.06</title>
@@ -2410,7 +2410,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
             <div class="admin-grid">
               <div class="admin-field">
                 <label for="adminDailyEvalDate">수업일</label>
-                <input type="date" id="adminDailyEvalDate" onchange="adminLoadClassList(this.value); adminRenderDailyEvalTable();">
+                <input type="date" id="adminDailyEvalDate" onchange="adminLoadClassList(this.value)">
               </div>
               <div class="admin-field">
                 <label for="adminDailyEvalClass">반명 / 수업명 선택 또는 검색</label>
@@ -2425,7 +2425,7 @@ body.admin-mode .admin-only-tab { display:block !important; }
               </div>
               <div class="admin-field">
                 <label for="adminDailyEvalFilter">학생명 필터</label>
-                <input type="text" id="adminDailyEvalFilter" placeholder="학생명 입력" oninput="adminRenderDailyEvalTable()">
+                <input type="text" id="adminDailyEvalFilter" placeholder="학생명 입력" oninput="adminScheduleDailyFilterReload704_()">
               </div>
             </div>
             <div class="admin-field admin-template-box admin-full-only" style="margin-top:12px;">
@@ -7588,13 +7588,37 @@ function showAdminPanel(panelId) {
     }
 
     if (panelId === 'adminPanelAttendance') {
-        adminLoadClassList('', false);
+        const attendanceDate = document.getElementById('adminAttendanceDate')?.value || '';
+        const attendanceClass = (document.getElementById('adminAttendanceClass')?.value || '').trim();
+        adminLoadClassList(attendanceDate, false);
+
+        if (attendanceClass) {
+            Promise.resolve(adminLoadAttendanceSnapshot(false, false)).catch(() => {});
+        }
     }
 
     if (panelId === 'adminPanelDailyEval') {
-        adminLoadClassList(document.getElementById('adminDailyEvalDate')?.value || '', false);
+        const dailyDate = document.getElementById('adminDailyEvalDate')?.value || '';
+        const dailyClass = (document.getElementById('adminDailyEvalClass')?.value || '').trim();
+        const dailyRows = Array.isArray(adminDailyEvalRows) ? adminDailyEvalRows : [];
+        const firstDailyRow = dailyRows[0] || null;
+        const sameDailyDate = !firstDailyRow || !dailyDate || String(firstDailyRow.date || firstDailyRow.classDate || '') === String(dailyDate);
+        const sameDailyClass = !firstDailyRow || !dailyClass || dailyClass === '전체반' ||
+            normalizeClassSearchText(adminCleanClassNameOnly_(firstDailyRow.className || '')) ===
+            normalizeClassSearchText(adminCleanClassNameOnly_(dailyClass));
+
+        adminLoadClassList(dailyDate, false);
         if (!adminDailyEvalTemplateLoaded) adminLoadDailyEvalTemplate();
-        adminRenderDailyEvalTable();
+
+        if (dailyRows.length && sameDailyDate && sameDailyClass) {
+            adminRenderDailyEvalRows();
+            Promise.resolve(adminLoadDailyEvalStudents(false)).catch(() => {});
+        } else if (dailyClass && dailyClass !== '전체반') {
+            adminDailyEvalRows = [];
+            Promise.resolve(adminLoadDailyEvalStudents(false)).catch(() => {});
+        } else {
+            adminRenderDailyEvalTable();
+        }
     }
 
     if (panelId === 'adminPanelVocalPractice') {
@@ -7785,16 +7809,47 @@ function adminCleanClassNameOnly_(className) {
         .trim();
 }
 
-function adminGetClassItemByName_(className) {
+function adminGetClassItemByName_(className, dateOverride = '') {
     const target = normalizeClassSearchText(className || '');
     if (!target) return null;
-    return (adminClassList || []).find(c => normalizeClassSearchText(c.className || '') === target)
-        || (adminClassList || []).find(c => normalizeClassSearchText(adminCleanClassNameOnly_(c.className || '')) === normalizeClassSearchText(adminCleanClassNameOnly_(className || '')))
+
+    const date = String(
+        dateOverride ||
+        document.getElementById('adminDailyEvalDate')?.value ||
+        document.getElementById('adminAttendanceDate')?.value ||
+        ''
+    ).trim();
+
+    let list = [];
+    try {
+        if (date && typeof adminGetClassListForDate704_ === 'function') {
+            list = adminGetClassListForDate704_(date);
+        }
+    } catch (ignore) {}
+
+    if (!Array.isArray(list) || !list.length) {
+        try {
+            const expectedKey = date && typeof getAdminClassListCacheKey === 'function'
+                ? getAdminClassListCacheKey(date)
+                : '';
+            const loadedKey = typeof adminClassListLoadedKey !== 'undefined'
+                ? String(adminClassListLoadedKey || '')
+                : '';
+            if (!date || (expectedKey && loadedKey === expectedKey)) {
+                list = Array.isArray(adminClassList) ? adminClassList : [];
+            }
+        } catch (ignore) {
+            list = [];
+        }
+    }
+
+    return (list || []).find(c => normalizeClassSearchText(c.className || '') === target)
+        || (list || []).find(c => normalizeClassSearchText(adminCleanClassNameOnly_(c.className || '')) === normalizeClassSearchText(adminCleanClassNameOnly_(className || '')))
         || null;
 }
 
-function adminGetVideoLinkForClassName_(className) {
-    const item = adminGetClassItemByName_(className);
+function adminGetVideoLinkForClassName_(className, dateOverride = '') {
+    const item = adminGetClassItemByName_(className, dateOverride);
     return item && item.videoLink ? String(item.videoLink || '').trim() : '';
 }
 
@@ -19513,6 +19568,22 @@ ${ruleSummary}`, 'success');
     let dailyDraftLastSavedAt = '';
     let dailyDraftPromptedKey = '';
     let dailyCommonLessonMemory = { key: '', value: '' };
+    let dailyFilterReloadTimer704_ = null;
+
+    window.adminScheduleDailyFilterReload704_ = function() {
+        if (dailyFilterReloadTimer704_) clearTimeout(dailyFilterReloadTimer704_);
+        dailyFilterReloadTimer704_ = setTimeout(function() {
+            dailyFilterReloadTimer704_ = null;
+            const className = getDailyClass_();
+            const keyword = document.getElementById('adminDailyEvalFilter')?.value.trim() || '';
+            if (!className && !keyword) {
+                adminDailyEvalRows = [];
+                adminRenderDailyEvalTable();
+                return;
+            }
+            Promise.resolve(adminLoadDailyEvalStudents(false)).catch(() => {});
+        }, 280);
+    };
 
     function esc_(value) {
         if (typeof ulimAdminEsc_ === 'function') return ulimAdminEsc_(value);
@@ -20064,6 +20135,7 @@ ${ruleSummary}`, 'success');
         const className = getDailyClass_();
         const keyword = document.getElementById('adminDailyEvalFilter')?.value.trim() || '';
         const wrap = document.getElementById('adminDailyEvalTableWrap');
+        const list = Array.isArray(adminDailyEvalRows) ? adminDailyEvalRows : [];
 
         if (!className && !keyword) {
             adminDailyEvalRows = [];
@@ -20071,10 +20143,14 @@ ${ruleSummary}`, 'success');
             return;
         }
 
-        if (typeof adminBuildDailyRowsFromStudents === 'function') {
-            adminBuildDailyRowsFromStudents();
+        if (list.length) {
+            adminRenderDailyEvalRows();
+            return;
         }
-        adminRenderDailyEvalRows();
+
+        if (wrap) {
+            wrap.innerHTML = '<div class="admin-data-guard-message">선택한 날짜와 반의 학생 및 저장 평가를 불러오세요.</div>';
+        }
     };
 
     const originalLoadDailyStudents = window.adminLoadDailyEvalStudents;
@@ -24650,15 +24726,59 @@ body {
     } catch (ignore) {}
     if (!teacherMode) return true;
 
+    const dateId = inputId === 'adminDailyEvalClass'
+      ? 'adminDailyEvalDate'
+      : 'adminAttendanceDate';
+    const date = String(document.getElementById(dateId)?.value || '').trim();
+
     let list = [];
+    let dateListResolved = false;
+
     try {
-      list = typeof adminFilterClassListForRole === 'function'
-        ? adminFilterClassListForRole(Array.isArray(adminClassList) ? adminClassList : [])
-        : (Array.isArray(adminClassList) ? adminClassList : []);
+      if (date && typeof window.adminGetClassListForDate704_ === 'function') {
+        list = window.adminGetClassListForDate704_(date);
+        dateListResolved = Array.isArray(list) && list.length > 0;
+      }
     } catch (ignore) {}
 
+    if (!dateListResolved) {
+      try {
+        const expectedKey = date && typeof getAdminClassListCacheKey === 'function'
+          ? getAdminClassListCacheKey(date)
+          : '';
+        const loadedKey = typeof adminClassListLoadedKey !== 'undefined'
+          ? String(adminClassListLoadedKey || '')
+          : '';
+
+        if (!date || (expectedKey && loadedKey === expectedKey)) {
+          list = Array.isArray(adminClassList) ? adminClassList : [];
+          dateListResolved = Array.isArray(list) && list.length > 0;
+        }
+      } catch (ignore) {}
+    }
+
+    /*
+     * 해당 날짜 목록이 아직 도착하지 않은 동안에는 다른 날짜의 전역 목록으로
+     * 선택값을 무효화하지 않습니다. 목록이 준비된 뒤 날짜별로만 검증합니다.
+     */
+    if (!dateListResolved) return true;
+
+    try {
+      if (typeof adminFilterClassListForRole === 'function') {
+        list = adminFilterClassListForRole(list);
+      }
+    } catch (ignore) {}
+
+    const target = typeof normalizeClassSearchText === 'function'
+      ? normalizeClassSearchText(value)
+      : value.replace(/\s+/g, '').toLowerCase();
+
     return list.some(function (item) {
-      return String(item && item.className || '').trim() === value;
+      const itemName = String(item && item.className || '').trim();
+      const itemKey = typeof normalizeClassSearchText === 'function'
+        ? normalizeClassSearchText(itemName)
+        : itemName.replace(/\s+/g, '').toLowerCase();
+      return itemKey === target;
     });
   }
 
@@ -28001,7 +28121,7 @@ window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = true;
 <script src="./web/staff-performance-7.30.1.js?v=20260731.73001"></script>
 
 <!-- ULIM 7.31.15 / 7.34.3.10: attendance date-cell isolation + manual-only current status. -->
-<script src="./web/staff-firestore-operational-7.31.16.js?v=20260802.73116d3"></script>
+<script src="./web/staff-firestore-operational-7.31.16.js?v=20260802.73116d4"></script>
 <script src="./web/attendance-daily-ui-7.34.3.10.js?v=20260801.7340310"></script>
 
 <!-- ULIM 7.33.1: stable Firebase token guard + clean console baseline. -->
