@@ -9,6 +9,7 @@
 <link rel="dns-prefetch" href="https://script.googleusercontent.com">
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="ulim-tablet-build" content="20260801-734313-server-notify" />
 <title>울림연기학원 등하원 체크 2026.06.06.046.01</title>
 <style>
   :root {
@@ -376,7 +377,7 @@ body {
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
 <script>
 /****************************************************
- * 울림 태블릿 7.34.3.12 Firestore 실시간 출결 연동
+ * 울림 태블릿 7.34.3.13 Firestore 서버 알림·부분 스냅샷 연동
  * - 로컬 일일스냅샷 저장
  * - 등하원 클릭 즉시 로컬 출결로그 저장
  * - 로컬 중복 요청 즉시 차단
@@ -385,7 +386,7 @@ body {
  * - Google Sheets 출석칸과 알림톡은 기존 백그라운드 처리 유지
  ****************************************************/
 const API_URL = "https://script.google.com/macros/s/AKfycbyS3QUvrjNbwvaw92_g-QKQyN3Yito8DAdpAjxUzfnsuVf3Ce7ccuaXIv651U7FnYF4/exec";
-const TABLET_APP_VERSION = "2026.08.01.7.34.3.12a";
+const TABLET_APP_VERSION = "2026.08.01.7.34.3.13";
 const TABLET_DEBUG = false;
 const TABLET_FIREBASE_CONFIG = {
   apiKey: "AIzaSyAW-sqtUQ_mJ6ZS_aV8pTOAKvHTSX-FXUM",
@@ -959,26 +960,13 @@ async function sendLocalPendingItem(eventKey, item) {
       }
     }
 
-    const notifyParams = Object.assign({}, item.params || {}, {
-      action: "tabletFirestoreNotify",
+    // 7.34.3.13: 알림톡은 Firestore 이벤트 생성 트리거가 서버에서 직접 처리합니다.
+    // 태블릿 브라우저가 GAS 알림 호출까지 책임지면 화면 종료·네트워크 전환 시
+    // 출결은 저장되고 알림만 누락될 수 있으므로, Firestore 저장 성공 시 로컬 작업을 종료합니다.
+    updateLocalAttendanceEventStatus(eventKey, "success", {
       eventId: (firestoreResult && firestoreResult.eventId) || item.serverEventId || "",
-      attendanceNo: item.attendanceNo || (item.params && item.params.attendanceNo) || "",
-      mode: item.mode || (item.params && item.params.mode) || "in",
-      selectedStudentName: item.studentName || (item.params && item.params.selectedStudentName) || "",
-      className: item.className || (item.params && item.params.className) || "",
-      roomName: item.roomName || (item.params && item.params.roomName) || "데스크문의"
+      notificationState: (firestoreResult && firestoreResult.notificationState) || "pending"
     });
-    const data = await tabletFetchJson(notifyParams, 0);
-    const status = data && (data.status || "success");
-    if (["queued", "success", "duplicate"].indexOf(status) !== -1) {
-      updateLocalAttendanceEventStatus(eventKey, status, data);
-    } else if (status === "already") {
-      // GAS의 already는 다른 동일 요청이 아직 처리 중이라는 뜻입니다.
-      // 완료로 간주해 대기열을 삭제하지 않고 다음 재시도에서 최종 완료 여부를 확인합니다.
-      throw new Error("알림 처리 확인 중");
-    } else {
-      throw new Error(data && (data.message || data.popupMessage || data.status) ? String(data.message || data.popupMessage || data.status) : "알림 처리 실패");
-    }
   } catch (err) {
     const pending = getLocalPendingStore();
     if (pending.items[eventKey]) {
