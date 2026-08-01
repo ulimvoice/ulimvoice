@@ -634,14 +634,30 @@ function attendanceMinimal(row) {
 
   function studentMatchKey(row) {
     const r = row || {};
-    if (text(r.studentUid)) return 'UID|' + text(r.studentUid);
-    if (text(r.studentIdentityKey)) return 'KEY|' + text(r.studentIdentityKey);
-    const phone = text(r.studentPhone).replace(/\D/g, '');
-    if (phone.length >= 8) return 'PHONE|' + phone;
-    if (text(r.studentNo || r.attendanceNo)) return 'NO|' + normalize(r.studentNo || r.attendanceNo);
-    return 'NAME|' + normalize(r.studentName || r.name) + '|' + normalize(r.className);
-  }
 
+    // 출석 명단과 저장 평가에 공통으로 존재하는 식별키를 최우선 사용합니다.
+    if (text(r.studentIdentityKey)) {
+      return 'KEY|' + text(r.studentIdentityKey);
+    }
+
+    if (text(r.studentUid)) {
+      return 'UID|' + text(r.studentUid);
+    }
+
+    const phone = text(r.studentPhone).replace(/\D/g, '');
+    if (phone.length >= 8) {
+      return 'PHONE|' + phone;
+    }
+
+    if (text(r.studentNo || r.attendanceNo)) {
+      return 'NO|' + normalize(r.studentNo || r.attendanceNo);
+    }
+
+    return 'NAME|' +
+      normalize(r.studentName || r.name) +
+      '|' +
+      classCoreKey(r.className);
+  }
   function dailyRosterRow(row, ctx) {
     const r = row || {};
     return {
@@ -667,27 +683,60 @@ function attendanceMinimal(row) {
   }
 
   function mergeDailyStrict(roster, savedRows, ctx) {
-    const map = new Map();
-    (savedRows || []).forEach(function (saved) { map.set(studentMatchKey(saved), saved); });
-    const result = (roster || []).map(function (source) {
-      const base = dailyRosterRow(source, ctx);
-      const saved = map.get(studentMatchKey(base));
-      return saved ? Object.assign({}, base, saved, {
-        date: ctx.date,
-        className: base.className,
-        teacherScopeKey: ctx.teacherScopeKey,
-        instructor: base.instructor || saved.instructor || teacherNameFor(ctx.className, saved)
-      }) : base;
-    });
-    // 평가만 남아 있고 현재 출석 명단에서 빠진 학생은 누락시키지 않습니다.
+    const savedMap = new Map();
+
+    // 동일 학생의 저장 평가가 여러 건이면 가장 최근 자료만 사용합니다.
     (savedRows || []).forEach(function (saved) {
-      if (!result.some(function (row) { return studentMatchKey(row) === studentMatchKey(saved); })) {
-        result.push(Object.assign(dailyRosterRow(saved, ctx), saved, { teacherScopeKey: ctx.teacherScopeKey }));
+      const key = studentMatchKey(saved);
+      if (!key) return;
+
+      const previous = savedMap.get(key);
+
+      const savedTime = Date.parse(
+        saved.savedAt ||
+        saved.updatedAt ||
+        saved.createdAt ||
+        ''
+      ) || 0;
+
+      const previousTime = previous
+        ? (Date.parse(
+            previous.savedAt ||
+            previous.updatedAt ||
+            previous.createdAt ||
+            ''
+          ) || 0)
+        : -1;
+
+      if (!previous || savedTime >= previousTime) {
+        savedMap.set(key, saved);
       }
     });
-    return result;
-  }
 
+    // 화면에는 현재 출석 명단에 존재하는 학생만 표시합니다.
+    return (roster || []).map(function (source) {
+      const base = dailyRosterRow(source, ctx);
+      const saved = savedMap.get(studentMatchKey(base));
+
+      if (!saved) return base;
+
+      return Object.assign({}, base, saved, {
+        date: ctx.date,
+        className: base.className,
+        classId: base.classId || saved.classId || '',
+        teacherScopeKey: ctx.teacherScopeKey,
+        studentUid: base.studentUid || saved.studentUid || '',
+        studentIdentityKey:
+          base.studentIdentityKey ||
+          saved.studentIdentityKey ||
+          '',
+        instructor:
+          base.instructor ||
+          saved.instructor ||
+          teacherNameFor(ctx.className, saved)
+      });
+    });
+  }
   function renderDaily(rows, message) {
     try { adminDailyEvalRows = Array.isArray(rows) ? rows.map(clone) : []; global.adminDailyEvalRows = adminDailyEvalRows; } catch (ignore) {}
     try {
