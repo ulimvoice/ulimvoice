@@ -969,6 +969,7 @@ function attendanceMinimal(row) {
 
   const CLASS_CACHE_PREFIX = 'ulim_staff_classlist_7313_';
   const LEGACY_CLASS_CACHE_PREFIX = 'ulim_staff_classlist_7312_';
+  let activeClassListRequestDate73116 = '';
 
   function classCacheKey(date) {
     return CLASS_CACHE_PREFIX + owner() + '_' + text(date);
@@ -1047,25 +1048,55 @@ function attendanceMinimal(row) {
     let filtered = Array.isArray(classes) ? classes.filter(function (item) {
       return item && text(item.className);
     }) : [];
-    try {
-      if (typeof adminFilterClassListForRole === 'function') filtered = adminFilterClassListForRole(filtered);
-    } catch (ignore) {}
 
-    try { adminClassList = filtered; global.adminClassList = filtered; } catch (ignore) {}
     try {
-      if (typeof getAdminClassListCacheKey === 'function') {
-        adminClassListLoadedKey = getAdminClassListCacheKey(date);
-        if (typeof writeAdminClassListCache === 'function') writeAdminClassListCache(adminClassListLoadedKey, filtered);
+      if (typeof adminFilterClassListForRole === 'function') {
+        filtered = adminFilterClassListForRole(filtered);
       }
     } catch (ignore) {}
-    if (exact) writePersistentClassList(date, filtered);
-    try { if (typeof adminRenderClassSelectors === 'function') adminRenderClassSelectors(); } catch (ignore) {}
-    if (exact) {
-      try { if (typeof adminClearInvalidClassSelection704_ === 'function') adminClearInvalidClassSelection704_(date); } catch (ignore) {}
+
+    const responseDate = text(date);
+    const latestDate = text(activeClassListRequestDate73116);
+    const isLatestRequest = !latestDate || responseDate === latestDate;
+
+    // 날짜별 캐시는 과거 응답도 정상적으로 보관합니다.
+    if (exact) writePersistentClassList(responseDate, filtered);
+
+    // 늦게 도착한 과거 날짜 응답은 현재 화면을 덮어쓰지 않습니다.
+    if (!isLatestRequest) {
+      return filtered;
     }
+
+    try {
+      adminClassList = filtered;
+      global.adminClassList = filtered;
+    } catch (ignore) {}
+
+    try {
+      if (typeof getAdminClassListCacheKey === 'function') {
+        adminClassListLoadedKey = getAdminClassListCacheKey(responseDate);
+        if (typeof writeAdminClassListCache === 'function') {
+          writeAdminClassListCache(adminClassListLoadedKey, filtered);
+        }
+      }
+    } catch (ignore) {}
+
+    try {
+      if (typeof adminRenderClassSelectors === 'function') {
+        adminRenderClassSelectors();
+      }
+    } catch (ignore) {}
+
+    if (exact) {
+      try {
+        if (typeof adminClearInvalidClassSelection704_ === 'function') {
+          adminClearInvalidClassSelection704_(responseDate);
+        }
+      } catch (ignore) {}
+    }
+
     return filtered;
   }
-
   async function legacyClassListForDate(date, force) {
     if (typeof adminApi !== 'function') return [];
     try {
@@ -1089,6 +1120,7 @@ function attendanceMinimal(row) {
       || text(document.getElementById('adminDailyEvalDate') && document.getElementById('adminDailyEvalDate').value)
       || localDateText();
     force = force === true;
+    activeClassListRequestDate73116 = date;
 
     let immediate = readPersistentClassList(date);
     if (!immediate || !immediate.length) {
