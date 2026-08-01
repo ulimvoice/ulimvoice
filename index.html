@@ -3,11 +3,11 @@
 
 <html lang="ko">
 <head>
-  <script id="ulim-production-console-silencer-7-34-3-9">
+  <script id="ulim-production-console-silencer-7-34-3-10">
   (function (global) {
     'use strict';
-    if (global.__ULIM_PRODUCTION_CONSOLE_SILENCER_73439__) return;
-    global.__ULIM_PRODUCTION_CONSOLE_SILENCER_73439__ = true;
+    if (global.__ULIM_PRODUCTION_CONSOLE_SILENCER_734310__) return;
+    global.__ULIM_PRODUCTION_CONSOLE_SILENCER_734310__ = true;
     const noop = function () {};
     const target = global.console || (global.console = {});
     [
@@ -25,7 +25,7 @@
   <script src="./web/room-classroom-realtime-7.29.16.js?v=20260801.72916"></script>
   <script src="./web/staff-login-firebase-primary-7.32.6.js?v=20260801.73206"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260801-734039-current-status-firestore-first-clean-ui">
+<meta name="ulim-build" content="20260801-7340310-attendance-cell-isolated-manual-current-status">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2730%27 fill=%27%2322c55e%27/%3E%3Cpath d=%27M32 13a9 9 0 0 0-9 9v11a9 9 0 0 0 18 0V22a9 9 0 0 0-9-9zm-14 19a3 3 0 0 1 6 0v1a8 8 0 0 0 16 0v-1a3 3 0 0 1 6 0v1a14 14 0 0 1-11 13.7V51h7a3 3 0 0 1 0 6H22a3 3 0 0 1 0-6h7v-4.3A14 14 0 0 1 18 33z%27 fill=%27white%27/%3E%3C/svg%3E">
 <script>window.__ULIM_WEB_DB_MODE_704__ = 'OFF';</script>
 <title>울림 성우·스피치·연기학원 통합 연습 프로그램 7.06</title>
@@ -12128,11 +12128,9 @@ function adminUpdateAttendanceRecordFromRow_(idx) {
     const currentStatusValue = currentInput
         ? currentInput.value
         : (base.currentStatus || base.remarkText || base.sheetRemark || '');
+    // 현재상태는 이 화면에서 강사가 직접 입력한 경우에만 수정 대상으로 처리합니다.
+    // Firestore 문서에 남아 있던 과거 dirty 플래그는 절대 재사용하지 않습니다.
     const currentStatusDirty = !!(
-        base.currentStatusDirty === true ||
-        base.remarkDirty === true ||
-        base.sheetRemarkDirty === true ||
-        base.__currentStatusDirty73439 === true ||
         row.dataset.currentStatusDirty === '1' ||
         (currentInput && currentInput.dataset.currentStatusDirty === '1')
     );
@@ -12145,7 +12143,8 @@ function adminUpdateAttendanceRecordFromRow_(idx) {
     base.currentStatusDirty = currentStatusDirty;
     base.remarkDirty = currentStatusDirty;
     base.sheetRemarkDirty = currentStatusDirty;
-    base.__currentStatusDirty73439 = currentStatusDirty;
+    base.__currentStatusDirty734310 = currentStatusDirty;
+    base.__currentStatusDirty73439 = false;
     base.memo = memo;
 
     base.date = base.date || document.getElementById('adminAttendanceDate')?.value || getTodayInputValue();
@@ -27947,9 +27946,9 @@ window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = true;
 <!-- ULIM 7.30.0: cache-first login shell, attendance and daily evaluation reads. -->
 <script src="./web/staff-performance-7.30.1.js?v=20260731.73001"></script>
 
-<!-- ULIM 7.31.14 / 7.34.3.9: editable current status + clean staff UI. -->
-<script src="./web/staff-firestore-operational-7.31.14.js?v=20260801.73114"></script>
-<script src="./web/attendance-daily-ui-7.34.3.9.js?v=20260801.734039"></script>
+<!-- ULIM 7.31.15 / 7.34.3.10: attendance date-cell isolation + manual-only current status. -->
+<script src="./web/staff-firestore-operational-7.31.15.js?v=20260801.73115"></script>
+<script src="./web/attendance-daily-ui-7.34.3.10.js?v=20260801.7340310"></script>
 
 <!-- ULIM 7.33.1: stable Firebase token guard + clean console baseline. -->
 <script src="./web/staff-account-admin-7.34.3.6.js?v=20260801.734036"></script>
