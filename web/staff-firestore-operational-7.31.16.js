@@ -310,49 +310,131 @@ function currentStatusEdited73115(row) {
     }
   }
 
-  function currentClassItem(className) {
+  function currentClassItem(className, date) {
     let list = [];
-    try { list = Array.isArray(adminClassList) ? adminClassList : []; } catch (ignore) {}
+
+    try {
+      if (
+        date &&
+        typeof global.adminGetClassListForDate704_ === 'function'
+      ) {
+        list = global.adminGetClassListForDate704_(date);
+      }
+    } catch (ignore) {}
+
+    if (!Array.isArray(list) || !list.length) {
+      try {
+        const expectedKey =
+          date && typeof getAdminClassListCacheKey === 'function'
+            ? getAdminClassListCacheKey(date)
+            : '';
+
+        const loadedKey =
+          typeof adminClassListLoadedKey !== 'undefined'
+            ? text(adminClassListLoadedKey)
+            : '';
+
+        const canUseSharedList =
+          !date ||
+          (expectedKey && loadedKey === expectedKey);
+
+        list =
+          canUseSharedList &&
+          Array.isArray(adminClassList)
+            ? adminClassList
+            : [];
+      } catch (ignore) {
+        list = [];
+      }
+    }
+
     const target = normalize(className);
-    const exact = list.find(function (item) { return normalize(item && item.className) === target; });
+    const exact = list.find(function (item) {
+      return normalize(item && item.className) === target;
+    });
+
     if (exact) return exact;
-    return list.find(function (item) { return classNamesEquivalent(item && item.className, className); }) || {};
+
+    return list.find(function (item) {
+      return classNamesEquivalent(item && item.className, className);
+    }) || {};
   }
 
-  function teacherNameFor(className, row) {
+  function teacherNameFor(className, row, date) {
     const bracket = text(className).match(/\[\s*([^\]]+?)\s*T?\s*\]/i);
     if (bracket && bracket[1]) return bracket[1].replace(/T$/i, '').trim();
-    const item = currentClassItem(className);
-    return text(item.teacher || item.instructor || row && (row.instructor || row.instructorName) || '').replace(/T$/i, '').trim();
+
+    const item = currentClassItem(className, date);
+    return text(
+      item.teacher ||
+      item.instructor ||
+      row && (row.instructor || row.instructorName) ||
+      ''
+    ).replace(/T$/i, '').trim();
   }
 
-  function teacherScope(className, row) {
-    const name = teacherNameFor(className, row);
+  function teacherScope(className, row, date) {
+    const name = teacherNameFor(className, row, date);
     return name ? 'name:' + normalize(name) : '';
   }
 
   function attendanceContext() {
-    const className = text(document.getElementById('adminAttendanceClass') && document.getElementById('adminAttendanceClass').value);
-    const classItem = currentClassItem(className);
+    const date =
+      text(
+        document.getElementById('adminAttendanceDate') &&
+        document.getElementById('adminAttendanceDate').value
+      ) || localDateText();
+
+    const className = text(
+      document.getElementById('adminAttendanceClass') &&
+      document.getElementById('adminAttendanceClass').value
+    );
+
+    const classItem = currentClassItem(className, date);
+
     return {
-      date: text(document.getElementById('adminAttendanceDate') && document.getElementById('adminAttendanceDate').value) || localDateText(),
+      date: date,
       className: className,
       classId: text(classItem.classId),
-      teacherScopeKey: text(classItem.teacherScopeKey) || teacherScope(className, classItem),
-      keyword: text(document.getElementById('adminAttendanceFilter') && document.getElementById('adminAttendanceFilter').value),
-      statusFilter: text(document.getElementById('adminAttendanceStatusFilter') && document.getElementById('adminAttendanceStatusFilter').value)
+      teacherScopeKey:
+        text(classItem.teacherScopeKey) ||
+        teacherScope(className, classItem, date),
+      keyword: text(
+        document.getElementById('adminAttendanceFilter') &&
+        document.getElementById('adminAttendanceFilter').value
+      ),
+      statusFilter: text(
+        document.getElementById('adminAttendanceStatusFilter') &&
+        document.getElementById('adminAttendanceStatusFilter').value
+      )
     };
   }
 
   function dailyContext() {
-    const className = text(document.getElementById('adminDailyEvalClass') && document.getElementById('adminDailyEvalClass').value);
-    const classItem = currentClassItem(className);
+    const date =
+      text(
+        document.getElementById('adminDailyEvalDate') &&
+        document.getElementById('adminDailyEvalDate').value
+      ) || localDateText();
+
+    const className = text(
+      document.getElementById('adminDailyEvalClass') &&
+      document.getElementById('adminDailyEvalClass').value
+    );
+
+    const classItem = currentClassItem(className, date);
+
     return {
-      date: text(document.getElementById('adminDailyEvalDate') && document.getElementById('adminDailyEvalDate').value) || localDateText(),
+      date: date,
       className: className,
       classId: text(classItem.classId),
-      keyword: text(document.getElementById('adminDailyEvalFilter') && document.getElementById('adminDailyEvalFilter').value),
-      teacherScopeKey: text(classItem.teacherScopeKey) || teacherScope(className, classItem)
+      keyword: text(
+        document.getElementById('adminDailyEvalFilter') &&
+        document.getElementById('adminDailyEvalFilter').value
+      ),
+      teacherScopeKey:
+        text(classItem.teacherScopeKey) ||
+        teacherScope(className, classItem, date)
     };
   }
 
@@ -376,8 +458,192 @@ function currentStatusEdited73115(row) {
     });
   }
 
+  const attendanceLocalEdits73116 = new Map();
+  let activeAttendanceLoadSeq73116 = 0;
+  let activeAttendanceLoadContextKey73116 = '';
+
+  function attendanceEditContextKey73116(ctx) {
+    const current = ctx || attendanceContext();
+    return [
+      text(current.date),
+      text(current.classId),
+      normalize(current.className),
+      normalize(current.keyword),
+      normalize(current.statusFilter),
+      text(current.teacherScopeKey)
+    ].join('|');
+  }
+
+  function attendanceRows73116() {
+    try {
+      if (Array.isArray(adminAttendanceRecords)) {
+        return adminAttendanceRecords;
+      }
+    } catch (ignore) {}
+
+    try {
+      if (Array.isArray(global.adminAttendanceRecords)) {
+        return global.adminAttendanceRecords;
+      }
+    } catch (ignore) {}
+
+    return [];
+  }
+
+  function attendanceEditMapKey73116(contextKey, row) {
+    return contextKey + '||' + studentMatchKey(row || {});
+  }
+
+  function captureAttendanceRow73116(tr) {
+    if (!tr) return;
+
+    const index = Number(tr.dataset.attIndex);
+    const base = attendanceRows73116()[index];
+    if (!base) return;
+
+    const statusEl = tr.querySelector('select[data-field="status"]');
+    const memoEl = tr.querySelector('input[data-field="memo"]');
+    const currentEl = tr.querySelector('input[data-field="currentStatus"]');
+    const checkEl = tr.querySelector('.admin-att-check');
+    const contextKey = attendanceEditContextKey73116();
+    const mapKey = attendanceEditMapKey73116(contextKey, base);
+
+    const draft = {
+      status: statusEl ? statusEl.value : (base.status || base.attendanceStatus || ''),
+      attendanceStatus: statusEl ? statusEl.value : (base.attendanceStatus || base.status || ''),
+      memo: memoEl ? memoEl.value : (base.memo || ''),
+      checked: !checkEl || checkEl.checked !== false,
+      __localAttendanceDirty73116: true
+    };
+
+    if (currentEl) {
+      const currentValue = currentEl.value || '';
+      currentEl.dataset.currentStatusDirty = '1';
+      tr.dataset.currentStatusDirty = '1';
+
+      draft.currentStatus = currentValue;
+      draft.remarkText = currentValue;
+      draft.sheetRemark = currentValue;
+      draft.currentStatusDirty = true;
+      draft.remarkDirty = true;
+      draft.sheetRemarkDirty = true;
+      draft.__currentStatusDirty734310 = true;
+    }
+
+    attendanceLocalEdits73116.set(mapKey, draft);
+
+    while (attendanceLocalEdits73116.size > 500) {
+      const oldestKey = attendanceLocalEdits73116.keys().next().value;
+      if (!oldestKey) break;
+      attendanceLocalEdits73116.delete(oldestKey);
+    }
+  }
+
+  function captureAttendanceEditEvent73116(event) {
+    const target = event && event.target;
+    if (!target || typeof target.closest !== 'function') return;
+
+    const quickButton = target.closest('.admin-att-mini');
+    const editable =
+      typeof target.matches === 'function' &&
+      target.matches(
+        '#adminAttendanceTableWrap select[data-field="status"], ' +
+        '#adminAttendanceTableWrap input[data-field="memo"], ' +
+        '#adminAttendanceTableWrap input[data-field="currentStatus"], ' +
+        '#adminAttendanceTableWrap input.admin-att-check'
+      );
+
+    if (!quickButton && !editable) return;
+
+    const tr = target.closest(
+      '#adminAttendanceTableWrap tr[data-att-index]'
+    );
+    captureAttendanceRow73116(tr);
+  }
+
+  function preserveAttendanceEdits73116(records) {
+    const contextKey = attendanceEditContextKey73116();
+    const source = Array.isArray(records) ? records : [];
+    const seen = new Set();
+
+    const prepared = source.map(function (row) {
+      const mapKey = attendanceEditMapKey73116(contextKey, row);
+      const draft = attendanceLocalEdits73116.get(mapKey);
+      seen.add(mapKey);
+
+      return draft
+        ? Object.assign({}, row, draft)
+        : row;
+    });
+
+    /*
+     * 실시간 갱신 중 일시적으로 빈 응답이 와도
+     * 저장되지 않은 편집 행은 현재 화면에 유지합니다.
+     */
+    attendanceRows73116().forEach(function (row) {
+      const mapKey = attendanceEditMapKey73116(contextKey, row);
+      const draft = attendanceLocalEdits73116.get(mapKey);
+      if (!draft || seen.has(mapKey)) return;
+
+      seen.add(mapKey);
+      prepared.push(Object.assign({}, row, draft));
+    });
+
+    return prepared;
+  }
+
+  function clearSavedAttendanceEdits73116(records, ctx) {
+    const contextKey = attendanceEditContextKey73116(ctx);
+
+    (records || []).forEach(function (row) {
+      const mapKey = attendanceEditMapKey73116(contextKey, row);
+      const draft = attendanceLocalEdits73116.get(mapKey);
+      if (!draft) return;
+
+      const sameStatus =
+        normalize(draft.status) ===
+        normalize(row.status || row.attendanceStatus);
+
+      const sameMemo =
+        text(draft.memo) === text(row.memo);
+
+      const sameCurrent =
+        !draft.currentStatusDirty ||
+        text(draft.currentStatus) ===
+        text(row.currentStatus || row.remarkText || row.sheetRemark);
+
+      if (sameStatus && sameMemo && sameCurrent && draft.checked !== false) {
+        attendanceLocalEdits73116.delete(mapKey);
+      }
+    });
+  }
+
+  if (!global.__ULIM_ATTENDANCE_EDIT_GUARD_73116__) {
+    global.__ULIM_ATTENDANCE_EDIT_GUARD_73116__ = true;
+
+    document.addEventListener(
+      'input',
+      captureAttendanceEditEvent73116,
+      false
+    );
+    document.addEventListener(
+      'change',
+      captureAttendanceEditEvent73116,
+      false
+    );
+    document.addEventListener(
+      'click',
+      captureAttendanceEditEvent73116,
+      false
+    );
+  }
+
   function renderAttendance(records, message) {
-    try { adminAttendanceRecords = Array.isArray(records) ? records.map(clone) : []; } catch (ignore) {}
+    const preparedRecords = preserveAttendanceEdits73116(records);
+    try {
+      adminAttendanceRecords = preparedRecords.map(clone);
+      global.adminAttendanceRecords = adminAttendanceRecords;
+    } catch (ignore) {}
     try { if (typeof adminRenderAttendanceTable === 'function') adminRenderAttendanceTable(); } catch (ignore) {}
     const count = (records && records.length) || 0;
     setAttendanceSummary(message || ('Firestore 출석부 ' + count + '건'), simpleCountLabel('학생', count));
@@ -388,10 +654,25 @@ function currentStatusEdited73115(row) {
     showAlert = showAlert !== false;
     forceSheetSync = forceSheetSync === true;
     const ctx = attendanceContext();
+    const loadContextKey73116 = attendanceEditContextKey73116(ctx);
+
+    if (activeAttendanceLoadContextKey73116 !== loadContextKey73116) {
+      activeAttendanceLoadContextKey73116 = loadContextKey73116;
+      activeAttendanceLoadSeq73116 += 1;
+    }
+
+    const loadSeq73116 = activeAttendanceLoadSeq73116;
+    const canRenderAttendanceLoad73116 = function () {
+      return (
+        loadSeq73116 === activeAttendanceLoadSeq73116 &&
+        attendanceEditContextKey73116() === loadContextKey73116
+      );
+    };
+
     bindRevisionListener7318('attendance', ctx.date);
     const key = cacheKey('attendance', ctx);
     const cached = readCache(key);
-    if (Array.isArray(cached)) renderAttendance(cached, forceSheetSync
+    if (Array.isArray(cached) && canRenderAttendanceLoad73116()) renderAttendance(cached, forceSheetSync
       ? '최근 출석부를 표시했습니다. Google Sheets 원본을 확인 중입니다...'
       : '최근 Firestore 출석부를 먼저 표시했습니다.');
 
@@ -463,7 +744,9 @@ function currentStatusEdited73115(row) {
           : (forceSheetSync
             ? ('시트 원본 동기화 완료 · 반 ' + syncClassCount + '개 · 선택 반 출석부 ' + records.length + '건')
             : (data.message || ('Firestore 출석부 ' + records.length + '건')));
-        renderAttendance(records, message);
+        if (canRenderAttendanceLoad73116()) {
+          renderAttendance(records, message);
+        }
         if (sheetSyncError && showAlert) alert(isFullAdmin()
           ? ('Google Sheets 원본 동기화에 실패했습니다. 기존 Firestore 자료를 표시합니다.\n' + (sheetSyncError.message || String(sheetSyncError)))
           : '최신 출석부 확인에 실패했습니다. 현재 표시된 출석부를 계속 사용합니다.');
@@ -582,6 +865,7 @@ function attendanceMinimal(row) {
         adminId: info().id || '',
         adminName: info().name || ''
       }, 'saveAttendance');
+      clearSavedAttendanceEdits73116(compact, attendanceContext());
       setAttendanceState(compact, '저장됨 · 시트전송중', false);
       const summary = document.getElementById('adminAttendanceSummary');
       setAttendanceSummary(data.message || ('출석 ' + compact.length + '건 Firestore 저장 완료 · 시트 백그라운드 전송 중'), '저장 완료');
@@ -737,8 +1021,145 @@ function attendanceMinimal(row) {
       });
     });
   }
+  const dailyLocalEdits73116 = new Map();
+  let activeDailyLoadSeq73116 = 0;
+
+  function dailyEditContextKey73116(ctx) {
+    const current = ctx || dailyContext();
+    return [
+      text(current.date),
+      normalize(current.className),
+      normalize(current.keyword),
+      text(current.teacherScopeKey)
+    ].join('|');
+  }
+
+  function dailyEditMapKey73116(contextKey, row) {
+    return contextKey + '||' + studentMatchKey(row || {});
+  }
+
+  function dailyRows73116() {
+    try {
+      if (Array.isArray(global.adminDailyEvalRows)) {
+        return global.adminDailyEvalRows;
+      }
+    } catch (ignore) {}
+
+    try {
+      if (Array.isArray(adminDailyEvalRows)) {
+        return adminDailyEvalRows;
+      }
+    } catch (ignore) {}
+
+    return [];
+  }
+
+  function captureDailyEditEvent73116(event) {
+    const target = event && event.target;
+    if (!target || typeof target.matches !== 'function') return;
+
+    if (!target.matches(
+      '.admin-eval-lesson, .admin-eval-attitude, .admin-eval-comment, .admin-daily-check'
+    )) return;
+
+    const tr = target.closest(
+      '#adminDailyEvalTableWrap tr[data-daily-index]'
+    );
+    if (!tr) return;
+
+    const index = Number(tr.dataset.dailyIndex);
+    const base = dailyRows73116()[index];
+    if (!base) return;
+
+    const contextKey = dailyEditContextKey73116();
+    const mapKey = dailyEditMapKey73116(contextKey, base);
+
+    dailyLocalEdits73116.set(mapKey, {
+      lessonContent:
+        (tr.querySelector('.admin-eval-lesson') || {}).value || '',
+      lessonAttitude:
+        (tr.querySelector('.admin-eval-attitude') || {}).value || '',
+      teacherComment:
+        (tr.querySelector('.admin-eval-comment') || {}).value || '',
+      checked:
+        !tr.querySelector('.admin-daily-check') ||
+        tr.querySelector('.admin-daily-check').checked !== false,
+      __localDailyDirty73116: true
+    });
+
+    while (dailyLocalEdits73116.size > 500) {
+      const oldestKey = dailyLocalEdits73116.keys().next().value;
+      if (!oldestKey) break;
+      dailyLocalEdits73116.delete(oldestKey);
+    }
+  }
+
+  function preserveDailyEdits73116(rows) {
+    const contextKey = dailyEditContextKey73116();
+    const source = Array.isArray(rows) ? rows : [];
+    const seen = new Set();
+
+    const prepared = source.map(function (row) {
+      const mapKey = dailyEditMapKey73116(contextKey, row);
+      const draft = dailyLocalEdits73116.get(mapKey);
+      seen.add(mapKey);
+
+      return draft
+        ? Object.assign({}, row, draft)
+        : row;
+    });
+
+    /*
+     * 동기화 도중 서버가 일시적으로 빈 명단을 반환하더라도
+     * 현재 화면에서 작성 중인 학생 행은 제거하지 않습니다.
+     */
+    dailyRows73116().forEach(function (row) {
+      const mapKey = dailyEditMapKey73116(contextKey, row);
+      const draft = dailyLocalEdits73116.get(mapKey);
+      if (!draft || seen.has(mapKey)) return;
+
+      seen.add(mapKey);
+      prepared.push(Object.assign({}, row, draft));
+    });
+
+    return prepared;
+  }
+
+  function clearSavedDailyEdits73116(rows, ctx) {
+    const contextKey = dailyEditContextKey73116(ctx);
+
+    (rows || []).forEach(function (row) {
+      const mapKey = dailyEditMapKey73116(contextKey, row);
+      const draft = dailyLocalEdits73116.get(mapKey);
+      if (!draft) return;
+
+      const same =
+        text(draft.lessonContent) === text(row.lessonContent) &&
+        text(draft.lessonAttitude) === text(row.lessonAttitude) &&
+        text(draft.teacherComment) === text(row.teacherComment) &&
+        draft.checked !== false;
+
+      if (same) dailyLocalEdits73116.delete(mapKey);
+    });
+  }
+
+  if (!global.__ULIM_DAILY_EDIT_GUARD_73116__) {
+    global.__ULIM_DAILY_EDIT_GUARD_73116__ = true;
+    document.addEventListener(
+      'input',
+      captureDailyEditEvent73116,
+      true
+    );
+    document.addEventListener(
+      'change',
+      captureDailyEditEvent73116,
+      true
+    );
+  }
+
   function renderDaily(rows, message) {
-    try { adminDailyEvalRows = Array.isArray(rows) ? rows.map(clone) : []; global.adminDailyEvalRows = adminDailyEvalRows; } catch (ignore) {}
+    const preparedRows = preserveDailyEdits73116(rows);
+    try { adminDailyEvalRows = preparedRows.map(clone); global.adminDailyEvalRows = adminDailyEvalRows; } catch (ignore) {}
     try {
       const displayMessage = isFullAdmin()
         ? (message || ('Firestore 일일평가 ' + rows.length + '건'))
@@ -752,6 +1173,14 @@ function attendanceMinimal(row) {
     forceSheetSync = forceSheetSync === true;
     if (!token()) return alert('로그인이 필요합니다.');
     const ctx = dailyContext();
+    const loadSeq73116 = ++activeDailyLoadSeq73116;
+    const loadContextKey73116 = dailyEditContextKey73116(ctx);
+    const canRenderDailyLoad73116 = function () {
+      return (
+        loadSeq73116 === activeDailyLoadSeq73116 &&
+        dailyEditContextKey73116() === loadContextKey73116
+      );
+    };
     bindRevisionListener7318('daily', ctx.date);
     if (!ctx.className && !ctx.keyword) return alert('반명 또는 학생명을 입력하거나 반 목록에서 선택해주세요.');
     if (ctx.className && ctx.className !== '전체반' && !ctx.teacherScopeKey) return alert('선택한 반의 담당강사를 확인하지 못했습니다. 반 목록에서 다시 선택해주세요.');
@@ -759,7 +1188,7 @@ function attendanceMinimal(row) {
     const key = cacheKey('daily', ctx);
     const cached = readCache(key);
     if (cached && Array.isArray(cached.rows)) {
-      renderDaily(cached.rows, forceSheetSync
+      if (canRenderDailyLoad73116()) renderDaily(cached.rows, forceSheetSync
         ? '최근 학생 명단을 즉시 표시했습니다. 시트 원본을 백그라운드에서 확인합니다...'
         : '최근 Firestore 일일평가를 먼저 표시했습니다.');
     }
@@ -773,7 +1202,7 @@ function attendanceMinimal(row) {
       const savedRows = Array.isArray(data.rows) ? data.rows : [];
       const rows = mergeDailyStrict(roster, savedRows, ctx);
       writeCache(key, { rows: rows });
-      renderDaily(rows, message || data.message || ('Firestore 학생 ' + rows.length + '명'));
+      if (canRenderDailyLoad73116()) renderDaily(rows, message || data.message || ('Firestore 학생 ' + rows.length + '명'));
       return { data: data, roster: roster, savedRows: savedRows, rows: rows };
     }
 
@@ -781,7 +1210,7 @@ function attendanceMinimal(row) {
       const rt = await runtime();
 
       if (forceSheetSync) {
-        renderDaily(cached && Array.isArray(cached.rows) ? cached.rows : [], '출석부 명단을 먼저 동기화하는 중...');
+        if (canRenderDailyLoad73116()) renderDaily(cached && Array.isArray(cached.rows) ? cached.rows : [], '출석부 명단을 먼저 동기화하는 중...');
 
         const attendanceSyncPromise = syncDateFromSheets(
           rt,
@@ -833,7 +1262,7 @@ function attendanceMinimal(row) {
 
       let result = await readAndRender(rt);
       if (!result.roster.length) {
-        renderDaily(result.rows, '오늘 학생 명단 최초 자동적재 중...');
+        if (canRenderDailyLoad73116()) renderDaily(result.rows, '오늘 학생 명단 최초 자동적재 중...');
         try {
           await bootstrapDateOnce(rt, ctx.date, 'daily_attendance_empty_bootstrap', ['attendance']);
           result = await readAndRender(rt, '현재 반 학생 명단 자동적재 완료');
@@ -926,6 +1355,7 @@ function attendanceMinimal(row) {
         adminName: info().name || ''
       }, 'saveDaily');
       const savedMap = new Map(compact.map(function (row) { return [studentMatchKey(row), row]; }));
+      clearSavedDailyEdits73116(compact, ctx);
       try {
         adminDailyEvalRows = (adminDailyEvalRows || []).map(function (row) {
           const saved = savedMap.get(studentMatchKey(row));
@@ -1055,6 +1485,12 @@ function attendanceMinimal(row) {
       }
     } catch (ignore) {}
 
+    try {
+      if (typeof global.adminRememberClassListForDate704_ === 'function') {
+        filtered = global.adminRememberClassListForDate704_(date, filtered);
+      }
+    } catch (ignore) {}
+
     const responseDate = text(date);
     const latestDate = text(activeClassListRequestDate73116);
     const isLatestRequest = !latestDate || responseDate === latestDate;
@@ -1064,6 +1500,20 @@ function attendanceMinimal(row) {
 
     // 늦게 도착한 과거 날짜 응답은 현재 화면을 덮어쓰지 않습니다.
     if (!isLatestRequest) {
+      try {
+        if (typeof adminRenderClassSelectors === 'function') {
+          adminRenderClassSelectors();
+        }
+      } catch (ignore) {}
+
+      if (exact) {
+        try {
+          if (typeof adminClearInvalidClassSelection704_ === 'function') {
+            adminClearInvalidClassSelection704_(responseDate);
+          }
+        } catch (ignore) {}
+      }
+
       return filtered;
     }
 
@@ -1130,7 +1580,21 @@ function attendanceMinimal(row) {
       } catch (ignore) {}
     }
     if (!immediate || !immediate.length) {
-      try { immediate = Array.isArray(adminClassList) && adminClassList.length ? adminClassList : null; } catch (ignore) {}
+      try {
+        const expectedKey = typeof getAdminClassListCacheKey === 'function'
+          ? getAdminClassListCacheKey(date)
+          : '';
+        const currentKey = typeof adminClassListLoadedKey !== 'undefined'
+          ? text(adminClassListLoadedKey)
+          : '';
+
+        immediate = expectedKey &&
+          currentKey === expectedKey &&
+          Array.isArray(adminClassList) &&
+          adminClassList.length
+            ? adminClassList
+            : null;
+      } catch (ignore) {}
     }
     if (!immediate || !immediate.length) immediate = fixedClassItemsForDate(date);
     if (immediate && immediate.length) applyClassListFast(date, immediate, false);

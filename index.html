@@ -5682,6 +5682,55 @@ const ADMIN_NOTICE_FIXED_CLASS_LIST = [
   "[최현식T] 목요일 연기기초 (19:00~22:00)"
 ];
 let adminClassList = [];
+const adminClassListsByDate704_ = Object.create(null);
+
+function adminRememberClassListForDate704_(date, classes) {
+    const dateKey = String(date || '').trim();
+    const raw = Array.isArray(classes) ? classes : [];
+    const filtered = typeof adminFilterClassListForRole === 'function'
+        ? adminFilterClassListForRole(raw)
+        : raw.filter(item => item && String(item.className || '').trim());
+
+    if (dateKey) adminClassListsByDate704_[dateKey] = filtered.slice();
+    return filtered;
+}
+
+function adminGetClassListForDate704_(date) {
+    const dateKey = String(date || '').trim();
+
+    if (dateKey && Array.isArray(adminClassListsByDate704_[dateKey])) {
+        return adminClassListsByDate704_[dateKey].slice();
+    }
+
+    if (
+        dateKey &&
+        typeof getAdminClassListCacheKey === 'function' &&
+        typeof readAdminClassListCache === 'function'
+    ) {
+        const cached = readAdminClassListCache(getAdminClassListCacheKey(dateKey));
+        if (Array.isArray(cached)) {
+            return adminRememberClassListForDate704_(dateKey, cached);
+        }
+    }
+
+    if (dateKey) return [];
+
+    return typeof adminFilterClassListForRole === 'function'
+        ? adminFilterClassListForRole(adminClassList || [])
+        : (Array.isArray(adminClassList) ? adminClassList.slice() : []);
+}
+
+function adminGetClassListForInput704_(inputId) {
+    const dateId = inputId === 'adminDailyEvalClass'
+        ? 'adminDailyEvalDate'
+        : 'adminAttendanceDate';
+    const dateEl = document.getElementById(dateId);
+    return adminGetClassListForDate704_(dateEl && dateEl.value || '');
+}
+
+window.adminRememberClassListForDate704_ = adminRememberClassListForDate704_;
+window.adminGetClassListForDate704_ = adminGetClassListForDate704_;
+
 let adminAttendanceRecords = [];
 let adminDailyEvalRows = [];
 let adminStudentsLoaded = false;
@@ -6404,10 +6453,10 @@ function writeAdminClassListCache(key, classes) {
     } catch (e) {}
 }
 
-function adminClassListContainsExact704_(className) {
+function adminClassListContainsExact704_(className, date) {
     const target = normalizeClassSearchText(className || '');
     if (!target || target === normalizeClassSearchText('전체반')) return true;
-    return (adminClassList || []).some(item =>
+    return adminGetClassListForDate704_(date).some(item =>
         normalizeClassSearchText(item && item.className || '') === target
     );
 }
@@ -6437,7 +6486,7 @@ function adminClearInvalidClassSelection704_(loadedDate) {
 
         const input = document.getElementById(target.inputId);
         const selected = String(input && input.value || '').trim();
-        if (!selected || selected === '전체반' || adminClassListContainsExact704_(selected)) return;
+        if (!selected || selected === '전체반' || adminClassListContainsExact704_(selected, dateKey)) return;
 
         input.value = '';
         const display = document.getElementById(target.displayId);
@@ -6470,7 +6519,7 @@ async function adminLoadClassList(dateOverride = '', force = false) {
         if (!force) {
             const cached = readAdminClassListCache(cacheKey);
             if (cached) {
-                adminClassList = adminFilterClassListForRole(cached || []);
+                adminClassList = adminRememberClassListForDate704_(date, cached || []);
                 adminClassListLoadedKey = cacheKey;
                 adminRenderClassSelectors();
                 adminClearInvalidClassSelection704_(date);
@@ -6484,7 +6533,7 @@ async function adminLoadClassList(dateOverride = '', force = false) {
             force: force ? '1' : '',
             exactDateVersion: '704'
         });
-        adminClassList = adminFilterClassListForRole(data.classes || []);
+        adminClassList = adminRememberClassListForDate704_(date, data.classes || []);
         adminClassListLoadedKey = cacheKey;
         writeAdminClassListCache(cacheKey, adminClassList);
         adminRenderClassSelectors();
@@ -6597,7 +6646,7 @@ function adminRenderClassPicker(inputId, panelId) {
 
     const sourceList = inputId === 'noticeClass'
         ? adminBuildNoticeClassList()
-        : adminFilterClassListForRole(adminClassList);
+        : adminFilterClassListForRole(adminGetClassListForInput704_(inputId));
 
     let filtered = sourceList
         .filter(c => {
@@ -13996,7 +14045,7 @@ function adminRenderDailyEvalRows(message = '') {
         const phoneCells = isFull ? `<td>${ulimAdminEsc_(s.studentPhone)}</td><td>${ulimAdminEsc_(s.parentPhone)}</td>` : '';
 
         html += `<tr data-daily-index="${idx}">
-            <td><input type="checkbox" class="admin-daily-check" checked></td>
+            <td><input type="checkbox" class="admin-daily-check" ${s.checked === false ? '' : 'checked'}></td>
             <td><b>${ulimAdminEsc_(s.studentName || s.name)}</b></td>
             <td>${ulimAdminEsc_(adminCleanClassNameOnly_(s.className))}</td>
             ${phoneCells}
@@ -14217,7 +14266,7 @@ function adminRenderAttendanceTable() {
         const badgeClass = status === '출석' ? 'attendance-ok' : (status === '결석' ? 'attendance-no' : '');
 
         html += `<tr data-att-index="${idx}">
-            <td><input type="checkbox" class="admin-att-check" checked></td>
+            <td><input type="checkbox" class="admin-att-check" ${r.checked === false ? '' : 'checked'}></td>
             <td>
                 <div class="admin-att-action-wrap">
                     <button type="button" class="admin-att-mini ok${adminAttendanceButtonSelectedClass_(status, '출석')}" onclick="adminSetAttendanceRowStatus(${idx}, '출석')" title="출석 처리">O</button>
@@ -20031,9 +20080,14 @@ ${ruleSummary}`, 'success');
     const originalLoadDailyStudents = window.adminLoadDailyEvalStudents;
     if (typeof originalLoadDailyStudents === 'function') {
         window.adminLoadDailyEvalStudents = async function() {
-            const wrap = document.getElementById('adminDailyEvalTableWrap');
-            if (wrap) wrap.innerHTML = '<div class="admin-data-guard-message">현재 반 학생을 불러오는 중입니다...</div>';
-            adminDailyEvalRows = [];
+            const explicitReload = arguments.length === 0 || arguments[0] === true;
+
+            if (explicitReload) {
+                const wrap = document.getElementById('adminDailyEvalTableWrap');
+                if (wrap) wrap.innerHTML = '<div class="admin-data-guard-message">현재 반 학생을 불러오는 중입니다...</div>';
+                adminDailyEvalRows = [];
+            }
+
             const result = await originalLoadDailyStudents.apply(this, arguments);
             setTimeout(() => maybeOfferDailyDraft_(), 200);
             return result;
@@ -27947,7 +28001,7 @@ window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = true;
 <script src="./web/staff-performance-7.30.1.js?v=20260731.73001"></script>
 
 <!-- ULIM 7.31.15 / 7.34.3.10: attendance date-cell isolation + manual-only current status. -->
-<script src="./web/staff-firestore-operational-7.31.16.js?v=20260802.73116d2"></script>
+<script src="./web/staff-firestore-operational-7.31.16.js?v=20260802.73116d3"></script>
 <script src="./web/attendance-daily-ui-7.34.3.10.js?v=20260801.7340310"></script>
 
 <!-- ULIM 7.33.1: stable Firebase token guard + clean console baseline. -->
