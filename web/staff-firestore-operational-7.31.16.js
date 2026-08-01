@@ -4,8 +4,8 @@
   if (global.__ULIM_STAFF_FIRESTORE_OPERATIONAL_73116__) return;
   global.__ULIM_STAFF_FIRESTORE_OPERATIONAL_73116__ = true;
 
-  const VERSION = '2026-08-02.731.16-independent-context';
-  const CACHE_PREFIX = 'ulim_staff_fsop_73116e1_';
+  const VERSION = '2026-08-02.731.16-realtime-sync';
+  const CACHE_PREFIX = 'ulim_staff_fsop_73116e2_';
   const inflight = new Map();
   let runtimePromise = null;
   let revisionEnsurePromise73112 = null;
@@ -23,6 +23,14 @@
       lastReloadAt: 0
     }
   };
+
+  const DAILY_PEER_CHANNEL_NAME_73116 =
+    'ulim-staff-daily-revision-73116';
+  const DAILY_PEER_STORAGE_KEY_73116 =
+    'ulim_staff_daily_revision_73116';
+  const dailyPeerClientId73116 =
+    'daily-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+  let dailyPeerChannel73116 = null;
 
   function safeConsole() {
     // 운영 배포본에서는 브라우저 콘솔에 앱 내부 정보를 출력하지 않습니다.
@@ -1515,8 +1523,14 @@ function attendanceMinimal(row) {
     } catch (ignore) {}
   }
 
-  global.adminLoadDailyEvalStudents = async function (forceSheetSync) {
+  global.adminLoadDailyEvalStudents = async function (forceSheetSync, options) {
     forceSheetSync = forceSheetSync === true;
+    options = options && typeof options === 'object' ? options : {};
+    const bypassCache73116 =
+      options.bypassCache === true ||
+      options.source === 'revision' ||
+      options.source === 'save-confirm' ||
+      options.source === 'peer';
     if (!token()) return alert('로그인이 필요합니다.');
 
     let ctx = dailyContext();
@@ -1549,10 +1563,10 @@ function attendanceMinimal(row) {
       );
     };
 
-    bindRevisionListener7318('daily', ctx.date, '', true);
+    await bindRevisionListener7318('daily', ctx.date, '', true);
 
     const key = cacheKey('daily', ctx);
-    const cached = readCache(key);
+    const cached = bypassCache73116 ? null : readCache(key);
     const silentRealtime73116 = forceSheetSync === false;
     const alreadyRendered73116 =
       lastDailyRenderedContextKey73116 === loadContextKey73116 &&
@@ -1882,6 +1896,21 @@ function attendanceMinimal(row) {
         ctx
       );
       writeCache(cacheKey('daily', ctx), { rows: adminDailyEvalRows || compact });
+      notifyDailyRevisionPeers73116(ctx, rid);
+      setTimeout(function () {
+        if (
+          dailyViewContextKey73116() === dailyViewContextKey73116(ctx) &&
+          typeof global.adminLoadDailyEvalStudents === 'function'
+        ) {
+          Promise.resolve(
+            global.adminLoadDailyEvalStudents(false, {
+              source: 'save-confirm',
+              bypassCache: true,
+              requestId: rid
+            })
+          ).catch(function () {});
+        }
+      }, 120);
       if (statusEl) statusEl.textContent = isFullAdmin()
         ? (data.message || 'Firestore 저장 완료 · 시트 백그라운드 전송 중')
         : '저장 완료';
@@ -2211,6 +2240,110 @@ function attendanceMinimal(row) {
     }
   }
 
+  function notifyDailyRevisionPeers73116(ctx, requestIdValue) {
+    const current = ctx || dailyContext();
+    const payload = {
+      type: 'daily-save',
+      clientId: dailyPeerClientId73116,
+      date: text(current.date),
+      className: text(current.className),
+      requestId: text(requestIdValue),
+      emittedAtMs: Date.now()
+    };
+
+    try {
+      if (!dailyPeerChannel73116 && typeof BroadcastChannel === 'function') {
+        dailyPeerChannel73116 = new BroadcastChannel(
+          DAILY_PEER_CHANNEL_NAME_73116
+        );
+        dailyPeerChannel73116.onmessage = function (event) {
+          handleDailyPeerRevision73116(event && event.data);
+        };
+      }
+      if (dailyPeerChannel73116) {
+        dailyPeerChannel73116.postMessage(payload);
+      }
+    } catch (ignore) {}
+
+    try {
+      localStorage.setItem(
+        DAILY_PEER_STORAGE_KEY_73116,
+        JSON.stringify(payload)
+      );
+      localStorage.removeItem(DAILY_PEER_STORAGE_KEY_73116);
+    } catch (ignore) {}
+  }
+
+  function handleDailyPeerRevision73116(payload) {
+    const data = payload && typeof payload === 'object' ? payload : {};
+    if (
+      data.type !== 'daily-save' ||
+      text(data.clientId) === dailyPeerClientId73116
+    ) {
+      return;
+    }
+
+    const ctx = dailyContext();
+    if (
+      text(data.date) !== text(ctx.date) ||
+      !revisionPanelActive73116('daily') ||
+      !revisionSelectionReady73116('daily')
+    ) {
+      return;
+    }
+
+    const incomingClass = normalize(data.className);
+    const selectedClass = normalize(ctx.className);
+    if (
+      incomingClass &&
+      selectedClass &&
+      selectedClass !== normalize('전체반') &&
+      incomingClass !== selectedClass &&
+      classCoreKey(data.className) !== classCoreKey(ctx.className)
+    ) {
+      return;
+    }
+
+    const state = revisionListeners7318.daily;
+    if (!state) return;
+    const syntheticRevision =
+      Number(state.lastRevision || 0) + 1;
+    scheduleRevisionReload7318(
+      'daily',
+      text(ctx.date),
+      '',
+      syntheticRevision
+    );
+  }
+
+  function installDailyPeerRevision73116() {
+    try {
+      if (!dailyPeerChannel73116 && typeof BroadcastChannel === 'function') {
+        dailyPeerChannel73116 = new BroadcastChannel(
+          DAILY_PEER_CHANNEL_NAME_73116
+        );
+        dailyPeerChannel73116.onmessage = function (event) {
+          handleDailyPeerRevision73116(event && event.data);
+        };
+      }
+    } catch (ignore) {}
+
+    if (global.__ULIM_DAILY_PEER_STORAGE_73116__) return;
+    global.__ULIM_DAILY_PEER_STORAGE_73116__ = true;
+    global.addEventListener('storage', function (event) {
+      if (
+        !event ||
+        event.key !== DAILY_PEER_STORAGE_KEY_73116 ||
+        !event.newValue
+      ) {
+        return;
+      }
+      try {
+        handleDailyPeerRevision73116(JSON.parse(event.newValue));
+      } catch (ignore) {}
+    });
+  }
+
   async function firebaseStaffClaimsReady73111(rt) {
     try {
       if (!rt || !rt.auth || !rt.auth.currentUser || !rt.sdk || typeof rt.sdk.getIdTokenResult !== 'function') return false;
@@ -2310,7 +2443,11 @@ function attendanceMinimal(row) {
           )
         : (
             typeof global.adminLoadDailyEvalStudents === 'function'
-              ? global.adminLoadDailyEvalStudents(false)
+              ? global.adminLoadDailyEvalStudents(false, {
+                  source: 'revision',
+                  bypassCache: true,
+                  revision: handledRevision
+                })
               : false
           );
 
@@ -2514,6 +2651,7 @@ function attendanceMinimal(row) {
         if (!button) return;
 
         setTimeout(function () {
+          Promise.resolve(ensureRevisionListeners7318()).catch(function () {});
           const panelId = text(button.dataset.adminPanel);
           const kind = panelId === 'adminPanelAttendance'
             ? 'attendance'
@@ -2542,6 +2680,7 @@ function attendanceMinimal(row) {
   }
 
   function prewarm() {
+    installDailyPeerRevision73116();
     installRevisionDateHandlers7318();
 
     // 로그인 전에는 GAS 런타임만 깨우며 보호 데이터/리스너는 시작하지 않습니다.
@@ -2643,7 +2782,10 @@ function attendanceMinimal(row) {
             text(dailyClass.value) &&
             typeof adminLoadDailyEvalStudents === 'function'
           ) {
-            adminLoadDailyEvalStudents(false);
+            adminLoadDailyEvalStudents(false, {
+              source: 'auth-ready',
+              bypassCache: true
+            });
           }
         }
       } catch (error) {
