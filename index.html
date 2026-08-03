@@ -1842,6 +1842,26 @@ body.admin-mode .admin-only-tab { display:block !important; }
 <link rel="preconnect" href="https://script.google.com" crossorigin>
 <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+
+<style id="ulim-attendance-admin-modal-73545">
+.ulim-attendance-modal73545{display:none;position:fixed;inset:0;z-index:100000;background:rgba(15,23,42,.55);padding:18px;align-items:center;justify-content:center}
+.ulim-attendance-modal73545.open{display:flex}
+body.ulim-attendance-modal-open73545{overflow:hidden}
+.ulim-attendance-modal-card73545{width:min(560px,96vw);max-height:90vh;overflow:auto;background:#fff;border-radius:18px;padding:18px;box-shadow:0 24px 70px rgba(15,23,42,.32)}
+.ulim-attendance-modal-head73545{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.ulim-attendance-modal-head73545 h3{margin:0;font-size:20px}
+.ulim-attendance-modal-close73545{border:0;background:#eef2f7;border-radius:10px;width:38px;height:38px;font-size:26px;line-height:1;cursor:pointer}
+.ulim-attendance-context73545{padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;font-weight:800;margin-bottom:12px;line-height:1.45}
+.ulim-attendance-label73545{display:block;font-size:13px;font-weight:800;color:#334155;margin-top:11px}
+.ulim-attendance-label73545 input,.ulim-attendance-label73545 select{width:100%;margin-top:6px;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:10px;padding:10px 12px;background:#fff;font-size:14px}
+.ulim-attendance-label73545 select[size]{min-height:210px;padding:6px}
+.ulim-attendance-hint73545{margin-top:10px;padding:10px 12px;background:#fff7ed;color:#9a3412;border-radius:10px;font-size:12px;line-height:1.55}
+.ulim-attendance-modal-actions73545{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.admin-att-delete73545{border:0;border-radius:9px;background:#ef4444;color:#fff;font-weight:800;padding:7px 10px;cursor:pointer;white-space:nowrap}
+.admin-att-delete73545:hover{background:#dc2626}
+@media(max-width:700px){.ulim-attendance-modal73545{padding:8px}.ulim-attendance-modal-card73545{padding:14px;border-radius:14px}.admin-att-delete73545{padding:6px 8px}}
+</style>
+
 </head>
 <body>
 
@@ -2395,47 +2415,6 @@ body.admin-mode .admin-only-tab { display:block !important; }
               <button type="button" class="admin-btn orange admin-full-only" onclick="adminPreviewAttendanceMessages()">발송 미리보기</button>
               <button type="button" class="admin-btn red admin-full-only" onclick="adminSendAttendanceMessages()">선택 발송</button>
             </div>
-            <details id="ulimAttendanceAddBox73541" class="admin-full-only" style="margin:14px 0;padding:14px;border:1px solid #fdba74;background:#fff7ed;border-radius:14px;" ontoggle="if(this.open&&typeof ulimAttendanceAddPrepare73541==='function')ulimAttendanceAddPrepare73541()">
-              <summary style="cursor:pointer;font-weight:900;color:#9a3412;">현재 출석부에 학생 추가</summary>
-              <div style="font-size:12px;color:#7c2d12;line-height:1.6;margin:8px 0 12px;">
-                위에서 수업일과 반을 선택한 뒤 기존학생·보강·일일특강 학생을 현재 출석부에 바로 추가합니다. 이 기능은 전체관리자에게만 표시됩니다.
-              </div>
-              <div class="admin-grid">
-                <div class="admin-field">
-                  <label for="ulimAttendanceAddKind73541">등록 구분</label>
-                  <select id="ulimAttendanceAddKind73541" onchange="ulimAttendanceAddKindChanged73541()">
-                    <option value="existing">기존학생</option>
-                    <option value="makeup">보강</option>
-                    <option value="daily_special">일일특강</option>
-                  </select>
-                </div>
-                <div class="admin-field">
-                  <label for="ulimAttendanceAddDate73541">현재 수업일</label>
-                  <input id="ulimAttendanceAddDate73541" type="date" readonly>
-                </div>
-                <div class="admin-field" style="grid-column:span 2;">
-                  <label for="ulimAttendanceAddClass73541">현재 반</label>
-                  <input id="ulimAttendanceAddClass73541" readonly placeholder="위에서 반을 선택해주세요.">
-                </div>
-                <div class="admin-field" style="grid-column:span 2;">
-                  <label for="ulimAttendanceAddSearch73541">기존학생 검색</label>
-                  <input id="ulimAttendanceAddSearch73541" placeholder="학생명·출결번호·전화번호 검색" oninput="ulimAttendanceAddFilter73541()">
-                </div>
-                <div class="admin-field" style="grid-column:span 2;">
-                  <label for="ulimAttendanceAddStudent73541">기존학생 선택</label>
-                  <select id="ulimAttendanceAddStudent73541" size="6"></select>
-                </div>
-                <div id="ulimAttendanceAddDirectWrap73541" class="admin-field" style="grid-column:span 2;display:none;">
-                  <label for="ulimAttendanceAddDirectName73541">학생명 직접 입력</label>
-                  <input id="ulimAttendanceAddDirectName73541" autocomplete="off" placeholder="학생명단에 없는 보강생·일일특강생">
-                </div>
-              </div>
-              <div id="ulimAttendanceAddHint73541" style="margin-top:9px;font-size:12px;color:#64748b;line-height:1.6;"></div>
-              <div class="admin-btn-row" style="margin-top:10px;">
-                <button type="button" class="admin-btn gray" onclick="ulimAttendanceAddPrepare73541(true)">학생목록 새로고침</button>
-                <button type="button" id="ulimAttendanceAddSubmit73541" class="admin-btn orange" onclick="ulimAttendanceAddFromRoster73541()">현재 출석부에 추가</button>
-              </div>
-            </details>
             <div id="adminAttendanceSummary" style="font-size:13px; color:#666; margin:10px 0;"></div>
             <div id="adminAttendanceTableWrap" class="admin-table-wrap"></div>
             <div id="adminAttendanceMessagePreview" class="admin-message-preview" style="display:none;"></div>
@@ -14328,13 +14307,13 @@ async function adminSyncAttendanceRowStatus(idx, value) {
 function adminRenderAttendanceTable() {
     const wrap = document.getElementById('adminAttendanceTableWrap');
     if (!wrap) return;
+    const isFull = adminIsFullAdmin();
 
     if (!adminAttendanceRecords.length) {
-        wrap.innerHTML = `<div class="notice-empty">출석부 데이터를 불러오세요. 날짜와 반명을 선택한 뒤 [출석부 반영]을 누르면 됩니다.</div>`;
+        wrap.innerHTML = `<div class="notice-empty">출석부 데이터를 불러오세요. 날짜와 반명을 선택한 뒤 [출석부 반영]을 누르면 됩니다.</div>`
+            + (isFull ? `<div style="display:flex;justify-content:flex-end;margin-top:12px;"><button type="button" class="admin-btn orange" onclick="ulimAttendanceOpenAddModal73545()">학생추가</button></div>` : '');
         return;
     }
-
-    const isFull = adminIsFullAdmin();
     let html = `<table class="admin-table">
         <thead>
             <tr>
@@ -14347,6 +14326,7 @@ function adminRenderAttendanceTable() {
                 <th>강의실</th>
                 ${isFull ? '<th>학생전화</th><th>학부모전화</th>' : ''}
                 <th>메모</th>
+                ${isFull ? '<th>관리</th>' : ''}
             </tr>
         </thead>
         <tbody>`;
@@ -14382,18 +14362,23 @@ function adminRenderAttendanceTable() {
             <td>${ulimAdminEsc_(r.classroom || r.roomName || r.room || '')}</td>
             ${phoneCells}
             <td><input class="admin-small-input" data-field="memo" value="${ulimAdminEsc_(r.memo || '')}" placeholder="메모"></td>
+            ${isFull ? `<td><button type="button" class="admin-att-delete73545" onclick="ulimAttendanceRemoveRow73545(${idx})">삭제</button></td>` : ''}
         </tr>`;
     });
 
     html += `</tbody></table>
         <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px; flex-wrap:wrap;">
+            ${isFull ? '<button type="button" class="admin-btn orange" onclick="ulimAttendanceOpenAddModal73545()">학생추가</button>' : ''}
             <button type="button" class="admin-btn" onclick="adminSaveAttendanceFromTable(false)">선택 출석부 저장</button>
             <button type="button" class="admin-btn gray" onclick="adminLoadAttendanceSnapshot(true, true)">출석부 다시 불러오기</button>
         </div>`;
 
     wrap.innerHTML = html;
     if (typeof ulimAdminAfterRender_ === 'function') ulimAdminAfterRender_();
-}</script>
+}
+window.ulimGetAdminAttendanceRecord73545 = function(index) {
+    return adminAttendanceRecords[Number(index)] || null;
+};</script>
 
 
 <script>
@@ -28167,7 +28152,7 @@ window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = true;
 
 <!-- ULIM 7.33.1: stable Firebase token guard + clean console baseline. -->
 <script src="./web/staff-account-admin-7.34.3.6.js?v=20260801.734036"></script>
-<script src="./web/student-master-admin-7.35.4.3.js?v=20260803.735043"></script>
+<script src="./web/student-master-admin-7.35.4.5.js?v=20260804.735045"></script>
 <script src="./web/student-course-application-7.35.2.js?v=20260802.735020"></script>
 <script id="ulim-general-teacher-firebase-auth-bootstrap-7-31-5">
 (function(){
