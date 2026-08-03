@@ -2395,6 +2395,47 @@ body.admin-mode .admin-only-tab { display:block !important; }
               <button type="button" class="admin-btn orange admin-full-only" onclick="adminPreviewAttendanceMessages()">발송 미리보기</button>
               <button type="button" class="admin-btn red admin-full-only" onclick="adminSendAttendanceMessages()">선택 발송</button>
             </div>
+            <details id="ulimAttendanceAddBox73541" class="admin-full-only" style="margin:14px 0;padding:14px;border:1px solid #fdba74;background:#fff7ed;border-radius:14px;" ontoggle="if(this.open&&typeof ulimAttendanceAddPrepare73541==='function')ulimAttendanceAddPrepare73541()">
+              <summary style="cursor:pointer;font-weight:900;color:#9a3412;">현재 출석부에 학생 추가</summary>
+              <div style="font-size:12px;color:#7c2d12;line-height:1.6;margin:8px 0 12px;">
+                위에서 수업일과 반을 선택한 뒤 기존학생·보강·일일특강 학생을 현재 출석부에 바로 추가합니다. 이 기능은 전체관리자에게만 표시됩니다.
+              </div>
+              <div class="admin-grid">
+                <div class="admin-field">
+                  <label for="ulimAttendanceAddKind73541">등록 구분</label>
+                  <select id="ulimAttendanceAddKind73541" onchange="ulimAttendanceAddKindChanged73541()">
+                    <option value="existing">기존학생</option>
+                    <option value="makeup">보강</option>
+                    <option value="daily_special">일일특강</option>
+                  </select>
+                </div>
+                <div class="admin-field">
+                  <label for="ulimAttendanceAddDate73541">현재 수업일</label>
+                  <input id="ulimAttendanceAddDate73541" type="date" readonly>
+                </div>
+                <div class="admin-field" style="grid-column:span 2;">
+                  <label for="ulimAttendanceAddClass73541">현재 반</label>
+                  <input id="ulimAttendanceAddClass73541" readonly placeholder="위에서 반을 선택해주세요.">
+                </div>
+                <div class="admin-field" style="grid-column:span 2;">
+                  <label for="ulimAttendanceAddSearch73541">기존학생 검색</label>
+                  <input id="ulimAttendanceAddSearch73541" placeholder="학생명·출결번호·전화번호 검색" oninput="ulimAttendanceAddFilter73541()">
+                </div>
+                <div class="admin-field" style="grid-column:span 2;">
+                  <label for="ulimAttendanceAddStudent73541">기존학생 선택</label>
+                  <select id="ulimAttendanceAddStudent73541" size="6"></select>
+                </div>
+                <div id="ulimAttendanceAddDirectWrap73541" class="admin-field" style="grid-column:span 2;display:none;">
+                  <label for="ulimAttendanceAddDirectName73541">학생명 직접 입력</label>
+                  <input id="ulimAttendanceAddDirectName73541" autocomplete="off" placeholder="학생명단에 없는 보강생·일일특강생">
+                </div>
+              </div>
+              <div id="ulimAttendanceAddHint73541" style="margin-top:9px;font-size:12px;color:#64748b;line-height:1.6;"></div>
+              <div class="admin-btn-row" style="margin-top:10px;">
+                <button type="button" class="admin-btn gray" onclick="ulimAttendanceAddPrepare73541(true)">학생목록 새로고침</button>
+                <button type="button" id="ulimAttendanceAddSubmit73541" class="admin-btn orange" onclick="ulimAttendanceAddFromRoster73541()">현재 출석부에 추가</button>
+              </div>
+            </details>
             <div id="adminAttendanceSummary" style="font-size:13px; color:#666; margin:10px 0;"></div>
             <div id="adminAttendanceTableWrap" class="admin-table-wrap"></div>
             <div id="adminAttendanceMessagePreview" class="admin-message-preview" style="display:none;"></div>
@@ -28126,7 +28167,7 @@ window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = true;
 
 <!-- ULIM 7.33.1: stable Firebase token guard + clean console baseline. -->
 <script src="./web/staff-account-admin-7.34.3.6.js?v=20260801.734036"></script>
-<script src="./web/student-master-admin-7.35.3.js?v=20260803.735030"></script>
+<script src="./web/student-master-admin-7.35.4.1.js?v=20260803.735041"></script>
 <script src="./web/student-course-application-7.35.2.js?v=20260802.735020"></script>
 <script id="ulim-general-teacher-firebase-auth-bootstrap-7-31-5">
 (function(){
