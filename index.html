@@ -25,11 +25,11 @@
   <script src="./web/room-classroom-realtime-7.29.16.js?v=20260801.72916p15"></script>
   <script src="./web/staff-login-firebase-primary-7.32.6.js?v=20260801.73206"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260804-735041100-teacher-columns-search-dropdown">
-<script id="ulim-one-time-cache-clean-735411">
+<meta name="ulim-build" content="20260804-735041200-classroom-match-temp-move">
+<script id="ulim-one-time-cache-clean-735412">
 (function (global) {
   'use strict';
-  var key = 'ULIM_ONE_TIME_CACHE_CLEAN_735411';
+  var key = 'ULIM_ONE_TIME_CACHE_CLEAN_735412';
   try { if (global.localStorage.getItem(key) === 'Y') return; global.localStorage.setItem(key, 'Y'); } catch (_ignore) {}
   try {
     if (global.caches && typeof global.caches.keys === 'function') {
@@ -28237,16 +28237,16 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 </script>
 
 <!-- ULIM 7.35.4.7: exact-row attendance delete, editable student detail and stale-response guard. -->
-<script src="./web/attendance-admin-integrated-7.35.4.10.js?v=20260804.7350410"></script>
+<script src="./web/attendance-admin-integrated-7.35.4.12.js?v=20260804.7350412"></script>
 
 <!-- ULIM 7.35.4.10: Firestore-only student/attendance/daily evaluation runtime. -->
 <script src="./web/firestore-only-admin-7.35.4.10.js?v=20260804.7350410"></script>
-<!-- ULIM 7.35.4.11: teacher-grouped all-classes layout and integrated student search. -->
-<script src="./web/admin-runtime-stability-7.35.4.11.js?v=20260804.7350411"></script>
+<!-- ULIM 7.35.4.12: teacher columns, temporary-card move, Firestore classroom matching. -->
+<script src="./web/admin-runtime-stability-7.35.4.12.js?v=20260804.7350412"></script>
 <script id="ulim-stable-build-readiness-735410">
 (function (global) {
   'use strict';
-  global.__ULIM_LOADED_BUILD_735410__ = '20260804-735041100-teacher-columns-search-dropdown';
+  global.__ULIM_LOADED_BUILD_735410__ = '20260804-735041200-classroom-match-temp-move';
   var required = [
     ['학생관리', '__ULIM_STUDENT_MANAGEMENT_V2_735410__'],
     ['학생목록 UI', '__ULIM_STUDENT_MANAGEMENT_UI_735410__'],
@@ -28263,7 +28263,7 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
   document.body.appendChild(overlay);
   document.getElementById('ulimStableReload735410').addEventListener('click', function () {
     var url = new URL(global.location.href);
-    url.searchParams.set('v', '7350411-' + Date.now());
+    url.searchParams.set('v', '7350412-' + Date.now());
     global.location.replace(url.toString());
   });
 })(window);
