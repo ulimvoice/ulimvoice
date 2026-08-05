@@ -9,7 +9,7 @@
 <link rel="dns-prefetch" href="https://script.googleusercontent.com">
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<meta name="ulim-tablet-build" content="20260804-735412-firestore-classroom-match-video-fix" />
+<meta name="ulim-tablet-build" content="20260804-735413-dynamic-classroom-usage-log" />
 <title>울림연기학원 등하원 체크 2026.06.06.046.01</title>
 <style>
   :root {
@@ -448,7 +448,7 @@ body {
  * - Google Sheets 출석칸과 알림톡은 기존 백그라운드 처리 유지
  ****************************************************/
 const API_URL = "https://script.google.com/macros/s/AKfycbyS3QUvrjNbwvaw92_g-QKQyN3Yito8DAdpAjxUzfnsuVf3Ce7ccuaXIv651U7FnYF4/exec";
-const TABLET_APP_VERSION = "2026.08.04.7.35.4.12";
+const TABLET_APP_VERSION = "2026.08.04.7.35.4.13";
 const TABLET_DEBUG = false;
 const TABLET_FIREBASE_CONFIG = {
   apiKey: "AIzaSyAW-sqtUQ_mJ6ZS_aV8pTOAKvHTSX-FXUM",
@@ -785,7 +785,7 @@ function clearStaleTabletLocalData() {
 
 function saveDailySnapshot(data) {
   if (!data || data.status !== "success" || !data.attendanceMap) return false;
-  if (!data.version || String(data.version).indexOf("tablet-firestore") < 0) data.version = "2026-08-04.tablet-firestore-classroom-v2";
+  if (!data.version || String(data.version).indexOf("tablet-firestore") < 0) data.version = "2026-08-04.tablet-firestore-classroom-v3";
   tabletPreload = data;
   tabletPreloadAt = Date.now();
   localStorage.setItem(DAILY_SNAPSHOT_KEY, JSON.stringify(data));
@@ -803,7 +803,7 @@ function loadDailySnapshotFromLocal() {
     if (!raw) return null;
     const data = JSON.parse(raw);
     if (!data || data.status !== "success" || !data.attendanceMap) return null;
-    if (data.version && String(data.version) !== "2026-08-04.tablet-firestore-classroom-v2") return null;
+    if (data.version && String(data.version) !== "2026-08-04.tablet-firestore-classroom-v3") return null;
     tabletPreload = data;
     tabletPreloadAt = Number(localStorage.getItem(DAILY_SNAPSHOT_AT_KEY) || 0) || Date.now();
     return data;
