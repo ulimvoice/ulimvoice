@@ -25,7 +25,7 @@
   <script src="./web/room-classroom-realtime-7.29.16.js?v=20260801.72916p15"></script>
   <script src="./web/staff-login-firebase-primary-7.32.6.js?v=20260801.73206"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260804-735041400-data-authority-six-stage">
+<meta name="ulim-build" content="20260805-735041401-data-authority-panel-hotfix">
 <script id="ulim-one-time-cache-clean-735414">
 (function (global) {
   'use strict';
@@ -28161,7 +28161,7 @@ window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = true;
 <script src="./web/staff-account-admin-7.34.3.6.js?v=20260801.734036"></script>
 <script src="./web/student-master-admin-7.35.4.13.js?v=20260804.7350413"></script>
 <!-- ULIM 7.35.4.14: six-stage Firestore authority reconciliation and Sheets backup. -->
-<script src="./web/data-authority-admin-7.35.4.14.js?v=20260804.7350414"></script>
+<script src="./web/data-authority-admin-7.35.4.14.1.js?v=20260805.73504141"></script>
 <!-- ULIM 7.35.4.7: compact student management UI. -->
 <script src="./web/student-management-ui-7.35.4.10.js?v=20260804.7350410"></script>
 <script src="./web/student-course-application-7.35.2.js?v=20260802.735020"></script>
@@ -28248,14 +28248,14 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 <script id="ulim-stable-build-readiness-735410">
 (function (global) {
   'use strict';
-  global.__ULIM_LOADED_BUILD_735410__ = '20260804-735041400-data-authority-six-stage';
+  global.__ULIM_LOADED_BUILD_735410__ = '20260805-735041401-data-authority-panel-hotfix';
   var required = [
     ['학생관리', '__ULIM_STUDENT_MANAGEMENT_V2_735410__'],
     ['학생목록 UI', '__ULIM_STUDENT_MANAGEMENT_UI_735410__'],
     ['출석부', '__ULIM_ATTENDANCE_ADMIN_INTEGRATED_735410__'],
     ['일일평가', '__ULIM_FIRESTORE_ONLY_ADMIN_735410__'],
     ['안정화', '__ULIM_ADMIN_RUNTIME_STABILITY_735410__'],
-    ['데이터 원본 전환', '__ULIM_DATA_AUTHORITY_735414__']
+    ['데이터 원본 전환', '__ULIM_DATA_AUTHORITY_7354141__']
   ];
   var missing = required.filter(function (item) { return global[item[1]] !== true; }).map(function (item) { return item[0]; });
   if (!missing.length) return;
@@ -28266,7 +28266,7 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
   document.body.appendChild(overlay);
   document.getElementById('ulimStableReload735410').addEventListener('click', function () {
     var url = new URL(global.location.href);
-    url.searchParams.set('v', '7350414-' + Date.now());
+    url.searchParams.set('v', '73504141-' + Date.now());
     global.location.replace(url.toString());
   });
 })(window);
