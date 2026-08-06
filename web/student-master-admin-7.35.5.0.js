@@ -1,7 +1,12 @@
 (function (global) {
   'use strict';
-  if (global.__ULIM_STUDENT_MANAGEMENT_V2_7355002__) return;
+  if (global.__ULIM_STUDENT_MANAGEMENT_V2_7355002__) {
+    global.__ULIM_STUDENT_MANAGEMENT_V2_735410__ = true;
+    return;
+  }
   global.__ULIM_STUDENT_MANAGEMENT_V2_7355002__ = true;
+  // Compatibility marker for 7.35.4.10/7.35.5.0 readiness checks.
+  global.__ULIM_STUDENT_MANAGEMENT_V2_735410__ = true;
 
   const VERSION = '2026-08-06.735.05.0.2';
   const PANEL_ID = 'adminPanelStudentManagement7352';

@@ -25408,9 +25408,9 @@ window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = false;
 
 <!-- ULIM 7.33.1: stable Firebase token guard + clean console baseline. -->
 <script src="./web/staff-account-admin-7.34.3.6.js?v=20260801.734036"></script>
-<script src="./web/student-master-admin-7.35.5.0.js?v=20260806.7350502"></script>
+<script src="./web/student-master-admin-7.35.5.0.js?v=20260806.7350506"></script>
 <!-- ULIM 7.35.4.7: compact student management UI. -->
-<script src="./web/student-management-ui-7.35.4.10.js?v=20260804.7350410"></script>
+<script src="./web/student-management-ui-7.35.4.10.js?v=20260806.7350506"></script>
 <script id="ulim-general-teacher-firebase-auth-bootstrap-7-31-5">
 (function(){
   if (window.__ULIM_STAFF_LOGIN_FIREBASE_PRIMARY_7321__) {
@@ -25489,24 +25489,45 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 <!-- ULIM 7.35.5.0: stable Firestore-only course application and operational runtime. -->
 <script src="./web/student-course-application-7.35.5.0.js?v=20260806.735050"></script>
 <script src="./web/ulim-firestore-primary-7.35.5.0.js?v=20260806.735050"></script>
-<script id="ulim-stable-build-readiness-73550">
+<script id="ulim-stable-build-readiness-735506">
 (function (global) {
   'use strict';
-  global.__ULIM_LOADED_BUILD_73550__ = '20260806-7350505-solapi-template-routing-gas-dedup';
-  var required = [
-     ['학생관리', '__ULIM_STUDENT_MANAGEMENT_V2_7355002__'],
-   ['운영통합', '__ULIM_FIRESTORE_PRIMARY_OPERATIONAL_73550__']
-];
-  var missing = required.filter(function (item) { return global[item[1]] !== true; }).map(function (item) { return item[0]; });
-  if (!missing.length) return;
-  var overlay = document.createElement('div');
-  overlay.id = 'ulimStableBuildMissing73550';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#f8fafc;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box';
-  overlay.innerHTML = '<section style="width:min(560px,96vw);background:#fff;border:1px solid #fecaca;border-radius:18px;padding:24px;box-shadow:0 24px 80px rgba(15,23,42,.25);text-align:center"><h2 style="margin:0 0 12px;color:#991b1b">업데이트 파일 적용 대기</h2><p style="line-height:1.7;color:#475569">누락 기능: <b>' + missing.join(', ') + '</b></p><button type="button" id="ulimStableReload73550" style="border:0;border-radius:10px;padding:12px 18px;background:#2563eb;color:#fff;font-weight:900;cursor:pointer">최신 파일 다시 불러오기</button></section>';
-  document.body.appendChild(overlay);
-  document.getElementById('ulimStableReload73550').addEventListener('click', function () {
-    var url = new URL(global.location.href); url.searchParams.set('v', '735050-' + Date.now()); global.location.replace(url.toString());
-  });
+  global.__ULIM_LOADED_BUILD_73550__ = '20260806-7350506-student-readiness-hotfix';
+
+  function verifyRequiredModules735506() {
+    var studentReady =
+      global.__ULIM_STUDENT_MANAGEMENT_V2_7355002__ === true ||
+      global.__ULIM_STUDENT_MANAGEMENT_V2_735410__ === true;
+    var operationalReady = global.__ULIM_FIRESTORE_PRIMARY_OPERATIONAL_73550__ === true;
+    var existing = document.getElementById('ulimStableBuildMissing73550');
+
+    if (studentReady && operationalReady) {
+      if (existing) existing.remove();
+      return;
+    }
+
+    // Do not lock the whole app because of a stale diagnostic marker.
+    // Missing modules are reported in DevTools and can be repaired without
+    // resetting an in-progress form or blocking all tabs.
+    if (existing) existing.remove();
+    try {
+      console.error('[ULIM 7.35.5.0.6 module readiness]', {
+        studentReady: studentReady,
+        operationalReady: operationalReady,
+        studentCoreNew: global.__ULIM_STUDENT_MANAGEMENT_V2_7355002__,
+        studentCoreCompat: global.__ULIM_STUDENT_MANAGEMENT_V2_735410__,
+        studentUi: global.__ULIM_STUDENT_MANAGEMENT_UI_735410__
+      });
+    } catch (_ignore) {}
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+      setTimeout(verifyRequiredModules735506, 1200);
+    }, { once: true });
+  } else {
+    setTimeout(verifyRequiredModules735506, 1200);
+  }
 })(window);
 </script>
 
