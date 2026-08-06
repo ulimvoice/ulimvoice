@@ -23,13 +23,13 @@
   <link rel="preconnect" href="https://asia-northeast3-ulim-7b09a.cloudfunctions.net" data-ulim-classroom-preconnect="7297">
   <!-- ULIM 7.34.2: safe Firebase-first staff/student directory integration. -->
   <script src="./web/room-classroom-realtime-7.29.16.js?v=20260801.72916p15"></script>
-  <script src="./web/staff-login-firebase-primary-7.32.6.js?v=20260801.73206"></script>
+  <script src="./web/staff-login-firebase-primary-7.32.7.js?v=20260807.73207"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260806-7350505-solapi-template-routing-gas-dedup">
-<script id="ulim-one-time-cache-clean-735414">
+<meta name="ulim-build" content="20260807-7350509-login-classlist-firestore-only">
+<script id="ulim-one-time-cache-clean-7350509">
 (function (global) {
   'use strict';
-  var key = 'ULIM_ONE_TIME_CACHE_CLEAN_7354143';
+  var key = 'ULIM_ONE_TIME_CACHE_CLEAN_7350509';
   try { if (global.localStorage.getItem(key) === 'Y') return; global.localStorage.setItem(key, 'Y'); } catch (_ignore) {}
   try {
     if (global.caches && typeof global.caches.keys === 'function') {
@@ -5092,7 +5092,7 @@ window.onload = async function() {
 
 
 const ULIM_APP_VERSION = "2026.07.06.706.08";
-const ULIM_INDEX_BUILD_META = "20260706-past-spacing-session-log-clean-70608";
+const ULIM_INDEX_BUILD_META = "20260807-login-classlist-firestore-only-7350509";
 
 window.__ULIM_APP_VERSION__ = ULIM_APP_VERSION;
 window.__ULIM_INDEX_BUILD_META__ = ULIM_INDEX_BUILD_META;
@@ -25403,7 +25403,7 @@ window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = false;
 <script src="./web/staff-performance-7.30.1.js?v=20260731.73001"></script>
 
 <!-- ULIM 7.31.15 / 7.34.3.10: attendance date-cell isolation + manual-only current status. -->
-<script src="./web/staff-firestore-operational-7.31.19.js?v=20260807.731190"></script>
+<script src="./web/staff-firestore-operational-7.31.20.js?v=20260807.731200"></script>
 <script src="./web/attendance-daily-ui-7.34.3.10.js?v=20260801.7340310"></script>
 
 <!-- ULIM 7.33.1: stable Firebase token guard + clean console baseline. -->
@@ -25492,7 +25492,8 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 <script id="ulim-stable-build-readiness-735506">
 (function (global) {
   'use strict';
-  global.__ULIM_LOADED_BUILD_73550__ = '20260806-7350506-student-readiness-hotfix';
+  global.__ULIM_LOADED_BUILD_73550__ = '20260807-7350509-login-classlist-firestore-only';
+  global.__ULIM_LOADED_BUILD_7350509__ = true;
 
   function verifyRequiredModules735506() {
     var studentReady =
