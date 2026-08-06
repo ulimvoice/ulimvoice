@@ -28154,7 +28154,7 @@ window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = true;
 <script src="./web/staff-performance-7.30.1.js?v=20260731.73001"></script>
 
 <!-- ULIM 7.31.15 / 7.34.3.10: attendance date-cell isolation + manual-only current status. -->
-<script src="./web/staff-firestore-operational-7.31.16.js?v=20260802.73116d5"></script>
+<script src="./web/staff-firestore-operational-7.31.18.js?v=20260806.731180"></script>
 <script src="./web/attendance-daily-ui-7.34.3.10.js?v=20260801.7340310"></script>
 
 <!-- ULIM 7.33.1: stable Firebase token guard + clean console baseline. -->
@@ -28248,7 +28248,7 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 <script id="ulim-stable-build-readiness-735410">
 (function (global) {
   'use strict';
-  global.__ULIM_LOADED_BUILD_735410__ = '20260805-735041403-partial-apply-recovery';
+  global.__ULIM_LOADED_BUILD_735410__ = '20260806-735041513-attendance-duplicate-guard-operational-path-fix';
   var required = [
     ['학생관리', '__ULIM_STUDENT_MANAGEMENT_V2_735410__'],
     ['학생목록 UI', '__ULIM_STUDENT_MANAGEMENT_UI_735410__'],
@@ -28266,7 +28266,7 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
   document.body.appendChild(overlay);
   document.getElementById('ulimStableReload735410').addEventListener('click', function () {
     var url = new URL(global.location.href);
-    url.searchParams.set('v', '73504144-' + Date.now());
+    url.searchParams.set('v', '735041513-' + Date.now());
     global.location.replace(url.toString());
   });
 })(window);
