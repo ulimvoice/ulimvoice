@@ -3,13 +3,9 @@
 <head>
 <link rel="manifest" href="./manifest-tablet.json">
 <meta name="theme-color" content="#16a34a">
-<link rel="preconnect" href="https://script.google.com">
-<link rel="preconnect" href="https://script.googleusercontent.com">
-<link rel="dns-prefetch" href="https://script.google.com">
-<link rel="dns-prefetch" href="https://script.googleusercontent.com">
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<meta name="ulim-tablet-build" content="20260807-7355014-canonical-roster-kiosk-auth" />
+<meta name="ulim-tablet-build" content="20260808-7355016-callable-only-auth-retry" />
 <title>울림연기학원 등하원 체크 2026.06.06.046.01</title>
 <style>
   :root {
@@ -445,11 +441,10 @@ body {
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
 <script>
 /****************************************************
- * 울림 태블릿 7.35.5.0.14 Firestore canonical roster · SOLAPI Functions
+ * 울림 태블릿 7.35.5.0.16 callable-only canonical roster · SOLAPI Functions
  * - 로컬 일일스냅샷 저장
  * - 등하원 클릭 즉시 로컬 출결로그 저장
  * - 로컬 중복 요청 즉시 차단
@@ -458,9 +453,8 @@ body {
  * - Google Sheets는 오전 6시/관리자 백업 전용
  * - 등하원 알림톡은 Firebase Functions → SOLAPI 직접 발송
  ****************************************************/
-const API_URL = ""; // 7.35.5.0.11: 태블릿 운영에서 GAS를 사용하지 않습니다.
-const TABLET_APP_VERSION = "2026.08.07.7.35.5.0.14";
-const TABLET_SNAPSHOT_CLIENT_VERSION = "2026-08-07.tablet-canonical-roster-7355014";
+const TABLET_APP_VERSION = "2026.08.08.7.35.5.0.16";
+const TABLET_SNAPSHOT_CLIENT_VERSION = "2026-08-08.tablet-canonical-roster-7355016";
 const TABLET_DEBUG = false;
 const TABLET_FIREBASE_CONFIG = {
   apiKey: "AIzaSyAW-sqtUQ_mJ6ZS_aV8pTOAKvHTSX-FXUM",
@@ -515,6 +509,7 @@ let tabletProcessingFallbackTimer = null;
 let tabletFirebaseRuntimePromise = null;
 let tabletSnapshotUnsubscribe = null;
 let tabletSnapshotListenerDate = "";
+let tabletLastCallableRefreshAt7355016 = 0;
 
 const TABLET_SEOUL_TIME_ZONE = "Asia/Seoul";
 function pad2(n) { return String(n).padStart(2, "0"); }
@@ -582,7 +577,6 @@ async function getTabletFirebaseRuntime() {
     try { app = firebase.app("ulim-tablet"); }
     catch (err) { app = firebase.initializeApp(TABLET_FIREBASE_CONFIG, "ulim-tablet"); }
     const auth = app.auth();
-    const firestore = app.firestore();
     const functions = app.functions(TABLET_FIREBASE_REGION);
     if (!auth.currentUser) {
       const issueToken = functions.httpsCallable("issueTabletKioskToken");
@@ -601,7 +595,6 @@ async function getTabletFirebaseRuntime() {
     return {
       app: app,
       auth: auth,
-      firestore: firestore,
       functions: functions,
       getSnapshot: functions.httpsCallable("getTabletOperationalSnapshot"),
       saveAttendance: functions.httpsCallable("saveTabletAttendanceOperational"),
@@ -614,32 +607,51 @@ async function getTabletFirebaseRuntime() {
   return tabletFirebaseRuntimePromise;
 }
 
-async function bindTabletSnapshotListener() {
-  const date = getTodayKey();
-  if (tabletSnapshotUnsubscribe && tabletSnapshotListenerDate === date) return true;
-  if (tabletSnapshotUnsubscribe) {
-    try { tabletSnapshotUnsubscribe(); } catch (err) {}
-    tabletSnapshotUnsubscribe = null;
+function tabletAuthError7355016(error) {
+  const code = String((error && error.code) || '').toLowerCase();
+  const message = String((error && error.message) || '').toLowerCase();
+  return code.indexOf('unauthenticated') >= 0 || code.indexOf('permission-denied') >= 0 ||
+    message.indexOf('unauthenticated') >= 0 || message.indexOf('permission-denied') >= 0 ||
+    message.indexOf('태블릿 인증') >= 0 || message.indexOf('날짜 인증') >= 0;
+}
+
+async function resetTabletFirebaseRuntime7355016() {
+  let runtime = null;
+  try { runtime = tabletFirebaseRuntimePromise ? await tabletFirebaseRuntimePromise : null; } catch (err) {}
+  try { if (runtime && runtime.auth && runtime.auth.currentUser) await runtime.auth.signOut(); } catch (err) {}
+  tabletFirebaseRuntimePromise = null;
+  tabletSnapshotUnsubscribe = null;
+  tabletSnapshotListenerDate = '';
+}
+
+async function withTabletAuthRetry7355016(operation) {
+  let runtime = await getTabletFirebaseRuntime();
+  try {
+    return await operation(runtime);
+  } catch (error) {
+    if (!tabletAuthError7355016(error)) throw error;
+    await resetTabletFirebaseRuntime7355016();
+    runtime = await getTabletFirebaseRuntime();
+    return await operation(runtime);
   }
-  const runtime = await getTabletFirebaseRuntime();
-  tabletSnapshotListenerDate = date;
-  tabletSnapshotUnsubscribe = runtime.firestore.collection("tabletDailySnapshots").doc(date).onSnapshot(function(doc) {
-    if (!doc.exists) return;
-    const data = Object.assign({ status: "success", date: date }, doc.data() || {});
-    saveDailySnapshot(data);
-  }, function() {
-    tabletSnapshotUnsubscribe = null;
-    tabletSnapshotListenerDate = "";
-  });
+}
+
+async function bindTabletSnapshotListener() {
+  // 7.35.5.0.16: Direct Firestore listeners were removed. They depended on client
+  // Firestore rules and could enter permission-denied while callable auth was still valid.
+  // The tablet now has one transport only: authenticated Firebase callable functions.
+  tabletSnapshotUnsubscribe = null;
+  tabletSnapshotListenerDate = getTodayKey();
   return true;
 }
 
 async function loadTabletFirestoreSnapshot() {
-  const runtime = await getTabletFirebaseRuntime();
-  await bindTabletSnapshotListener();
-  const result = await runtime.getSnapshot({ date: getTodayKey() });
+  const result = await withTabletAuthRetry7355016(function(runtime) {
+    return runtime.getSnapshot({ date: getTodayKey() });
+  });
   const data = result && result.data ? result.data : null;
   if (data && data.status === "success" && data.attendanceMap) {
+    tabletLastCallableRefreshAt7355016 = Date.now();
     saveDailySnapshot(data);
     return data;
   }
@@ -647,24 +659,24 @@ async function loadTabletFirestoreSnapshot() {
 }
 
 async function saveTabletAttendanceToFirestore(item) {
-  const runtime = await getTabletFirebaseRuntime();
   const params = item && item.params ? item.params : {};
-  const result = await runtime.saveAttendance({
-    date: item.date || getTodayKey(),
-    eventKey: item.eventKey || "",
-    attendanceNo: item.attendanceNo || params.attendanceNo || "",
-    mode: item.mode || params.mode || "in",
-    studentName: item.studentName || params.selectedStudentName || "",
-    className: item.className || params.className || "",
-    classIndex: params.selectedClassIndex !== undefined ? params.selectedClassIndex : params.classIndex,
-    recordId: params.recordId || ""
+  const result = await withTabletAuthRetry7355016(function(runtime) {
+    return runtime.saveAttendance({
+      date: item.date || getTodayKey(),
+      eventKey: item.eventKey || "",
+      attendanceNo: item.attendanceNo || params.attendanceNo || "",
+      mode: item.mode || params.mode || "in",
+      studentName: item.studentName || params.selectedStudentName || "",
+      className: item.className || params.className || "",
+      classIndex: params.selectedClassIndex !== undefined ? params.selectedClassIndex : params.classIndex,
+      recordId: params.recordId || ""
+    });
   });
   return result && result.data ? result.data : {};
 }
 
-function apiUrl(params) {
-  throw new Error("태블릿 운영 GAS 연결은 사용하지 않습니다.");
-}
+
+// 7.35.5.0.16: legacy GAS transport helpers were removed; callable Functions are the only transport.
 
 function tabletPublicMessage_(value, fallback) {
   const raw = String(value || "").trim();
@@ -675,26 +687,6 @@ function tabletPublicMessage_(value, fallback) {
   return raw;
 }
 
-async function tabletFetchJson(params, timeoutMs = 0) {
-  const fetchPromise = fetch(apiUrl(params), { method: "GET", cache: "no-store" }).then(async function(res) {
-    const text = await res.text();
-    if (!res.ok) throw new Error("잠시 연결이 지연되고 있습니다. 다시 시도해주세요.");
-    if (/^\s*</.test(text || "")) throw new Error("잠시 연결이 지연되고 있습니다. 다시 시도해주세요.");
-    let data;
-    try { data = JSON.parse(text); } catch (err) { throw new Error("잠시 연결이 지연되고 있습니다. 다시 시도해주세요."); }
-    if (!data || typeof data !== "object") throw new Error("잠시 연결이 지연되고 있습니다. 다시 시도해주세요.");
-    if (data.message) data.message = tabletPublicMessage_(data.message, "잠시 연결이 지연되고 있습니다. 다시 시도해주세요.");
-    if (data.popupMessage) data.popupMessage = tabletPublicMessage_(data.popupMessage, data.message || "잠시 연결이 지연되고 있습니다. 다시 시도해주세요.");
-    return data;
-  });
-
-  const limit = Math.max(0, Number(timeoutMs) || 0);
-  if (!limit) return fetchPromise;
-  const timeoutPromise = new Promise(function(_, reject) {
-    setTimeout(function() { reject(new Error("잠시 연결이 지연되고 있습니다. 다시 시도해주세요.")); }, limit);
-  });
-  return Promise.race([fetchPromise, timeoutPromise]);
-}
 
 function escapeHtml(value) {
   return String(value == null ? "" : value)
@@ -825,7 +817,7 @@ function loadDailySnapshotFromLocal() {
     // 7.35.5.0.14 accepts canonical Firestore snapshots and the immediately previous local snapshot format.
     if (data.version) {
       const version = String(data.version);
-      const accepted = version === TABLET_SNAPSHOT_CLIENT_VERSION || version.indexOf("tablet-canonical-roster-7355014") >= 0 || version === "2026-08-04.tablet-firestore-classroom-v3";
+      const accepted = version === TABLET_SNAPSHOT_CLIENT_VERSION || version.indexOf("tablet-canonical-roster-7355016") >= 0;
       if (!accepted) return null;
     }
     tabletPreload = data;
@@ -839,7 +831,10 @@ async function loadTabletPreload(force = false) {
   const now = Date.now();
   const localSnapshot = loadDailySnapshotFromLocal();
   if (!force && tabletPreload && now - tabletPreloadAt < 30 * 60 * 1000) {
-    bindTabletSnapshotListener().catch(function() {});
+    if (now - tabletLastCallableRefreshAt7355016 > 2 * 60 * 1000) {
+      tabletLastCallableRefreshAt7355016 = now;
+      loadTabletFirestoreSnapshot().catch(function() {});
+    }
     return tabletPreload;
   }
   if (!force && localSnapshot) {
@@ -1402,8 +1397,7 @@ function selectClassChoice(attendanceNo, studentRowNumber, studentName, classInd
 async function warmup() { return true; }
 async function loadAds() {
   try {
-    const runtime = await getTabletFirebaseRuntime();
-    const response = await runtime.getOperationalContent({});
+    const response = await withTabletAuthRetry7355016(function(runtime) { return runtime.getOperationalContent({}); });
     const data = response && response.data ? response.data : {};
     adSlides = Array.isArray(data.slides) && data.slides.length ? data.slides : defaultSlides();
   } catch (err) {
@@ -1479,15 +1473,15 @@ function tabletConnectionMessage7355014(error) {
   const code = String((error && (error.ulimCode || error.code)) || "");
   const message = String((error && error.message) || "");
   if (code.indexOf("kiosk-key-missing") >= 0 || message.indexOf("인증키가 설정되지") >= 0) {
-    return "이 태블릿에 연결키가 없습니다. PC에서 7.35.5.0.14 태블릿 연결 설정을 한 번 실행한 뒤 생성된 1회 연결 주소를 이 태블릿에서 열어주세요.";
+    return "이 태블릿에 연결키가 없습니다. PC에서 7.35.5.0.16 태블릿 연결 설정을 한 번 실행한 뒤 생성된 1회 연결 주소를 이 태블릿에서 열어주세요.";
   }
   if (code.indexOf("permission-denied") >= 0 || message.indexOf("인증키") >= 0 || message.indexOf("KIOSK") >= 0) {
-    return "태블릿 연결키와 Firebase Secret이 일치하지 않습니다. 7.35.5.0.14 태블릿 연결 설정을 다시 실행해주세요.";
+    return "태블릿 연결키와 Firebase Secret이 일치하지 않습니다. 7.35.5.0.16 태블릿 연결 설정을 다시 실행해주세요.";
   }
   if (code.indexOf("not-found") >= 0 || code.indexOf("unimplemented") >= 0) {
     return "태블릿 Firebase Functions가 아직 최신 버전으로 배포되지 않았습니다. Functions 배포 후 다시 연결해주세요.";
   }
-  return "Firebase 연결 또는 태블릿 인증에 실패했습니다. 네트워크와 7.35.5.0.14 Functions 배포 상태를 확인해주세요.";
+  return "Firebase 연결 또는 태블릿 인증에 실패했습니다. 네트워크와 7.35.5.0.16 Functions 배포 상태를 확인해주세요.";
 }
 
 window.addEventListener("keydown", function(event) {
@@ -1504,12 +1498,12 @@ preserveCurrentTabletPendingV43_21_();
 clearLegacyTabletSnapshotKeys43_21();
 clearStaleTabletLocalData();
 loadAds();
-getTabletFirebaseRuntime().then(function() { return bindTabletSnapshotListener(); }).catch(function(error) {
+getTabletFirebaseRuntime().then(function() { return loadTabletFirestoreSnapshot(); }).catch(function(error) {
   showModal("태블릿 연결을 확인해주세요.", tabletConnectionMessage7355014(error), "warning", '<button class="modal-btn" onclick="location.reload()">다시 연결</button>');
 });
 loadTabletPreload(true);
 processLocalPendingAttendanceQueue();
-setInterval(function(){ loadTabletPreload(false); bindTabletSnapshotListener().catch(function() {}); }, 5 * 60 * 1000);
+setInterval(function(){ loadTabletPreload(false); }, 2 * 60 * 1000);
 setInterval(function(){ processLocalPendingAttendanceQueue(); }, 60 * 1000);
 setInterval(function(){ clearStaleTabletLocalData(); }, 5 * 60 * 1000);
 setInterval(function(){ loadAds(); }, 5 * 60 * 1000);
