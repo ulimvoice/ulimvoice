@@ -25,11 +25,11 @@
   <script src="./web/room-classroom-realtime-7.29.16.js?v=20260801.72916p15"></script>
   <script src="./web/staff-login-firebase-primary-7.32.7.js?v=20260807.73207"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260807-7355013-student-save-directory-guard">
-<script id="ulim-one-time-cache-clean-7350509">
+<meta name="ulim-build" content="20260807-7355014-attendance-tablet-final-convergence">
+<script id="ulim-one-time-cache-clean-7355014">
 (function (global) {
   'use strict';
-  var key = 'ULIM_ONE_TIME_CACHE_CLEAN_7350509';
+  var key = 'ULIM_ONE_TIME_CACHE_CLEAN_7355014';
   try { if (global.localStorage.getItem(key) === 'Y') return; global.localStorage.setItem(key, 'Y'); } catch (_ignore) {}
   try {
     if (global.caches && typeof global.caches.keys === 'function') {
@@ -2374,7 +2374,7 @@ body.ulim-attendance-modal-open73545{overflow:hidden}
             <div class="admin-grid">
               <div class="admin-field">
                 <label for="adminAttendanceDate">수업일</label>
-                <input type="date" id="adminAttendanceDate" onchange="adminLoadClassList(this.value)">
+                <input type="date" id="adminAttendanceDate">
               </div>
               <div class="admin-field">
                 <label for="adminAttendanceClass">반명 / 수업명 선택 또는 검색</label>
@@ -7334,13 +7334,8 @@ function showAdminPanel(panelId) {
     }
 
     if (panelId === 'adminPanelAttendance') {
-        const attendanceDate = document.getElementById('adminAttendanceDate')?.value || '';
-        const attendanceClass = (document.getElementById('adminAttendanceClass')?.value || '').trim();
-        adminLoadClassList(attendanceDate, false);
-
-        if (attendanceClass) {
-            Promise.resolve(adminLoadAttendanceSnapshot(false, false)).catch(() => {});
-        }
+        // 7.35.5.0.14: attendance-admin-integrated-7.35.4.15 is the sole owner.
+        // Do not reload here when switching tabs; this preserves unsaved edits and prevents duplicate calls.
     }
 
     if (panelId === 'adminPanelDailyEval') {
@@ -25403,7 +25398,7 @@ window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = false;
 <script src="./web/staff-performance-7.30.1.js?v=20260731.73001"></script>
 
 <!-- ULIM 7.31.15 / 7.34.3.10: attendance date-cell isolation + manual-only current status. -->
-<script src="./web/staff-firestore-operational-7.31.21.js?v=20260807.731210"></script>
+<script src="./web/staff-firestore-operational-7.31.22.js?v=20260807.731220"></script>
 <script src="./web/attendance-daily-ui-7.34.3.10.js?v=20260801.7340310"></script>
 
 <!-- ULIM 7.33.1: stable Firebase token guard + clean console baseline. -->
@@ -25487,17 +25482,18 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 
 
 <!-- ULIM 7.35.5.0.11: non-attendance Firestore runtime + restored dedicated attendance owner. -->
-<script src="./web/ulim-firestore-primary-7.35.5.0.11.js?v=20260807.7355011"></script>
-<script src="./web/attendance-admin-integrated-7.35.4.14.js?v=20260807.7350414"></script>
+<script src="./web/ulim-firestore-primary-7.35.5.0.14.js?v=20260807.7355014"></script>
+<script src="./web/attendance-admin-integrated-7.35.4.15.js?v=20260807.7350415"></script>
 <script src="./web/operational-content-admin-7.35.5.0.11.js?v=20260807.7355011"></script>
 <script src="./web/student-login-notice-and-role-access-7.35.5.0.11.js?v=20260807.7355011"></script>
 <script id="ulim-stable-build-readiness-735506">
 (function (global) {
   'use strict';
-  global.__ULIM_LOADED_BUILD_73550__ = '20260807-7355013-student-save-directory-guard';
+  global.__ULIM_LOADED_BUILD_73550__ = '20260807-7355014-attendance-tablet-final-convergence';
   global.__ULIM_LOADED_BUILD_7350509__ = true;
   global.__ULIM_LOADED_BUILD_7355011__ = true;
   global.__ULIM_LOADED_BUILD_7355013__ = true;
+  global.__ULIM_LOADED_BUILD_7355014__ = true;
 
   function verifyRequiredModules735506() {
     var studentReady =

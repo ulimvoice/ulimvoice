@@ -9,7 +9,7 @@
 <link rel="dns-prefetch" href="https://script.googleusercontent.com">
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<meta name="ulim-tablet-build" content="20260807-7355011-firestore-kiosk-popup-ui" />
+<meta name="ulim-tablet-build" content="20260807-7355014-canonical-roster-kiosk-auth" />
 <title>울림연기학원 등하원 체크 2026.06.06.046.01</title>
 <style>
   :root {
@@ -449,16 +449,18 @@ body {
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
 <script>
 /****************************************************
- * 울림 태블릿 7.34.3.13 Firestore 서버 알림·부분 스냅샷 연동
+ * 울림 태블릿 7.35.5.0.14 Firestore canonical roster · SOLAPI Functions
  * - 로컬 일일스냅샷 저장
  * - 등하원 클릭 즉시 로컬 출결로그 저장
  * - 로컬 중복 요청 즉시 차단
  * - 화면 안내는 로컬 기준 1회만 표시
  * - 출석은 Firestore에 즉시 저장하고 울림앱에 실시간 반영
- * - Google Sheets 출석칸과 알림톡은 기존 백그라운드 처리 유지
+ * - Google Sheets는 오전 6시/관리자 백업 전용
+ * - 등하원 알림톡은 Firebase Functions → SOLAPI 직접 발송
  ****************************************************/
 const API_URL = ""; // 7.35.5.0.11: 태블릿 운영에서 GAS를 사용하지 않습니다.
-const TABLET_APP_VERSION = "2026.08.07.7.35.5.0.11";
+const TABLET_APP_VERSION = "2026.08.07.7.35.5.0.14";
+const TABLET_SNAPSHOT_CLIENT_VERSION = "2026-08-07.tablet-canonical-roster-7355014";
 const TABLET_DEBUG = false;
 const TABLET_FIREBASE_CONFIG = {
   apiKey: "AIzaSyAW-sqtUQ_mJ6ZS_aV8pTOAKvHTSX-FXUM",
@@ -566,7 +568,16 @@ async function getTabletFirebaseRuntime() {
     tabletFirebaseRuntimePromise = null;
   }
   tabletFirebaseRuntimePromise = (async function() {
-    if (!window.firebase || !KIOSK_KEY) throw new Error("태블릿 연결을 준비할 수 없습니다.");
+    if (!window.firebase) {
+      const error = new Error("Firebase SDK를 불러오지 못했습니다.");
+      error.ulimCode = "firebase-sdk-missing";
+      throw error;
+    }
+    if (!KIOSK_KEY) {
+      const error = new Error("이 태블릿에 인증키가 설정되지 않았습니다.");
+      error.ulimCode = "kiosk-key-missing";
+      throw error;
+    }
     let app;
     try { app = firebase.app("ulim-tablet"); }
     catch (err) { app = firebase.initializeApp(TABLET_FIREBASE_CONFIG, "ulim-tablet"); }
@@ -793,7 +804,7 @@ function clearStaleTabletLocalData() {
 
 function saveDailySnapshot(data) {
   if (!data || data.status !== "success" || !data.attendanceMap) return false;
-  if (!data.version || String(data.version).indexOf("tablet-firestore") < 0) data.version = "2026-08-04.tablet-firestore-classroom-v3";
+  if (!data.version) data.version = TABLET_SNAPSHOT_CLIENT_VERSION;
   tabletPreload = data;
   tabletPreloadAt = Date.now();
   localStorage.setItem(DAILY_SNAPSHOT_KEY, JSON.stringify(data));
@@ -811,7 +822,12 @@ function loadDailySnapshotFromLocal() {
     if (!raw) return null;
     const data = JSON.parse(raw);
     if (!data || data.status !== "success" || !data.attendanceMap) return null;
-    if (data.version && String(data.version) !== "2026-08-04.tablet-firestore-classroom-v3") return null;
+    // 7.35.5.0.14 accepts canonical Firestore snapshots and the immediately previous local snapshot format.
+    if (data.version) {
+      const version = String(data.version);
+      const accepted = version === TABLET_SNAPSHOT_CLIENT_VERSION || version.indexOf("tablet-canonical-roster-7355014") >= 0 || version === "2026-08-04.tablet-firestore-classroom-v3";
+      if (!accepted) return null;
+    }
     tabletPreload = data;
     tabletPreloadAt = Number(localStorage.getItem(DAILY_SNAPSHOT_AT_KEY) || 0) || Date.now();
     return data;
@@ -1459,6 +1475,21 @@ function nextAdSlide() { if (!adSlides.length) return; clearTimeout(adTimer); ad
 function prevAdSlide() { if (!adSlides.length) return; clearTimeout(adTimer); adIndex = (adIndex - 1 + adSlides.length) % adSlides.length; renderAdSlide(); }
 function handleAdAreaClick(event) { const tag = String((event.target && event.target.tagName) || "").toLowerCase(); if (["button", "iframe", "video"].indexOf(tag) !== -1) return; nextAdSlide(true); }
 
+function tabletConnectionMessage7355014(error) {
+  const code = String((error && (error.ulimCode || error.code)) || "");
+  const message = String((error && error.message) || "");
+  if (code.indexOf("kiosk-key-missing") >= 0 || message.indexOf("인증키가 설정되지") >= 0) {
+    return "이 태블릿에 연결키가 없습니다. PC에서 7.35.5.0.14 태블릿 연결 설정을 한 번 실행한 뒤 생성된 1회 연결 주소를 이 태블릿에서 열어주세요.";
+  }
+  if (code.indexOf("permission-denied") >= 0 || message.indexOf("인증키") >= 0 || message.indexOf("KIOSK") >= 0) {
+    return "태블릿 연결키와 Firebase Secret이 일치하지 않습니다. 7.35.5.0.14 태블릿 연결 설정을 다시 실행해주세요.";
+  }
+  if (code.indexOf("not-found") >= 0 || code.indexOf("unimplemented") >= 0) {
+    return "태블릿 Firebase Functions가 아직 최신 버전으로 배포되지 않았습니다. Functions 배포 후 다시 연결해주세요.";
+  }
+  return "Firebase 연결 또는 태블릿 인증에 실패했습니다. 네트워크와 7.35.5.0.14 Functions 배포 상태를 확인해주세요.";
+}
+
 window.addEventListener("keydown", function(event) {
   if (/^[0-9]$/.test(event.key)) { pressNum(event.key); return; }
   if (event.key === "Backspace") { backspacePin(); return; }
@@ -1474,7 +1505,7 @@ clearLegacyTabletSnapshotKeys43_21();
 clearStaleTabletLocalData();
 loadAds();
 getTabletFirebaseRuntime().then(function() { return bindTabletSnapshotListener(); }).catch(function(error) {
-  showModal("태블릿 연결을 확인해주세요.", "태블릿 인증정보 또는 Firebase Functions 연결을 확인한 뒤 다시 시도해주세요.", "warning", '<button class="modal-btn" onclick="location.reload()">다시 연결</button>');
+  showModal("태블릿 연결을 확인해주세요.", tabletConnectionMessage7355014(error), "warning", '<button class="modal-btn" onclick="location.reload()">다시 연결</button>');
 });
 loadTabletPreload(true);
 processLocalPendingAttendanceQueue();
