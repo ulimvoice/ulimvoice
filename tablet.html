@@ -5,7 +5,7 @@
 <meta name="theme-color" content="#16a34a">
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<meta name="ulim-tablet-build" content="20260808-7355016-callable-only-auth-retry" />
+<meta name="ulim-tablet-build" content="20260808-7355018-seoul-calendar-date" />
 <title>울림연기학원 등하원 체크 2026.06.06.046.01</title>
 <style>
   :root {
@@ -510,6 +510,7 @@ let tabletFirebaseRuntimePromise = null;
 let tabletSnapshotUnsubscribe = null;
 let tabletSnapshotListenerDate = "";
 let tabletLastCallableRefreshAt7355016 = 0;
+let tabletCalendarDateKey7355018 = "";
 
 const TABLET_SEOUL_TIME_ZONE = "Asia/Seoul";
 function pad2(n) { return String(n).padStart(2, "0"); }
@@ -528,8 +529,21 @@ function formatSeoulYmd(epochMs) {
   const shifted = new Date(epochMs + 9 * 60 * 60 * 1000);
   return [shifted.getUTCFullYear(), pad2(shifted.getUTCMonth() + 1), pad2(shifted.getUTCDate())].join("-");
 }
-function getTodayKey() { return formatSeoulYmd(Date.now() - 3 * 60 * 60 * 1000); }
+function getTodayKey() { return formatSeoulYmd(Date.now()); }
 function getNowIso() { return new Date().toISOString(); }
+function checkTabletCalendarDateRollover7355018() {
+  const today = getTodayKey();
+  if (!tabletCalendarDateKey7355018) {
+    tabletCalendarDateKey7355018 = today;
+    return;
+  }
+  if (tabletCalendarDateKey7355018 === today) return;
+  tabletCalendarDateKey7355018 = today;
+  clearStaleTabletLocalData();
+  resetTabletFirebaseRuntime7355016()
+    .then(function() { return loadTabletPreload(true); })
+    .catch(function() {});
+}
 function modeTextOf(mode) { return mode === "out" || mode === "하원" ? "하원" : "등원"; }
 function duplicateMessageOf(mode) { return modeTextOf(mode) === "하원" ? "이미 하원처리되었습니다." : "이미 등원처리되었습니다."; }
 function normalizeAttendanceNoClient(value) { return String(value || "").replace(/[^0-9]/g, ""); }
@@ -542,6 +556,7 @@ function updateClock() {
   const h12 = now.getHours() % 12 || 12;
   document.getElementById("clockDate").textContent = `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일 ${weekdays[now.getDay()]}`;
   document.getElementById("clockTime").textContent = `${ampm} ${pad2(h12)}:${pad2(now.getMinutes())}`;
+  checkTabletCalendarDateRollover7355018();
 }
 
 function pressNum(num) { if (busy) return; if (pin.length >= 8) return; pin += num; renderPin(); }
