@@ -25,11 +25,11 @@
   <script src="./web/room-classroom-realtime-7.29.16.js?v=20260801.72916p15"></script>
   <script src="./web/staff-login-firebase-primary-7.32.7.js?v=20260807.73207"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260807-7355014-attendance-tablet-final-convergence">
-<script id="ulim-one-time-cache-clean-7355014">
+<meta name="ulim-build" content="20260808-7355015-no-mixed-roster-strict-date">
+<script id="ulim-one-time-cache-clean-7355015">
 (function (global) {
   'use strict';
-  var key = 'ULIM_ONE_TIME_CACHE_CLEAN_7355014';
+  var key = 'ULIM_ONE_TIME_CACHE_CLEAN_7355015';
   try { if (global.localStorage.getItem(key) === 'Y') return; global.localStorage.setItem(key, 'Y'); } catch (_ignore) {}
   try {
     if (global.caches && typeof global.caches.keys === 'function') {
@@ -38,6 +38,22 @@
       }).catch(function () {});
     }
   } catch (_ignore2) {}
+  // 7.35.5.0.15: do not let exact-date/class/attendance caches from older mixed-source builds repaint the screen.
+  try {
+    [global.localStorage, global.sessionStorage].forEach(function (store) {
+      if (!store) return;
+      for (var i = store.length - 1; i >= 0; i -= 1) {
+        var cacheKey = store.key(i) || '';
+        if (
+          cacheKey.indexOf('ulim_staff_classlist_') === 0 ||
+          cacheKey.indexOf('ulim_admin_classes_v3_exactdate_') === 0 ||
+          cacheKey.indexOf('ulim_staff_fsop_73120_attendance_') === 0
+        ) {
+          store.removeItem(cacheKey);
+        }
+      }
+    });
+  } catch (_ignore3) {}
 })(window);
 </script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2730%27 fill=%27%2322c55e%27/%3E%3Cpath d=%27M32 13a9 9 0 0 0-9 9v11a9 9 0 0 0 18 0V22a9 9 0 0 0-9-9zm-14 19a3 3 0 0 1 6 0v1a8 8 0 0 0 16 0v-1a3 3 0 0 1 6 0v1a14 14 0 0 1-11 13.7V51h7a3 3 0 0 1 0 6H22a3 3 0 0 1 0-6h7v-4.3A14 14 0 0 1 18 33z%27 fill=%27white%27/%3E%3C/svg%3E">
@@ -7334,7 +7350,7 @@ function showAdminPanel(panelId) {
     }
 
     if (panelId === 'adminPanelAttendance') {
-        // 7.35.5.0.14: attendance-admin-integrated-7.35.4.15 is the sole owner.
+        // 7.35.5.0.15: attendance-admin-integrated-7.35.4.16 is the sole owner.
         // Do not reload here when switching tabs; this preserves unsaved edits and prevents duplicate calls.
     }
 
@@ -25483,17 +25499,18 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 
 <!-- ULIM 7.35.5.0.11: non-attendance Firestore runtime + restored dedicated attendance owner. -->
 <script src="./web/ulim-firestore-primary-7.35.5.0.14.js?v=20260807.7355014"></script>
-<script src="./web/attendance-admin-integrated-7.35.4.15.js?v=20260807.7350415"></script>
+<script src="./web/attendance-admin-integrated-7.35.4.16.js?v=20260808.7350416"></script>
 <script src="./web/operational-content-admin-7.35.5.0.11.js?v=20260807.7355011"></script>
 <script src="./web/student-login-notice-and-role-access-7.35.5.0.11.js?v=20260807.7355011"></script>
 <script id="ulim-stable-build-readiness-735506">
 (function (global) {
   'use strict';
-  global.__ULIM_LOADED_BUILD_73550__ = '20260807-7355014-attendance-tablet-final-convergence';
+  global.__ULIM_LOADED_BUILD_73550__ = '20260808-7355015-no-mixed-roster-strict-date';
   global.__ULIM_LOADED_BUILD_7350509__ = true;
   global.__ULIM_LOADED_BUILD_7355011__ = true;
   global.__ULIM_LOADED_BUILD_7355013__ = true;
   global.__ULIM_LOADED_BUILD_7355014__ = true;
+  global.__ULIM_LOADED_BUILD_7355015__ = true;
 
   function verifyRequiredModules735506() {
     var studentReady =
