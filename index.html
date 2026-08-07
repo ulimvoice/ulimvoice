@@ -25,7 +25,7 @@
   <script src="./web/room-classroom-realtime-7.29.16.js?v=20260801.72916p15"></script>
   <script src="./web/staff-login-firebase-primary-7.32.7.js?v=20260807.73207"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260808-7355016-stability-convergence">
+<meta name="ulim-build" content="20260808-7355017-structural-roster-tab-fix">
 <script id="ulim-one-time-cache-clean-7355015">
 (function (global) {
   'use strict';
@@ -5801,10 +5801,47 @@ function activateTabById(tabId) {
     if (content) content.classList.add('active');
 }
 
+function adminReadStaffInfo_() {
+    if (adminInfo && typeof adminInfo === 'object') return adminInfo;
+    if (window.adminInfo && typeof window.adminInfo === 'object') return window.adminInfo;
+    for (const storage of [sessionStorage, localStorage]) {
+        try {
+            const raw = storage.getItem('adminInfo');
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed && typeof parsed === 'object') return parsed;
+            }
+        } catch (ignore) {}
+    }
+    try {
+        const profile = JSON.parse(localStorage.getItem('ulimFirebaseStaffProfile7320') || 'null');
+        if (profile && typeof profile === 'object') return profile;
+    } catch (ignore) {}
+    return null;
+}
+
+function adminHasStaffSession() {
+    const info = adminReadStaffInfo_();
+    if (!info) return false;
+    let legacyToken = '';
+    try { legacyToken = String(adminToken || window.adminToken || sessionStorage.getItem('adminToken') || localStorage.getItem('adminToken') || '').trim(); } catch (ignore) {}
+    let firebaseProfile = null;
+    try { firebaseProfile = JSON.parse(localStorage.getItem('ulimFirebaseStaffProfile7320') || 'null'); } catch (ignore) {}
+    const role = String(info.firebaseRole || info.role || info.adminRole || '').replace(/\s+/g, '').toLowerCase();
+    const staffRole = /teacher|admin|superadmin|강사|관리자|전체관리|원장/.test(role);
+    return !!(legacyToken || (firebaseProfile && staffRole) || (adminModeActive && staffRole));
+}
+window.adminHasStaffSession = adminHasStaffSession;
+window.adminReadStaffInfo_ = adminReadStaffInfo_;
+
 function setAdminTabVisibility() {
     const tab = document.querySelector('.tab[data-tab="tabAdmin"]');
     if (!tab) return;
-    const show = !!(adminModeActive && adminToken && adminInfo);
+    const show = adminHasStaffSession();
+    if (show) {
+        adminInfo = adminReadStaffInfo_() || adminInfo;
+        adminModeActive = true;
+    }
     document.body.classList.toggle('admin-mode', show);
     tab.style.display = show ? '' : 'none';
     if (show) adminEnableAllTabsForAdminMode();
@@ -5824,6 +5861,7 @@ function adminEnableAllTabsForAdminMode() {
         clickedTab.classList.add('active');
         const target = document.getElementById(targetTab);
         if (target) target.classList.add('active');
+        try { localStorage.setItem('ulimActiveTabId', targetTab); } catch (ignore) {}
     };
 
     document.querySelectorAll('.tab').forEach(tab => {
@@ -5832,7 +5870,7 @@ function adminEnableAllTabsForAdminMode() {
         tab.style.opacity = '1';
         tab.style.pointerEvents = 'auto';
         if (isAdminTab) {
-            tab.style.display = (adminModeActive && adminToken && adminInfo) ? '' : 'none';
+            tab.style.display = adminHasStaffSession() ? '' : 'none';
             tab.classList.add('admin-only-tab');
         } else {
             tab.style.display = '';
@@ -5843,9 +5881,13 @@ function adminEnableAllTabsForAdminMode() {
 }
 
 function openAdminPage() {
-    adminModeActive = true;
-    localStorage.setItem('ulimLastMode', 'admin');
-    adminEnableAllTabsForAdminMode();
+    const hasStaff = adminHasStaffSession();
+    adminModeActive = hasStaff;
+    if (hasStaff) adminInfo = adminReadStaffInfo_() || adminInfo;
+    try { localStorage.setItem('ulimLastMode', 'admin'); } catch (ignore) {}
+    setAdminTabVisibility();
+    if (hasStaff) adminEnableAllTabsForAdminMode();
+
     const overlay = document.getElementById('loginOverlay');
     const wrapper = document.querySelector('.wrapper');
     if (overlay) overlay.style.display = 'none';
@@ -5859,16 +5901,19 @@ function openAdminPage() {
     }
 
     const adminTab = document.querySelector('.tab[data-tab="tabAdmin"]');
-    if (adminTab) adminTab.style.display = 'none';
+    if (adminTab) adminTab.style.display = hasStaff ? '' : 'none';
     activateTabById('tabAdmin');
 
     const loginBox = document.getElementById('adminLoginBox');
     const dashboard = document.getElementById('adminDashboard');
 
-    if (adminToken) {
+    if (hasStaff) {
         if (loginBox) loginBox.style.display = 'none';
-        if (dashboard) dashboard.style.display = adminInfo ? 'block' : 'none';
-        adminLoadInitialData();
+        if (dashboard) dashboard.style.display = 'block';
+        applyAdminPermissions();
+        let legacyToken = '';
+        try { legacyToken = String(adminToken || window.adminToken || '').trim(); } catch (ignore) {}
+        if (legacyToken && typeof adminLoadInitialData === 'function') adminLoadInitialData();
     } else {
         if (loginBox) loginBox.style.display = 'block';
         if (dashboard) dashboard.style.display = 'none';
@@ -5876,18 +5921,19 @@ function openAdminPage() {
 }
 
 function adminRoleText() {
-    return String((adminInfo && adminInfo.role) || '').trim();
+    const info = adminReadStaffInfo_() || {};
+    return String(info.firebaseRole || info.role || info.adminRole || info.permission || '').trim();
 }
 
 function adminIsFullAdmin() {
-    const role = adminRoleText().replace(/\s/g, '');
+    const role = adminRoleText().replace(/\s/g, '').toLowerCase();
     if (!role) return false;
-    if (/강사/.test(role) && !/전체|관리자|원장|admin/i.test(role)) return false;
-    return /전체|관리|관리자|원장|admin/i.test(role);
+    if (/teacher|강사/.test(role) && !/superadmin|fulladmin|전체|관리자|원장/.test(role)) return false;
+    return /superadmin|fulladmin|전체관리|전체관리자|최고관리|관리자|원장|^admin$/.test(role);
 }
 
 function adminIsTeacherMode() {
-    return !!adminInfo && !adminIsFullAdmin();
+    return adminHasStaffSession() && !adminIsFullAdmin();
 }
 
 function adminCanonicalizeTeacherText(value) {
@@ -5910,8 +5956,9 @@ function adminNormalizeKoreanName(value) {
 }
 
 function adminTeacherKey() {
-    if (!adminInfo) return '';
-    return adminNormalizeKoreanName(adminInfo.name || adminInfo.id || '');
+    const info = adminReadStaffInfo_();
+    if (!info) return '';
+    return adminNormalizeKoreanName(info.name || info.id || info.adminName || '');
 }
 
 function adminClassBelongsToCurrentTeacher(classItem) {
@@ -5929,8 +5976,10 @@ function adminFilterClassListForRole(classes) {
 }
 
 function applyAdminPermissions() {
+    const staffInfo = adminReadStaffInfo_();
+    if (staffInfo) adminInfo = staffInfo;
     const isFull = adminIsFullAdmin();
-    const isTeacher = !!adminInfo && !isFull;
+    const isTeacher = adminHasStaffSession() && !isFull;
 
     document.body.classList.toggle('teacher-mode', isTeacher);
     document.body.classList.toggle('full-admin-mode', !!adminInfo && isFull);
@@ -5984,6 +6033,12 @@ function applyAdminPermissions() {
     if (adminClassList.length) adminRenderClassSelectors();
     if (adminAttendanceRecords.length) adminRenderAttendanceTable();
     if (adminDailyEvalRows.length) adminRenderDailyEvalRows();
+
+    // Firebase-only 교직원 로그인도 학생용 주요 기능 탭을 동일하게 사용할 수 있습니다.
+    if (adminHasStaffSession()) adminEnableAllTabsForAdminMode();
+    if (typeof window.__ULIM_APPLY_RESERVATION_VISIBILITY_713__ === 'function') {
+        window.__ULIM_APPLY_RESERVATION_VISIBILITY_713__();
+    }
 }
 
 function toggleAdminClassList(id) {
@@ -6442,53 +6497,52 @@ function writeAdminClassListCache(key, classes) {
     } catch (e) {}
 }
 
-function adminClassListContainsExact704_(className, date) {
-    const target = normalizeClassSearchText(className || '');
-    if (!target || target === normalizeClassSearchText('전체반')) return true;
-    return adminGetClassListForDate704_(date).some(item =>
-        normalizeClassSearchText(item && item.className || '') === target
+function adminResolveCanonicalClass704_(className, date, classId = '') {
+    const nameKey = normalizeClassSearchText(className || '');
+    const idKey = String(classId || '').trim();
+    if (!nameKey || nameKey === normalizeClassSearchText('전체반')) return null;
+    const matches = adminGetClassListForDate704_(date).filter(item =>
+        normalizeClassSearchText(item && item.className || '') === nameKey
     );
+    if (idKey) {
+        const exactId = matches.find(item => String(item && (item.classId || item.id) || '').trim() === idKey);
+        if (exactId) return exactId;
+    }
+    return matches.length === 1 ? matches[0] : null;
 }
 
 function adminClearInvalidClassSelection704_(loadedDate) {
     const dateKey = String(loadedDate || '').trim();
     const targets = [
-        {
-            dateId: 'adminAttendanceDate',
-            inputId: 'adminAttendanceClass',
-            displayId: 'adminAttendanceClassDisplay',
-            emptyText: '반 목록에서 선택하거나 검색하세요',
-            type: 'attendance'
-        },
-        {
-            dateId: 'adminDailyEvalDate',
-            inputId: 'adminDailyEvalClass',
-            displayId: 'adminDailyEvalClassDisplay',
-            emptyText: '반 목록에서 선택하거나 검색하세요',
-            type: 'daily'
-        }
+        { dateId: 'adminAttendanceDate', inputId: 'adminAttendanceClass', displayId: 'adminAttendanceClassDisplay', emptyText: '반 목록에서 선택하거나 검색하세요', type: 'attendance' },
+        { dateId: 'adminDailyEvalDate', inputId: 'adminDailyEvalClass', displayId: 'adminDailyEvalClassDisplay', emptyText: '반 목록에서 선택하거나 검색하세요', type: 'daily' }
     ];
 
     targets.forEach(target => {
         const dateEl = document.getElementById(target.dateId);
         if (!dateEl || String(dateEl.value || '').trim() !== dateKey) return;
-
         const input = document.getElementById(target.inputId);
-        const selected = String(input && input.value || '').trim();
-        if (!selected || selected === '전체반' || adminClassListContainsExact704_(selected, dateKey)) return;
+        if (!input) return;
+        const selected = String(input.value || '').trim();
+        const selectedId = String(input.dataset.classId || '').trim();
+        if (!selected) { input.dataset.classId = ''; return; }
+        if (selected === '전체반') { input.dataset.classId = ''; return; }
 
-        input.value = '';
-        const display = document.getElementById(target.displayId);
-        if (display) {
-            display.textContent = target.emptyText;
-            display.classList.add('empty');
+        const resolved = adminResolveCanonicalClass704_(selected, dateKey, selectedId);
+        if (resolved) {
+            input.dataset.classId = String(resolved.classId || resolved.id || '').trim();
+            return;
         }
 
+        input.value = '';
+        input.dataset.classId = '';
+        const display = document.getElementById(target.displayId);
+        if (display) { display.textContent = target.emptyText; display.classList.add('empty'); }
         if (target.type === 'attendance') {
             adminAttendanceRecords = [];
             if (typeof adminRenderAttendanceTable === 'function') adminRenderAttendanceTable();
             const summary = document.getElementById('adminAttendanceSummary');
-            if (summary) summary.textContent = '선택한 날짜에는 출석부에 등록된 수업일이 없습니다.';
+            if (summary) summary.textContent = '선택한 날짜에는 정확히 매칭되는 수업반이 없습니다. 반을 다시 선택해주세요.';
         } else {
             adminDailyEvalRows = [];
             if (typeof adminRenderDailyEvalTable === 'function') adminRenderDailyEvalTable();
@@ -6644,16 +6698,16 @@ function adminRenderClassPicker(inputId, panelId) {
         })
         .slice(0, 120);
 
-    const allClassItem = { className: '전체반', teacher: '', source: 'virtual' };
+    const allClassItem = { classId: '', className: '전체반', teacher: '', source: 'virtual' };
     if (!query || normalizeClassSearchText('전체반').includes(query) || query.includes('전체')) {
         filtered = [allClassItem].concat(filtered.filter(c => c.className !== '전체반'));
     }
 
     let html = '';
 
-    if (queryRaw) {
+    if (queryRaw && inputId === 'noticeClass') {
         html += `
-            <button type="button" class="admin-class-option direct" onclick="adminSelectClass('${escapeJsString(queryRaw)}', '${escapeJsString(inputId)}', '${escapeJsString(panelId)}')">
+            <button type="button" class="admin-class-option direct" onclick="adminSelectClass('${escapeJsString(queryRaw)}', '${escapeJsString(inputId)}', '${escapeJsString(panelId)}', '')">
                 입력한 문구 그대로 사용: ${escapeHtml(queryRaw)}
             </button>
         `;
@@ -6670,7 +6724,7 @@ function adminRenderClassPicker(inputId, panelId) {
             const activeMark = c.className === selectedValue ? ' ✓' : '';
             const teacher = c.teacher ? ` <span style="color:#64748b; font-weight:700;">/ ${escapeHtml(c.teacher)}</span>` : '';
             return `
-                <button type="button" class="admin-class-option" onclick="adminSelectClass('${escapeJsString(c.className)}', '${escapeJsString(inputId)}', '${escapeJsString(panelId)}')">
+                <button type="button" class="admin-class-option" onclick="adminSelectClass('${escapeJsString(c.className)}', '${escapeJsString(inputId)}', '${escapeJsString(panelId)}', '${escapeJsString(c.classId || '')}')">
                     ${escapeHtml(c.className)}${activeMark}${teacher}
                 </button>
             `;
@@ -6692,9 +6746,12 @@ function escapeJsString(value) {
 }
 
 
-function adminSelectClass(className, targetId = 'adminAttendanceClass', panelId = '') {
+function adminSelectClass(className, targetId = 'adminAttendanceClass', panelId = '', classId = '') {
     const el = document.getElementById(targetId);
-    if (el) el.value = className;
+    if (el) {
+        el.value = className;
+        el.dataset.classId = String(classId || '').trim();
+    }
 
     const display = document.getElementById(adminGetClassDisplayId(targetId));
     if (display) {
@@ -6720,12 +6777,17 @@ function adminSelectClass(className, targetId = 'adminAttendanceClass', panelId 
         if (className && className !== '전체반') adminLoadDailyEvalStudents();
     }
     if (targetId === 'noticeClass') adminLoadNoticeTargets(true);
+    if (targetId === 'adminAttendanceClass' && className === '전체반' && typeof window.ulimAttendanceOpenAllClasses735418 === 'function') {
+        window.ulimAttendanceOpenAllClasses735418();
+    }
 }
 
 function adminSelectClassFromDropdown(selectEl, targetId) {
     const value = selectEl ? selectEl.value : '';
     if (!value) return;
-    adminSelectClass(value, targetId);
+    const list = adminGetClassListForInput704_(targetId) || [];
+    const matched = list.find(item => String(item && item.className || '').trim() === String(value).trim());
+    adminSelectClass(value, targetId, '', matched && matched.classId || '');
 }
 
 function adminCloseClassCombosOnOutsideClick(event) {
@@ -12576,7 +12638,7 @@ function getRoomAdminToken630_() {
 
 function getRoomReservationActor630_() {
     const staffToken = getRoomAdminToken630_();
-    const staffInfo = getRoomAdminInfo630_();
+    const staffInfo = (typeof adminReadStaffInfo_ === 'function' ? adminReadStaffInfo_() : null) || getRoomAdminInfo630_();
 
     if (staffToken) {
         const info = staffInfo && typeof staffInfo === 'object' ? staffInfo : {};
@@ -12612,6 +12674,7 @@ function getRoomReservationActor630_() {
             phoneLast4: phone4,
             instructorName: name || '교직원',
             identity: 'staff_' + identity,
+            principalUidV2: String(info.principalUidV2 || info.principalUid || '').trim(),
             params: { adminToken: staffToken }
         };
     }
@@ -13568,14 +13631,7 @@ function ulimRefreshStudentAccountBarVisibility_() {
         };
     }
 
-    const originalOpenAdminPage = window.openAdminPage;
-    if (typeof originalOpenAdminPage === 'function') {
-        window.openAdminPage = function() {
-            const ret = originalOpenAdminPage.apply(this, arguments);
-            setTimeout(run, 0);
-            return ret;
-        };
-    }
+    // 7.35.5.0.17: redundant openAdminPage layout wrapper removed; observer/timer keep UI refresh.
 
     const originalAdminLogout = window.adminLogout;
     if (typeof originalAdminLogout === 'function') {
@@ -16925,16 +16981,19 @@ ${ruleSummary}`, 'success');
     return { token: getLocal('adminToken'), info: info };
   }
   function hasAdminSession(){
+    if (typeof window.adminHasStaffSession === 'function') return window.adminHasStaffSession();
     const a = readAdminSession();
     return !!(a.token && a.info && (a.info.id || a.info.name));
   }
   function applyAdminGlobals(){
     const a = readAdminSession();
+    const info = (typeof window.adminReadStaffInfo_ === 'function' ? window.adminReadStaffInfo_() : null) || a.info || null;
+    const active = hasAdminSession();
     try { adminToken = a.token || adminToken || ''; } catch(e) {}
-    try { adminInfo = a.info || adminInfo || null; } catch(e) {}
-    try { adminModeActive = !!(adminToken && adminInfo); } catch(e) {}
-    if (a.token && a.info) {
-      try { document.body.classList.add('admin-mode'); } catch(e) {}
+    try { adminInfo = info || adminInfo || null; } catch(e) {}
+    try { adminModeActive = active; window.adminModeActive = active; } catch(e) {}
+    try { document.body.classList.toggle('admin-mode', active); } catch(e) {}
+    if (active) {
       try { if (typeof setAdminTabVisibility === 'function') setAdminTabVisibility(); } catch(e) {}
       try { if (typeof applyAdminPermissions === 'function') applyAdminPermissions(); } catch(e) {}
     }
@@ -17763,246 +17822,12 @@ ${ruleSummary}`, 'success');
     try { pronRunEtriAdvancedAnalysis = window.pronRunEtriAdvancedAnalysis; } catch(e) {}
   }
 
-  function isAdminTabAllowed565_() {
-    if (document.body && document.body.classList.contains('admin-mode')) return true;
-    if (document.body && document.body.classList.contains('full-admin-mode')) return true;
-    try { if (localStorage.getItem('adminToken') || localStorage.getItem('adminInfo')) return true; } catch(e) {}
-    return false;
-  }
-
-  function canUseTab565_(tabId) {
-    if (!tabId) return false;
-    const content = document.getElementById(tabId);
-    const tab = document.querySelector('.tab[data-tab="' + tabId + '"]');
-    if (!content || !tab) return false;
-    if (tab.classList.contains('admin-only-tab') && !isAdminTabAllowed565_()) return false;
-    return true;
-  }
-
-  window.ulimActivateTab565_ = function(tabId, save) {
-    let targetId = canUseTab565_(tabId) ? tabId : 'tab1';
-    const targetTab = document.querySelector('.tab[data-tab="' + targetId + '"]');
-    const targetContent = document.getElementById(targetId);
-    if (!targetTab || !targetContent) return;
-    document.querySelectorAll('.tab').forEach(function(x){ x.classList.remove('active'); });
-    document.querySelectorAll('.tab-content').forEach(function(x){ x.classList.remove('active'); });
-    targetTab.classList.add('active');
-    targetContent.classList.add('active');
-    if (save !== false) {
-      try { localStorage.setItem('ulimActiveTabId', targetId); } catch(e) {}
-    }
-  };
-
-  function installTabPersistence565_() {
-    document.querySelectorAll('.tab[data-tab]').forEach(function(t){
-      t.onclick = function(ev) {
-        if (ev) ev.preventDefault();
-        window.ulimActivateTab565_(t.dataset.tab, true);
-        return false;
-      };
-    });
-    let saved = '';
-    try { saved = localStorage.getItem('ulimActiveTabId') || ''; } catch(e) {}
-    if (saved) window.ulimActivateTab565_(saved, false);
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', installTabPersistence565_);
-  } else {
-    installTabPersistence565_();
-  }
-  window.addEventListener('pageshow', function(){
-    let saved = '';
-    try { saved = localStorage.getItem('ulimActiveTabId') || ''; } catch(e) {}
-    if (saved) setTimeout(function(){ window.ulimActivateTab565_(saved, false); }, 0);
-  });
-  setTimeout(installTabPersistence565_, 500);
-  setTimeout(function(){
-    let saved = '';
-    try { saved = localStorage.getItem('ulimActiveTabId') || ''; } catch(e) {}
-    if (saved) window.ulimActivateTab565_(saved, false);
-  }, 1200);
+  // 7.35.5.0.17: tab ownership moved to the canonical main-tab controller above.
 
 })();</script>
 
 
-<script id="ulim-tab-persist-no-flicker-5-66">
-(function(){
-  if (window.__ULIM_TAB_PERSIST_NO_FLICKER_566__) return;
-  window.__ULIM_TAB_PERSIST_NO_FLICKER_566__ = true;
-  window.ULIM_TAB_PERSIST_VERSION = '2026.06.06.566.01';
-
-  function isAdminMode566_() {
-    try {
-      return !!(
-        (document.body && (document.body.classList.contains('admin-mode') || document.body.classList.contains('full-admin-mode'))) ||
-        localStorage.getItem('adminToken') ||
-        localStorage.getItem('adminInfo')
-      );
-    } catch (e) {
-      return false;
-    }
-  }
-
-  function isTabUsable566_(tabId) {
-    if (!tabId) return false;
-    const tab = document.querySelector('.tab[data-tab="' + tabId + '"]');
-    const content = document.getElementById(tabId);
-    if (!tab || !content) return false;
-    if (tabId === 'tabAdmin' && !isAdminMode566_()) return false;
-    if (tab.style.display === 'none') return false;
-    if (tab.style.pointerEvents === 'none') return false;
-    return true;
-  }
-
-  function getSavedTab566_(isAuthenticated) {
-    let saved = '';
-    try { saved = localStorage.getItem('ulimActiveTabId') || ''; } catch (e) {}
-    if (!saved) saved = 'tab1';
-    if (!isAuthenticated && saved !== 'tab1') return 'tab1';
-    if (!isTabUsable566_(saved)) return 'tab1';
-    return saved;
-  }
-
-  window.ulimActivateTab566_ = function(tabId, save) {
-    let targetId = tabId || 'tab1';
-
-    if (targetId === 'tabAdmin' && !isAdminMode566_()) {
-      try { if (typeof openAdminPage === 'function') openAdminPage(); } catch (e) {}
-      return false;
-    }
-
-    if (!isTabUsable566_(targetId)) targetId = 'tab1';
-
-    const targetTab = document.querySelector('.tab[data-tab="' + targetId + '"]');
-    const targetContent = document.getElementById(targetId);
-    if (!targetTab || !targetContent) return false;
-
-    document.querySelectorAll('.tab').forEach(function(x){ x.classList.remove('active'); });
-    document.querySelectorAll('.tab-content').forEach(function(x){ x.classList.remove('active'); });
-
-    targetTab.classList.add('active');
-    targetContent.classList.add('active');
-
-    if (save !== false) {
-      try { localStorage.setItem('ulimActiveTabId', targetId); } catch (e) {}
-    }
-    return true;
-  };
-
-  window.ulimActivateTab565_ = window.ulimActivateTab566_;
-
-  function installTabClickHandlers566_() {
-    document.querySelectorAll('.tab[data-tab]').forEach(function(tab){
-      tab.onclick = function(ev) {
-        if (ev) ev.preventDefault();
-        const targetTab = tab.dataset.tab || 'tab1';
-        if (targetTab === 'tabAdmin' && !isAdminMode566_()) {
-          try { if (typeof openAdminPage === 'function') openAdminPage(); } catch (e) {}
-          return false;
-        }
-        window.ulimActivateTab566_(targetTab, true);
-        return false;
-      };
-    });
-  }
-
-  window.showMainContent = function(isAuthenticated) {
-    if (!window.adminModeActive) {
-      try { localStorage.setItem('ulimLastMode', isAuthenticated ? 'student' : 'guest'); } catch (e) {}
-    }
-
-    try { window.adminModeActive = false; } catch (e) {}
-    try { adminModeActive = false; } catch (e) {}
-    if (document.body) document.body.classList.remove('admin-mode');
-    try { if (typeof setAdminTabVisibility === 'function') setAdminTabVisibility(); } catch (e) {}
-
-    const loginOverlay = document.getElementById('loginOverlay');
-    if (loginOverlay) loginOverlay.style.display = 'none';
-
-    const wrapper = document.querySelector('.wrapper');
-    if (wrapper) {
-      wrapper.style.visibility = 'hidden';
-      wrapper.style.display = 'flex';
-      wrapper.style.flexDirection = 'column';
-      wrapper.style.width = '95%';
-      wrapper.style.maxWidth = '1200px';
-      wrapper.style.margin = '0 auto';
-      wrapper.style.padding = '20px 0';
-    }
-
-    const tabs = document.querySelectorAll('.tab');
-    document.querySelectorAll('.tab').forEach(function(x){ x.classList.remove('active'); });
-    document.querySelectorAll('.tab-content').forEach(function(x){ x.classList.remove('active'); });
-
-    tabs.forEach(function(tab, i){
-      const targetTab = tab.dataset ? tab.dataset.tab : '';
-      const tabContent = targetTab ? document.getElementById(targetTab) : null;
-      const isAdminTab = targetTab === 'tabAdmin';
-
-      tab.onclick = null;
-
-      if (isAdminTab) {
-        tab.style.display = isAdminMode566_() ? '' : 'none';
-        tab.onclick = function(ev) {
-          if (ev) ev.preventDefault();
-          if (!isAdminMode566_()) {
-            try { if (typeof openAdminPage === 'function') openAdminPage(); } catch (e) {}
-            return false;
-          }
-          window.ulimActivateTab566_('tabAdmin', true);
-          return false;
-        };
-        if (tabContent) tabContent.style.display = '';
-        return;
-      }
-
-      if (!isAuthenticated && i !== 0) {
-        tab.onclick = function(){ alert('학생 인증 후 이용 가능한 기능입니다.'); return false; };
-        tab.style.opacity = '0.5';
-        tab.style.pointerEvents = 'none';
-        if (tabContent) tabContent.style.display = 'none';
-      } else {
-        tab.onclick = function(ev) {
-          if (ev) ev.preventDefault();
-          window.ulimActivateTab566_(targetTab, true);
-          return false;
-        };
-        tab.style.opacity = '1';
-        tab.style.pointerEvents = 'auto';
-        tab.style.display = '';
-        if (tabContent) tabContent.style.display = '';
-      }
-    });
-
-    const targetId = getSavedTab566_(!!isAuthenticated);
-    window.ulimActivateTab566_(targetId, false);
-    installTabClickHandlers566_();
-
-    if (wrapper) wrapper.style.visibility = 'visible';
-
-    if (isAuthenticated) {
-      try { setTimeout(showNoticeIfNeeded, 0); } catch (e) {}
-    }
-  };
-
-  try { showMainContent = window.showMainContent; } catch (e) {}
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', installTabClickHandlers566_);
-  } else {
-    installTabClickHandlers566_();
-  }
-
-  window.addEventListener('pageshow', function(){
-    let saved = '';
-    try { saved = localStorage.getItem('ulimActiveTabId') || ''; } catch (e) {}
-    if (saved) {
-      setTimeout(function(){ window.ulimActivateTab566_(saved, false); }, 0);
-    }
-  });
-
-})();</script>
+<!-- 7.35.5.0.17: removed obsolete 5.66 tab/showMainContent override; canonical controller owns tabs. -->
 
 
 <script id="ulim-student-identity-lock-5-67">
@@ -20938,6 +20763,7 @@ ${ruleSummary}`, 'success');
   }
   function getAdminInfoAny(){ return parseAdminInfo(readAdmin('adminInfo')); }
   function hasAdminSession(){
+    if (typeof window.adminHasStaffSession === 'function') return window.adminHasStaffSession();
     var info = getAdminInfoAny();
     return !!(readAdmin('adminToken') && info && (info.id || info.name));
   }
@@ -21094,13 +20920,12 @@ ${ruleSummary}`, 'success');
   }
 
   function applyAdminGlobals(){
-    var info = getAdminInfoAny();
-    try { adminToken = readAdmin('adminToken') || ''; } catch(e) {}
-    try { adminInfo = info; } catch(e) {}
-    try { adminModeActive = !!(readAdmin('adminToken') && info); } catch(e) {}
-    if (document.body) {
-      document.body.classList.toggle('admin-mode', !!(readAdmin('adminToken') && info));
-    }
+    var info = (typeof window.adminReadStaffInfo_ === 'function' ? window.adminReadStaffInfo_() : null) || getAdminInfoAny();
+    var active = hasAdminSession();
+    try { adminToken = readAdmin('adminToken') || adminToken || ''; } catch(e) {}
+    try { adminInfo = info || adminInfo || null; } catch(e) {}
+    try { adminModeActive = active; window.adminModeActive = active; } catch(e) {}
+    if (document.body) document.body.classList.toggle('admin-mode', active);
   }
 
   function showWrapper(){
@@ -21140,61 +20965,9 @@ ${ruleSummary}`, 'success');
   window.setAdminSecureSession_ = function(data){ saveAdminSession(data); };
   try { setAdminSecureSession_ = window.setAdminSecureSession_; } catch(e) {}
 
-  var originalSetAdminTabVisibility = window.setAdminTabVisibility;
-  window.setAdminTabVisibility = function(){
-    if (hasAdminSession()) applyAdminGlobals();
-    setAdminTabVisibleByAuth();
-    if (hasAdminSession() && typeof window.adminEnableAllTabsForAdminMode === 'function') {
-      window.adminEnableAllTabsForAdminMode();
-    }
-  };
-  try { setAdminTabVisibility = window.setAdminTabVisibility; } catch(e) {}
+  // 7.35.5.0.17: canonical setAdminTabVisibility/adminEnableAllTabsForAdminMode are not redefined here.
 
-  var originalAdminEnableAllTabs = window.adminEnableAllTabsForAdminMode;
-  window.adminEnableAllTabsForAdminMode = function(){
-    if (!hasAdminSession()) {
-      setAdminTabVisibleByAuth();
-      installSecureTabGate();
-      return false;
-    }
-    applyAdminGlobals();
-    if (typeof originalAdminEnableAllTabs === 'function') {
-      return originalAdminEnableAllTabs.apply(this, arguments);
-    }
-    return true;
-  };
-  try { adminEnableAllTabsForAdminMode = window.adminEnableAllTabsForAdminMode; } catch(e) {}
-
-  window.openAdminPage = function(){
-    injectAutoLoginCheckboxes();
-    showWrapper();
-
-    var loginBox = document.getElementById('adminLoginBox');
-    var dashboard = document.getElementById('adminDashboard');
-
-    if (hasAdminSession()) {
-      applyAdminGlobals();
-      setAdminTabVisibleByAuth();
-      if (typeof window.adminEnableAllTabsForAdminMode === 'function') window.adminEnableAllTabsForAdminMode();
-      activateTab('tabAdmin');
-      if (loginBox) loginBox.style.display = 'none';
-      if (dashboard) dashboard.style.display = 'none';
-      if (typeof window.adminLoadInitialData === 'function') window.adminLoadInitialData();
-    } else {
-      try { adminToken = ''; adminInfo = null; adminModeActive = false; } catch(e) {}
-      if (document.body) document.body.classList.remove('admin-mode','teacher-mode','full-admin-mode','admin-booting');
-      setAdminTabVisibleByAuth();
-      activateTab('tabAdmin');
-      if (loginBox) loginBox.style.display = 'block';
-      if (dashboard) dashboard.style.display = 'none';
-      var adminTab = document.querySelector('.tab[data-tab="tabAdmin"]');
-      if (adminTab) adminTab.style.display = 'none';
-    }
-    installSecureTabGate();
-    try { if (typeof renderStudentAccountBar_ === 'function') renderStudentAccountBar_(); } catch(e) {}
-    return false;
-  };
-  try { openAdminPage = window.openAdminPage; } catch(e) {}
+  // 7.35.5.0.17: canonical openAdminPage owns staff-tab navigation.
 
   window.getStudentSessionToken_ = function(){
     var token = readStudent('studentSessionToken') || '';
@@ -21453,15 +21226,7 @@ ${ruleSummary}`, 'success');
     }
   }, true);
 
-  var oldUlimActivate566 = window.ulimActivateTab566_;
-  window.ulimActivateTab566_ = function(tabId, save){
-    if (!canAccessTab(tabId)) {
-      if (tabId === 'tabAdmin') window.openAdminPage();
-      return false;
-    }
-    return secureActivateTab(tabId, save);
-  };
-  window.ulimActivateTab565_ = window.ulimActivateTab566_;
+  // 7.35.5.0.17: obsolete 5.65/5.66 activation aliases removed.
 
   function boot592(){
     injectAutoLoginCheckboxes();
@@ -24774,24 +24539,7 @@ body {
 })();</script>
 
 
-<script id="ulim-room-auth-diagnostic-6-30-final">
-(function () {
-  'use strict';
-  if (window.__ULIM_ROOM_AUTH_DIAGNOSTIC_630_FINAL__) return;
-  window.__ULIM_ROOM_AUTH_DIAGNOSTIC_630_FINAL__ = true;
-
-  const original = window.getRoomReservationActor630_;
-  if (typeof original !== 'function') return;
-
-  window.getRoomReservationActor630_ = function () {
-    const actor = original.apply(this, arguments);
-    try {
-    } catch (ignore) {}
-    return actor;
-  };
-
-  try { getRoomReservationActor630_ = window.getRoomReservationActor630_; } catch (ignore) {}
-})();</script>
+<!-- 7.35.5.0.17: removed no-op room actor diagnostic wrapper. -->
 <script>window.__ULIM_EXACT_ATTENDANCE_DATE_704__ = true; window.__ULIM_AI_START_NOTICE_704__ = true;</script>
 <style id="ulim-uidv2-reservation-visibility-7-13">
 /*
@@ -24978,6 +24726,7 @@ body.full-admin-mode #adminPanelRoom .admin-full-only {
   }
 
   function staffSession713_() {
+    if (typeof window.adminHasStaffSession === 'function') return window.adminHasStaffSession();
     const info = currentAdminInfo713_();
     return !!(
       currentAdminToken713_() &&
@@ -25108,187 +24857,7 @@ body.full-admin-mode #adminPanelRoom .admin-full-only {
     }
   }
 
-  const originalAdminRoleText713_ =
-    typeof window.adminRoleText === 'function'
-      ? window.adminRoleText
-      : (
-          typeof adminRoleText === 'function'
-            ? adminRoleText
-            : null
-        );
-
-  window.adminRoleText = function () {
-    const info = currentAdminInfo713_();
-    const roles = roleCandidates713_(info);
-
-    if (roles.length) return roles[0];
-
-    if (originalAdminRoleText713_) {
-      try {
-        return String(
-          originalAdminRoleText713_.apply(this, arguments) ||
-          ''
-        ).trim();
-      } catch (ignore) {}
-    }
-
-    return '';
-  };
-
-  try {
-    adminRoleText = window.adminRoleText;
-  } catch (ignore) {}
-
-  const originalAdminIsFull713_ =
-    typeof window.adminIsFullAdmin === 'function'
-      ? window.adminIsFullAdmin
-      : (
-          typeof adminIsFullAdmin === 'function'
-            ? adminIsFullAdmin
-            : null
-        );
-
-  window.__ULIM_ORIGINAL_ADMIN_IS_FULL_713__ =
-    originalAdminIsFull713_;
-
-  window.adminIsFullAdmin = function () {
-    return isFullAdmin713_();
-  };
-
-  try {
-    adminIsFullAdmin = window.adminIsFullAdmin;
-  } catch (ignore) {}
-
-  const originalApplyPermissions713_ =
-    typeof window.applyAdminPermissions === 'function'
-      ? window.applyAdminPermissions
-      : (
-          typeof applyAdminPermissions === 'function'
-            ? applyAdminPermissions
-            : null
-        );
-
-  if (originalApplyPermissions713_) {
-    window.applyAdminPermissions = function () {
-      const result =
-        originalApplyPermissions713_.apply(this, arguments);
-      applyReservationVisibility713_();
-      return result;
-    };
-
-    try {
-      applyAdminPermissions = window.applyAdminPermissions;
-    } catch (ignore) {}
-  }
-
-  const originalEnableTabs713_ =
-    typeof window.adminEnableAllTabsForAdminMode === 'function'
-      ? window.adminEnableAllTabsForAdminMode
-      : (
-          typeof adminEnableAllTabsForAdminMode === 'function'
-            ? adminEnableAllTabsForAdminMode
-            : null
-        );
-
-  if (originalEnableTabs713_) {
-    window.adminEnableAllTabsForAdminMode = function () {
-      const result =
-        originalEnableTabs713_.apply(this, arguments);
-      applyReservationVisibility713_();
-      return result;
-    };
-
-    try {
-      adminEnableAllTabsForAdminMode =
-        window.adminEnableAllTabsForAdminMode;
-    } catch (ignore) {}
-  }
-
-  const originalInitialLoad713_ =
-    typeof window.adminLoadInitialData === 'function'
-      ? window.adminLoadInitialData
-      : (
-          typeof adminLoadInitialData === 'function'
-            ? adminLoadInitialData
-            : null
-        );
-
-  if (originalInitialLoad713_) {
-    window.adminLoadInitialData = async function () {
-      const result =
-        await originalInitialLoad713_.apply(this, arguments);
-      applyReservationVisibility713_();
-      return result;
-    };
-
-    try {
-      adminLoadInitialData = window.adminLoadInitialData;
-    } catch (ignore) {}
-  }
-
-  const originalRoomActor713_ =
-    typeof window.getRoomReservationActor630_ === 'function'
-      ? window.getRoomReservationActor630_
-      : (
-          typeof getRoomReservationActor630_ === 'function'
-            ? getRoomReservationActor630_
-            : null
-        );
-
-  if (originalRoomActor713_) {
-    window.getRoomReservationActor630_ = function () {
-      const actor =
-        originalRoomActor713_.apply(this, arguments) || {};
-
-      if (actor.authenticated) return actor;
-
-      const token = currentAdminToken713_();
-      const info = currentAdminInfo713_();
-
-      if (!token || !staffSession713_()) return actor;
-
-      const name = String(
-        info.name ||
-        info.adminName ||
-        info.id ||
-        info.adminId ||
-        '교직원'
-      ).trim();
-
-      const accountUid = String(
-        info.accountUid ||
-        info.adminUid ||
-        info.id ||
-        info.adminId ||
-        ''
-      ).trim();
-
-      const principalUid = principalUid713_(info);
-
-      return {
-        authenticated: true,
-        type: 'staff',
-        name: name,
-        phoneLast4: String(info.phone || '')
-          .replace(/[^0-9]/g, '')
-          .slice(-4),
-        instructorName: name,
-        identity:
-          'staff_' +
-          String(accountUid || principalUid || name)
-            .replace(/[^0-9A-Za-z가-힣_-]/g, '_'),
-        principalUidV2: principalUid,
-        params: {
-          adminToken: token
-        }
-      };
-    };
-
-    try {
-      getRoomReservationActor630_ =
-        window.getRoomReservationActor630_;
-    } catch (ignore) {}
-  }
+  // 7.35.5.0.17: canonical role/permission/tab/room actor functions stay single-owner.
 
   function boot713_() {
     applyReservationVisibility713_();
@@ -25499,19 +25068,20 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 
 <!-- ULIM 7.35.5.0.11: non-attendance Firestore runtime + restored dedicated attendance owner. -->
 <script src="./web/ulim-firestore-primary-7.35.5.0.16.js?v=20260808.7355016"></script>
-<script src="./web/attendance-admin-integrated-7.35.4.17.js?v=20260808.7350417"></script>
+<script src="./web/attendance-admin-integrated-7.35.4.18.js?v=20260808.7350418"></script>
 <script src="./web/operational-content-admin-7.35.5.0.11.js?v=20260807.7355011"></script>
 <script src="./web/student-login-notice-and-role-access-7.35.5.0.11.js?v=20260807.7355011"></script>
 <script id="ulim-stable-build-readiness-735506">
 (function (global) {
   'use strict';
-  global.__ULIM_LOADED_BUILD_73550__ = '20260808-7355016-stability-convergence';
+  global.__ULIM_LOADED_BUILD_73550__ = '20260808-7355017-structural-roster-tab-fix';
   global.__ULIM_LOADED_BUILD_7350509__ = true;
   global.__ULIM_LOADED_BUILD_7355011__ = true;
   global.__ULIM_LOADED_BUILD_7355013__ = true;
   global.__ULIM_LOADED_BUILD_7355014__ = true;
   global.__ULIM_LOADED_BUILD_7355015__ = true;
   global.__ULIM_LOADED_BUILD_7355016__ = true;
+  global.__ULIM_LOADED_BUILD_7355017__ = true;
 
   function verifyRequiredModules735506() {
     var studentReady =
