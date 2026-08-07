@@ -25,7 +25,7 @@
   <script src="./web/room-classroom-realtime-7.29.16.js?v=20260801.72916p15"></script>
   <script src="./web/staff-login-firebase-primary-7.32.7.js?v=20260807.73207"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260808-7355017-structural-roster-tab-fix">
+<meta name="ulim-build" content="20260808-7355018-class-roster-attno-tablet-date-fix">
 <script id="ulim-one-time-cache-clean-7355015">
 (function (global) {
   'use strict';
@@ -6677,6 +6677,29 @@ function adminBuildNoticeClassList() {
     return Array.from(map.values()).sort((a, b) => String(a.className).localeCompare(String(b.className), 'ko'));
 }
 
+function adminBindClassPickerOptions(inputId, panelId) {
+    const optionsBox = document.getElementById(panelId + 'Options');
+    if (!optionsBox || optionsBox.dataset.ulimClassPickerBound === '1') return;
+
+    optionsBox.dataset.ulimClassPickerBound = '1';
+    optionsBox.addEventListener('click', event => {
+        const button = event.target && event.target.closest
+            ? event.target.closest('.admin-class-option[data-class-name]')
+            : null;
+        if (!button || !optionsBox.contains(button)) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        adminSelectClass(
+            button.dataset.className || '',
+            inputId,
+            panelId,
+            button.dataset.classId || ''
+        );
+    });
+}
+
 function adminRenderClassPicker(inputId, panelId) {
     const panel = document.getElementById(panelId);
     const optionsBox = document.getElementById(panelId + 'Options');
@@ -6707,7 +6730,10 @@ function adminRenderClassPicker(inputId, panelId) {
 
     if (queryRaw && inputId === 'noticeClass') {
         html += `
-            <button type="button" class="admin-class-option direct" onclick="adminSelectClass('${escapeJsString(queryRaw)}', '${escapeJsString(inputId)}', '${escapeJsString(panelId)}', '')">
+            <button type="button"
+                    class="admin-class-option direct"
+                    data-class-name="${escapeHtml(queryRaw)}"
+                    data-class-id="">
                 입력한 문구 그대로 사용: ${escapeHtml(queryRaw)}
             </button>
         `;
@@ -6724,7 +6750,10 @@ function adminRenderClassPicker(inputId, panelId) {
             const activeMark = c.className === selectedValue ? ' ✓' : '';
             const teacher = c.teacher ? ` <span style="color:#64748b; font-weight:700;">/ ${escapeHtml(c.teacher)}</span>` : '';
             return `
-                <button type="button" class="admin-class-option" onclick="adminSelectClass('${escapeJsString(c.className)}', '${escapeJsString(inputId)}', '${escapeJsString(panelId)}', '${escapeJsString(c.classId || '')}')">
+                <button type="button"
+                        class="admin-class-option"
+                        data-class-name="${escapeHtml(c.className)}"
+                        data-class-id="${escapeHtml(c.classId || '')}">
                     ${escapeHtml(c.className)}${activeMark}${teacher}
                 </button>
             `;
@@ -6732,6 +6761,7 @@ function adminRenderClassPicker(inputId, panelId) {
     }
 
     optionsBox.innerHTML = html;
+    adminBindClassPickerOptions(inputId, panelId);
 }
 
 function normalizeClassSearchText(value) {
@@ -6747,10 +6777,26 @@ function escapeJsString(value) {
 
 
 function adminSelectClass(className, targetId = 'adminAttendanceClass', panelId = '', classId = '') {
+    let resolvedClassId = String(classId || '').trim();
+
+    if (
+        !resolvedClassId &&
+        className &&
+        className !== '전체반' &&
+        (targetId === 'adminAttendanceClass' || targetId === 'adminDailyEvalClass')
+    ) {
+        const dateId = targetId === 'adminDailyEvalClass' ? 'adminDailyEvalDate' : 'adminAttendanceDate';
+        const dateValue = document.getElementById(dateId)?.value || '';
+        const resolved = typeof adminResolveCanonicalClass704_ === 'function'
+            ? adminResolveCanonicalClass704_(className, dateValue, '')
+            : null;
+        resolvedClassId = String(resolved && (resolved.classId || resolved.id) || '').trim();
+    }
+
     const el = document.getElementById(targetId);
     if (el) {
         el.value = className;
-        el.dataset.classId = String(classId || '').trim();
+        el.dataset.classId = resolvedClassId;
     }
 
     const display = document.getElementById(adminGetClassDisplayId(targetId));
@@ -6769,16 +6815,44 @@ function adminSelectClass(className, targetId = 'adminAttendanceClass', panelId 
         document.activeElement.blur();
     }
 
-    if (targetId === 'adminAttendanceClass' && className && className !== '전체반') {
-        adminLoadAttendanceSnapshot(false);
+    if (targetId === 'adminAttendanceClass') {
+        if (className === '전체반' && typeof window.ulimAttendanceOpenAllClasses735419 === 'function') {
+            window.ulimAttendanceOpenAllClasses735419();
+            return;
+        }
+        if (className) {
+            adminLoadAttendanceSnapshot(false);
+        }
+        return;
     }
+
     if (targetId === 'adminDailyEvalClass') {
-        adminRenderDailyEvalTable();
-        if (className && className !== '전체반') adminLoadDailyEvalStudents();
+        adminDailyEvalRows = [];
+        if (typeof dailyCommonLessonMemory !== 'undefined') {
+            dailyCommonLessonMemory = {
+                key: typeof getDailyContextKey_ === 'function' ? getDailyContextKey_() : '',
+                value: ''
+            };
+        }
+
+        const wrap = document.getElementById('adminDailyEvalTableWrap');
+        if (wrap) {
+            wrap.innerHTML = className && className !== '전체반'
+                ? '<div class="admin-data-guard-message">선택한 반의 학생을 불러오는 중입니다...</div>'
+                : '';
+        }
+        if (typeof setDraftStatus_ === 'function') setDraftStatus_('');
+
+        if (className && className !== '전체반') {
+            adminLoadDailyEvalStudents();
+        } else {
+            adminRenderDailyEvalTable();
+        }
+        return;
     }
-    if (targetId === 'noticeClass') adminLoadNoticeTargets(true);
-    if (targetId === 'adminAttendanceClass' && className === '전체반' && typeof window.ulimAttendanceOpenAllClasses735418 === 'function') {
-        window.ulimAttendanceOpenAllClasses735418();
+
+    if (targetId === 'noticeClass') {
+        adminLoadNoticeTargets(true);
     }
 }
 
@@ -7412,7 +7486,7 @@ function showAdminPanel(panelId) {
     }
 
     if (panelId === 'adminPanelAttendance') {
-        // 7.35.5.0.16: attendance-admin-integrated-7.35.4.17 is the sole attendance owner.
+        // 7.35.5.0.18: attendance-admin-integrated-7.35.4.19 is the sole attendance owner.
         // Do not reload here when switching tabs; this preserves unsaved edits and prevents duplicate calls.
     }
 
@@ -19428,39 +19502,6 @@ ${ruleSummary}`, 'success');
         }
     };
 
-    const originalAdminSelectClass = window.adminSelectClass;
-    if (typeof originalAdminSelectClass === 'function') {
-        window.adminSelectClass = function(className, targetId, panelId) {
-            if (targetId === 'adminDailyEvalClass') {
-                const el = document.getElementById(targetId);
-                if (el) el.value = className;
-
-                const display = document.getElementById(typeof adminGetClassDisplayId === 'function' ? adminGetClassDisplayId(targetId) : 'adminDailyEvalClassDisplay');
-                if (display) {
-                    display.textContent = className || '반 목록에서 선택하거나 검색하세요';
-                    display.classList.toggle('empty', !className);
-                }
-
-                const search = document.getElementById(typeof adminGetClassSearchInputId === 'function' ? adminGetClassSearchInputId(targetId) : 'adminDailyEvalClassSearch');
-                if (search) search.value = '';
-
-                const panel = panelId ? document.getElementById(panelId) : null;
-                if (panel) panel.classList.remove('open');
-
-                adminDailyEvalRows = [];
-                dailyCommonLessonMemory = { key: getDailyContextKey_(), value: '' };
-                const wrap = document.getElementById('adminDailyEvalTableWrap');
-                if (wrap) wrap.innerHTML = '<div class="admin-data-guard-message">선택한 반의 학생을 불러오는 중입니다...</div>';
-                setDraftStatus_('');
-
-                if (className && className !== '전체반') adminLoadDailyEvalStudents();
-                else adminRenderDailyEvalTable();
-                return;
-            }
-            return originalAdminSelectClass.apply(this, arguments);
-        };
-    }
-
     const originalAdminLogin = window.adminLogin;
     window.adminLogin = async function() {
         const id = document.getElementById('adminIdInput')?.value.trim() || '';
@@ -24988,7 +25029,7 @@ window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = false;
 
 <!-- ULIM 7.33.1: stable Firebase token guard + clean console baseline. -->
 <script src="./web/staff-account-admin-7.34.3.6.js?v=20260801.734036"></script>
-<script src="./web/student-master-admin-7.35.5.0.16.js?v=20260808.7355016"></script>
+<script src="./web/student-master-admin-7.35.5.0.18.js?v=20260808.7355018"></script>
 <!-- ULIM 7.35.4.7: compact student management UI. -->
 <script src="./web/student-management-ui-7.35.4.10.js?v=20260806.7350506"></script>
 <script id="ulim-general-teacher-firebase-auth-bootstrap-7-31-5">
@@ -25068,13 +25109,13 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 
 <!-- ULIM 7.35.5.0.11: non-attendance Firestore runtime + restored dedicated attendance owner. -->
 <script src="./web/ulim-firestore-primary-7.35.5.0.16.js?v=20260808.7355016"></script>
-<script src="./web/attendance-admin-integrated-7.35.4.18.js?v=20260808.7350418"></script>
+<script src="./web/attendance-admin-integrated-7.35.4.19.js?v=20260808.7350419"></script>
 <script src="./web/operational-content-admin-7.35.5.0.11.js?v=20260807.7355011"></script>
 <script src="./web/student-login-notice-and-role-access-7.35.5.0.11.js?v=20260807.7355011"></script>
 <script id="ulim-stable-build-readiness-735506">
 (function (global) {
   'use strict';
-  global.__ULIM_LOADED_BUILD_73550__ = '20260808-7355017-structural-roster-tab-fix';
+  global.__ULIM_LOADED_BUILD_73550__ = '20260808-7355018-class-roster-attno-tablet-date-fix';
   global.__ULIM_LOADED_BUILD_7350509__ = true;
   global.__ULIM_LOADED_BUILD_7355011__ = true;
   global.__ULIM_LOADED_BUILD_7355013__ = true;
