@@ -25,7 +25,7 @@
   <script src="./web/room-classroom-realtime-7.29.16.js?v=20260801.72916p15"></script>
   <script src="./web/staff-login-firebase-primary-7.32.7.js?v=20260807.73207"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260808-7355015-no-mixed-roster-strict-date">
+<meta name="ulim-build" content="20260808-7355016-stability-convergence">
 <script id="ulim-one-time-cache-clean-7355015">
 (function (global) {
   'use strict';
@@ -7350,7 +7350,7 @@ function showAdminPanel(panelId) {
     }
 
     if (panelId === 'adminPanelAttendance') {
-        // 7.35.5.0.15: attendance-admin-integrated-7.35.4.16 is the sole owner.
+        // 7.35.5.0.16: attendance-admin-integrated-7.35.4.17 is the sole attendance owner.
         // Do not reload here when switching tabs; this preserves unsaved edits and prevents duplicate calls.
     }
 
@@ -25419,7 +25419,7 @@ window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = false;
 
 <!-- ULIM 7.33.1: stable Firebase token guard + clean console baseline. -->
 <script src="./web/staff-account-admin-7.34.3.6.js?v=20260801.734036"></script>
-<script src="./web/student-master-admin-7.35.5.0.js?v=20260806.7350506"></script>
+<script src="./web/student-master-admin-7.35.5.0.16.js?v=20260808.7355016"></script>
 <!-- ULIM 7.35.4.7: compact student management UI. -->
 <script src="./web/student-management-ui-7.35.4.10.js?v=20260806.7350506"></script>
 <script id="ulim-general-teacher-firebase-auth-bootstrap-7-31-5">
@@ -25498,19 +25498,20 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 
 
 <!-- ULIM 7.35.5.0.11: non-attendance Firestore runtime + restored dedicated attendance owner. -->
-<script src="./web/ulim-firestore-primary-7.35.5.0.14.js?v=20260807.7355014"></script>
-<script src="./web/attendance-admin-integrated-7.35.4.16.js?v=20260808.7350416"></script>
+<script src="./web/ulim-firestore-primary-7.35.5.0.16.js?v=20260808.7355016"></script>
+<script src="./web/attendance-admin-integrated-7.35.4.17.js?v=20260808.7350417"></script>
 <script src="./web/operational-content-admin-7.35.5.0.11.js?v=20260807.7355011"></script>
 <script src="./web/student-login-notice-and-role-access-7.35.5.0.11.js?v=20260807.7355011"></script>
 <script id="ulim-stable-build-readiness-735506">
 (function (global) {
   'use strict';
-  global.__ULIM_LOADED_BUILD_73550__ = '20260808-7355015-no-mixed-roster-strict-date';
+  global.__ULIM_LOADED_BUILD_73550__ = '20260808-7355016-stability-convergence';
   global.__ULIM_LOADED_BUILD_7350509__ = true;
   global.__ULIM_LOADED_BUILD_7355011__ = true;
   global.__ULIM_LOADED_BUILD_7355013__ = true;
   global.__ULIM_LOADED_BUILD_7355014__ = true;
   global.__ULIM_LOADED_BUILD_7355015__ = true;
+  global.__ULIM_LOADED_BUILD_7355016__ = true;
 
   function verifyRequiredModules735506() {
     var studentReady =
