@@ -9,7 +9,7 @@
 <link rel="dns-prefetch" href="https://script.googleusercontent.com">
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<meta name="ulim-tablet-build" content="20260804-735413-dynamic-classroom-usage-log" />
+<meta name="ulim-tablet-build" content="20260807-7355011-firestore-kiosk-popup-ui" />
 <title>울림연기학원 등하원 체크 2026.06.06.046.01</title>
 <style>
   :root {
@@ -399,6 +399,16 @@ body {
   }
 }
 
+
+/* 7.35.5.0.11: 키패드 확대 + 상시 출결문구 카드 제거 */
+.status-card{display:none!important}
+.card{padding:clamp(20px,2.4vw,30px)!important}
+.pin-display{height:clamp(70px,8vh,88px)!important;font-size:clamp(34px,4vw,46px)!important}
+.keypad{gap:clamp(10px,1.4vw,16px)!important}
+.num-btn{height:clamp(68px,8.2vh,86px)!important;font-size:clamp(29px,3.2vw,38px)!important;border-radius:18px!important}
+.action-btn{height:clamp(76px,8.8vh,94px)!important;font-size:clamp(27px,3vw,36px)!important;border-radius:18px!important}
+.left{justify-content:flex-start!important}
+@media(max-height:680px) and (orientation:landscape){.num-btn{height:58px!important}.action-btn{height:64px!important}.pin-display{height:58px!important}.card{padding:14px 18px!important}}
 </style>
 </head>
 <body>
@@ -447,8 +457,8 @@ body {
  * - 출석은 Firestore에 즉시 저장하고 울림앱에 실시간 반영
  * - Google Sheets 출석칸과 알림톡은 기존 백그라운드 처리 유지
  ****************************************************/
-const API_URL = "https://script.google.com/macros/s/AKfycbyS3QUvrjNbwvaw92_g-QKQyN3Yito8DAdpAjxUzfnsuVf3Ce7ccuaXIv651U7FnYF4/exec";
-const TABLET_APP_VERSION = "2026.08.04.7.35.4.13";
+const API_URL = ""; // 7.35.5.0.11: 태블릿 운영에서 GAS를 사용하지 않습니다.
+const TABLET_APP_VERSION = "2026.08.07.7.35.5.0.11";
 const TABLET_DEBUG = false;
 const TABLET_FIREBASE_CONFIG = {
   apiKey: "AIzaSyAW-sqtUQ_mJ6ZS_aV8pTOAKvHTSX-FXUM",
@@ -583,7 +593,8 @@ async function getTabletFirebaseRuntime() {
       firestore: firestore,
       functions: functions,
       getSnapshot: functions.httpsCallable("getTabletOperationalSnapshot"),
-      saveAttendance: functions.httpsCallable("saveTabletAttendanceOperational")
+      saveAttendance: functions.httpsCallable("saveTabletAttendanceOperational"),
+      getOperationalContent: functions.httpsCallable("getTabletOperationalContent7355011")
     };
   })().catch(function(error) {
     tabletFirebaseRuntimePromise = null;
@@ -641,10 +652,7 @@ async function saveTabletAttendanceToFirestore(item) {
 }
 
 function apiUrl(params) {
-  const q = new URLSearchParams(params || {});
-  q.set("_", Date.now());
-  if (KIOSK_KEY) q.set("kioskKey", KIOSK_KEY);
-  return `${API_URL}?${q.toString()}`;
+  throw new Error("태블릿 운영 GAS 연결은 사용하지 않습니다.");
 }
 
 function tabletPublicMessage_(value, fallback) {
@@ -691,8 +699,8 @@ function setStatus(title, message, type) {
   card.className = "status-card" + (type === "error" ? " error" : type === "warning" ? " warning" : "");
   card.innerHTML = `<div><h2>${escapeHtml(safeTitle)}</h2>${safeMessage ? `<p>${escapeHtml(safeMessage)}</p>` : ""}</div>`;
 }
-function setDefaultStatus() { setStatus("출결번호를 입력해주세요.", "출결번호는 휴대폰 번호 뒤 네 자리", "success"); }
-function resetStatusSoon(delay = STATUS_RESET_DELAY_MS) { if (statusResetTimer) clearTimeout(statusResetTimer); statusResetTimer = setTimeout(setDefaultStatus, delay); }
+function setDefaultStatus() { /* 7.35.5.0.11: 상시 상태카드 제거, 안내는 팝업으로만 표시 */ }
+function resetStatusSoon(delay = STATUS_RESET_DELAY_MS) { if (statusResetTimer) clearTimeout(statusResetTimer); statusResetTimer = setTimeout(function(){ closeModal(); clearPin(); }, delay); }
 function clearProcessingFallback() { if (tabletProcessingFallbackTimer) { clearTimeout(tabletProcessingFallbackTimer); tabletProcessingFallbackTimer = null; } }
 function showNeutralWaiting(seq) { clearProcessingFallback(); tabletProcessingFallbackTimer = setTimeout(function(){ if (seq === statusRequestSeq) setStatus("확인 중입니다.", "잠시만 기다려주세요.", "success"); }, 900); }
 
@@ -958,9 +966,9 @@ function buildAttendanceParams(attendanceNo, mode, student, cls, extra) {
 function showAttendanceSuccess(mode, name, className, roomName) {
   const safeName = name || "학생";
   if (modeTextOf(mode) === "하원") {
-    setStatus(`${safeName}님, 수고하셨습니다.`, "오늘도 수고 많았습니다.", "success");
+    showModal(`${safeName}님, 수고하셨습니다.`, "오늘도 수고 많았습니다.", "success", '<button class="modal-btn" onclick="closeModal();clearPin()">확인</button>');
   } else {
-    setStatus(`${safeName}님, 어서오세요.`, [`오늘 수업: ${className || "데스크문의"}`, `오늘 강의실: ${roomName || "데스크문의"}`].join("\n"), "success");
+    showModal(`${safeName}님, 어서오세요.`, [`오늘 수업: ${className || "데스크문의"}`, `오늘 강의실: ${roomName || "데스크문의"}`].join("\n"), "success", '<button class="modal-btn" onclick="closeModal();clearPin()">확인</button>');
   }
   resetStatusSoon(STATUS_RESET_DELAY_MS);
 }
@@ -972,9 +980,9 @@ function showDuplicate(mode, name, className, roomName) {
   const safeName = name || "";
   if (roomName && modeTextOf(mode) !== "하원") {
     const namePrefix = safeName ? safeName + "님, " : "";
-    setStatus(namePrefix + duplicateMessageOf(mode), ["오늘 수업: " + (className || "데스크문의"), "오늘 강의실: " + roomName].join("\n"), "warning");
+    showModal(namePrefix + duplicateMessageOf(mode), ["오늘 수업: " + (className || "데스크문의"), "오늘 강의실: " + roomName].join("\n"), "warning");
   } else {
-    setStatus(safeName ? safeName + "님, " + duplicateMessageOf(mode) : duplicateMessageOf(mode), "", "warning");
+    showModal(safeName ? safeName + "님, " + duplicateMessageOf(mode) : duplicateMessageOf(mode), "", "warning");
   }
   resetStatusSoon(STATUS_RESET_DELAY_MS);
 }
@@ -1375,10 +1383,16 @@ function selectClassChoice(attendanceNo, studentRowNumber, studentName, classInd
   setBusy(false);
 }
 
-async function warmup() { try { await tabletFetchJson({ action: "tabletWarmup" }, 0); } catch (err) {} }
+async function warmup() { return true; }
 async function loadAds() {
-  try { const data = await tabletFetchJson({ action: "tabletGetAds" }, 0); adSlides = data.slides && data.slides.length ? data.slides : defaultSlides(); }
-  catch (err) { adSlides = defaultSlides(); }
+  try {
+    const runtime = await getTabletFirebaseRuntime();
+    const response = await runtime.getOperationalContent({});
+    const data = response && response.data ? response.data : {};
+    adSlides = Array.isArray(data.slides) && data.slides.length ? data.slides : defaultSlides();
+  } catch (err) {
+    adSlides = defaultSlides();
+  }
   adIndex = 0; renderAdSlide();
 }
 function defaultSlides() { return [{ type: "공지", title: "홍보 영상", content: "울림연기학원에 오신 것을 환영합니다.", imageUrl: "", videoUrl: "", seconds: 8 }]; }
@@ -1459,11 +1473,11 @@ preserveCurrentTabletPendingV43_21_();
 clearLegacyTabletSnapshotKeys43_21();
 clearStaleTabletLocalData();
 loadAds();
-warmup();
-getTabletFirebaseRuntime().then(function() { return bindTabletSnapshotListener(); }).catch(function() {});
+getTabletFirebaseRuntime().then(function() { return bindTabletSnapshotListener(); }).catch(function(error) {
+  showModal("태블릿 연결을 확인해주세요.", "태블릿 인증정보 또는 Firebase Functions 연결을 확인한 뒤 다시 시도해주세요.", "warning", '<button class="modal-btn" onclick="location.reload()">다시 연결</button>');
+});
 loadTabletPreload(true);
 processLocalPendingAttendanceQueue();
-setInterval(warmup, 4 * 60 * 1000);
 setInterval(function(){ loadTabletPreload(false); bindTabletSnapshotListener().catch(function() {}); }, 5 * 60 * 1000);
 setInterval(function(){ processLocalPendingAttendanceQueue(); }, 60 * 1000);
 setInterval(function(){ clearStaleTabletLocalData(); }, 5 * 60 * 1000);
