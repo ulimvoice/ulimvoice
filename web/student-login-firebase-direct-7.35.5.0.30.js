@@ -307,7 +307,8 @@
     await rt.sdk.updatePassword(rt.auth.currentUser, newInternal);
     const confirmCallable = rt.sdk.httpsCallable(rt.functions, 'confirmStudentFirebasePasswordChanged7355030');
     await confirmCallable({});
-    return await readProfile(rt);
+    state.profile = Object.assign({}, profile, { mustChangePassword: false });
+    return currentProfile();
   }
 
   async function signOut() {
