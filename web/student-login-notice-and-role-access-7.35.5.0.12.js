@@ -3,9 +3,12 @@
   if (global.__ULIM_STUDENT_LOGIN_NOTICE_ROLE_ACCESS_7355012__) return;
   global.__ULIM_STUDENT_LOGIN_NOTICE_ROLE_ACCESS_7355012__ = true;
 
-  const VERSION = '2026-08-08.735.05.0.12-course-popup-separation';
+  const VERSION = '2026-08-09.735.05.0.30-r8-notice-load-stable';
   let contentCache = null;
   let contentPromise = null;
+  let noticeShownThisPage = false;
+  let noticeScheduleTimer = null;
+  const NOTICE_TIMEOUT_MS = 12000;
 
   function text(value) { return String(value == null ? '' : value).trim(); }
   function normalize(value) { return text(value).normalize('NFKC').toLowerCase().replace(/\s+/g, ''); }
@@ -19,8 +22,10 @@
     return false;
   }
   function isStudent() {
+    const direct = global.__ULIM_STUDENT_FIREBASE_DIRECT_AUTH_7355030__ || null;
+    if (direct && typeof direct.hasValidatedSession === 'function') return direct.hasValidatedSession() && !isStaff();
     try { if (typeof global.ulimIsStudentLoggedIn_ === 'function') return global.ulimIsStudentLoggedIn_() && !isStaff(); } catch(_e){}
-    return !!(localStorage.getItem('studentName') && localStorage.getItem('studentSessionToken')) && !isStaff();
+    return false;
   }
   function roomRealtime() { return global.ULIM_ROOM_CLASSROOM_REALTIME_72917 || global.ULIM_ROOM_CLASSROOM_REALTIME_72916 || global.ULIM_ROOM_CLASSROOM_REALTIME_728 || global.ULIM_ROOM_CLASSROOM_REALTIME_727 || null; }
   async function runtime() {
@@ -32,6 +37,7 @@
     return rt;
   }
   async function call(name,payload){const rt=await runtime();const fn=rt.sdk.httpsCallable(rt.functions,name);const response=await fn(payload||{});return response&&response.data||{};}
+  function withTimeout(promise,timeoutMs){let timer=null;return Promise.race([Promise.resolve(promise),new Promise(function(_resolve,reject){timer=setTimeout(function(){reject(new Error('공지사항을 불러오는 데 시간이 오래 걸리고 있습니다.'));},timeoutMs);})]).finally(function(){if(timer)clearTimeout(timer);});}
 
   // 과거 별도 수강신청 탭/배너는 더 이상 사용하지 않습니다. 로그인 수강신청은 전용 팝업 owner가 담당합니다.
   function removeLegacyCourseUi() {
@@ -79,14 +85,16 @@
 
   async function loadLoginContent(force) {
     if(!isStudent())return {appNotice:null,studentNotices:[]};
+    if(contentPromise)return contentPromise;
     if(!force&&contentCache)return contentCache;
-    if(!force&&contentPromise)return contentPromise;
-    contentPromise=call('getStudentLoginContent7355011',{force:force===true}).then(function(data){contentCache=data||{};return contentCache;}).finally(function(){contentPromise=null;});
+    contentPromise=withTimeout(call('getStudentLoginContent7355011',{force:force===true}),NOTICE_TIMEOUT_MS)
+      .then(function(data){contentCache=data||{};return contentCache;})
+      .finally(function(){contentPromise=null;});
     return contentPromise;
   }
   function preloadNoticesFirestore7355012(){if(isStudent())loadLoginContent(false).catch(function(){});}
   async function showNoticesFirestore7355012(){
-    if(!isStudent())return;
+    if(!isStudent()||noticeShownThisPage)return;
     try{
       const data=await loadLoginContent(false);const list=[];const appNotice=data.appNotice||{};
       if(appNotice.enabled!==false&&(appNotice.title||appNotice.content||appNotice.imageUrl||appNotice.videoUrl||appNotice.youtubeUrl)&&targetMatched(appNotice,data.student||{})){
@@ -94,25 +102,35 @@
       }
       // 0.12: 과거 "학생 수강 등록/로그인 안내"가 만든 studentNotices는 더 이상 학생 화면에 표시하지 않습니다.
       // 수강신청 안내는 student-course-application-7.35.5.0.28.js가 단독 소유합니다.
-      if(!list.length)return;
+      if(!list.length){noticeShownThisPage=true;return;}
       const today=(typeof global.getTodayStringForNotice==='function'?global.getTodayStringForNotice():new Date().toISOString().slice(0,10));
       const ids=list.map(function(row){return row.id;}).join('_');
       const hideKey='noticeHideToday_'+today+'_'+ids;
-      try{if(localStorage.getItem(hideKey)==='Y')return;}catch(_e){}
+      try{if(localStorage.getItem(hideKey)==='Y'){noticeShownThisPage=true;return;}}catch(_e){}
       global.currentNoticeHideKey=hideKey;try{currentNoticeHideKey=hideKey;}catch(_e){}
       const body=document.getElementById('noticeBody'),check=document.getElementById('noticeTodayHide'),overlay=document.getElementById('noticeOverlay');
-      if(body&&overlay){body.innerHTML=list.map(noticeCard).join('');if(check)check.checked=false;overlay.style.display='flex';return;}
-      const fallback=document.createElement('div');fallback.id='ulimStudentLoginNoticeFallback7355012';fallback.style.cssText='position:fixed;inset:0;z-index:2147483600;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:18px';fallback.innerHTML='<section style="width:min(760px,96vw);max-height:90vh;overflow:auto;background:#fff;border-radius:18px;padding:18px"><div style="display:flex;justify-content:space-between;gap:8px"><h3 style="margin:0">공지사항</h3><button type="button" style="border:0;border-radius:9px;padding:8px 12px" data-close="1">닫기</button></div>'+list.map(noticeCard).join('')+'</section>';fallback.onclick=function(e){if(e.target===fallback||e.target.closest('[data-close]'))fallback.remove();};document.body.appendChild(fallback);
+      if(body&&overlay){body.innerHTML=list.map(noticeCard).join('');if(check)check.checked=false;overlay.style.display='flex';noticeShownThisPage=true;return;}
+      const fallback=document.createElement('div');fallback.id='ulimStudentLoginNoticeFallback7355012';fallback.style.cssText='position:fixed;inset:0;z-index:2147483600;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:18px';fallback.innerHTML='<section style="width:min(760px,96vw);max-height:90vh;overflow:auto;background:#fff;border-radius:18px;padding:18px"><div style="display:flex;justify-content:space-between;gap:8px"><h3 style="margin:0">공지사항</h3><button type="button" style="border:0;border-radius:9px;padding:8px 12px" data-close="1">닫기</button></div>'+list.map(noticeCard).join('')+'</section>';fallback.onclick=function(e){if(e.target===fallback||e.target.closest('[data-close]'))fallback.remove();};document.body.appendChild(fallback);noticeShownThisPage=true;
     }catch(_error){/* 학생 화면에 기술 오류를 노출하지 않습니다. */}
   }
 
+  function scheduleStudentNotice7355012(delay) {
+    if(noticeShownThisPage||!isStudent())return;
+    if(noticeScheduleTimer)clearTimeout(noticeScheduleTimer);
+    noticeScheduleTimer=setTimeout(function(){
+      noticeScheduleTimer=null;
+      if(noticeShownThisPage||!isStudent()||contentPromise)return;
+      showNoticesFirestore7355012();
+    },Math.max(0,Number(delay)||0));
+  }
   function install() {
     removeLegacyCourseUi();restoreStaffStudentTabs();
     global.preloadNoticesFromSheet=preloadNoticesFirestore7355012;
     global.loadNoticesFromSheet=function(){return loadLoginContent(false).then(function(data){const rows=[];if(data.appNotice&&data.appNotice.enabled!==false)rows.push(data.appNotice);return rows;});};
     global.showNoticeIfNeeded=showNoticesFirestore7355012;
+    global.ulimRefreshStudentLoginNotice7355012=function(){contentCache=null;noticeShownThisPage=false;return showNoticesFirestore7355012();};
     try{preloadNoticesFromSheet=global.preloadNoticesFromSheet;loadNoticesFromSheet=global.loadNoticesFromSheet;showNoticeIfNeeded=global.showNoticeIfNeeded;}catch(_e){}
-    if(isStudent())setTimeout(function(){preloadNoticesFirestore7355012();showNoticesFirestore7355012();},500);
+    scheduleStudentNotice7355012(650);
   }
   let tabRestoreTimer7355012 = 0;
   function scheduleTabRestore7355012() {
@@ -128,8 +146,8 @@
     observer.observe(root, { childList:true, subtree:true, attributes:true, attributeFilter:['style','class','disabled','hidden'] });
   }
 
-  global.addEventListener('ulim-firebase-auth-ready',function(){setTimeout(function(){contentCache=null;install();scheduleTabRestore7355012();},100);});
-  global.addEventListener('pageshow',function(){setTimeout(function(){install();scheduleTabRestore7355012();},120);});
+  global.addEventListener('ulim-firebase-auth-ready',function(){scheduleStudentNotice7355012(450);scheduleTabRestore7355012();});
+  global.addEventListener('pageshow',function(){setTimeout(function(){restoreStaffStudentTabs();scheduleStudentNotice7355012(650);scheduleTabRestore7355012();},120);});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){install();observeTabVisibility7355012();},{once:true});else{install();observeTabVisibility7355012();}
-  setTimeout(function(){install();observeTabVisibility7355012();},800);
+  setTimeout(function(){restoreStaffStudentTabs();observeTabVisibility7355012();scheduleStudentNotice7355012(900);},800);
 })(typeof window!=='undefined'?window:globalThis);

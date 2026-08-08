@@ -3,7 +3,7 @@
   if (global.__ULIM_STUDENT_COURSE_APPLICATION_POPUP_7355028__) return;
   global.__ULIM_STUDENT_COURSE_APPLICATION_POPUP_7355028__ = true;
 
-  const VERSION = '2026-08-09.735.05.0.30-r7-course-popup-stable';
+  const VERSION = '2026-08-09.735.05.0.30-r8-course-load-stable';
   const MODAL_ID = 'ulimCourseApplicationPopup7355028';
   const STYLE_ID = 'ulimCourseApplicationPopupStyle7355028';
   let config = null;
@@ -12,8 +12,8 @@
   let dismissedThisPage = false;
   let loadingPromise = null;
   let loadGeneration = 0;
-  let pendingForceReload = false;
   let scheduledLoadTimer = null;
+  const CONFIG_TIMEOUT_MS = 12000;
 
   function text(value) { return String(value == null ? '' : value).trim(); }
   function escapeHtml(value) {
@@ -57,6 +57,15 @@
     const fn = rt.sdk.httpsCallable(rt.functions, name);
     const response = await fn(payload || {});
     return response && response.data || {};
+  }
+  function withTimeout(promise, timeoutMs) {
+    let timer = null;
+    return Promise.race([
+      Promise.resolve(promise),
+      new Promise(function (_resolve, reject) {
+        timer = setTimeout(function () { reject(new Error('수강신청 정보를 불러오는 데 시간이 오래 걸리고 있습니다.')); }, timeoutMs);
+      })
+    ]).finally(function () { if (timer) clearTimeout(timer); });
   }
 
   function monthLabel(month) {
@@ -213,42 +222,45 @@
 
   async function loadConfig(force) {
     if (!isStudent() || dismissedThisPage) return null;
-    if (passwordChangeActive()) { scheduleLoad(600, force === true); return null; }
-    if (loadingPromise) {
-      if (force === true) pendingForceReload = true;
-      return loadingPromise;
-    }
+    if (passwordChangeActive()) { scheduleLoad(700, false); return null; }
+    if (document.getElementById(MODAL_ID) && config && config.active === true && config.needsApplication === true) return config;
+    if (loadingPromise) return loadingPromise;
+
     const generation = ++loadGeneration;
-    loadingPromise = call('getStudentCourseApplicationConfig7352', { requestId: requestId('course-config-7355028'), force: force === true })
-      .then(function (result) {
-        if (generation !== loadGeneration || dismissedThisPage || passwordChangeActive()) return result || null;
-        config = result || null;
-        if (config && config.active === true && config.needsApplication === true) {
-          if (!document.getElementById(MODAL_ID)) step = 1;
-          render();
-        } else {
-          closePopup(false);
-        }
-        return config;
-      })
-      .catch(function () { return null; })
-      .finally(function () {
-        loadingPromise = null;
-        if (pendingForceReload) {
-          pendingForceReload = false;
-          if (!dismissedThisPage && isStudent() && !passwordChangeActive()) scheduleLoad(120, true);
-        }
-      });
+    loadingPromise = withTimeout(
+      call('getStudentCourseApplicationConfig7352', {
+        requestId: requestId('course-config-7355028'),
+        force: force === true
+      }),
+      CONFIG_TIMEOUT_MS
+    ).then(function (result) {
+      if (generation !== loadGeneration || dismissedThisPage || passwordChangeActive()) return result || null;
+      config = result || null;
+      if (config && config.active === true && config.needsApplication === true) {
+        if (!document.getElementById(MODAL_ID)) step = 1;
+        render();
+      } else {
+        closePopup(false);
+      }
+      return config;
+    }).catch(function () {
+      return null;
+    }).finally(function () {
+      loadingPromise = null;
+    });
     return loadingPromise;
   }
 
   function scheduleLoad(delay, force) {
+    if (dismissedThisPage || document.getElementById(MODAL_ID)) return;
     if (scheduledLoadTimer) clearTimeout(scheduledLoadTimer);
     scheduledLoadTimer = setTimeout(function () {
       scheduledLoadTimer = null;
-      if (passwordChangeActive()) { scheduleLoad(600, force === true); return; }
-      if (isStudent() && !dismissedThisPage) loadConfig(force === true);
-    }, delay || 0);
+      if (dismissedThisPage || document.getElementById(MODAL_ID)) return;
+      if (passwordChangeActive()) { scheduleLoad(700, false); return; }
+      if (loadingPromise) return;
+      if (isStudent()) loadConfig(force === true);
+    }, Math.max(0, Number(delay) || 0));
   }
   function install() {
     injectStyle();
@@ -256,12 +268,9 @@
     scheduleLoad(900, false);
   }
 
-  global.addEventListener('ulim-firebase-auth-ready', function () { scheduleLoad(250, true); });
-  global.addEventListener('ulim-student-password-change-finished', function () { if (!dismissedThisPage) scheduleLoad(250, true); });
-  global.addEventListener('pageshow', function () { scheduleLoad(500, false); });
+  global.addEventListener('ulim-firebase-auth-ready', function () { scheduleLoad(350, false); });
+  global.addEventListener('ulim-student-password-change-finished', function () { if (!dismissedThisPage) { config = null; scheduleLoad(350, true); } });
+  global.addEventListener('pageshow', function () { scheduleLoad(650, false); });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install, { once:true });
   else install();
-  setInterval(function () {
-    if (!config && isStudent() && !dismissedThisPage) loadConfig(false);
-  }, 12000);
 })(typeof window !== 'undefined' ? window : globalThis);
