@@ -25,7 +25,7 @@
   <script src="./web/room-classroom-realtime-7.29.17.js?v=20260808.72917"></script>
   <script src="./web/staff-login-firebase-primary-7.32.7.js?v=20260807.73207"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260808-7355025-preview-authority-class-stability">
+<meta name="ulim-build" content="20260808-7355026-daily-canonical-preview-date-fix">
 <script id="ulim-one-time-cache-clean-7355019">
 (function (global) {
   'use strict';
@@ -2457,7 +2457,7 @@ body.ulim-attendance-modal-open73545{overflow:hidden}
             <div class="admin-grid">
               <div class="admin-field">
                 <label for="adminDailyEvalDate">수업일</label>
-                <input type="date" id="adminDailyEvalDate" onchange="adminLoadClassList(this.value)">
+                <input type="date" id="adminDailyEvalDate">
               </div>
               <div class="admin-field">
                 <label for="adminDailyEvalClass">반명 / 수업명 선택 또는 검색</label>
@@ -5724,30 +5724,24 @@ const ADMIN_NOTICE_FIXED_CLASS_LIST = [
 ];
 let adminClassList = [];
 const adminClassListsByDate704_ = Object.create(null);
-const adminClassVideoLinksById7355022_ = Object.create(null);
-const adminClassVideoLinksByName7355022_ = Object.create(null);
+const adminDailyServerClassListsByDate7355026_ = Object.create(null);
+/* ULIM 7.35.5.0.26: class video link authority is a class list confirmed by the
+   current page's Firestore class-list callable. General local/session class-list
+   caches may help paint class names, but they must never supply videoLink. */
 
-function adminClassVideoNameKey7355022_(className) {
-    return normalizeClassSearchText(className || '');
+function adminRememberDailyServerClassList7355026_(date, classes) {
+    const dateKey = String(date || '').trim();
+    const list = Array.isArray(classes) ? classes.map(item => Object.assign({}, item)) : [];
+    if (dateKey) adminDailyServerClassListsByDate7355026_[dateKey] = list;
+    adminRememberClassListForDate704_(dateKey, list);
+    return list;
 }
 
-function adminRememberClassVideoLink7355022_(item) {
-    if (!item) return item;
-    const classId = String(item.classId || item.id || '').trim();
-    const nameKey = adminClassVideoNameKey7355022_(item.className || '');
-    const hasOwnLink = Object.prototype.hasOwnProperty.call(item, 'videoLink');
-    if (hasOwnLink) {
-        const value = String(item.videoLink || '').trim();
-        if (classId) adminClassVideoLinksById7355022_[classId] = value;
-        if (nameKey) adminClassVideoLinksByName7355022_[nameKey] = value;
-        return item;
-    }
-    if (classId && Object.prototype.hasOwnProperty.call(adminClassVideoLinksById7355022_, classId)) {
-        item.videoLink = adminClassVideoLinksById7355022_[classId];
-    } else if (nameKey && Object.prototype.hasOwnProperty.call(adminClassVideoLinksByName7355022_, nameKey)) {
-        item.videoLink = adminClassVideoLinksByName7355022_[nameKey];
-    }
-    return item;
+function adminGetDailyServerClassList7355026_(date) {
+    const dateKey = String(date || '').trim();
+    return dateKey && Array.isArray(adminDailyServerClassListsByDate7355026_[dateKey])
+        ? adminDailyServerClassListsByDate7355026_[dateKey].slice()
+        : [];
 }
 
 function adminRememberClassListForDate704_(date, classes) {
@@ -5756,11 +5750,8 @@ function adminRememberClassListForDate704_(date, classes) {
     const filtered = (typeof adminFilterClassListForRole === 'function'
         ? adminFilterClassListForRole(raw)
         : raw.filter(item => item && String(item.className || '').trim()))
-        .map(item => adminRememberClassVideoLink7355022_(item));
+        .map(item => Object.assign({}, item));
 
-    /* ULIM 7.35.5.0.25:
-       A transient empty background response must not erase a class that the user is
-       currently selecting/using. Initial dates with no classes still remain empty. */
     const existing = dateKey && Array.isArray(adminClassListsByDate704_[dateKey])
         ? adminClassListsByDate704_[dateKey].slice()
         : [];
@@ -5774,98 +5765,37 @@ function adminRememberClassListForDate704_(date, classes) {
             if (!dateEl || String(dateEl.value || '').trim() !== dateKey) return false;
             const input = document.getElementById(parts[1]);
             const panel = document.getElementById(parts[2]);
-            return !!(
-                (input && String(input.value || '').trim()) ||
-                (panel && panel.classList.contains('open'))
-            );
+            return !!((input && String(input.value || '').trim()) || (panel && panel.classList.contains('open')));
         });
         if (userIsUsingDate) return existing;
     }
-
     if (dateKey) adminClassListsByDate704_[dateKey] = filtered.slice();
     return filtered;
 }
 
 function adminGetClassListForDate704_(date) {
     const dateKey = String(date || '').trim();
-
-    if (dateKey && Array.isArray(adminClassListsByDate704_[dateKey])) {
-        return adminClassListsByDate704_[dateKey].slice();
-    }
-
-    if (
-        dateKey &&
-        typeof getAdminClassListCacheKey === 'function' &&
-        typeof readAdminClassListCache === 'function'
-    ) {
+    if (dateKey && Array.isArray(adminClassListsByDate704_[dateKey])) return adminClassListsByDate704_[dateKey].slice();
+    if (dateKey && typeof getAdminClassListCacheKey === 'function' && typeof readAdminClassListCache === 'function') {
         const cached = readAdminClassListCache(getAdminClassListCacheKey(dateKey));
-        if (Array.isArray(cached)) {
-            return adminRememberClassListForDate704_(dateKey, cached);
-        }
+        if (Array.isArray(cached)) return adminRememberClassListForDate704_(dateKey, cached);
     }
-
     if (dateKey) return [];
-
     return typeof adminFilterClassListForRole === 'function'
         ? adminFilterClassListForRole(adminClassList || [])
         : (Array.isArray(adminClassList) ? adminClassList.slice() : []);
 }
 
 function adminGetClassListForInput704_(inputId) {
-    const dateId = inputId === 'adminDailyEvalClass'
-        ? 'adminDailyEvalDate'
-        : 'adminAttendanceDate';
+    const dateId = inputId === 'adminDailyEvalClass' ? 'adminDailyEvalDate' : 'adminAttendanceDate';
     const dateEl = document.getElementById(dateId);
     return adminGetClassListForDate704_(dateEl && dateEl.value || '');
 }
 
-function adminSetClassVideoLinkCache7355022_(classId, className, videoLink) {
-    const idKey = String(classId || '').trim();
-    const nameKey = adminClassVideoNameKey7355022_(className || '');
-    const value = String(videoLink || '').trim();
-    if (idKey) adminClassVideoLinksById7355022_[idKey] = value;
-    if (nameKey) adminClassVideoLinksByName7355022_[nameKey] = value;
-
-    const patchList = list => {
-        if (!Array.isArray(list)) return;
-        list.forEach(item => {
-            if (!item) return;
-            const itemId = String(item.classId || item.id || '').trim();
-            const itemName = adminClassVideoNameKey7355022_(item.className || '');
-            if ((idKey && itemId === idKey) || (!idKey && nameKey && itemName === nameKey) || (idKey && !itemId && nameKey && itemName === nameKey)) {
-                item.videoLink = value;
-                adminRememberClassVideoLink7355022_(item);
-            }
-        });
-    };
-    patchList(adminClassList);
-    Object.keys(adminClassListsByDate704_).forEach(key => patchList(adminClassListsByDate704_[key]));
-
-    try {
-        for (let i = 0; i < sessionStorage.length; i++) {
-            const key = sessionStorage.key(i);
-            if (!key || key.indexOf('ulim_admin_classes_v4_7355022_exactdate_') !== 0) continue;
-            const parsed = JSON.parse(sessionStorage.getItem(key) || '{}');
-            if (!parsed || !Array.isArray(parsed.classes)) continue;
-            patchList(parsed.classes);
-            sessionStorage.setItem(key, JSON.stringify(parsed));
-        }
-    } catch (ignore) {}
-    return value;
-}
-
-function adminGetClassVideoLinkCache7355022_(classId, className) {
-    const idKey = String(classId || '').trim();
-    const nameKey = adminClassVideoNameKey7355022_(className || '');
-    if (idKey && Object.prototype.hasOwnProperty.call(adminClassVideoLinksById7355022_, idKey)) return adminClassVideoLinksById7355022_[idKey];
-    if (nameKey && Object.prototype.hasOwnProperty.call(adminClassVideoLinksByName7355022_, nameKey)) return adminClassVideoLinksByName7355022_[nameKey];
-    return '';
-}
-
 window.adminRememberClassListForDate704_ = adminRememberClassListForDate704_;
 window.adminGetClassListForDate704_ = adminGetClassListForDate704_;
-window.adminSetClassVideoLinkCache7355022_ = adminSetClassVideoLinkCache7355022_;
-window.adminGetClassVideoLinkCache7355022_ = adminGetClassVideoLinkCache7355022_;
+window.adminRememberDailyServerClassList7355026_ = adminRememberDailyServerClassList7355026_;
+window.adminGetDailyServerClassList7355026_ = adminGetDailyServerClassList7355026_;
 
 let adminAttendanceRecords = [];
 let adminDailyEvalRows = [];
@@ -7679,7 +7609,9 @@ function showAdminPanel(panelId) {
             const cachedDailyClasses7355025 = adminGetClassListForDate704_(dailyDate);
             dailyClassListReady7355025 = Array.isArray(cachedDailyClasses7355025) && cachedDailyClasses7355025.length > 0;
         } catch (_ignore) {}
-        if (!dailyClassListReady7355025) {
+        if (typeof window.ulimLoadDailyClassList7355026 === 'function') {
+            Promise.resolve(window.ulimLoadDailyClassList7355026(dailyDate, false)).catch(() => {});
+        } else if (!dailyClassListReady7355025) {
             Promise.resolve(adminLoadClassList(dailyDate, false)).catch(() => {});
         } else {
             adminRenderClassSelectors();
@@ -7842,18 +7774,20 @@ function adminGetClassItemByName_(className, dateOverride = '') {
 }
 
 function adminGetVideoLinkForClassName_(className, dateOverride = '') {
-    const item = adminGetClassItemByName_(className, dateOverride);
-    const selected = document.getElementById('adminDailyEvalClass');
-    const selectedName = String(selected && selected.value || '').trim();
-    const selectedId = selectedName && normalizeClassSearchText(selectedName) === normalizeClassSearchText(className || '')
-        ? String(selected && selected.dataset.classId || '').trim()
+    const date = String(
+        dateOverride ||
+        document.getElementById('adminDailyEvalDate')?.value ||
+        ''
+    ).trim();
+    const target = normalizeClassSearchText(className || '');
+    if (!date || !target) return '';
+    const list = adminGetDailyServerClassList7355026_(date);
+    const item = list.find(c => normalizeClassSearchText(c && c.className || '') === target)
+        || list.find(c => normalizeClassSearchText(adminCleanClassNameOnly_(c && c.className || '')) === normalizeClassSearchText(adminCleanClassNameOnly_(className || '')))
+        || null;
+    return item && Object.prototype.hasOwnProperty.call(item, 'videoLink')
+        ? String(item.videoLink || '').trim()
         : '';
-    const classId = String(item && (item.classId || item.id) || selectedId || '').trim();
-    const cached = adminGetClassVideoLinkCache7355022_(classId, (item && item.className) || className || '');
-    if (classId && Object.prototype.hasOwnProperty.call(adminClassVideoLinksById7355022_, classId)) return cached;
-    const nameKey = adminClassVideoNameKey7355022_((item && item.className) || className || '');
-    if (nameKey && Object.prototype.hasOwnProperty.call(adminClassVideoLinksByName7355022_, nameKey)) return cached;
-    return item && Object.prototype.hasOwnProperty.call(item, 'videoLink') ? String(item.videoLink || '').trim() : '';
 }
 
 function adminNormalizeDailyEvalStatusLabel_(value) {
@@ -7961,25 +7895,25 @@ function adminDailyEvalComposeFromTemplate_(template, student) {
     // always use the same complete message.
     result = adminDailyEvalInjectSectionValue_(
         result,
-        /▶\s*이번주\s*수업[^\n\r]*/,
-        [/\n\s*▶\s*수업\s*활동\s*및\s*태도/, /\n\s*▶\s*선생님\s*전달\s*사항/, /\n\s*▶\s*수업영상\s*확인\s*링크/, /\n\s*문의전화\b/],
+        /(?:▶\s*)?이번주\s*수업\s*[:：]?[^\n\r]*/,
+        [/\n\s*(?:▶\s*)?수업\s*활동\s*및\s*태도\s*[:：]?/, /\n\s*(?:▶\s*)?(?:선생님\s*)?전달\s*사항\s*[:：]?/, /\n\s*(?:▶\s*)?(?:수업영상\s*확인\s*링크|영상\s*링크)\s*[:：]?/, /\n\s*문의전화\b/],
         row.lessonContent
     );
     result = adminDailyEvalInjectSectionValue_(
         result,
-        /▶\s*수업\s*활동\s*및\s*태도[^\n\r]*/,
-        [/\n\s*▶\s*선생님\s*전달\s*사항/, /\n\s*▶\s*수업영상\s*확인\s*링크/, /\n\s*문의전화\b/],
+        /(?:▶\s*)?수업\s*활동\s*및\s*태도\s*[:：]?[^\n\r]*/,
+        [/\n\s*(?:▶\s*)?(?:선생님\s*)?전달\s*사항\s*[:：]?/, /\n\s*(?:▶\s*)?(?:수업영상\s*확인\s*링크|영상\s*링크)\s*[:：]?/, /\n\s*문의전화\b/],
         row.lessonAttitude
     );
     result = adminDailyEvalInjectSectionValue_(
         result,
-        /▶\s*선생님\s*전달\s*사항[^\n\r]*/,
-        [/\n\s*▶\s*수업영상\s*확인\s*링크/, /\n\s*문의전화\b/],
+        /(?:▶\s*)?(?:선생님\s*)?전달\s*사항\s*[:：]?[^\n\r]*/,
+        [/\n\s*(?:▶\s*)?(?:수업영상\s*확인\s*링크|영상\s*링크)\s*[:：]?/, /\n\s*문의전화\b/],
         row.teacherComment
     );
     result = adminDailyEvalInjectSectionValue_(
         result,
-        /▶\s*수업영상\s*확인\s*링크[^\n\r]*/,
+        /(?:▶\s*)?(?:수업영상\s*확인\s*링크|영상\s*링크)\s*[:：]?[^\n\r]*/,
         [/\n\s*문의전화\b/, /\n\s*울림성우연기학원\b/, /\n\s*울림연기학원\b/],
         row.videoLink || map['[수업영상링크]']
     );
@@ -8023,12 +7957,25 @@ function adminExtractDailyPart_(text, startLabels, endLabels) {
 }
 
 function adminExtractDailyEvalParts_(row) {
-    const text = String((row && row.evaluation) || '');
+    const sourceText = String((row && row.evaluation) || '');
+    const read = (starts, ends) => adminExtractDailyPart_(sourceText, starts, ends);
     return {
-        lessonContent: String((row && row.lessonContent) || '').trim() || adminExtractDailyPart_(text, ['▶ 이번주 수업', '▶이번주 수업'], ['▶ 수업 활동 및 태도', '▶수업 활동 및 태도', '▶ 선생님 전달 사항', '▶선생님 전달 사항', '▶ 수업영상 확인 링크', '▶수업영상 확인 링크']),
-        lessonAttitude: String((row && row.lessonAttitude) || '').trim() || adminExtractDailyPart_(text, ['▶ 수업 활동 및 태도', '▶수업 활동 및 태도'], ['▶ 선생님 전달 사항', '▶선생님 전달 사항', '▶ 수업영상 확인 링크', '▶수업영상 확인 링크']),
-        teacherComment: String((row && row.teacherComment) || '').trim() || adminExtractDailyPart_(text, ['▶ 선생님 전달 사항', '▶선생님 전달 사항'], ['▶ 수업영상 확인 링크', '▶수업영상 확인 링크', '문의전화', '울림성우연기학원', '울림연기학원']),
-        videoLink: String((row && row.videoLink) || '').trim() || adminExtractDailyPart_(text, ['▶ 수업영상 확인 링크', '▶수업영상 확인 링크'], ['문의전화', '울림성우연기학원', '울림연기학원'])
+        lessonContent: String((row && row.lessonContent) || '').trim() || read(
+            ['▶ 이번주 수업', '▶이번주 수업', '이번주 수업:', '이번주 수업：', '이번주 수업'],
+            ['▶ 수업 활동 및 태도', '▶수업 활동 및 태도', '수업 활동 및 태도:', '수업활동 및 태도:', '수업 활동 및 태도', '수업활동 및 태도', '▶ 선생님 전달 사항', '전달사항:', '선생님 전달 사항:', '영상링크:', '수업영상 확인 링크:']
+        ),
+        lessonAttitude: String((row && row.lessonAttitude) || '').trim() || read(
+            ['▶ 수업 활동 및 태도', '▶수업 활동 및 태도', '수업 활동 및 태도:', '수업활동 및 태도:', '수업 활동 및 태도', '수업활동 및 태도'],
+            ['▶ 선생님 전달 사항', '▶선생님 전달 사항', '선생님 전달 사항:', '전달사항:', '선생님 전달 사항', '전달사항', '▶ 수업영상 확인 링크', '수업영상 확인 링크:', '영상링크:']
+        ),
+        teacherComment: String((row && row.teacherComment) || '').trim() || read(
+            ['▶ 선생님 전달 사항', '▶선생님 전달 사항', '선생님 전달 사항:', '전달사항:', '선생님 전달 사항', '전달사항'],
+            ['▶ 수업영상 확인 링크', '▶수업영상 확인 링크', '수업영상 확인 링크:', '영상링크:', '수업영상 확인 링크', '영상링크', '문의전화', '울림성우연기학원', '울림연기학원']
+        ),
+        videoLink: String((row && row.videoLink) || '').trim() || read(
+            ['▶ 수업영상 확인 링크', '▶수업영상 확인 링크', '수업영상 확인 링크:', '영상링크:', '수업영상 확인 링크', '영상링크'],
+            ['문의전화', '울림성우연기학원', '울림연기학원']
+        )
     };
 }
 
@@ -8051,7 +7998,7 @@ function adminDailyEvalMessageCoversParts_(evaluation, row) {
     });
 }
 
-/* ULIM 7.35.5.0.24: canonical daily message composition owner */
+/* ULIM 7.35.5.0.26: canonical daily message composition owner */
 function adminBuildDailyEvalMessageFromParts(base) {
     const template = document.getElementById('adminDailyEvalTemplate')?.value || adminDailyEvalTemplateText;
     return adminApplyDailyEvalTemplateReplacements_(template, base || {}).trim();
@@ -19630,32 +19577,19 @@ ${ruleSummary}`, 'success');
             base.lessonAttitude = row.querySelector('.admin-eval-attitude')?.value.trim() || '';
             base.teacherComment = row.querySelector('.admin-eval-comment')?.value.trim() || '';
 
-            const sourceEvaluation = String(source.evaluation || '').trim();
-            const previewCustomWasActive7355025 = source.__dailyPreviewCustom621 === true;
-            const previewStructuredChanged7355025 = previewCustomWasActive7355025 && (
-                String(source.lessonContent || '').trim() !== String(base.lessonContent || '').trim() ||
-                String(source.lessonAttitude || '').trim() !== String(base.lessonAttitude || '').trim() ||
-                String(source.teacherComment || '').trim() !== String(base.teacherComment || '').trim() ||
-                String(source.videoLink || '').trim() !== String(base.videoLink || '').trim()
-            );
-
-            if (previewCustomWasActive7355025 && sourceEvaluation && !previewStructuredChanged7355025) {
-                base.evaluation = sourceEvaluation;
-                base.__dailyPreviewCustom621 = true;
-            } else {
-                base.__dailyPreviewCustom621 = false;
-                base.evaluation = typeof adminBuildDailyEvalMessageFromParts === 'function'
-                    ? adminBuildDailyEvalMessageFromParts(base)
-                    : [base.lessonContent, base.lessonAttitude, base.teacherComment, base.videoLink].filter(Boolean).join('\n');
-                if (previewStructuredChanged7355025) {
-                    try {
-                        source.__dailyPreviewCustom621 = false;
-                        if (typeof window.adminDailyPreviewClearSaved621 === 'function') {
-                            window.adminDailyPreviewClearSaved621([source]);
-                        }
-                    } catch (_ignore) {}
+            /* 7.35.5.0.26: the evaluation form is canonical. Build from the live
+               structured fields first. A preview-only custom message may override it
+               only when its saved structured signature still matches this exact row. */
+            base.__dailyPreviewCustom621 = false;
+            base.evaluation = typeof adminBuildDailyEvalMessageFromParts === 'function'
+                ? adminBuildDailyEvalMessageFromParts(base)
+                : [base.lessonContent, base.lessonAttitude, base.teacherComment, base.videoLink].filter(Boolean).join('\n');
+            try {
+                if (typeof window.adminDailyPreviewApplySavedEdit621 === 'function') {
+                    const applied = window.adminDailyPreviewApplySavedEdit621(base);
+                    if (applied && typeof applied === 'object') Object.assign(base, applied);
                 }
-            }
+            } catch (_ignore) {}
 
             const hasAny = base.lessonContent || base.lessonAttitude || base.teacherComment || base.videoLink || base.evaluation;
             return hasAny ? base : null;
@@ -24235,30 +24169,17 @@ body {
             .replace(/'/g,'&#39;');
     }
 
-    function adminScope_() {
-        const info = window.adminInfo || (typeof adminInfo !== 'undefined' ? adminInfo : null) || {};
-        return trim_(info.uid || info.accountUid || info.id || info.loginId || info.name || 'full-admin');
-    }
-
-    function storageKey_() {
-        return 'ulim_admin_daily_preview_edits_7355022::' + adminScope_();
-    }
-
-    function loadEdits_() {
-        try {
-            const parsed = JSON.parse(sessionStorage.getItem(storageKey_()) || '{}');
-            return parsed && typeof parsed === 'object' ? parsed : {};
-        } catch (e) {
-            return {};
+    /* 7.35.5.0.26: preview edits are an in-memory draft only.
+       Per-device sessionStorage must never outrank the Firestore evaluation data. */
+    try {
+        for (let i = sessionStorage.length - 1; i >= 0; i--) {
+            const key = sessionStorage.key(i) || '';
+            if (key.indexOf('ulim_admin_daily_preview_edits_7355022::') === 0) sessionStorage.removeItem(key);
         }
-    }
-
-    let edits = loadEdits_();
+    } catch (_ignore) {}
+    let edits = Object.create(null);
     window.adminDailyPreviewEdits621 = edits;
-
-    function persistEdits_() {
-        try { sessionStorage.setItem(storageKey_(), JSON.stringify(edits)); } catch (e) {}
-    }
+    function persistEdits_() { window.adminDailyPreviewEdits621 = edits; }
 
     window.adminDailyPreviewClearSaved621 = function(rows) {
         const list = Array.isArray(rows) ? rows : [];
@@ -24355,6 +24276,11 @@ body {
         window.adminDailyPreviewEdits621 = edits;
         return null;
     }
+
+    window.adminDailyPreviewApplySavedEdit621 = function(row) {
+        const edit = applicablePreviewEdit7355025_(row);
+        return edit ? applyEditToRow_(row, edit) : row;
+    };
 
     function findSourceRow_(row) {
         let list = [];
@@ -24609,23 +24535,33 @@ body {
     }
 
     function openModal_(rows, recipientTypes, sendChannel, channelLabel) {
-        const overlay = ensureModal_();
-        edits = loadEdits_();
-        window.adminDailyPreviewEdits621 = edits;
-        state.rows = rows.map(function(row){
-            const edit = applicablePreviewEdit7355025_(row);
-            return edit ? applyEditToRow_(row, edit) : row;
-        });
-        state.index = 0;
-        state.recipientTypes = recipientTypes.slice();
-        state.sendChannel = sendChannel;
-        state.channelLabel = channelLabel;
-        state.drafts = Object.create(null);
-        state.beforeOpenOverflow = document.body.style.overflow;
-        document.body.style.overflow = 'hidden';
-        overlay.classList.add('open');
-        render_();
-        setTimeout(function(){ document.getElementById('adminDailyPreviewText621')?.focus(); }, 0);
+        let overlay = null;
+        const previousOverflow = document.body.style.overflow || '';
+        try {
+            overlay = ensureModal_();
+            const preparedRows = (Array.isArray(rows) ? rows : []).map(function(row) {
+                const applied = window.adminDailyPreviewApplySavedEdit621(row);
+                return applied && typeof applied === 'object' ? applied : row;
+            });
+            if (!preparedRows.length) return false;
+            state.rows = preparedRows;
+            state.index = 0;
+            state.recipientTypes = recipientTypes.slice();
+            state.sendChannel = sendChannel;
+            state.channelLabel = channelLabel;
+            state.drafts = Object.create(null);
+            state.beforeOpenOverflow = previousOverflow;
+            render_();
+            document.body.style.overflow = 'hidden';
+            overlay.classList.add('open');
+            setTimeout(function(){ document.getElementById('adminDailyPreviewText621')?.focus(); }, 0);
+            return true;
+        } catch (_error) {
+            try { if (overlay) overlay.classList.remove('open'); } catch (_ignore) {}
+            document.body.style.overflow = previousOverflow;
+            alert('발송 미리보기를 열지 못했습니다. 평가창을 다시 불러온 뒤 시도해주세요.');
+            return false;
+        }
     }
 
     window.adminPreviewDailyEvalMessages = function(){
@@ -25278,7 +25214,7 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 
 
 <!-- ULIM 7.35.5.0.11: non-attendance Firestore runtime + restored dedicated attendance owner. -->
-<script src="./web/ulim-firestore-primary-7.35.5.0.24.js?v=20260808.7355024"></script>
+<script src="./web/ulim-firestore-primary-7.35.5.0.26.js?v=20260808.7355026"></script>
 <script src="./web/attendance-admin-integrated-7.35.4.21.js?v=20260808.7350421"></script>
 <script src="./web/operational-content-admin-7.35.5.0.11.js?v=20260807.7355011"></script>
 <script src="./web/student-login-notice-and-role-access-7.35.5.0.11.js?v=20260807.7355011"></script>
