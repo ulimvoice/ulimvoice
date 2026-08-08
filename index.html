@@ -25,7 +25,7 @@
   <script src="./web/room-classroom-realtime-7.29.17.js?v=20260808.72917"></script>
   <script src="./web/staff-login-firebase-primary-7.32.7.js?v=20260807.73207"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260808-7355019-stability-convergence">
+<meta name="ulim-build" content="20260808-7355020-class-picker-core-capture">
 <script id="ulim-one-time-cache-clean-7355019">
 (function (global) {
   'use strict';
@@ -6588,6 +6588,39 @@ async function adminLoadClassList(dateOverride = '', force = false) {
 }
 
 
+let adminClassPickerCoreBound7355020_ = false;
+
+function adminHandleClassPickerOptionClick7355020_(event) {
+    const target = event && event.target;
+    const button = target && typeof target.closest === 'function'
+        ? target.closest('.admin-class-option[data-class-name][data-class-target][data-class-panel]')
+        : null;
+    if (!button) return;
+
+    const panelId = String(button.dataset.classPanel || '').trim();
+    const panel = panelId ? document.getElementById(panelId) : null;
+    if (!panel || !panel.contains(button)) return;
+
+    event.preventDefault();
+    if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+    else if (typeof event.stopPropagation === 'function') event.stopPropagation();
+
+    adminSelectClass(
+        button.dataset.className || '',
+        button.dataset.classTarget || 'adminAttendanceClass',
+        panelId,
+        button.dataset.classId || ''
+    );
+}
+
+function adminEnsureClassPickerCoreBinding7355020_() {
+    if (adminClassPickerCoreBound7355020_) return;
+    adminClassPickerCoreBound7355020_ = true;
+    document.addEventListener('click', adminHandleClassPickerOptionClick7355020_, true);
+}
+
+adminEnsureClassPickerCoreBinding7355020_();
+
 function adminRenderClassSelectors() {
     adminBindClassSearch('adminAttendanceClass', 'adminClassPickerPanel');
     adminBindClassSearch('adminDailyEvalClass', 'adminDailyClassPickerPanel');
@@ -6710,7 +6743,9 @@ function adminRenderClassPicker(inputId, panelId) {
             <button type="button"
                     class="admin-class-option direct"
                     data-class-name="${escapeHtml(queryRaw)}"
-                    data-class-id="">
+                    data-class-id=""
+                    data-class-target="${escapeHtml(inputId)}"
+                    data-class-panel="${escapeHtml(panelId)}">
                 입력한 문구 그대로 사용: ${escapeHtml(queryRaw)}
             </button>
         `;
@@ -6730,7 +6765,9 @@ function adminRenderClassPicker(inputId, panelId) {
                 <button type="button"
                         class="admin-class-option"
                         data-class-name="${escapeHtml(c.className)}"
-                        data-class-id="${escapeHtml(c.classId || '')}">
+                        data-class-id="${escapeHtml(c.classId || '')}"
+                        data-class-target="${escapeHtml(inputId)}"
+                        data-class-panel="${escapeHtml(panelId)}">
                     ${escapeHtml(c.className)}${activeMark}${teacher}
                 </button>
             `;
@@ -6738,18 +6775,6 @@ function adminRenderClassPicker(inputId, panelId) {
     }
 
     optionsBox.innerHTML = html;
-    optionsBox.querySelectorAll('.admin-class-option[data-class-name]').forEach(button => {
-        button.addEventListener('click', event => {
-            event.preventDefault();
-            event.stopPropagation();
-            adminSelectClass(
-                button.dataset.className || '',
-                inputId,
-                panelId,
-                button.dataset.classId || ''
-            );
-        });
-    });
 }
 
 function normalizeClassSearchText(value) {
@@ -6765,32 +6790,21 @@ function escapeJsString(value) {
 
 
 function adminSelectClass(className, targetId = 'adminAttendanceClass', panelId = '', classId = '') {
+    const selectedClassName = String(className || '').trim();
     let resolvedClassId = String(classId || '').trim();
 
-    if (
-        !resolvedClassId &&
-        className &&
-        className !== '전체반' &&
-        (targetId === 'adminAttendanceClass' || targetId === 'adminDailyEvalClass')
-    ) {
-        const dateId = targetId === 'adminDailyEvalClass' ? 'adminDailyEvalDate' : 'adminAttendanceDate';
-        const dateValue = document.getElementById(dateId)?.value || '';
-        const resolved = typeof adminResolveCanonicalClass704_ === 'function'
-            ? adminResolveCanonicalClass704_(className, dateValue, '')
-            : null;
-        resolvedClassId = String(resolved && (resolved.classId || resolved.id) || '').trim();
-    }
-
+    // Selection itself is committed synchronously before any matching or network work.
+    // A roster/read failure must never make the class button appear unclickable.
     const el = document.getElementById(targetId);
     if (el) {
-        el.value = className;
+        el.value = selectedClassName;
         el.dataset.classId = resolvedClassId;
     }
 
     const display = document.getElementById(adminGetClassDisplayId(targetId));
     if (display) {
-        display.textContent = className || '반 목록에서 선택하거나 검색하세요';
-        display.classList.toggle('empty', !className);
+        display.textContent = selectedClassName || '반 목록에서 선택하거나 검색하세요';
+        display.classList.toggle('empty', !selectedClassName);
     }
 
     const search = document.getElementById(adminGetClassSearchInputId(targetId));
@@ -6803,12 +6817,35 @@ function adminSelectClass(className, targetId = 'adminAttendanceClass', panelId 
         document.activeElement.blur();
     }
 
+    // classId from the clicked canonical option is authoritative. Only resolve by name
+    // when an older/virtual option legitimately has no id, and never undo the selection
+    // merely because the resolver cannot produce a unique id.
+    if (
+        !resolvedClassId &&
+        selectedClassName &&
+        selectedClassName !== '전체반' &&
+        (targetId === 'adminAttendanceClass' || targetId === 'adminDailyEvalClass')
+    ) {
+        try {
+            const dateId = targetId === 'adminDailyEvalClass' ? 'adminDailyEvalDate' : 'adminAttendanceDate';
+            const dateValue = document.getElementById(dateId)?.value || '';
+            const resolved = typeof adminResolveCanonicalClass704_ === 'function'
+                ? adminResolveCanonicalClass704_(selectedClassName, dateValue, '')
+                : null;
+            resolvedClassId = String(resolved && (resolved.classId || resolved.id) || '').trim();
+            if (el) el.dataset.classId = resolvedClassId;
+        } catch (_ignore) {
+            resolvedClassId = '';
+            if (el) el.dataset.classId = '';
+        }
+    }
+
     if (targetId === 'adminAttendanceClass') {
-        if (className === '전체반' && typeof window.ulimAttendanceOpenAllClasses735420 === 'function') {
+        if (selectedClassName === '전체반' && typeof window.ulimAttendanceOpenAllClasses735420 === 'function') {
             window.ulimAttendanceOpenAllClasses735420();
             return;
         }
-        if (className) {
+        if (selectedClassName) {
             const loadAttendance = typeof window.adminLoadAttendanceSnapshot === 'function'
                 ? window.adminLoadAttendanceSnapshot
                 : (typeof adminLoadAttendanceSnapshot === 'function' ? adminLoadAttendanceSnapshot : null);
@@ -6828,14 +6865,14 @@ function adminSelectClass(className, targetId = 'adminAttendanceClass', panelId 
 
         const wrap = document.getElementById('adminDailyEvalTableWrap');
         if (wrap) {
-            wrap.innerHTML = className && className !== '전체반'
+            wrap.innerHTML = selectedClassName && selectedClassName !== '전체반'
                 ? '<div class="admin-data-guard-message">선택한 반의 학생을 불러오는 중입니다...</div>'
                 : '';
         }
         if (typeof setDraftStatus_ === 'function') setDraftStatus_('');
 
-        if (className && className !== '전체반') {
-            adminLoadDailyEvalStudents();
+        if (selectedClassName && selectedClassName !== '전체반') {
+            Promise.resolve(adminLoadDailyEvalStudents()).catch(() => {});
         } else {
             adminRenderDailyEvalTable();
         }
@@ -6846,6 +6883,7 @@ function adminSelectClass(className, targetId = 'adminAttendanceClass', panelId 
         adminLoadNoticeTargets(true);
     }
 }
+
 
 function adminSelectClassFromDropdown(selectEl, targetId) {
     const value = selectEl ? selectEl.value : '';
@@ -23760,15 +23798,6 @@ body {
     };
   }
 
-  const originalRenderClassSelectors613_ = window.adminRenderClassSelectors;
-  if (typeof originalRenderClassSelectors613_ === 'function') {
-    window.adminRenderClassSelectors = function () {
-      const result = originalRenderClassSelectors613_.apply(this, arguments);
-      purgeInvalidTeacherSelections613_();
-      return result;
-    };
-  }
-
   window.addEventListener('pageshow', function (event) {
     if (!event.persisted) return;
     const savedOwner = (() => {
@@ -25105,7 +25134,7 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 <script id="ulim-stable-build-readiness-735506">
 (function (global) {
   'use strict';
-  global.__ULIM_LOADED_BUILD_73550__ = '20260808-7355019-stability-convergence';
+  global.__ULIM_LOADED_BUILD_73550__ = '20260808-7355020-class-picker-core-capture';
   global.__ULIM_LOADED_BUILD_7350509__ = true;
   global.__ULIM_LOADED_BUILD_7355011__ = true;
   global.__ULIM_LOADED_BUILD_7355013__ = true;
@@ -25115,6 +25144,7 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
   global.__ULIM_LOADED_BUILD_7355017__ = true;
   global.__ULIM_LOADED_BUILD_7355018__ = true;
   global.__ULIM_LOADED_BUILD_7355019__ = true;
+  global.__ULIM_LOADED_BUILD_7355020__ = true;
 
   function verifyRequiredModules735506() {
     var studentReady =
