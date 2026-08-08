@@ -25,7 +25,7 @@
   <script src="./web/room-classroom-realtime-7.29.17.js?v=20260808.72917"></script>
   <script src="./web/staff-login-firebase-primary-7.32.7.js?v=20260807.73207"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260808-7355022-daily-detail-stability">
+<meta name="ulim-build" content="20260808-7355023-daily-message-composition-fix">
 <script id="ulim-one-time-cache-clean-7355019">
 (function (global) {
   'use strict';
@@ -2482,7 +2482,7 @@ body.ulim-attendance-modal-open73545{overflow:hidden}
                 <button type="button" class="admin-btn admin-full-only" onclick="adminSaveDailyEvalTemplate()">기본 문구 저장</button>
                 <button type="button" class="admin-btn blue" onclick="adminApplyTemplateToVisibleRows()">현재 학생들에게 문구 적용</button>
               </div>
-              <div class="admin-permission-note">사용 가능 치환어: [학생명], [반명], [반이름], [출석여부], [수업일], [담당강사], [수업영상링크]</div>
+              <div class="admin-permission-note">사용 가능 치환어: [학생명], [반명], [반이름], [출석여부], [수업일], [담당강사], [수업내용], [수업태도], [전달사항], [수업영상링크]</div>
             </div>
 
             <div class="admin-recipient-row admin-full-only">
@@ -7807,35 +7807,104 @@ function adminResolveDailyEvalStatusFromRow_(base, domRow) {
 }
 
 function adminBuildDailyEvalReplaceMap_(student) {
-    const date = document.getElementById('adminDailyEvalDate')?.value || getTodayInputValue();
-    const selectedClass = document.getElementById('adminDailyEvalClass')?.value || student.className || '';
-    const rawClassName = selectedClass || student.className || '';
+    const row = student || {};
+    const date = String(row.date || document.getElementById('adminDailyEvalDate')?.value || getTodayInputValue() || '').trim();
+    const selectedClass = String(document.getElementById('adminDailyEvalClass')?.value || '').trim();
+    const rawClassName = String(row.className || selectedClass || '').trim();
     const cleanClassName = adminCleanClassNameOnly_(rawClassName);
-    const attendanceStatus = adminNormalizeDailyEvalStatusLabel_(student.attendanceStatus || student.status || student.specialStatus || '');
-    const videoLink = adminGetVideoLinkForClassName_(rawClassName) || adminGetVideoLinkForClassName_(student.className || '') || student.videoLink || '';
+    const attendanceStatus = adminNormalizeDailyEvalStatusLabel_(row.attendanceStatus || row.status || row.specialStatus || '');
+    const videoLink = String(row.videoLink || adminGetVideoLinkForClassName_(rawClassName, date) || '').trim();
 
     return {
         '[반이름]': cleanClassName,
         '[반명]': cleanClassName,
-        '[학생명]': student.name || student.studentName || '',
-        '[담당강사]': student.instructor || student.instructorName || '',
+        '[학생명]': row.name || row.studentName || '',
+        '[담당강사]': row.instructor || row.instructorName || '',
         '[수업일]': date,
         '[출석여부]': attendanceStatus,
         '[구분]': attendanceStatus,
-        '[수업영상링크]': videoLink || '',
-        '[수업내용]': student.lessonContent || '',
-        '[수업태도]': student.lessonAttitude || '',
-        '[전달사항]': student.teacherComment || ''
+        '[수업영상링크]': videoLink,
+        '[수업내용]': row.lessonContent || '',
+        '[수업태도]': row.lessonAttitude || '',
+        '[전달사항]': row.teacherComment || ''
     };
 }
 
-function adminApplyDailyEvalTemplateReplacements_(template, student) {
+function adminDailyEvalFindNextSectionIndex_(source, startIndex, patterns) {
+    let best = source.length;
+    (patterns || []).forEach(pattern => {
+        const tail = source.slice(startIndex);
+        const match = tail.match(pattern);
+        if (match && typeof match.index === 'number') best = Math.min(best, startIndex + match.index);
+    });
+    return best;
+}
+
+function adminDailyEvalInjectSectionValue_(message, headingPattern, nextPatterns, value) {
+    const source = String(message || '');
+    const content = String(value || '').trim();
+    if (!source || !content) return source;
+
+    const match = source.match(headingPattern);
+    if (!match || typeof match.index !== 'number') return source;
+
+    const bodyStart = match.index + match[0].length;
+    const bodyEnd = adminDailyEvalFindNextSectionIndex_(source, bodyStart, nextPatterns);
+    const body = source.slice(bodyStart, bodyEnd);
+    const section = source.slice(match.index, bodyEnd);
+    if (section.indexOf(content) >= 0) return source;
+
+    const trimmedBody = body.trim();
+    const unresolvedOnly = /^\[[^\]]+\]$/.test(trimmedBody);
+    let replacementBody;
+    if (!trimmedBody || unresolvedOnly) {
+        replacementBody = '\n' + content + '\n\n';
+    } else {
+        replacementBody = '\n' + content + '\n' + trimmedBody + '\n\n';
+    }
+    return source.slice(0, bodyStart) + replacementBody + source.slice(bodyEnd).replace(/^\s*/, '');
+}
+
+function adminDailyEvalComposeFromTemplate_(template, student) {
+    const row = student || {};
     let result = String(template || '');
-    const map = adminBuildDailyEvalReplaceMap_(student || {});
+    const map = adminBuildDailyEvalReplaceMap_(row);
     Object.keys(map).forEach(key => {
         result = result.split(key).join(map[key] || '');
     });
+
+    // Existing saved templates may contain only section headings and no field placeholders.
+    // Fill those section bodies from the canonical live/saved fields so preview and actual send
+    // always use the same complete message.
+    result = adminDailyEvalInjectSectionValue_(
+        result,
+        /▶\s*이번주\s*수업[^\n\r]*/,
+        [/\n\s*▶\s*수업\s*활동\s*및\s*태도/, /\n\s*▶\s*선생님\s*전달\s*사항/, /\n\s*▶\s*수업영상\s*확인\s*링크/, /\n\s*문의전화\b/],
+        row.lessonContent
+    );
+    result = adminDailyEvalInjectSectionValue_(
+        result,
+        /▶\s*수업\s*활동\s*및\s*태도[^\n\r]*/,
+        [/\n\s*▶\s*선생님\s*전달\s*사항/, /\n\s*▶\s*수업영상\s*확인\s*링크/, /\n\s*문의전화\b/],
+        row.lessonAttitude
+    );
+    result = adminDailyEvalInjectSectionValue_(
+        result,
+        /▶\s*선생님\s*전달\s*사항[^\n\r]*/,
+        [/\n\s*▶\s*수업영상\s*확인\s*링크/, /\n\s*문의전화\b/],
+        row.teacherComment
+    );
+    result = adminDailyEvalInjectSectionValue_(
+        result,
+        /▶\s*수업영상\s*확인\s*링크[^\n\r]*/,
+        [/\n\s*문의전화\b/, /\n\s*울림성우연기학원\b/, /\n\s*울림연기학원\b/],
+        row.videoLink || map['[수업영상링크]']
+    );
     return result;
+}
+
+function adminApplyDailyEvalTemplateReplacements_(template, student) {
+    return adminDailyEvalComposeFromTemplate_(template, student || {});
 }
 
 
@@ -7875,10 +7944,31 @@ function adminExtractDailyEvalParts_(row) {
     return {
         lessonContent: String((row && row.lessonContent) || '').trim() || adminExtractDailyPart_(text, ['▶ 이번주 수업', '▶이번주 수업'], ['▶ 수업 활동 및 태도', '▶수업 활동 및 태도', '▶ 선생님 전달 사항', '▶선생님 전달 사항', '▶ 수업영상 확인 링크', '▶수업영상 확인 링크']),
         lessonAttitude: String((row && row.lessonAttitude) || '').trim() || adminExtractDailyPart_(text, ['▶ 수업 활동 및 태도', '▶수업 활동 및 태도'], ['▶ 선생님 전달 사항', '▶선생님 전달 사항', '▶ 수업영상 확인 링크', '▶수업영상 확인 링크']),
-        teacherComment: String((row && row.teacherComment) || '').trim() || adminExtractDailyPart_(text, ['▶ 선생님 전달 사항', '▶선생님 전달 사항'], ['▶ 수업영상 확인 링크', '▶수업영상 확인 링크', '울림성우연기학원', '울림연기학원'])
+        teacherComment: String((row && row.teacherComment) || '').trim() || adminExtractDailyPart_(text, ['▶ 선생님 전달 사항', '▶선생님 전달 사항'], ['▶ 수업영상 확인 링크', '▶수업영상 확인 링크', '문의전화', '울림성우연기학원', '울림연기학원']),
+        videoLink: String((row && row.videoLink) || '').trim() || adminExtractDailyPart_(text, ['▶ 수업영상 확인 링크', '▶수업영상 확인 링크'], ['문의전화', '울림성우연기학원', '울림연기학원'])
     };
 }
 
+function adminDailyEvalMessageCoversParts_(evaluation, row) {
+    const message = String(evaluation || '').trim();
+    if (!message) return false;
+    const expected = row || {};
+    const extracted = adminExtractDailyEvalParts_({ evaluation: message });
+    const checks = [
+        ['lessonContent', expected.lessonContent],
+        ['lessonAttitude', expected.lessonAttitude],
+        ['teacherComment', expected.teacherComment],
+        ['videoLink', expected.videoLink]
+    ];
+    return checks.every(([key, value]) => {
+        const wanted = String(value || '').trim();
+        if (!wanted) return true;
+        const actual = String(extracted[key] || '').trim();
+        return actual.indexOf(wanted) >= 0 || message.indexOf(wanted) >= 0;
+    });
+}
+
+/* ULIM 7.35.5.0.23: canonical daily message composition owner */
 function adminBuildDailyEvalMessageFromParts(base) {
     const template = document.getElementById('adminDailyEvalTemplate')?.value || adminDailyEvalTemplateText;
     return adminApplyDailyEvalTemplateReplacements_(template, base || {}).trim();
@@ -19112,7 +19202,8 @@ ${ruleSummary}`, 'success');
             if (typeof adminResolveDailyEvalStatusFromRow_ === 'function') {
                 base.attendanceStatus = adminResolveDailyEvalStatusFromRow_(base, row);
             }
-            base.videoLink = (typeof adminGetVideoLinkForClassName_ === 'function' ? adminGetVideoLinkForClassName_(rawClassName) : '') || base.videoLink || '';
+            const liveVideoLink = (document.getElementById('adminDailyClassVideoLink7355021')?.value || '').trim();
+            base.videoLink = liveVideoLink || (typeof adminGetVideoLinkForClassName_ === 'function' ? adminGetVideoLinkForClassName_(rawClassName) : '') || base.videoLink || '';
             base.lessonContent = commonLesson;
             base.lessonAttitude = row.querySelector('.admin-eval-attitude')?.value.trim() || '';
             base.teacherComment = row.querySelector('.admin-eval-comment')?.value.trim() || '';
@@ -19382,26 +19473,29 @@ ${ruleSummary}`, 'success');
             if (typeof adminResolveDailyEvalStatusFromRow_ === 'function') {
                 base.attendanceStatus = adminResolveDailyEvalStatusFromRow_(base, row);
             }
-            base.videoLink = (typeof adminGetVideoLinkForClassName_ === 'function' ? adminGetVideoLinkForClassName_(rawClassName, date) : '') || base.videoLink || '';
+            const liveVideoLink = (document.getElementById('adminDailyClassVideoLink7355021')?.value || '').trim();
+            base.videoLink = liveVideoLink || (typeof adminGetVideoLinkForClassName_ === 'function' ? adminGetVideoLinkForClassName_(rawClassName, date) : '') || base.videoLink || '';
             base.lessonContent = commonLesson;
             base.lessonAttitude = row.querySelector('.admin-eval-attitude')?.value.trim() || '';
             base.teacherComment = row.querySelector('.admin-eval-comment')?.value.trim() || '';
 
-            const savedParts = typeof adminExtractDailyEvalParts_ === 'function'
-                ? adminExtractDailyEvalParts_(source)
-                : { lessonContent: source.lessonContent || '', lessonAttitude: source.lessonAttitude || '', teacherComment: source.teacherComment || '' };
-            const formMatchesSaved = String(base.lessonContent || '').trim() === String(savedParts.lessonContent || source.lessonContent || '').trim()
-                && String(base.lessonAttitude || '').trim() === String(savedParts.lessonAttitude || source.lessonAttitude || '').trim()
-                && String(base.teacherComment || '').trim() === String(savedParts.teacherComment || source.teacherComment || '').trim();
+            const sourceEvaluation = String(source.evaluation || '').trim();
+            const sourceCarriesCurrentParts = typeof adminDailyEvalMessageCoversParts_ === 'function'
+                ? adminDailyEvalMessageCoversParts_(sourceEvaluation, base)
+                : false;
 
-            if (String(source.evaluation || '').trim() && formMatchesSaved && source.__dailyPreviewCustom621 !== true) {
-                base.evaluation = String(source.evaluation || '').trim();
+            if (sourceEvaluation && source.__dailyPreviewCustom621 === true && sourceCarriesCurrentParts) {
+                base.evaluation = sourceEvaluation;
+            } else if (sourceEvaluation && sourceCarriesCurrentParts) {
+                base.evaluation = sourceEvaluation;
             } else {
+                // 7.35.5.0.23: never reuse an older saved message whose section bodies are blank
+                // or do not carry the current canonical form values.
                 base.evaluation = typeof adminBuildDailyEvalMessageFromParts === 'function'
                     ? adminBuildDailyEvalMessageFromParts(base)
-                    : [base.lessonContent, base.lessonAttitude, base.teacherComment].filter(Boolean).join('\n');
+                    : [base.lessonContent, base.lessonAttitude, base.teacherComment, base.videoLink].filter(Boolean).join('\n');
             }
-            const hasAny = base.lessonContent || base.lessonAttitude || base.teacherComment || base.evaluation;
+            const hasAny = base.lessonContent || base.lessonAttitude || base.teacherComment || base.videoLink || base.evaluation;
             return hasAny ? base : null;
         }).filter(Boolean);
     };
@@ -24154,14 +24248,6 @@ body {
         return list.find(function(source){ return sameStudent_(source, row); }) || null;
     }
 
-    function sourceMessageStillValid_(selectedRow, sourceRow) {
-        if (!sourceRow || !trim_(sourceRow.evaluation)) return false;
-        return trim_(selectedRow.lessonContent) === trim_(sourceRow.lessonContent)
-            && trim_(selectedRow.lessonAttitude) === trim_(sourceRow.lessonAttitude)
-            && trim_(selectedRow.teacherComment) === trim_(sourceRow.teacherComment);
-    }
-
-
     function ensureModal_() {
         let overlay = document.getElementById('adminDailyPreviewOverlay621');
         if (overlay) return overlay;
@@ -24226,7 +24312,16 @@ body {
         if (!row) return '';
         const key = rowKey_(row);
         if (edits[key]) return text_(edits[key].evaluation);
-        return text_(row.evaluation);
+        const stored = text_(row.evaluation);
+        try {
+            if (typeof adminDailyEvalMessageCoversParts_ === 'function' && adminDailyEvalMessageCoversParts_(stored, row)) {
+                return stored;
+            }
+            if (typeof adminBuildDailyEvalMessageFromParts === 'function') {
+                return text_(adminBuildDailyEvalMessageFromParts(row));
+            }
+        } catch (e) {}
+        return stored;
     }
 
     function captureDraft_() {
