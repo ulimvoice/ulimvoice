@@ -5,7 +5,7 @@
 <meta name="theme-color" content="#16a34a">
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<meta name="ulim-tablet-build" content="20260808-7355018-seoul-calendar-date" />
+<meta name="ulim-tablet-build" content="20260808-7355019-calendar-contract" />
 <title>울림연기학원 등하원 체크 2026.06.06.046.01</title>
 <style>
   :root {
@@ -444,7 +444,7 @@ body {
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
 <script>
 /****************************************************
- * 울림 태블릿 7.35.5.0.16 callable-only canonical roster · SOLAPI Functions
+ * 울림 태블릿 7.35.5.0.19 callable-only canonical roster · calendar-date contract
  * - 로컬 일일스냅샷 저장
  * - 등하원 클릭 즉시 로컬 출결로그 저장
  * - 로컬 중복 요청 즉시 차단
@@ -453,8 +453,8 @@ body {
  * - Google Sheets는 오전 6시/관리자 백업 전용
  * - 등하원 알림톡은 Firebase Functions → SOLAPI 직접 발송
  ****************************************************/
-const TABLET_APP_VERSION = "2026.08.08.7.35.5.0.16";
-const TABLET_SNAPSHOT_CLIENT_VERSION = "2026-08-08.tablet-canonical-roster-7355016";
+const TABLET_APP_VERSION = "2026.08.08.7.35.5.0.19";
+const TABLET_SNAPSHOT_CLIENT_VERSION = "2026-08-08.tablet-canonical-roster-7355019";
 const TABLET_DEBUG = false;
 const TABLET_FIREBASE_CONFIG = {
   apiKey: "AIzaSyAW-sqtUQ_mJ6ZS_aV8pTOAKvHTSX-FXUM",
@@ -510,7 +510,7 @@ let tabletFirebaseRuntimePromise = null;
 let tabletSnapshotUnsubscribe = null;
 let tabletSnapshotListenerDate = "";
 let tabletLastCallableRefreshAt7355016 = 0;
-let tabletCalendarDateKey7355018 = "";
+let tabletCalendarDateKey7355019 = "";
 
 const TABLET_SEOUL_TIME_ZONE = "Asia/Seoul";
 function pad2(n) { return String(n).padStart(2, "0"); }
@@ -531,14 +531,14 @@ function formatSeoulYmd(epochMs) {
 }
 function getTodayKey() { return formatSeoulYmd(Date.now()); }
 function getNowIso() { return new Date().toISOString(); }
-function checkTabletCalendarDateRollover7355018() {
+function checkTabletCalendarDateRollover7355019() {
   const today = getTodayKey();
-  if (!tabletCalendarDateKey7355018) {
-    tabletCalendarDateKey7355018 = today;
+  if (!tabletCalendarDateKey7355019) {
+    tabletCalendarDateKey7355019 = today;
     return;
   }
-  if (tabletCalendarDateKey7355018 === today) return;
-  tabletCalendarDateKey7355018 = today;
+  if (tabletCalendarDateKey7355019 === today) return;
+  tabletCalendarDateKey7355019 = today;
   clearStaleTabletLocalData();
   resetTabletFirebaseRuntime7355016()
     .then(function() { return loadTabletPreload(true); })
@@ -551,12 +551,28 @@ function normalizeLocalKeyPart(value) { return String(value || "").replace(/\s+/
 
 function updateClock() {
   const now = new Date();
-  const weekdays = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"];
-  const ampm = now.getHours() >= 12 ? "오후" : "오전";
-  const h12 = now.getHours() % 12 || 12;
-  document.getElementById("clockDate").textContent = `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일 ${weekdays[now.getDay()]}`;
-  document.getElementById("clockTime").textContent = `${ampm} ${pad2(h12)}:${pad2(now.getMinutes())}`;
-  checkTabletCalendarDateRollover7355018();
+  let year, month, day, weekday, hour24, minute;
+  try {
+    const parts = new Intl.DateTimeFormat("ko-KR", {
+      timeZone: TABLET_SEOUL_TIME_ZONE,
+      year: "numeric", month: "numeric", day: "numeric", weekday: "long",
+      hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+    }).formatToParts(now);
+    const map = {};
+    parts.forEach(function(part) { if (part.type !== "literal") map[part.type] = part.value; });
+    year = Number(map.year); month = Number(map.month); day = Number(map.day);
+    weekday = map.weekday || ""; hour24 = Number(map.hour); minute = Number(map.minute);
+  } catch (err) {
+    const shifted = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    year = shifted.getUTCFullYear(); month = shifted.getUTCMonth() + 1; day = shifted.getUTCDate();
+    weekday = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"][shifted.getUTCDay()];
+    hour24 = shifted.getUTCHours(); minute = shifted.getUTCMinutes();
+  }
+  const ampm = hour24 >= 12 ? "오후" : "오전";
+  const h12 = hour24 % 12 || 12;
+  document.getElementById("clockDate").textContent = `${year}년 ${month}월 ${day}일 ${weekday}`;
+  document.getElementById("clockTime").textContent = `${ampm} ${pad2(h12)}:${pad2(minute)}`;
+  checkTabletCalendarDateRollover7355019();
 }
 
 function pressNum(num) { if (busy) return; if (pin.length >= 8) return; pin += num; renderPin(); }
@@ -652,7 +668,7 @@ async function withTabletAuthRetry7355016(operation) {
 }
 
 async function bindTabletSnapshotListener() {
-  // 7.35.5.0.16: Direct Firestore listeners were removed. They depended on client
+  // Callable-only transport: Direct Firestore listeners remain intentionally disabled. They depended on client
   // Firestore rules and could enter permission-denied while callable auth was still valid.
   // The tablet now has one transport only: authenticated Firebase callable functions.
   tabletSnapshotUnsubscribe = null;
@@ -661,16 +677,25 @@ async function bindTabletSnapshotListener() {
 }
 
 async function loadTabletFirestoreSnapshot() {
+  const expectedDate = getTodayKey();
   const result = await withTabletAuthRetry7355016(function(runtime) {
-    return runtime.getSnapshot({ date: getTodayKey() });
+    return runtime.getSnapshot({ date: expectedDate });
   });
   const data = result && result.data ? result.data : null;
-  if (data && data.status === "success" && data.attendanceMap) {
+  if (
+    data &&
+    data.status === "success" &&
+    data.attendanceMap &&
+    String(data.date || "") === expectedDate &&
+    String(data.version || "") === TABLET_SNAPSHOT_CLIENT_VERSION
+  ) {
     tabletLastCallableRefreshAt7355016 = Date.now();
-    saveDailySnapshot(data);
+    if (!saveDailySnapshot(data)) throw new Error("오늘 날짜 수업정보를 저장하지 못했습니다.");
     return data;
   }
-  throw new Error("오늘 수업 정보를 확인하지 못했습니다.");
+  // Never install an adjacent-day or legacy snapshot into today's tablet state.
+  clearStaleTabletLocalData();
+  throw new Error("오늘 날짜 수업정보가 일치하지 않습니다.");
 }
 
 async function saveTabletAttendanceToFirestore(item) {
@@ -691,7 +716,7 @@ async function saveTabletAttendanceToFirestore(item) {
 }
 
 
-// 7.35.5.0.16: legacy GAS transport helpers were removed; callable Functions are the only transport.
+// Legacy GAS transport helpers are removed; callable Functions are the only transport.
 
 function tabletPublicMessage_(value, fallback) {
   const raw = String(value || "").trim();
@@ -810,14 +835,20 @@ function clearStaleTabletLocalData() {
 }
 
 function saveDailySnapshot(data) {
-  if (!data || data.status !== "success" || !data.attendanceMap) return false;
-  if (!data.version) data.version = TABLET_SNAPSHOT_CLIENT_VERSION;
+  const today = getTodayKey();
+  if (
+    !data ||
+    data.status !== "success" ||
+    !data.attendanceMap ||
+    String(data.date || "") !== today ||
+    String(data.version || "") !== TABLET_SNAPSHOT_CLIENT_VERSION
+  ) return false;
   tabletPreload = data;
   tabletPreloadAt = Date.now();
   localStorage.setItem(DAILY_SNAPSHOT_KEY, JSON.stringify(data));
   localStorage.setItem(DAILY_SNAPSHOT_AT_KEY, String(tabletPreloadAt));
-  localStorage.setItem(DAILY_SNAPSHOT_DATE_KEY, String(data.date || getTodayKey()));
-  localStorage.setItem(LOCAL_DATA_DATE_KEY, String(data.date || getTodayKey()));
+  localStorage.setItem(DAILY_SNAPSHOT_DATE_KEY, today);
+  localStorage.setItem(LOCAL_DATA_DATE_KEY, today);
   return true;
 }
 
@@ -830,11 +861,8 @@ function loadDailySnapshotFromLocal() {
     const data = JSON.parse(raw);
     if (!data || data.status !== "success" || !data.attendanceMap) return null;
     // 7.35.5.0.14 accepts canonical Firestore snapshots and the immediately previous local snapshot format.
-    if (data.version) {
-      const version = String(data.version);
-      const accepted = version === TABLET_SNAPSHOT_CLIENT_VERSION || version.indexOf("tablet-canonical-roster-7355016") >= 0;
-      if (!accepted) return null;
-    }
+    if (String(data.date || "") !== getTodayKey()) return null;
+    if (String(data.version || "") !== TABLET_SNAPSHOT_CLIENT_VERSION) return null;
     tabletPreload = data;
     tabletPreloadAt = Number(localStorage.getItem(DAILY_SNAPSHOT_AT_KEY) || 0) || Date.now();
     return data;
@@ -1488,15 +1516,15 @@ function tabletConnectionMessage7355014(error) {
   const code = String((error && (error.ulimCode || error.code)) || "");
   const message = String((error && error.message) || "");
   if (code.indexOf("kiosk-key-missing") >= 0 || message.indexOf("인증키가 설정되지") >= 0) {
-    return "이 태블릿에 연결키가 없습니다. PC에서 7.35.5.0.16 태블릿 연결 설정을 한 번 실행한 뒤 생성된 1회 연결 주소를 이 태블릿에서 열어주세요.";
+    return "이 태블릿에 연결키가 없습니다. PC의 태블릿 연결 설정에서 생성된 1회 연결 주소를 이 태블릿에서 열어주세요.";
   }
   if (code.indexOf("permission-denied") >= 0 || message.indexOf("인증키") >= 0 || message.indexOf("KIOSK") >= 0) {
-    return "태블릿 연결키와 Firebase Secret이 일치하지 않습니다. 7.35.5.0.16 태블릿 연결 설정을 다시 실행해주세요.";
+    return "태블릿 연결키와 Firebase Secret이 일치하지 않습니다. 태블릿 연결 설정을 다시 실행해주세요.";
   }
   if (code.indexOf("not-found") >= 0 || code.indexOf("unimplemented") >= 0) {
     return "태블릿 Firebase Functions가 아직 최신 버전으로 배포되지 않았습니다. Functions 배포 후 다시 연결해주세요.";
   }
-  return "Firebase 연결 또는 태블릿 인증에 실패했습니다. 네트워크와 7.35.5.0.16 Functions 배포 상태를 확인해주세요.";
+  return "태블릿 연결 또는 인증에 실패했습니다. 네트워크와 최신 Functions 배포 상태를 확인해주세요.";
 }
 
 window.addEventListener("keydown", function(event) {
@@ -1514,7 +1542,12 @@ clearLegacyTabletSnapshotKeys43_21();
 clearStaleTabletLocalData();
 loadAds();
 getTabletFirebaseRuntime().then(function() { return loadTabletFirestoreSnapshot(); }).catch(function(error) {
-  showModal("태블릿 연결을 확인해주세요.", tabletConnectionMessage7355014(error), "warning", '<button class="modal-btn" onclick="location.reload()">다시 연결</button>');
+  const code = String((error && (error.ulimCode || error.code)) || "");
+  const missingKey = code.indexOf("kiosk-key-missing") >= 0 || String((error && error.message) || "").indexOf("인증키가 설정되지") >= 0;
+  const action = missingKey
+    ? '<button class="modal-btn" onclick="closeModal()">확인</button>'
+    : '<button class="modal-btn" onclick="location.reload()">다시 시도</button>';
+  showModal("태블릿 연결을 확인해주세요.", tabletConnectionMessage7355014(error), "warning", action);
 });
 loadTabletPreload(true);
 processLocalPendingAttendanceQueue();
