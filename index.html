@@ -24,7 +24,7 @@
   <!-- ULIM 7.34.2: safe Firebase-first staff/student directory integration. -->
   <script src="./web/room-classroom-realtime-7.29.17.js?v=20260808.72917"></script>
   <script src="./web/staff-login-firebase-primary-7.32.7.js?v=20260809.73207-student-isolation-r6"></script>
-  <script src="./web/student-login-firebase-direct-7.35.5.0.30.js?v=20260809.7355030"></script>
+  <script src="./web/student-login-firebase-direct-7.35.5.0.30.js?v=20260809.7355030r7"></script>
 <meta charset="UTF-8">
 <meta name="ulim-build" content="20260809-7355030-student-firebase-direct-auth">
 <script id="ulim-one-time-cache-clean-7355030">
@@ -13198,26 +13198,28 @@ async function changeStudentPasswordByPrompt(force = false, knownCurrentPassword
         return false;
     }
 
-    const currentPassword = knownCurrentPassword || prompt('현재 비밀번호를 입력해주세요.');
-    if (!currentPassword) return false;
-
-    const newPassword = prompt('새 비밀번호를 입력해주세요.\n4자 이상으로 설정해주세요.');
-    if (!newPassword) return false;
-    if (String(newPassword).length < 4) {
-        alert('새 비밀번호는 4자 이상으로 설정해주세요.');
-        return false;
-    }
-    if (String(currentPassword) === String(newPassword)) {
-        alert('새 비밀번호는 현재 비밀번호와 다르게 설정해주세요.');
-        return false;
-    }
-    const newPassword2 = prompt('새 비밀번호를 한 번 더 입력해주세요.');
-    if (newPassword !== newPassword2) {
-        alert('새 비밀번호가 서로 다릅니다.');
-        return false;
-    }
-
+    window.__ULIM_STUDENT_PASSWORD_CHANGE_IN_PROGRESS_7355030__ = true;
+    let changedOk7355030 = false;
     try {
+        const currentPassword = knownCurrentPassword || prompt('현재 비밀번호를 입력해주세요.');
+        if (!currentPassword) return false;
+
+        const newPassword = prompt('새 비밀번호를 입력해주세요.\n4자 이상으로 설정해주세요.');
+        if (!newPassword) return false;
+        if (String(newPassword).length < 4) {
+            alert('새 비밀번호는 4자 이상으로 설정해주세요.');
+            return false;
+        }
+        if (String(currentPassword) === String(newPassword)) {
+            alert('새 비밀번호는 현재 비밀번호와 다르게 설정해주세요.');
+            return false;
+        }
+        const newPassword2 = prompt('새 비밀번호를 한 번 더 입력해주세요.');
+        if (newPassword !== newPassword2) {
+            alert('새 비밀번호가 서로 다릅니다.');
+            return false;
+        }
+
         showLoading('비밀번호 변경 중...');
         const profile = await direct.changePassword(currentPassword, newPassword);
         studentMustChangePassword = false;
@@ -13227,13 +13229,16 @@ async function changeStudentPasswordByPrompt(force = false, knownCurrentPassword
             studentName = profile.name;
             localStorage.setItem('studentName', studentName);
         }
-        hideLoading();
+        changedOk7355030 = true;
         alert('비밀번호가 변경되었습니다.');
         return true;
     } catch (err) {
-        hideLoading();
         alert(err && err.message ? err.message : '비밀번호 변경 중 문제가 발생했습니다.');
         return false;
+    } finally {
+        try { hideLoading(); } catch (_ignore7355030) {}
+        window.__ULIM_STUDENT_PASSWORD_CHANGE_IN_PROGRESS_7355030__ = false;
+        try { window.dispatchEvent(new CustomEvent('ulim-student-password-change-finished', { detail: { ok: changedOk7355030 } })); } catch (_ignoreEvent7355030) {}
     }
 }</script>
 
@@ -21171,6 +21176,7 @@ ${ruleSummary}`, 'success');
       try { if (typeof hideLoading === 'function') hideLoading(); } catch(e) {}
       alert((profile.name || name) + '님 로그인되었습니다.');
       if (profile.mustChangePassword === true && typeof changeStudentPasswordByPrompt === 'function') {
+        window.__ULIM_STUDENT_PASSWORD_CHANGE_IN_PROGRESS_7355030__ = true;
         setTimeout(function(){ changeStudentPasswordByPrompt(true, password); }, 250);
       }
       if (typeof showMainContent === 'function') showMainContent(true);
@@ -25209,7 +25215,7 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 <script src="./web/attendance-admin-integrated-7.35.4.22.js?v=20260808.7350422"></script>
 <script src="./web/operational-content-admin-7.35.5.0.12.js?v=20260808.7355012"></script>
 <script src="./web/student-login-notice-and-role-access-7.35.5.0.12.js?v=20260808.7355012"></script>
-<script src="./web/student-course-application-7.35.5.0.28.js?v=20260808.7355028"></script>
+<script src="./web/student-course-application-7.35.5.0.28.js?v=20260809.7355030r7"></script>
 <script id="ulim-stable-build-readiness-735506">
 (function (global) {
   'use strict';
