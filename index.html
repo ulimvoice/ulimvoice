@@ -25,8 +25,9 @@
   <script src="./web/room-classroom-realtime-7.29.17.js?v=20260808.72917"></script>
   <script src="./web/staff-login-firebase-primary-7.32.7.js?v=20260807.73207"></script>
   <script src="./web/student-login-firebase-direct-7.35.5.0.30.js?v=20260809.7355030r7"></script>
+  <script src="./web/student-home-bootstrap-7.35.5.0.31.js?v=20260809.7355031"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260809-7355030-student-firebase-direct-auth">
+<meta name="ulim-build" content="20260809-7355031-course-application-firestore-final">
 <script id="ulim-one-time-cache-clean-7355030">
 (function (global) {
   'use strict';
@@ -5584,6 +5585,7 @@ function closeNoticeModal() {
     if (overlayEl) {
         overlayEl.style.display = "none";
     }
+    try { window.dispatchEvent(new CustomEvent('ulim-student-login-notice-closed', { detail: { source: 'closeNoticeModal', version: '7355031' } })); } catch (ignore) {}
 }
 
 
@@ -21173,13 +21175,23 @@ ${ruleSummary}`, 'success');
       if (!profile) throw new Error('학생 이름 또는 비밀번호가 일치하지 않습니다.');
       saveStudentDirectProfile(profile);
       applyStudentGlobals();
+      /* 7.35.5.0.31: login success is non-blocking. Preload notice/course data immediately. */
+      window.__ULIM_STUDENT_PASSWORD_CHANGE_IN_PROGRESS_7355030__ = profile.mustChangePassword === true;
+      try {
+        var homeBoot7355031 = window.__ULIM_STUDENT_HOME_BOOTSTRAP_7355031__;
+        if (homeBoot7355031 && typeof homeBoot7355031.reset === 'function') homeBoot7355031.reset();
+        var noticeFlow7355031 = window.__ULIM_STUDENT_LOGIN_NOTICE_FLOW_7355031__;
+        if (noticeFlow7355031 && typeof noticeFlow7355031.reset === 'function') noticeFlow7355031.reset();
+        if (typeof window.ulimResetCourseApplication7355031 === 'function') window.ulimResetCourseApplication7355031();
+        if (homeBoot7355031 && typeof homeBoot7355031.load === 'function') Promise.resolve(homeBoot7355031.load(true)).catch(function(){});
+        if (noticeFlow7355031 && typeof noticeFlow7355031.ensure === 'function') Promise.resolve(noticeFlow7355031.ensure()).catch(function(){});
+        if (typeof window.ulimRefreshCourseApplication7355031 === 'function') Promise.resolve(window.ulimRefreshCourseApplication7355031()).catch(function(){});
+      } catch(e) {}
       try { if (typeof hideLoading === 'function') hideLoading(); } catch(e) {}
-      alert((profile.name || name) + '님 로그인되었습니다.');
-      if (profile.mustChangePassword === true && typeof changeStudentPasswordByPrompt === 'function') {
-        window.__ULIM_STUDENT_PASSWORD_CHANGE_IN_PROGRESS_7355030__ = true;
-        setTimeout(function(){ changeStudentPasswordByPrompt(true, password); }, 250);
-      }
       if (typeof showMainContent === 'function') showMainContent(true);
+      if (profile.mustChangePassword === true && typeof changeStudentPasswordByPrompt === 'function') {
+        setTimeout(function(){ changeStudentPasswordByPrompt(true, password); }, 120);
+      }
       installSecureTabGate();
       try { if (typeof renderStudentAccountBar_ === 'function') renderStudentAccountBar_(); } catch(e) {}
       return true;
@@ -21284,6 +21296,13 @@ ${ruleSummary}`, 'success');
 
     if (hasStudentSession()) {
       applyStudentGlobals();
+      try {
+        var homeRestore7355031 = window.__ULIM_STUDENT_HOME_BOOTSTRAP_7355031__;
+        if (homeRestore7355031 && typeof homeRestore7355031.load === 'function') Promise.resolve(homeRestore7355031.load(false)).catch(function(){});
+        var noticeRestore7355031 = window.__ULIM_STUDENT_LOGIN_NOTICE_FLOW_7355031__;
+        if (noticeRestore7355031 && typeof noticeRestore7355031.ensure === 'function') Promise.resolve(noticeRestore7355031.ensure()).catch(function(){});
+        if (typeof window.ulimRefreshCourseApplication7355031 === 'function') Promise.resolve(window.ulimRefreshCourseApplication7355031()).catch(function(){});
+      } catch(e) {}
       try { if (typeof showMainContent === 'function') showMainContent(true); } catch(e) {}
       try { if (typeof renderStudentAccountBar_ === 'function') renderStudentAccountBar_(); } catch(e) {}
       installSecureTabGate();
@@ -21300,6 +21319,13 @@ ${ruleSummary}`, 'success');
   window.studentSecureLogout = async function(){
     if (!confirm('학생 로그아웃할까요?')) return;
     try { sessionStorage.setItem('ULIM_EXPLICIT_LOGOUT_IN_PROGRESS', 'Y'); } catch(e) {}
+    try {
+      var homeLogout7355031 = window.__ULIM_STUDENT_HOME_BOOTSTRAP_7355031__;
+      if (homeLogout7355031 && typeof homeLogout7355031.reset === 'function') homeLogout7355031.reset();
+      var noticeLogout7355031 = window.__ULIM_STUDENT_LOGIN_NOTICE_FLOW_7355031__;
+      if (noticeLogout7355031 && typeof noticeLogout7355031.reset === 'function') noticeLogout7355031.reset();
+      if (typeof window.ulimResetCourseApplication7355031 === 'function') window.ulimResetCourseApplication7355031();
+    } catch(e) {}
     try {
       var direct = studentDirectAuth();
       if (direct && typeof direct.signOut === 'function') await direct.signOut();
@@ -25214,8 +25240,9 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 <script src="./web/ulim-firestore-primary-7.35.5.0.26.js?v=20260808.7355026"></script>
 <script src="./web/attendance-admin-integrated-7.35.4.22.js?v=20260808.7350422"></script>
 <script src="./web/operational-content-admin-7.35.5.0.12.js?v=20260808.7355012"></script>
-<script src="./web/student-login-notice-and-role-access-7.35.5.0.12.js?v=20260809.7355030r8"></script>
-<script src="./web/student-course-application-7.35.5.0.28.js?v=20260809.7355030r8"></script>
+<script src="./web/course-application-admin-7.35.5.0.31.js?v=20260809.7355031"></script>
+<script src="./web/student-login-notice-and-role-access-7.35.5.0.31.js?v=20260809.7355031"></script>
+<script src="./web/student-course-application-7.35.5.0.31.js?v=20260809.7355031"></script>
 <script id="ulim-stable-build-readiness-735506">
 (function (global) {
   'use strict';
