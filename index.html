@@ -25,7 +25,7 @@
   <script src="./web/room-classroom-realtime-7.29.17.js?v=20260808.72917"></script>
   <script src="./web/staff-login-firebase-primary-7.32.7.js?v=20260807.73207"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260808-7355026-daily-canonical-preview-date-fix">
+<meta name="ulim-build" content="20260808-7355027-schedule-roster-classless-fix">
 <script id="ulim-one-time-cache-clean-7355019">
 (function (global) {
   'use strict';
@@ -5744,8 +5744,9 @@ function adminGetDailyServerClassList7355026_(date) {
         : [];
 }
 
-function adminRememberClassListForDate704_(date, classes) {
+function adminRememberClassListForDate704_(date, classes, options) {
     const dateKey = String(date || '').trim();
+    const authoritative = options === true || !!(options && options.authoritative === true);
     const raw = Array.isArray(classes) ? classes : [];
     const filtered = (typeof adminFilterClassListForRole === 'function'
         ? adminFilterClassListForRole(raw)
@@ -5755,7 +5756,7 @@ function adminRememberClassListForDate704_(date, classes) {
     const existing = dateKey && Array.isArray(adminClassListsByDate704_[dateKey])
         ? adminClassListsByDate704_[dateKey].slice()
         : [];
-    if (!filtered.length && !raw.length && existing.length) {
+    if (!authoritative && !filtered.length && !raw.length && existing.length) {
         const activeTargets = [
             ['adminAttendanceDate', 'adminAttendanceClass', 'adminClassPickerPanel'],
             ['adminDailyEvalDate', 'adminDailyEvalClass', 'adminDailyClassPickerPanel']
@@ -7590,7 +7591,7 @@ function showAdminPanel(panelId) {
     }
 
     if (panelId === 'adminPanelAttendance') {
-        // 7.35.5.0.19: attendance-admin-integrated-7.35.4.21 is the sole attendance owner.
+        // 7.35.5.0.27: attendance-admin-integrated-7.35.4.22 is the sole attendance owner.
         // Do not reload here when switching tabs; this preserves unsaved edits and prevents duplicate calls.
     }
 
@@ -25194,7 +25195,7 @@ window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = false;
 
 <!-- ULIM 7.33.1: stable Firebase token guard + clean console baseline. -->
 <script src="./web/staff-account-admin-7.34.3.6.js?v=20260801.734036"></script>
-<script src="./web/student-master-admin-7.35.5.0.18.js?v=20260808.7355018"></script>
+<script src="./web/student-master-admin-7.35.5.0.19.js?v=20260808.7355019"></script>
 <!-- ULIM 7.35.4.7: compact student management UI. -->
 <script src="./web/student-management-ui-7.35.4.10.js?v=20260806.7350506"></script>
 <script id="ulim-general-teacher-firebase-auth-bootstrap-7-31-5">
@@ -25215,7 +25216,7 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 
 <!-- ULIM 7.35.5.0.11: non-attendance Firestore runtime + restored dedicated attendance owner. -->
 <script src="./web/ulim-firestore-primary-7.35.5.0.26.js?v=20260808.7355026"></script>
-<script src="./web/attendance-admin-integrated-7.35.4.21.js?v=20260808.7350421"></script>
+<script src="./web/attendance-admin-integrated-7.35.4.22.js?v=20260808.7350422"></script>
 <script src="./web/operational-content-admin-7.35.5.0.11.js?v=20260807.7355011"></script>
 <script src="./web/student-login-notice-and-role-access-7.35.5.0.11.js?v=20260807.7355011"></script>
 <script id="ulim-stable-build-readiness-735506">
