@@ -3,7 +3,7 @@
 
   if (global.__ULIM_STUDENT_FIREBASE_PRIMARY_AUTH_7355029__) return;
 
-  const VERSION = '2026-08-08.7355029-student-firebase-primary-auth';
+  const VERSION = '2026-08-08.7355029-r3-student-firebase-primary-auth-single-owner';
   const AUTO_LOGIN_KEY = 'ulimStudentAutoLogin';
   const EXPLICIT_LOGOUT_KEY = 'ULIM_EXPLICIT_LOGOUT_IN_PROGRESS';
   const MAX_LEGACY_TOKEN_LENGTH = 2048;
@@ -185,39 +185,23 @@
     state.profile = null;
   }
 
-  async function issueFreshProof(studentSessionToken) {
-    const endpoint = gasEndpoint();
-    const token = cleanLegacyToken(studentSessionToken);
-    if (!endpoint || !token) throw new Error('학생 로그인 정보를 다시 확인해주세요.');
-
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({
-        action: 'issueFirebaseLoginProof',
-        studentSessionToken: token
-      }),
-      credentials: 'omit',
-      cache: 'no-store'
-    });
-
-    const data = await response.json().catch(function () { return null; });
-    if (!response.ok || !data || data.status !== 'success' || !data.proof) {
-      throw new Error((data && data.message) || '학생 로그인 연결을 완료하지 못했습니다.');
+  async function authenticateThroughSharedRuntime(rt, reason) {
+    const room = roomRealtime();
+    if (!room || typeof room.forceReauthenticate !== 'function') {
+      throw new Error('학생 로그인 연결을 준비하지 못했습니다.');
     }
-    return text(data.proof);
-  }
 
-  async function exchangeOneFreshProof(rt, studentSessionToken) {
-    const proof = await issueFreshProof(studentSessionToken);
-    const callable = typeof rt.sdk.httpsCallable === 'function'
-      ? rt.sdk.httpsCallable(rt.functions, 'exchangeLegacySession')
-      : rt.exchange;
-    if (typeof callable !== 'function') throw new Error('학생 로그인 연결을 준비하지 못했습니다.');
-    const response = await callable({ proof: proof });
-    const data = response && response.data || {};
-    if (!data.customToken) throw new Error('학생 로그인 연결을 완료하지 못했습니다.');
-    return data;
+    /*
+     * 0.29 R3 single-owner rule:
+     * room-classroom-realtime already owns legacy proof issuance, one-time proof
+     * consumption, server exchange and Firebase sign-in. The student
+     * module must never run a second exchange path against the same Auth instance.
+     */
+    const authenticated = await room.forceReauthenticate(reason || 'student-primary-login');
+    if (!authenticated || !authenticated.auth || !authenticated.auth.currentUser) {
+      throw new Error('학생 로그인 연결을 완료하지 못했습니다.');
+    }
+    return authenticated;
   }
 
   async function establishFromLegacy(options) {
@@ -233,37 +217,21 @@
       await applyPersistenceToRuntime(rt);
       clearValidatedProfile();
 
+      /* A stale staff/other Firebase identity must not be accepted for a new
+         student login. Sign it out before handing authentication to the one
+         shared realtime owner. The realtime owner serializes concurrent auth
+         work through its own state.signingIn promise. */
       if (rt.auth.currentUser) {
         try { await rt.sdk.signOut(rt.auth); } catch (_ignore) {}
       }
 
-      let exchangeData = null;
-      let lastError = null;
-      for (let attempt = 0; attempt < 2; attempt += 1) {
-        try {
-          exchangeData = await exchangeOneFreshProof(rt, token);
-          lastError = null;
-          break;
-        } catch (error) {
-          lastError = error;
-        }
-      }
-      if (!exchangeData) throw lastError || new Error('학생 로그인 연결을 완료하지 못했습니다.');
-
-      const credential = await rt.sdk.signInWithCustomToken(rt.auth, exchangeData.customToken);
-      const signedInUser = credential && credential.user ? credential.user : rt.auth.currentUser;
-      if (!signedInUser) throw new Error('학생 로그인 연결을 완료하지 못했습니다.');
-
-      const room = roomRealtime();
-      if (room && typeof room.resetStableTokenGuard === 'function') {
-        room.resetStableTokenGuard(signedInUser.uid);
-      }
+      const authenticated = await authenticateThroughSharedRuntime(rt, 'student-primary-login');
 
       try {
-        const profile = await readValidatedStudentProfile(rt, options.expectedStudentUid || '');
+        const profile = await readValidatedStudentProfile(authenticated, options.expectedStudentUid || '');
         return setValidatedProfile(profile);
       } catch (error) {
-        try { await rt.sdk.signOut(rt.auth); } catch (_ignore) {}
+        try { await authenticated.sdk.signOut(authenticated.auth); } catch (_ignore) {}
         clearValidatedProfile();
         throw error;
       }
