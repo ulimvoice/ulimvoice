@@ -25,7 +25,7 @@
   <script src="./web/room-classroom-realtime-7.29.17.js?v=20260808.72917"></script>
   <script src="./web/staff-login-firebase-primary-7.32.7.js?v=20260807.73207"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260808-7355024-daily-persistence-pc-picker-fix">
+<meta name="ulim-build" content="20260808-7355025-preview-authority-class-stability">
 <script id="ulim-one-time-cache-clean-7355019">
 (function (global) {
   'use strict';
@@ -5758,6 +5758,30 @@ function adminRememberClassListForDate704_(date, classes) {
         : raw.filter(item => item && String(item.className || '').trim()))
         .map(item => adminRememberClassVideoLink7355022_(item));
 
+    /* ULIM 7.35.5.0.25:
+       A transient empty background response must not erase a class that the user is
+       currently selecting/using. Initial dates with no classes still remain empty. */
+    const existing = dateKey && Array.isArray(adminClassListsByDate704_[dateKey])
+        ? adminClassListsByDate704_[dateKey].slice()
+        : [];
+    if (!filtered.length && !raw.length && existing.length) {
+        const activeTargets = [
+            ['adminAttendanceDate', 'adminAttendanceClass', 'adminClassPickerPanel'],
+            ['adminDailyEvalDate', 'adminDailyEvalClass', 'adminDailyClassPickerPanel']
+        ];
+        const userIsUsingDate = activeTargets.some(parts => {
+            const dateEl = document.getElementById(parts[0]);
+            if (!dateEl || String(dateEl.value || '').trim() !== dateKey) return false;
+            const input = document.getElementById(parts[1]);
+            const panel = document.getElementById(parts[2]);
+            return !!(
+                (input && String(input.value || '').trim()) ||
+                (panel && panel.classList.contains('open'))
+            );
+        });
+        if (userIsUsingDate) return existing;
+    }
+
     if (dateKey) adminClassListsByDate704_[dateKey] = filtered.slice();
     return filtered;
 }
@@ -6659,8 +6683,8 @@ async function adminLoadClassList(dateOverride = '', force = false) {
 }
 
 
-/* ULIM 7.35.5.0.24: class picker single owner = stable options container delegation. */
-function adminHandleClassPickerOptionClick7355024_(event, optionsBox) {
+/* ULIM 7.35.5.0.25: class picker single owner + interaction-stable background rendering. */
+function adminHandleClassPickerOptionClick7355025_(event, optionsBox) {
     const target = event && event.target;
     const button = target && typeof target.closest === 'function'
         ? target.closest('.admin-class-option[data-class-name][data-class-target][data-class-panel]')
@@ -6678,27 +6702,64 @@ function adminHandleClassPickerOptionClick7355024_(event, optionsBox) {
     );
 }
 
-function adminBindClassPickerOptions7355024_(inputId, panelId) {
+function adminBindClassPickerOptions7355025_(inputId, panelId) {
     const optionsBox = document.getElementById(panelId + 'Options');
-    if (!optionsBox || optionsBox.dataset.ulimClassPickerBound7355024 === '1') return;
-    optionsBox.dataset.ulimClassPickerBound7355024 = '1';
+    if (!optionsBox || optionsBox.dataset.ulimClassPickerBound7355025 === '1') return;
+    optionsBox.dataset.ulimClassPickerBound7355025 = '1';
     optionsBox.addEventListener('click', function(event) {
-        adminHandleClassPickerOptionClick7355024_(event, optionsBox);
+        adminHandleClassPickerOptionClick7355025_(event, optionsBox);
     });
+}
+
+function adminClassPickerDataSignature7355025_(inputId) {
+    const sourceList = inputId === 'noticeClass'
+        ? adminBuildNoticeClassList()
+        : adminFilterClassListForRole(adminGetClassListForInput704_(inputId));
+    return (sourceList || []).map(item => [
+        String(item && (item.classId || item.id) || '').trim(),
+        String(item && item.className || '').trim(),
+        String(item && (item.teacher || item.instructor || item.instructorName) || '').trim()
+    ].join('\u001f')).sort().join('\u001e');
+}
+
+function adminRenderClassSelectorStable7355025_(inputId, panelId) {
+    const panel = document.getElementById(panelId);
+    const optionsBox = document.getElementById(panelId + 'Options');
+    if (!panel || !optionsBox) return false;
+
+    const signature = adminClassPickerDataSignature7355025_(inputId);
+
+    /* Never destroy/recreate option buttons while a desktop pointer can be between
+       mousedown and click. Background class/auth responses are deferred until the next
+       explicit open/search render. */
+    if (panel.classList.contains('open')) {
+        panel.dataset.ulimPendingClassSignature7355025 = signature;
+        return false;
+    }
+
+    if (
+        optionsBox.dataset.ulimClassDataSignature7355025 === signature &&
+        optionsBox.childNodes.length > 0
+    ) {
+        return false;
+    }
+
+    adminRenderClassPicker(inputId, panelId);
+    optionsBox.dataset.ulimClassDataSignature7355025 = signature;
+    delete panel.dataset.ulimPendingClassSignature7355025;
+    return true;
 }
 
 function adminRenderClassSelectors() {
     adminBindClassSearch('adminAttendanceClass', 'adminClassPickerPanel');
     adminBindClassSearch('adminDailyEvalClass', 'adminDailyClassPickerPanel');
     adminBindClassSearch('noticeClass', 'noticeClassPickerPanel');
-    adminBindClassPickerOptions7355024_('adminAttendanceClass', 'adminClassPickerPanel');
-    adminBindClassPickerOptions7355024_('adminDailyEvalClass', 'adminDailyClassPickerPanel');
-    adminBindClassPickerOptions7355024_('noticeClass', 'noticeClassPickerPanel');
-    adminRenderClassPicker('adminAttendanceClass', 'adminClassPickerPanel');
-    adminRenderClassPicker('adminDailyEvalClass', 'adminDailyClassPickerPanel');
-    adminRenderClassPicker('noticeClass', 'noticeClassPickerPanel');
-    // A refreshed canonical class list may contain the persistent per-class video link.
-    // Keep the active daily-evaluation input synchronized with that server-backed value.
+    adminBindClassPickerOptions7355025_('adminAttendanceClass', 'adminClassPickerPanel');
+    adminBindClassPickerOptions7355025_('adminDailyEvalClass', 'adminDailyClassPickerPanel');
+    adminBindClassPickerOptions7355025_('noticeClass', 'noticeClassPickerPanel');
+    adminRenderClassSelectorStable7355025_('adminAttendanceClass', 'adminClassPickerPanel');
+    adminRenderClassSelectorStable7355025_('adminDailyEvalClass', 'adminDailyClassPickerPanel');
+    adminRenderClassSelectorStable7355025_('noticeClass', 'noticeClassPickerPanel');
     try {
         if (typeof window.ulimSyncDailyClassVideoLink7355024 === 'function') {
             window.ulimSyncDailyClassVideoLink7355024();
@@ -6790,7 +6851,7 @@ function adminRenderClassPicker(inputId, panelId) {
     const panel = document.getElementById(panelId);
     const optionsBox = document.getElementById(panelId + 'Options');
     if (!panel || !optionsBox) return;
-    adminBindClassPickerOptions7355024_(inputId, panelId);
+    adminBindClassPickerOptions7355025_(inputId, panelId);
 
     const search = document.getElementById(adminGetClassSearchInputId(inputId));
     const queryRaw = search ? search.value.trim() : '';
@@ -6852,6 +6913,10 @@ function adminRenderClassPicker(inputId, panelId) {
     }
 
     optionsBox.innerHTML = html;
+    try {
+        optionsBox.dataset.ulimClassDataSignature7355025 = adminClassPickerDataSignature7355025_(inputId);
+        delete panel.dataset.ulimPendingClassSignature7355025;
+    } catch (_ignore) {}
 }
 
 function normalizeClassSearchText(value) {
@@ -7609,7 +7674,16 @@ function showAdminPanel(panelId) {
             normalizeClassSearchText(adminCleanClassNameOnly_(firstDailyRow.className || '')) ===
             normalizeClassSearchText(adminCleanClassNameOnly_(dailyClass));
 
-        adminLoadClassList(dailyDate, false);
+        let dailyClassListReady7355025 = false;
+        try {
+            const cachedDailyClasses7355025 = adminGetClassListForDate704_(dailyDate);
+            dailyClassListReady7355025 = Array.isArray(cachedDailyClasses7355025) && cachedDailyClasses7355025.length > 0;
+        } catch (_ignore) {}
+        if (!dailyClassListReady7355025) {
+            Promise.resolve(adminLoadClassList(dailyDate, false)).catch(() => {});
+        } else {
+            adminRenderClassSelectors();
+        }
         if (!adminDailyEvalTemplateLoaded) adminLoadDailyEvalTemplate();
 
         if (dailyRows.length && sameDailyDate && sameDailyClass) {
@@ -19170,21 +19244,61 @@ ${ruleSummary}`, 'success');
         return best;
     }
 
+    function invalidateDailyPreviewCustom7355025_(target) {
+        let affected = [];
+        const tr = target && typeof target.closest === 'function'
+            ? target.closest('#adminDailyEvalTableWrap tr[data-daily-index]')
+            : null;
+        if (tr) {
+            const idx = Number(tr.dataset.dailyIndex);
+            const row = (adminDailyEvalRows || [])[idx];
+            if (row) affected = [row];
+        } else {
+            affected = Array.isArray(adminDailyEvalRows) ? adminDailyEvalRows.slice() : [];
+        }
+
+        affected.forEach(row => {
+            if (row) row.__dailyPreviewCustom621 = false;
+        });
+        try {
+            if (affected.length && typeof window.adminDailyPreviewClearSaved621 === 'function') {
+                window.adminDailyPreviewClearSaved621(affected);
+            }
+        } catch (_ignore) {}
+    }
+
     function bindDailyDraftInputs_() {
         const common = document.getElementById('adminDailyCommonLesson');
         if (common && common.dataset.bound574 !== '1') {
             common.dataset.bound574 = '1';
             common.addEventListener('input', function() {
                 dailyCommonLessonMemory = { key: getDailyContextKey_(), value: common.value || '' };
+                invalidateDailyPreviewCustom7355025_(common);
                 scheduleDailyDraftSave_();
             });
         }
 
-        document.querySelectorAll('#adminDailyEvalTableWrap textarea, #adminDailyEvalTableWrap input.admin-daily-check').forEach(el => {
+        const videoLink = document.getElementById('adminDailyClassVideoLink7355021');
+        if (videoLink && videoLink.dataset.boundPreviewAuthority7355025 !== '1') {
+            videoLink.dataset.boundPreviewAuthority7355025 = '1';
+            videoLink.addEventListener('input', function() {
+                invalidateDailyPreviewCustom7355025_(videoLink);
+                scheduleDailyDraftSave_();
+            });
+            videoLink.addEventListener('change', scheduleDailyDraftSave_);
+        }
+
+        document.querySelectorAll('#adminDailyEvalTableWrap tr[data-daily-index] textarea, #adminDailyEvalTableWrap tr[data-daily-index] input.admin-daily-check').forEach(el => {
             if (el.dataset.boundDraft574 === '1') return;
             el.dataset.boundDraft574 = '1';
-            el.addEventListener('input', scheduleDailyDraftSave_);
-            el.addEventListener('change', scheduleDailyDraftSave_);
+            el.addEventListener('input', function() {
+                invalidateDailyPreviewCustom7355025_(el);
+                scheduleDailyDraftSave_();
+            });
+            el.addEventListener('change', function() {
+                invalidateDailyPreviewCustom7355025_(el);
+                scheduleDailyDraftSave_();
+            });
         });
     }
 
@@ -19517,12 +19631,30 @@ ${ruleSummary}`, 'success');
             base.teacherComment = row.querySelector('.admin-eval-comment')?.value.trim() || '';
 
             const sourceEvaluation = String(source.evaluation || '').trim();
-            if (source.__dailyPreviewCustom621 === true && sourceEvaluation) {
+            const previewCustomWasActive7355025 = source.__dailyPreviewCustom621 === true;
+            const previewStructuredChanged7355025 = previewCustomWasActive7355025 && (
+                String(source.lessonContent || '').trim() !== String(base.lessonContent || '').trim() ||
+                String(source.lessonAttitude || '').trim() !== String(base.lessonAttitude || '').trim() ||
+                String(source.teacherComment || '').trim() !== String(base.teacherComment || '').trim() ||
+                String(source.videoLink || '').trim() !== String(base.videoLink || '').trim()
+            );
+
+            if (previewCustomWasActive7355025 && sourceEvaluation && !previewStructuredChanged7355025) {
                 base.evaluation = sourceEvaluation;
+                base.__dailyPreviewCustom621 = true;
             } else {
+                base.__dailyPreviewCustom621 = false;
                 base.evaluation = typeof adminBuildDailyEvalMessageFromParts === 'function'
                     ? adminBuildDailyEvalMessageFromParts(base)
                     : [base.lessonContent, base.lessonAttitude, base.teacherComment, base.videoLink].filter(Boolean).join('\n');
+                if (previewStructuredChanged7355025) {
+                    try {
+                        source.__dailyPreviewCustom621 = false;
+                        if (typeof window.adminDailyPreviewClearSaved621 === 'function') {
+                            window.adminDailyPreviewClearSaved621([source]);
+                        }
+                    } catch (_ignore) {}
+                }
             }
 
             const hasAny = base.lessonContent || base.lessonAttitude || base.teacherComment || base.videoLink || base.evaluation;
@@ -24188,8 +24320,40 @@ body {
         if (Object.prototype.hasOwnProperty.call(edit, 'lessonContent')) out.lessonContent = text_(edit.lessonContent);
         if (Object.prototype.hasOwnProperty.call(edit, 'lessonAttitude')) out.lessonAttitude = text_(edit.lessonAttitude);
         if (Object.prototype.hasOwnProperty.call(edit, 'teacherComment')) out.teacherComment = text_(edit.teacherComment);
-        out.__dailyPreviewCustom621 = true;
+        if (Object.prototype.hasOwnProperty.call(edit, 'videoLink')) out.videoLink = text_(edit.videoLink);
+        out.__dailyPreviewCustom621 = edit.__dailyPreviewCustom621 !== false;
         return out;
+    }
+
+    function previewStructuredSignature7355025_(row) {
+        row = row || {};
+        return [
+            trim_(row.lessonContent),
+            trim_(row.lessonAttitude),
+            trim_(row.teacherComment),
+            trim_(row.videoLink)
+        ].join('\\u001f');
+    }
+
+    function previewEditMatchesRow7355025_(row, edit) {
+        if (!row || !edit) return false;
+        /* 0.24 edits had no videoLink snapshot, so they cannot safely override a new
+           evaluation form state. They are invalidated once after this upgrade. */
+        if (!Object.prototype.hasOwnProperty.call(edit, 'videoLink')) return false;
+        return previewStructuredSignature7355025_(row) === previewStructuredSignature7355025_(edit);
+    }
+
+    function applicablePreviewEdit7355025_(row) {
+        if (!row) return null;
+        const key = rowKey_(row);
+        const edit = edits[key];
+        if (!edit) return null;
+        if (previewEditMatchesRow7355025_(row, edit)) return edit;
+        delete edits[key];
+        delete state.drafts[key];
+        persistEdits_();
+        window.adminDailyPreviewEdits621 = edits;
+        return null;
     }
 
     function findSourceRow_(row) {
@@ -24260,8 +24424,8 @@ body {
 
     function currentAppliedMessage_(row) {
         if (!row) return '';
-        const key = rowKey_(row);
-        if (edits[key]) return text_(edits[key].evaluation);
+        const applicableEdit7355025 = applicablePreviewEdit7355025_(row);
+        if (applicableEdit7355025) return text_(applicableEdit7355025.evaluation);
         const stored = text_(row.evaluation);
         try {
             if (typeof adminDailyEvalMessageCoversParts_ === 'function' && adminDailyEvalMessageCoversParts_(stored, row)) {
@@ -24312,7 +24476,7 @@ body {
         document.getElementById('adminDailyPreviewPage621').textContent = (state.index + 1) + ' / ' + total;
         document.getElementById('adminDailyPreviewNavLabel621').textContent = (state.index + 1) + '번째 학생';
         document.getElementById('adminDailyPreviewText621').value = draft;
-        document.getElementById('adminDailyPreviewSaved621').textContent = edits[key] ? '학생별 수정문구 저장됨' : '';
+        document.getElementById('adminDailyPreviewSaved621').textContent = applicablePreviewEdit7355025_(row) ? '학생별 수정문구 저장됨' : '';
         document.getElementById('adminDailyPreviewStatus621').textContent = '';
         document.getElementById('adminDailyPreviewPrev621').disabled = state.index <= 0;
         document.getElementById('adminDailyPreviewNext621').disabled = state.index >= total - 1;
@@ -24339,7 +24503,8 @@ body {
                 lessonContent: edit.lessonContent,
                 lessonAttitude: edit.lessonAttitude,
                 teacherComment: edit.teacherComment,
-                __dailyPreviewCustom621: true
+                videoLink: Object.prototype.hasOwnProperty.call(edit, 'videoLink') ? edit.videoLink : source.videoLink,
+                __dailyPreviewCustom621: edit.__dailyPreviewCustom621 !== false
             });
         });
         try { adminDailyEvalRows = next; } catch (e) {}
@@ -24371,12 +24536,15 @@ body {
         const hasLessonLabel = /▶\s*이번주\s*수업/.test(message);
         const hasAttitudeLabel = /▶\s*수업\s*활동\s*및\s*태도/.test(message);
         const hasCommentLabel = /▶\s*선생님\s*전달\s*사항/.test(message);
+        const hasVideoLabel = /▶\s*수업영상\s*확인\s*링크/.test(message);
         const key = rowKey_(row);
         const edit = {
             evaluation: message,
             lessonContent: hasLessonLabel ? text_(parts.lessonContent) : text_(row.lessonContent),
             lessonAttitude: hasAttitudeLabel ? text_(parts.lessonAttitude) : text_(row.lessonAttitude),
             teacherComment: hasCommentLabel ? text_(parts.teacherComment) : text_(row.teacherComment),
+            videoLink: hasVideoLabel ? text_(parts.videoLink) : text_(row.videoLink),
+            __dailyPreviewCustom621: true,
             updatedAt: Date.now(),
             studentName: trim_(row.studentName || row.name),
             date: trim_(row.date),
@@ -24419,7 +24587,9 @@ body {
             evaluation: fresh,
             lessonContent: /▶\s*이번주\s*수업/.test(fresh) ? text_(resetParts.lessonContent) : text_(row.lessonContent),
             lessonAttitude: /▶\s*수업\s*활동\s*및\s*태도/.test(fresh) ? text_(resetParts.lessonAttitude) : text_(row.lessonAttitude),
-            teacherComment: /▶\s*선생님\s*전달\s*사항/.test(fresh) ? text_(resetParts.teacherComment) : text_(row.teacherComment)
+            teacherComment: /▶\s*선생님\s*전달\s*사항/.test(fresh) ? text_(resetParts.teacherComment) : text_(row.teacherComment),
+            videoLink: /▶\s*수업영상\s*확인\s*링크/.test(fresh) ? text_(resetParts.videoLink) : text_(row.videoLink),
+            __dailyPreviewCustom621: false
         };
         state.rows[state.index] = Object.assign({}, row, resetEdit, { __dailyPreviewCustom621:false });
         state.drafts[key] = fresh;
@@ -24443,7 +24613,7 @@ body {
         edits = loadEdits_();
         window.adminDailyPreviewEdits621 = edits;
         state.rows = rows.map(function(row){
-            const edit = edits[rowKey_(row)];
+            const edit = applicablePreviewEdit7355025_(row);
             return edit ? applyEditToRow_(row, edit) : row;
         });
         state.index = 0;
@@ -25092,70 +25262,11 @@ window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = false;
 <!-- ULIM 7.35.4.7: compact student management UI. -->
 <script src="./web/student-management-ui-7.35.4.10.js?v=20260806.7350506"></script>
 <script id="ulim-general-teacher-firebase-auth-bootstrap-7-31-5">
+/* ULIM 7.35.5.0.25: obsolete 7.31.5 Firebase bootstrap disabled.
+   staff-login-firebase-primary-7.32.7 is the single authentication owner. */
 (function(){
-  if (window.__ULIM_STAFF_LOGIN_FIREBASE_PRIMARY_7321__) {
-    window.__ULIM_GENERAL_TEACHER_FIREBASE_AUTH_BOOTSTRAP_7315__ = true;
-    return;
-  }
-  if (window.__ULIM_GENERAL_TEACHER_FIREBASE_AUTH_BOOTSTRAP_7315__) return;
   window.__ULIM_GENERAL_TEACHER_FIREBASE_AUTH_BOOTSTRAP_7315__ = true;
-
-  var bootPromise = null;
-  async function boot(reason){
-    if (bootPromise) return bootPromise;
-    bootPromise = (async function(){
-      try {
-        var room = window.ULIM_ROOM_CLASSROOM_REALTIME_728 || window.ULIM_ROOM_CLASSROOM_REALTIME_727;
-        var token = String(
-          (typeof adminToken !== 'undefined' && adminToken) ||
-          window.adminToken ||
-          localStorage.getItem('adminToken') ||
-          sessionStorage.getItem('adminToken') || ''
-        ).trim();
-        if (!token || !room || typeof room.ensureAuthenticated !== 'function') return null;
-
-        var rt = typeof room.waitUntilAuthenticated === 'function'
-          ? await room.waitUntilAuthenticated(12000)
-          : await room.ensureAuthenticated();
-        if ((!rt || !rt.auth || !rt.auth.currentUser) && typeof room.forceReauthenticate === 'function') {
-          rt = await room.forceReauthenticate(reason || 'teacher-bootstrap');
-        }
-        if (rt && rt.auth && rt.auth.currentUser) {
-          try { window.dispatchEvent(new CustomEvent('ulim-firebase-auth-ready', { detail: { uid: rt.auth.currentUser.uid, reason: reason || 'teacher-bootstrap' } })); } catch(ignore) {}
-          setTimeout(function(){
-            try { if (typeof adminLoadClassList === 'function') adminLoadClassList('', false); } catch(ignore) {}
-          }, 50);
-        }
-        return rt;
-      } catch (error) {
-        console.warn('[ULIM 7.31.5 teacher Firebase bootstrap]', error);
-        return null;
-      }
-    })().finally(function(){ bootPromise = null; });
-    return bootPromise;
-  }
-
-  window.ulimEnsureStaffFirebaseAuth7315_ = boot;
-
-  try {
-    var originalSetAdminSecureSession7315 = window.setAdminSecureSession_;
-    if (typeof originalSetAdminSecureSession7315 === 'function' && !originalSetAdminSecureSession7315.__ulim7315Wrapped) {
-      var wrapped = function(data){
-        var result = originalSetAdminSecureSession7315.apply(this, arguments);
-        setTimeout(function(){ boot('admin-session-saved'); }, 0);
-        return result;
-      };
-      wrapped.__ulim7315Wrapped = true;
-      window.setAdminSecureSession_ = wrapped;
-      try { setAdminSecureSession_ = wrapped; } catch(ignore) {}
-    }
-  } catch(ignore) {}
-
-  window.addEventListener('pageshow', function(){ setTimeout(function(){ boot('pageshow'); }, 120); });
-  document.addEventListener('visibilitychange', function(){
-    if (document.visibilityState === 'visible') setTimeout(function(){ boot('visible'); }, 80);
-  });
-  setTimeout(function(){ boot('initial'); }, 120);
+  window.__ULIM_GENERAL_TEACHER_FIREBASE_AUTH_BOOTSTRAP_DISABLED_7355025__ = true;
 })();
 </script>
 
