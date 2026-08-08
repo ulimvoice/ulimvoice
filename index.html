@@ -25,7 +25,7 @@
   <script src="./web/room-classroom-realtime-7.29.17.js?v=20260808.72917"></script>
   <script src="./web/staff-login-firebase-primary-7.32.7.js?v=20260807.73207"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260808-7355023-daily-message-composition-fix">
+<meta name="ulim-build" content="20260808-7355024-daily-persistence-pc-picker-fix">
 <script id="ulim-one-time-cache-clean-7355019">
 (function (global) {
   'use strict';
@@ -6659,46 +6659,51 @@ async function adminLoadClassList(dateOverride = '', force = false) {
 }
 
 
-let adminClassPickerCoreBound7355020_ = false;
-
-function adminHandleClassPickerOptionClick7355020_(event) {
+/* ULIM 7.35.5.0.24: class picker single owner = stable options container delegation. */
+function adminHandleClassPickerOptionClick7355024_(event, optionsBox) {
     const target = event && event.target;
     const button = target && typeof target.closest === 'function'
         ? target.closest('.admin-class-option[data-class-name][data-class-target][data-class-panel]')
         : null;
-    if (!button) return;
-
-    const panelId = String(button.dataset.classPanel || '').trim();
-    const panel = panelId ? document.getElementById(panelId) : null;
-    if (!panel || !panel.contains(button)) return;
+    if (!button || !optionsBox || !optionsBox.contains(button)) return;
 
     event.preventDefault();
-    if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
-    else if (typeof event.stopPropagation === 'function') event.stopPropagation();
+    event.stopPropagation();
 
     adminSelectClass(
         button.dataset.className || '',
         button.dataset.classTarget || 'adminAttendanceClass',
-        panelId,
+        button.dataset.classPanel || '',
         button.dataset.classId || ''
     );
 }
 
-function adminEnsureClassPickerCoreBinding7355020_() {
-    if (adminClassPickerCoreBound7355020_) return;
-    adminClassPickerCoreBound7355020_ = true;
-    document.addEventListener('click', adminHandleClassPickerOptionClick7355020_, true);
+function adminBindClassPickerOptions7355024_(inputId, panelId) {
+    const optionsBox = document.getElementById(panelId + 'Options');
+    if (!optionsBox || optionsBox.dataset.ulimClassPickerBound7355024 === '1') return;
+    optionsBox.dataset.ulimClassPickerBound7355024 = '1';
+    optionsBox.addEventListener('click', function(event) {
+        adminHandleClassPickerOptionClick7355024_(event, optionsBox);
+    });
 }
-
-adminEnsureClassPickerCoreBinding7355020_();
 
 function adminRenderClassSelectors() {
     adminBindClassSearch('adminAttendanceClass', 'adminClassPickerPanel');
     adminBindClassSearch('adminDailyEvalClass', 'adminDailyClassPickerPanel');
     adminBindClassSearch('noticeClass', 'noticeClassPickerPanel');
+    adminBindClassPickerOptions7355024_('adminAttendanceClass', 'adminClassPickerPanel');
+    adminBindClassPickerOptions7355024_('adminDailyEvalClass', 'adminDailyClassPickerPanel');
+    adminBindClassPickerOptions7355024_('noticeClass', 'noticeClassPickerPanel');
     adminRenderClassPicker('adminAttendanceClass', 'adminClassPickerPanel');
     adminRenderClassPicker('adminDailyEvalClass', 'adminDailyClassPickerPanel');
     adminRenderClassPicker('noticeClass', 'noticeClassPickerPanel');
+    // A refreshed canonical class list may contain the persistent per-class video link.
+    // Keep the active daily-evaluation input synchronized with that server-backed value.
+    try {
+        if (typeof window.ulimSyncDailyClassVideoLink7355024 === 'function') {
+            window.ulimSyncDailyClassVideoLink7355024();
+        }
+    } catch (_ignore) {}
 }
 
 function adminGetClassSearchInputId(inputId) {
@@ -6785,6 +6790,7 @@ function adminRenderClassPicker(inputId, panelId) {
     const panel = document.getElementById(panelId);
     const optionsBox = document.getElementById(panelId + 'Options');
     if (!panel || !optionsBox) return;
+    adminBindClassPickerOptions7355024_(inputId, panelId);
 
     const search = document.getElementById(adminGetClassSearchInputId(inputId));
     const queryRaw = search ? search.value.trim() : '';
@@ -6947,6 +6953,9 @@ function adminSelectClass(className, targetId = 'adminAttendanceClass', panelId 
         } else {
             adminRenderDailyEvalTable();
         }
+        setTimeout(function() {
+            try { if (typeof window.ulimSyncDailyClassVideoLink7355024 === 'function') window.ulimSyncDailyClassVideoLink7355024(); } catch (_ignore) {}
+        }, 0);
         return;
     }
 
@@ -7968,7 +7977,7 @@ function adminDailyEvalMessageCoversParts_(evaluation, row) {
     });
 }
 
-/* ULIM 7.35.5.0.23: canonical daily message composition owner */
+/* ULIM 7.35.5.0.24: canonical daily message composition owner */
 function adminBuildDailyEvalMessageFromParts(base) {
     const template = document.getElementById('adminDailyEvalTemplate')?.value || adminDailyEvalTemplateText;
     return adminApplyDailyEvalTemplateReplacements_(template, base || {}).trim();
@@ -19406,7 +19415,7 @@ ${ruleSummary}`, 'success');
                     <label for="adminDailyClassVideoLink7355021">수업영상 링크</label>
                     <div class="daily-class-video-link-row-7355021">
                         <input id="adminDailyClassVideoLink7355021" type="text" autocomplete="off" value="${esc_(typeof adminGetVideoLinkForClassName_ === 'function' ? adminGetVideoLinkForClassName_(currentClass, getDailyDate_()) : '')}" placeholder="영상 링크 또는 알림톡에 넣을 값">
-                        <button type="button" class="admin-btn blue" onclick="ulimSaveDailyClassVideoLink7355022()">링크 저장</button>
+                        <button type="button" class="admin-btn blue" onclick="ulimSaveDailyClassVideoLink7355024()">링크 저장</button>
                     </div>
                     <div id="adminDailyClassVideoLinkStatus7355021" class="daily-common-lesson-help">반별로 고정 저장됩니다. 날짜를 바꿔도 같은 반에는 이 값이 유지됩니다.</div>
                 </div>
@@ -19451,50 +19460,71 @@ ${ruleSummary}`, 'success');
         wrap.innerHTML = html;
 
         bindDailyDraftInputs_();
+        setTimeout(function() {
+            try { if (typeof window.ulimSyncDailyClassVideoLink7355024 === 'function') window.ulimSyncDailyClassVideoLink7355024(); } catch (_ignore) {}
+        }, 0);
         if (typeof ulimAdminAfterRender_ === 'function') ulimAdminAfterRender_();
     };
 
     window.adminGetSelectedDailyRows = function() {
         const date = getDailyDate_();
-        const className = getDailyClass_();
+        const classInput = document.getElementById('adminDailyEvalClass');
+        const selectedClassName = String(classInput && classInput.value || '').trim();
+        const selectedClassId = String(classInput && classInput.dataset && classInput.dataset.classId || '').trim();
         const commonLesson = (document.getElementById('adminDailyCommonLesson')?.value || '').trim();
+        const liveVideoLink = (document.getElementById('adminDailyClassVideoLink7355021')?.value || '').trim();
         const rows = Array.from(document.querySelectorAll('#adminDailyEvalTableWrap tr[data-daily-index]'));
 
         return rows.map(row => {
             const idx = Number(row.dataset.dailyIndex);
-            const checked = row.querySelector('.admin-daily-check')?.checked;
-            if (!checked) return null;
+            if (!row.querySelector('.admin-daily-check')?.checked) return null;
 
             const source = Object.assign({}, (adminDailyEvalRows || [])[idx] || {});
             const base = Object.assign({}, source);
+            const rowClassName = selectedClassName && selectedClassName !== '전체반'
+                ? selectedClassName
+                : String(source.className || '').trim();
+            let classItem = null;
+            try {
+                if (typeof adminGetClassItemByName_ === 'function') classItem = adminGetClassItemByName_(rowClassName, date);
+            } catch (_ignore) {}
+
             base.date = date;
-            const rawClassName = (className && className !== '전체반') ? className : (base.className || className || '');
-            base.className = cleanClass_(rawClassName);
+            base.className = String(classItem && classItem.className || rowClassName || source.className || '').trim();
+            base.classId = String(
+                (selectedClassName && selectedClassName !== '전체반' ? selectedClassId : '') ||
+                source.classId ||
+                (classItem && (classItem.classId || classItem.id)) ||
+                ''
+            ).trim();
+            base.instructor = String(
+                (classItem && (classItem.instructorName || classItem.instructor || classItem.teacher)) ||
+                source.instructor || source.instructorName || ''
+            ).trim();
+            base.instructorName = base.instructor;
+            base.teacherScopeKey = String(
+                (classItem && classItem.teacherScopeKey) || source.teacherScopeKey || source.evaluatorTeacherKey || ''
+            ).trim();
+
             if (typeof adminResolveDailyEvalStatusFromRow_ === 'function') {
                 base.attendanceStatus = adminResolveDailyEvalStatusFromRow_(base, row);
             }
-            const liveVideoLink = (document.getElementById('adminDailyClassVideoLink7355021')?.value || '').trim();
-            base.videoLink = liveVideoLink || (typeof adminGetVideoLinkForClassName_ === 'function' ? adminGetVideoLinkForClassName_(rawClassName, date) : '') || base.videoLink || '';
+            base.videoLink = liveVideoLink ||
+                (typeof adminGetVideoLinkForClassName_ === 'function' ? adminGetVideoLinkForClassName_(base.className, date) : '') ||
+                source.videoLink || '';
             base.lessonContent = commonLesson;
             base.lessonAttitude = row.querySelector('.admin-eval-attitude')?.value.trim() || '';
             base.teacherComment = row.querySelector('.admin-eval-comment')?.value.trim() || '';
 
             const sourceEvaluation = String(source.evaluation || '').trim();
-            const sourceCarriesCurrentParts = typeof adminDailyEvalMessageCoversParts_ === 'function'
-                ? adminDailyEvalMessageCoversParts_(sourceEvaluation, base)
-                : false;
-
-            if (sourceEvaluation && source.__dailyPreviewCustom621 === true && sourceCarriesCurrentParts) {
-                base.evaluation = sourceEvaluation;
-            } else if (sourceEvaluation && sourceCarriesCurrentParts) {
+            if (source.__dailyPreviewCustom621 === true && sourceEvaluation) {
                 base.evaluation = sourceEvaluation;
             } else {
-                // 7.35.5.0.23: never reuse an older saved message whose section bodies are blank
-                // or do not carry the current canonical form values.
                 base.evaluation = typeof adminBuildDailyEvalMessageFromParts === 'function'
                     ? adminBuildDailyEvalMessageFromParts(base)
                     : [base.lessonContent, base.lessonAttitude, base.teacherComment, base.videoLink].filter(Boolean).join('\n');
             }
+
             const hasAny = base.lessonContent || base.lessonAttitude || base.teacherComment || base.videoLink || base.evaluation;
             return hasAny ? base : null;
         }).filter(Boolean);
@@ -19551,87 +19581,7 @@ ${ruleSummary}`, 'success');
 
     /* 7.35.5.0.22: duplicate inline preview owner removed; 6.21 modal below is the sole owner. */
 
-    window.adminSaveDailyEvaluations = async function(sendSms) {
-        if (sendSms && typeof adminIsFullAdmin === 'function' && !adminIsFullAdmin()) return alert('발송은 관리자 권한에서만 가능합니다.');
-        const rows = adminGetSelectedDailyRows();
-        const recipientTypes = typeof adminGetRecipientTypes === 'function' ? adminGetRecipientTypes('daily') : [];
-        if (!rows.length) return alert('저장할 일일평가 내용이 없습니다.');
-        if (sendSms && !recipientTypes.length) return alert('수신 대상을 선택해주세요.');
-
-        const sendChannel = typeof adminGetSendChannel === 'function' ? adminGetSendChannel('daily') : 'alimtalk';
-        const channelLabel = typeof adminGetSendChannelLabel === 'function' ? adminGetSendChannelLabel(sendChannel) : sendChannel;
-        if (sendSms && !confirm(`일일평가를 저장하고 [${recipientTypes.join(', ')}]에게 ${channelLabel}으로 발송할까요?`)) return;
-
-        try {
-            showLoading(sendSms ? `일일평가 저장 및 ${channelLabel} 발송 중...` : '일일평가 저장 중...');
-            const compactRows = rows.map(r => ({
-                date: r.date || '',
-                className: r.className || '',
-                studentName: r.studentName || r.name || '',
-                name: r.studentName || r.name || '',
-                studentNo: r.studentNo || r.attendanceNo || '',
-                studentIdentityKey: r.studentIdentityKey || '',
-                instructor: r.instructor || '',
-                studentPhone: r.studentPhone || '',
-                parentPhone: r.parentPhone || '',
-                attendanceStatus: (typeof adminNormalizeDailyEvalStatusLabel_ === 'function' ? adminNormalizeDailyEvalStatusLabel_(r.attendanceStatus || r.status || r.specialStatus || '') : (r.attendanceStatus || r.status || '')),
-                specialStatus: r.specialStatus || '',
-                memo: r.memo || '',
-                lessonContent: r.lessonContent || '',
-                lessonAttitude: r.lessonAttitude || '',
-                teacherComment: r.teacherComment || '',
-                videoLink: r.videoLink || '',
-                evaluation: r.evaluation || ''
-            }));
-
-            const data = await adminPostNoCors('adminSaveDailyEvaluations', {
-                adminToken,
-                rows: JSON.stringify(compactRows),
-                sendSms: sendSms ? 'Y' : 'N',
-                sendChannel,
-                recipientTypes: recipientTypes.join(',')
-            });
-
-            try {
-                localStorage.removeItem(getLocalDraftKey_());
-            } catch (ignore) {}
-
-            hideLoading();
-
-            rows.forEach(saved => {
-                const targetKey = typeof adminDailyEvalExactKey === 'function' ? adminDailyEvalExactKey(saved) : '';
-                const savedNo = String(saved.studentNo || saved.attendanceNo || '').trim();
-                const savedNameKey = typeof adminDailyEvalNameKey === 'function' ? adminDailyEvalNameKey(saved) : '';
-                const sameNameCount = (adminDailyEvalRows || []).filter(r => typeof adminDailyEvalNameKey === 'function' && adminDailyEvalNameKey(r) === savedNameKey).length;
-                adminDailyEvalRows = (adminDailyEvalRows || []).map(row => {
-                    const sameExact = targetKey && typeof adminDailyEvalExactKey === 'function' && adminDailyEvalExactKey(row) === targetKey;
-                    const sameUniqueName = !savedNo && sameNameCount === 1 && typeof adminDailyEvalNameKey === 'function' && adminDailyEvalNameKey(row) === savedNameKey;
-                    if (sameExact || sameUniqueName) {
-                        return Object.assign({}, row, {
-                            evaluation: saved.evaluation,
-                            lessonContent: saved.lessonContent || '',
-                            lessonAttitude: saved.lessonAttitude || '',
-                            teacherComment: saved.teacherComment || '',
-                            videoLink: saved.videoLink || row.videoLink || '',
-                            attendanceStatus: saved.attendanceStatus || row.attendanceStatus || '',
-                            specialStatus: saved.specialStatus || row.specialStatus || '',
-                            savedAt: '방금 저장',
-                            savedBy: (adminInfo && (adminInfo.name || adminInfo.id)) || ''
-                        });
-                    }
-                    return row;
-                });
-            });
-
-            adminRenderDailyEvalRows('저장된 일일평가 내용을 화면에 반영했습니다.');
-            if (typeof window.adminDailyPreviewClearSaved621 === 'function') window.adminDailyPreviewClearSaved621(rows);
-            setDraftStatus_('최종 저장 완료. 로컬 자동 임시저장본을 정리했습니다.', 'ok');
-            alert((data && data.message) || '처리 완료');
-        } catch (e) {
-            hideLoading();
-            alert(e.message || '일일평가 저장 중 문제가 발생했습니다.');
-        }
-    };
+    /* 7.35.5.0.24: daily save is owned only by staff-firestore-operational. */
 
     const originalAdminLogin = window.adminLogin;
     window.adminLogin = async function() {
@@ -25217,14 +25167,14 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 
 
 <!-- ULIM 7.35.5.0.11: non-attendance Firestore runtime + restored dedicated attendance owner. -->
-<script src="./web/ulim-firestore-primary-7.35.5.0.22.js?v=20260808.7355022"></script>
+<script src="./web/ulim-firestore-primary-7.35.5.0.24.js?v=20260808.7355024"></script>
 <script src="./web/attendance-admin-integrated-7.35.4.21.js?v=20260808.7350421"></script>
 <script src="./web/operational-content-admin-7.35.5.0.11.js?v=20260807.7355011"></script>
 <script src="./web/student-login-notice-and-role-access-7.35.5.0.11.js?v=20260807.7355011"></script>
 <script id="ulim-stable-build-readiness-735506">
 (function (global) {
   'use strict';
-  global.__ULIM_LOADED_BUILD_73550__ = '20260808-7355022-daily-detail-stability';
+  global.__ULIM_LOADED_BUILD_73550__ = '20260808-7355024-daily-persistence-pc-picker-fix';
   global.__ULIM_LOADED_BUILD_7350509__ = true;
   global.__ULIM_LOADED_BUILD_7355011__ = true;
   global.__ULIM_LOADED_BUILD_7355013__ = true;
