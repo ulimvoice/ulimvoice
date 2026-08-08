@@ -24,8 +24,9 @@
   <!-- ULIM 7.34.2: safe Firebase-first staff/student directory integration. -->
   <script src="./web/room-classroom-realtime-7.29.17.js?v=20260808.72917"></script>
   <script src="./web/staff-login-firebase-primary-7.32.7.js?v=20260807.73207"></script>
+  <script src="./web/student-login-firebase-primary-7.35.5.0.29.js?v=20260808.7355029"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260808-7355028-course-application-notification-stability">
+<meta name="ulim-build" content="20260808-7355029-student-firebase-primary-auth">
 <script id="ulim-one-time-cache-clean-7355019">
 (function (global) {
   'use strict';
@@ -20861,7 +20862,7 @@ ${ruleSummary}`, 'success');
 
   var STUDENT_AUTO_KEY = 'ulimStudentAutoLogin';
   var ADMIN_AUTO_KEY = 'ulimAdminAutoLogin';
-  var STUDENT_KEYS = ['studentSessionToken','studentUid','uid','studentNo','studentName','instructorName','studentMustChangePassword','phoneLast4','instructorFolderId'];
+  var STUDENT_KEYS = ['studentSessionToken','studentUid','uid','studentNo','studentName','instructorName','studentMustChangePassword','phoneLast4','instructorFolderId','studentFirebaseAuthUid','studentAuthVersion'];
   var ADMIN_KEYS = ['adminToken','adminInfo'];
   var COMMON_MODE_KEY = 'ulimLastMode';
 
@@ -20956,10 +20957,55 @@ ${ruleSummary}`, 'success');
     var info = getAdminInfoAny();
     return !!(readAdmin('adminToken') && info && (info.id || info.name));
   }
+  function studentPrimaryAuth(){
+    return window.__ULIM_STUDENT_FIREBASE_PRIMARY_AUTH_7355029__ || null;
+  }
   function hasStudentSession(){
-    var token = readStudent('studentSessionToken');
+    var auth = studentPrimaryAuth();
     var name = readStudent('studentName');
-    return !!(token && name && name !== '게스트');
+    return !!(auth && typeof auth.hasValidatedSession === 'function' && auth.hasValidatedSession() && name && name !== '게스트');
+  }
+  function saveStudentPrimaryProfile(profile){
+    profile = profile || {};
+    var uid = String(profile.studentUid || '').trim();
+    var firebaseUid = String(profile.firebaseAuthUid || '').trim();
+    var existingUid = String(readStudent('studentUid') || readStudent('uid') || '').trim();
+    if (!uid || !firebaseUid) throw new Error('학생 로그인 정보를 확인하지 못했습니다.');
+    if (existingUid && existingUid !== uid) throw new Error('학생 계정 정보가 일치하지 않습니다. 다시 로그인해주세요.');
+    var target = studentAutoOn() ? localStorage : sessionStorage;
+    var other = studentAutoOn() ? sessionStorage : localStorage;
+    safeSet(target, 'studentUid', uid);
+    safeSet(target, 'uid', uid);
+    safeSet(target, 'studentFirebaseAuthUid', firebaseUid);
+    if (profile.authVersion !== undefined && profile.authVersion !== null) safeSet(target, 'studentAuthVersion', profile.authVersion);
+    safeSet(target, COMMON_MODE_KEY, 'student');
+    safeRemove(other, 'studentFirebaseAuthUid');
+    safeRemove(other, 'studentAuthVersion');
+    try { window.studentUid = uid; } catch(e) {}
+    return profile;
+  }
+  async function restoreStudentPrimarySession(){
+    var auth = studentPrimaryAuth();
+    if (!auth || typeof auth.restore !== 'function') return null;
+    var profile = await auth.restore({
+      studentSessionToken: readStudent('studentSessionToken'),
+      expectedStudentUid: readStudent('studentUid') || readStudent('uid')
+    });
+    if (profile) saveStudentPrimaryProfile(profile);
+    return profile;
+  }
+  function revokeLegacyStudentSession(token){
+    token = String(token || '').trim();
+    if (!token) return;
+    try {
+      if (typeof GET_API_URL !== 'undefined' && GET_API_URL) {
+        var q = new URLSearchParams();
+        q.set('action','logoutStudentSession');
+        q.set('studentSessionToken', token);
+        q.set('_', Date.now());
+        fetch(GET_API_URL + '?' + q.toString(), { method:'GET', cache:'no-store', keepalive:true }).catch(function(){});
+      }
+    } catch(e) {}
   }
   function adminLoginScreenOpen(){
     var tab = document.getElementById('tabAdmin');
@@ -21024,6 +21070,8 @@ ${ruleSummary}`, 'success');
         cb.onchange = function(){
           safeSet(localStorage, STUDENT_AUTO_KEY, cb.checked ? 'Y' : 'N');
           syncStudentStorageByPreference();
+          var auth = studentPrimaryAuth();
+          if (auth && typeof auth.applyPersistence === 'function') Promise.resolve(auth.applyPersistence()).catch(function(){});
         };
       }
     }
@@ -21172,7 +21220,9 @@ ${ruleSummary}`, 'success');
     name = String(name || '').trim();
     password = String(password || '').trim();
     if (!name || !password) return alert('학생 이름과 비밀번호를 입력해주세요.');
+    try { sessionStorage.removeItem('ULIM_EXPLICIT_LOGOUT_IN_PROGRESS'); } catch(e) {}
     try { if (typeof showLoading === 'function') showLoading('로그인 정보 확인 중...'); } catch(e) {}
+    var issuedToken = '';
     try {
       var q = new URLSearchParams();
       q.set('action','secureStudentLogin');
@@ -21185,7 +21235,20 @@ ${ruleSummary}`, 'success');
       try { data = JSON.parse(text); } catch(parseErr) { throw new Error('로그인 응답을 확인하지 못했습니다.'); }
       if (!res.ok) throw new Error((data && data.message) || '로그인 연결이 지연되고 있습니다.');
       if (!data || data.status !== 'success' || !data.sessionToken) throw new Error((data && data.message) || '학생 이름 또는 비밀번호가 일치하지 않습니다.');
+
+      issuedToken = String(data.sessionToken || '').trim();
       saveStudentSession(data);
+
+      var primary = studentPrimaryAuth();
+      if (!primary || typeof primary.establishFromLegacy !== 'function') throw new Error('로그인 연결을 준비하지 못했습니다.');
+      var profile = await primary.establishFromLegacy({
+        studentSessionToken: issuedToken,
+        expectedStudentUid: data.studentUid || data.uid || readStudent('studentUid') || readStudent('uid'),
+        manual: true
+      });
+      if (!profile) throw new Error('로그인 연결을 완료하지 못했습니다.');
+      saveStudentPrimaryProfile(profile);
+
       try { if (typeof hideLoading === 'function') hideLoading(); } catch(e) {}
       alert((readStudent('studentName') || name) + '님 로그인되었습니다.');
       if ((data.mustChangePassword || readStudent('studentMustChangePassword') === 'Y') && typeof changeStudentPasswordByPrompt === 'function') {
@@ -21196,8 +21259,22 @@ ${ruleSummary}`, 'success');
       installSecureTabGate();
       try { if (typeof renderStudentAccountBar_ === 'function') renderStudentAccountBar_(); } catch(e) {}
     } catch(e) {
+      try {
+        var primaryFail = studentPrimaryAuth();
+        if (primaryFail && typeof primaryFail.signOut === 'function') {
+          Promise.resolve(primaryFail.signOut({ expectedFirebaseUid: readStudent('studentFirebaseAuthUid') })).catch(function(){});
+        }
+      } catch(ignorePrimary) {}
+      if (issuedToken) revokeLegacyStudentSession(issuedToken);
+      clearLocalStudentKeys();
+      clearSessionStudentKeys();
+      if (safeGet(localStorage, COMMON_MODE_KEY) === 'student') safeRemove(localStorage, COMMON_MODE_KEY);
+      if (safeGet(sessionStorage, COMMON_MODE_KEY) === 'student') safeRemove(sessionStorage, COMMON_MODE_KEY);
+      try { studentSessionToken = ''; window.studentUid = ''; studentNo = ''; studentName = ''; instructorName = ''; studentMustChangePassword = false; } catch(ignoreState) {}
       try { if (typeof hideLoading === 'function') hideLoading(); } catch(ignore) {}
-      alert(e && e.message ? e.message : '로그인 처리 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
+      var message = e && e.message ? String(e.message) : '';
+      if (/이름|비밀번호|사용|재원|휴원|퇴원/.test(message)) alert(message);
+      else alert('로그인 연결을 완료하지 못했습니다. 잠시 후 다시 시도해주세요.');
     }
   };
   try { authenticate = window.authenticate; } catch(e) {}
@@ -21280,6 +21357,8 @@ ${ruleSummary}`, 'success');
       return;
     }
 
+    try { await restoreStudentPrimarySession(); } catch(e) {}
+
     if (hasStudentSession()) {
       applyStudentGlobals();
       try { if (typeof showMainContent === 'function') showMainContent(true); } catch(e) {}
@@ -21295,19 +21374,18 @@ ${ruleSummary}`, 'success');
   };
   try { checkStudentName = window.checkStudentName; } catch(e) {}
 
-  window.studentSecureLogout = function(){
+  window.studentSecureLogout = async function(){
     if (!confirm('학생 로그아웃할까요?')) return;
     try { sessionStorage.setItem('ULIM_EXPLICIT_LOGOUT_IN_PROGRESS', 'Y'); } catch(e) {}
     var token = readStudent('studentSessionToken');
+    var firebaseUid = readStudent('studentFirebaseAuthUid');
     try {
-      if (typeof GET_API_URL !== 'undefined' && GET_API_URL && token) {
-        var q = new URLSearchParams();
-        q.set('action','logoutStudentSession');
-        q.set('studentSessionToken', token);
-        q.set('_', Date.now());
-        fetch(GET_API_URL + '?' + q.toString(), { method:'GET', cache:'no-store' }).catch(function(){});
+      var primary = studentPrimaryAuth();
+      if (primary && typeof primary.signOut === 'function') {
+        await primary.signOut({ expectedFirebaseUid: firebaseUid });
       }
     } catch(e) {}
+    revokeLegacyStudentSession(token);
     clearLocalStudentKeys();
     clearSessionStudentKeys();
     if (safeGet(localStorage, COMMON_MODE_KEY) === 'student') safeRemove(localStorage, COMMON_MODE_KEY);
