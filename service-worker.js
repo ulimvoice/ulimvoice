@@ -1,4 +1,4 @@
-const CACHE_NAME = "ulimvoice-cache-v56-tablet-video-734315";
+const CACHE_NAME = "ulimvoice-cache-v57-stability-7355019";
 
 const STATIC_ASSETS = [
   "./",

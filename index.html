@@ -22,14 +22,14 @@
   <link rel="preconnect" href="https://identitytoolkit.googleapis.com" data-ulim-classroom-preconnect="7297">
   <link rel="preconnect" href="https://asia-northeast3-ulim-7b09a.cloudfunctions.net" data-ulim-classroom-preconnect="7297">
   <!-- ULIM 7.34.2: safe Firebase-first staff/student directory integration. -->
-  <script src="./web/room-classroom-realtime-7.29.16.js?v=20260801.72916p15"></script>
+  <script src="./web/room-classroom-realtime-7.29.17.js?v=20260808.72917"></script>
   <script src="./web/staff-login-firebase-primary-7.32.7.js?v=20260807.73207"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260808-7355018-class-roster-attno-tablet-date-fix">
-<script id="ulim-one-time-cache-clean-7355015">
+<meta name="ulim-build" content="20260808-7355019-stability-convergence">
+<script id="ulim-one-time-cache-clean-7355019">
 (function (global) {
   'use strict';
-  var key = 'ULIM_ONE_TIME_CACHE_CLEAN_7355015';
+  var key = 'ULIM_ONE_TIME_CACHE_CLEAN_7355019';
   try { if (global.localStorage.getItem(key) === 'Y') return; global.localStorage.setItem(key, 'Y'); } catch (_ignore) {}
   try {
     if (global.caches && typeof global.caches.keys === 'function') {
@@ -38,7 +38,7 @@
       }).catch(function () {});
     }
   } catch (_ignore2) {}
-  // 7.35.5.0.15: do not let exact-date/class/attendance caches from older mixed-source builds repaint the screen.
+  // 7.35.5.0.19: clear pre-convergence exact-date/class/attendance caches once after deployment.
   try {
     [global.localStorage, global.sessionStorage].forEach(function (store) {
       if (!store) return;
@@ -6677,29 +6677,6 @@ function adminBuildNoticeClassList() {
     return Array.from(map.values()).sort((a, b) => String(a.className).localeCompare(String(b.className), 'ko'));
 }
 
-function adminBindClassPickerOptions(inputId, panelId) {
-    const optionsBox = document.getElementById(panelId + 'Options');
-    if (!optionsBox || optionsBox.dataset.ulimClassPickerBound === '1') return;
-
-    optionsBox.dataset.ulimClassPickerBound = '1';
-    optionsBox.addEventListener('click', event => {
-        const button = event.target && event.target.closest
-            ? event.target.closest('.admin-class-option[data-class-name]')
-            : null;
-        if (!button || !optionsBox.contains(button)) return;
-
-        event.preventDefault();
-        event.stopPropagation();
-
-        adminSelectClass(
-            button.dataset.className || '',
-            inputId,
-            panelId,
-            button.dataset.classId || ''
-        );
-    });
-}
-
 function adminRenderClassPicker(inputId, panelId) {
     const panel = document.getElementById(panelId);
     const optionsBox = document.getElementById(panelId + 'Options');
@@ -6761,7 +6738,18 @@ function adminRenderClassPicker(inputId, panelId) {
     }
 
     optionsBox.innerHTML = html;
-    adminBindClassPickerOptions(inputId, panelId);
+    optionsBox.querySelectorAll('.admin-class-option[data-class-name]').forEach(button => {
+        button.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            adminSelectClass(
+                button.dataset.className || '',
+                inputId,
+                panelId,
+                button.dataset.classId || ''
+            );
+        });
+    });
 }
 
 function normalizeClassSearchText(value) {
@@ -6816,12 +6804,15 @@ function adminSelectClass(className, targetId = 'adminAttendanceClass', panelId 
     }
 
     if (targetId === 'adminAttendanceClass') {
-        if (className === '전체반' && typeof window.ulimAttendanceOpenAllClasses735419 === 'function') {
-            window.ulimAttendanceOpenAllClasses735419();
+        if (className === '전체반' && typeof window.ulimAttendanceOpenAllClasses735420 === 'function') {
+            window.ulimAttendanceOpenAllClasses735420();
             return;
         }
         if (className) {
-            adminLoadAttendanceSnapshot(false);
+            const loadAttendance = typeof window.adminLoadAttendanceSnapshot === 'function'
+                ? window.adminLoadAttendanceSnapshot
+                : (typeof adminLoadAttendanceSnapshot === 'function' ? adminLoadAttendanceSnapshot : null);
+            if (loadAttendance) Promise.resolve(loadAttendance(false)).catch(() => {});
         }
         return;
     }
@@ -7486,7 +7477,7 @@ function showAdminPanel(panelId) {
     }
 
     if (panelId === 'adminPanelAttendance') {
-        // 7.35.5.0.18: attendance-admin-integrated-7.35.4.19 is the sole attendance owner.
+        // 7.35.5.0.19: attendance-admin-integrated-7.35.4.20 is the sole attendance owner.
         // Do not reload here when switching tabs; this preserves unsaved edits and prevents duplicate calls.
     }
 
@@ -25023,9 +25014,8 @@ window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = false;
 <!-- ULIM 7.30.0: cache-first login shell, attendance and daily evaluation reads. -->
 <script src="./web/staff-performance-7.30.1.js?v=20260731.73001"></script>
 
-<!-- ULIM 7.31.15 / 7.34.3.10: attendance date-cell isolation + manual-only current status. -->
+<!-- ULIM 7.35.5.0.19: staff operational data; attendance UI is owned only by integrated 7.35.4.20. -->
 <script src="./web/staff-firestore-operational-7.31.22.js?v=20260807.731220"></script>
-<script src="./web/attendance-daily-ui-7.34.3.10.js?v=20260801.7340310"></script>
 
 <!-- ULIM 7.33.1: stable Firebase token guard + clean console baseline. -->
 <script src="./web/staff-account-admin-7.34.3.6.js?v=20260801.734036"></script>
@@ -25109,13 +25099,13 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 
 <!-- ULIM 7.35.5.0.11: non-attendance Firestore runtime + restored dedicated attendance owner. -->
 <script src="./web/ulim-firestore-primary-7.35.5.0.16.js?v=20260808.7355016"></script>
-<script src="./web/attendance-admin-integrated-7.35.4.19.js?v=20260808.7350419"></script>
+<script src="./web/attendance-admin-integrated-7.35.4.20.js?v=20260808.7350420"></script>
 <script src="./web/operational-content-admin-7.35.5.0.11.js?v=20260807.7355011"></script>
 <script src="./web/student-login-notice-and-role-access-7.35.5.0.11.js?v=20260807.7355011"></script>
 <script id="ulim-stable-build-readiness-735506">
 (function (global) {
   'use strict';
-  global.__ULIM_LOADED_BUILD_73550__ = '20260808-7355018-class-roster-attno-tablet-date-fix';
+  global.__ULIM_LOADED_BUILD_73550__ = '20260808-7355019-stability-convergence';
   global.__ULIM_LOADED_BUILD_7350509__ = true;
   global.__ULIM_LOADED_BUILD_7355011__ = true;
   global.__ULIM_LOADED_BUILD_7355013__ = true;
@@ -25123,6 +25113,8 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
   global.__ULIM_LOADED_BUILD_7355015__ = true;
   global.__ULIM_LOADED_BUILD_7355016__ = true;
   global.__ULIM_LOADED_BUILD_7355017__ = true;
+  global.__ULIM_LOADED_BUILD_7355018__ = true;
+  global.__ULIM_LOADED_BUILD_7355019__ = true;
 
   function verifyRequiredModules735506() {
     var studentReady =
