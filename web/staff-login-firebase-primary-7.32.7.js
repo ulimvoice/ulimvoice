@@ -738,6 +738,14 @@
       const rt = await withTimeout(runtime(), 15000, '로그인 상태 복원 준비 시간이 초과되었습니다.');
       rt.sdk.onAuthStateChanged(rt.auth, async function (user) {
         if (!user || manualLoginInProgress) return;
+        /* ULIM 7.35.5.0.30 R6: student Firebase identity is not owned by staff restore */
+        try {
+          const roleToken7355030R6 = await rt.sdk.getIdTokenResult(user, false);
+          const observedRole7355030R6 = text(roleToken7355030R6 && roleToken7355030R6.claims && roleToken7355030R6.claims.role);
+          if (observedRole7355030R6 === 'student') return;
+        } catch (_studentRoleIsolation7355030R6) {
+          /* Unknown/unready roles continue through the existing staff validation path. */
+        }
         if (explicitLogoutActive()) {
           try { await rt.sdk.signOut(rt.auth); } catch (_ignore) {}
           return;
