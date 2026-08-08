@@ -25,7 +25,7 @@
   <script src="./web/room-classroom-realtime-7.29.17.js?v=20260808.72917"></script>
   <script src="./web/staff-login-firebase-primary-7.32.7.js?v=20260807.73207"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260808-7355020-class-picker-core-capture">
+<meta name="ulim-build" content="20260808-7355021-preview-video-staffmemo-classroom">
 <script id="ulim-one-time-cache-clean-7355019">
 (function (global) {
   'use strict';
@@ -7731,7 +7731,7 @@ function adminBuildDailyEvalReplaceMap_(student) {
     const rawClassName = selectedClass || student.className || '';
     const cleanClassName = adminCleanClassNameOnly_(rawClassName);
     const attendanceStatus = adminNormalizeDailyEvalStatusLabel_(student.attendanceStatus || student.status || student.specialStatus || '');
-    const videoLink = student.videoLink || adminGetVideoLinkForClassName_(rawClassName) || adminGetVideoLinkForClassName_(student.className || '');
+    const videoLink = adminGetVideoLinkForClassName_(rawClassName) || adminGetVideoLinkForClassName_(student.className || '') || student.videoLink || '';
 
     return {
         '[반이름]': cleanClassName,
@@ -8684,7 +8684,7 @@ function adminGetSelectedDailyRows() {
         if (typeof adminResolveDailyEvalStatusFromRow_ === 'function') {
             base.attendanceStatus = adminResolveDailyEvalStatusFromRow_(base, row);
         }
-        base.videoLink = base.videoLink || adminGetVideoLinkForClassName_(rawClassName);
+        base.videoLink = adminGetVideoLinkForClassName_(rawClassName) || base.videoLink || '';
         base.lessonContent = row.querySelector('.admin-eval-lesson')?.value.trim() || '';
         base.lessonAttitude = row.querySelector('.admin-eval-attitude')?.value.trim() || '';
         base.teacherComment = row.querySelector('.admin-eval-comment')?.value.trim() || '';
@@ -19020,6 +19020,29 @@ ${ruleSummary}`, 'success');
                 font-size: 12px;
                 line-height: 1.45;
             }
+            .daily-class-video-link-box-7355021 {
+                margin-top: 12px;
+                padding-top: 12px;
+                border-top: 1px dashed #86efac;
+            }
+            .daily-class-video-link-row-7355021 {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) auto;
+                gap: 8px;
+                align-items: center;
+            }
+            .daily-class-video-link-row-7355021 input {
+                width: 100%;
+                box-sizing: border-box;
+                padding: 10px 11px;
+                border: 1px solid #86efac;
+                border-radius: 10px;
+                background: #fff;
+                font-size: 14px;
+            }
+            @media (max-width: 640px) {
+                .daily-class-video-link-row-7355021 { grid-template-columns: 1fr; }
+            }
             .admin-data-guard-message {
                 padding: 18px;
                 border-radius: 14px;
@@ -19101,7 +19124,7 @@ ${ruleSummary}`, 'success');
             if (typeof adminResolveDailyEvalStatusFromRow_ === 'function') {
                 base.attendanceStatus = adminResolveDailyEvalStatusFromRow_(base, row);
             }
-            base.videoLink = base.videoLink || (typeof adminGetVideoLinkForClassName_ === 'function' ? adminGetVideoLinkForClassName_(rawClassName) : '');
+            base.videoLink = (typeof adminGetVideoLinkForClassName_ === 'function' ? adminGetVideoLinkForClassName_(rawClassName) : '') || base.videoLink || '';
             base.lessonContent = commonLesson;
             base.lessonAttitude = row.querySelector('.admin-eval-attitude')?.value.trim() || '';
             base.teacherComment = row.querySelector('.admin-eval-comment')?.value.trim() || '';
@@ -19300,6 +19323,14 @@ ${ruleSummary}`, 'success');
                 <label for="adminDailyCommonLesson">${esc_(classLabel)} 이번주 수업</label>
                 <textarea id="adminDailyCommonLesson" placeholder="예: 애니더빙 / 광고 내레이션 / 감정표현 훈련">${esc_(commonLesson)}</textarea>
                 <div class="daily-common-lesson-help">여기에 입력한 내용은 이 반의 선택 학생 전체에게 동일하게 적용됩니다.</div>
+                <div class="daily-class-video-link-box-7355021">
+                    <label for="adminDailyClassVideoLink7355021">수업영상 링크</label>
+                    <div class="daily-class-video-link-row-7355021">
+                        <input id="adminDailyClassVideoLink7355021" type="text" autocomplete="off" value="${esc_(typeof adminGetVideoLinkForClassName_ === 'function' ? adminGetVideoLinkForClassName_(currentClass, getDailyDate_()) : '')}" placeholder="영상 링크 또는 알림톡에 넣을 값">
+                        <button type="button" class="admin-btn blue" onclick="ulimSaveDailyClassVideoLink7355021()">링크 저장</button>
+                    </div>
+                    <div id="adminDailyClassVideoLinkStatus7355021" class="daily-common-lesson-help">반별로 고정 저장됩니다. 날짜를 바꿔도 같은 반에는 이 값이 유지됩니다.</div>
+                </div>
             </div>
         `;
 
@@ -19362,7 +19393,7 @@ ${ruleSummary}`, 'success');
             if (typeof adminResolveDailyEvalStatusFromRow_ === 'function') {
                 base.attendanceStatus = adminResolveDailyEvalStatusFromRow_(base, row);
             }
-            base.videoLink = base.videoLink || (typeof adminGetVideoLinkForClassName_ === 'function' ? adminGetVideoLinkForClassName_(rawClassName) : '');
+            base.videoLink = (typeof adminGetVideoLinkForClassName_ === 'function' ? adminGetVideoLinkForClassName_(rawClassName) : '') || base.videoLink || '';
             base.lessonContent = commonLesson;
             base.lessonAttitude = row.querySelector('.admin-eval-attitude')?.value.trim() || '';
             base.teacherComment = row.querySelector('.admin-eval-comment')?.value.trim() || '';
@@ -24419,9 +24450,6 @@ body {
         if (typeof adminIsFullAdmin === 'function' && !adminIsFullAdmin()) {
             return alert('일일평가 발송 미리보기와 발송은 관리자 권한에서만 가능합니다.');
         }
-        if (!trim_(window.adminToken || (typeof adminToken !== 'undefined' ? adminToken : ''))) {
-            return alert('관리자 로그인이 필요합니다.');
-        }
         const rows = typeof window.adminGetSelectedDailyRows === 'function' ? window.adminGetSelectedDailyRows() : [];
         const recipientTypes = typeof adminGetRecipientTypes === 'function' ? adminGetRecipientTypes('daily') : [];
         if (!rows.length) return alert('체크한 학생 중 저장/발송할 일일평가 내용이 없습니다.');
@@ -25127,14 +25155,14 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 
 
 <!-- ULIM 7.35.5.0.11: non-attendance Firestore runtime + restored dedicated attendance owner. -->
-<script src="./web/ulim-firestore-primary-7.35.5.0.16.js?v=20260808.7355016"></script>
+<script src="./web/ulim-firestore-primary-7.35.5.0.21.js?v=20260808.7355021"></script>
 <script src="./web/attendance-admin-integrated-7.35.4.20.js?v=20260808.7350420"></script>
 <script src="./web/operational-content-admin-7.35.5.0.11.js?v=20260807.7355011"></script>
 <script src="./web/student-login-notice-and-role-access-7.35.5.0.11.js?v=20260807.7355011"></script>
 <script id="ulim-stable-build-readiness-735506">
 (function (global) {
   'use strict';
-  global.__ULIM_LOADED_BUILD_73550__ = '20260808-7355020-class-picker-core-capture';
+  global.__ULIM_LOADED_BUILD_73550__ = '20260808-7355021-preview-video-staffmemo-classroom';
   global.__ULIM_LOADED_BUILD_7350509__ = true;
   global.__ULIM_LOADED_BUILD_7355011__ = true;
   global.__ULIM_LOADED_BUILD_7355013__ = true;
