@@ -24,11 +24,11 @@
   <!-- ULIM 7.34.2: safe Firebase-first staff/student directory integration. -->
   <script src="./web/room-classroom-realtime-7.29.18.js?v=20260809.72918"></script>
   <script src="./web/practice-room-firestore-primary-7.35.5.0.33.js?v=20260809.7355033"></script>
-  <script src="./web/staff-login-firebase-primary-7.32.7.js?v=20260807.73207"></script>
+  <script src="./web/staff-login-firebase-primary-7.32.8.js?v=20260809.73208"></script>
   <script src="./web/student-login-firebase-direct-7.35.5.0.30.js?v=20260809.7355030r7"></script>
   <script src="./web/student-home-bootstrap-7.35.5.0.31.js?v=20260809.7355031"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260809-7355033r5-attendance-realtime-ledger">
+<meta name="ulim-build" content="20260809-7355033r6-login-attendance-owner-repair">
 <script id="ulim-one-time-cache-clean-7355030">
 (function (global) {
   'use strict';
@@ -7595,7 +7595,7 @@ function showAdminPanel(panelId) {
     }
 
     if (panelId === 'adminPanelAttendance') {
-        // 7.35.5.0.33 R5: attendance-admin-integrated-7.35.4.23 is the sole attendance owner.
+        // 7.35.5.0.33 R6: attendance-admin-integrated-7.35.4.24 is the sole attendance owner.
         // Do not reload here when switching tabs; this preserves unsaved edits and prevents duplicate calls.
     }
 
@@ -24732,7 +24732,7 @@ window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = false;
 <script src="./web/student-management-ui-7.35.4.10.js?v=20260806.7350506"></script>
 <script id="ulim-general-teacher-firebase-auth-bootstrap-7-31-5">
 /* ULIM 7.35.5.0.25: obsolete 7.31.5 Firebase bootstrap disabled.
-   staff-login-firebase-primary-7.32.7 is the single authentication owner. */
+   staff-login-firebase-primary-7.32.8 is the single authentication owner. */
 (function(){
   window.__ULIM_GENERAL_TEACHER_FIREBASE_AUTH_BOOTSTRAP_7315__ = true;
   window.__ULIM_GENERAL_TEACHER_FIREBASE_AUTH_BOOTSTRAP_DISABLED_7355025__ = true;
@@ -24748,7 +24748,7 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 
 <!-- ULIM 7.35.5.0.11: non-attendance Firestore runtime + restored dedicated attendance owner. -->
 <script src="./web/ulim-firestore-primary-7.35.5.0.26.js?v=20260808.7355026"></script>
-<script src="./web/attendance-admin-integrated-7.35.4.23.js?v=20260809.7350423"></script>
+<script src="./web/attendance-admin-integrated-7.35.4.24.js?v=20260809.7350424"></script>
 <script src="./web/operational-content-admin-7.35.5.0.12.js?v=20260808.7355012"></script>
 <script src="./web/course-application-admin-7.35.5.0.32.js?v=20260809.7355032"></script>
 <script src="./web/student-login-notice-and-role-access-7.35.5.0.31.js?v=20260809.7355031"></script>
