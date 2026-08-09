@@ -22,13 +22,13 @@
   <link rel="preconnect" href="https://identitytoolkit.googleapis.com" data-ulim-classroom-preconnect="7297">
   <link rel="preconnect" href="https://asia-northeast3-ulim-7b09a.cloudfunctions.net" data-ulim-classroom-preconnect="7297">
   <!-- ULIM 7.34.2: safe Firebase-first staff/student directory integration. -->
-  <script src="./web/room-classroom-realtime-7.29.17.js?v=20260809.72917r33"></script>
+  <script src="./web/room-classroom-realtime-7.29.18.js?v=20260809.72918"></script>
   <script src="./web/practice-room-firestore-primary-7.35.5.0.33.js?v=20260809.7355033"></script>
   <script src="./web/staff-login-firebase-primary-7.32.7.js?v=20260807.73207"></script>
   <script src="./web/student-login-firebase-direct-7.35.5.0.30.js?v=20260809.7355030r7"></script>
   <script src="./web/student-home-bootstrap-7.35.5.0.31.js?v=20260809.7355031"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260809-7355033r4-my-reservation-label">
+<meta name="ulim-build" content="20260809-7355033r5-attendance-realtime-ledger">
 <script id="ulim-one-time-cache-clean-7355030">
 (function (global) {
   'use strict';
@@ -7595,7 +7595,7 @@ function showAdminPanel(panelId) {
     }
 
     if (panelId === 'adminPanelAttendance') {
-        // 7.35.5.0.27: attendance-admin-integrated-7.35.4.22 is the sole attendance owner.
+        // 7.35.5.0.33 R5: attendance-admin-integrated-7.35.4.23 is the sole attendance owner.
         // Do not reload here when switching tabs; this preserves unsaved edits and prevents duplicate calls.
     }
 
@@ -24723,7 +24723,7 @@ window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = false;
 <script src="./web/staff-performance-7.30.1.js?v=20260731.73001"></script>
 
 <!-- ULIM 7.35.5.0.19: staff operational data; attendance UI is owned only by integrated 7.35.4.20. -->
-<script src="./web/staff-firestore-operational-7.31.22.js?v=20260807.731220"></script>
+<script src="./web/staff-firestore-operational-7.31.23.js?v=20260809.73123"></script>
 
 <!-- ULIM 7.33.1: stable Firebase token guard + clean console baseline. -->
 <script src="./web/staff-account-admin-7.34.3.6.js?v=20260801.734036"></script>
@@ -24748,7 +24748,7 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 
 <!-- ULIM 7.35.5.0.11: non-attendance Firestore runtime + restored dedicated attendance owner. -->
 <script src="./web/ulim-firestore-primary-7.35.5.0.26.js?v=20260808.7355026"></script>
-<script src="./web/attendance-admin-integrated-7.35.4.22.js?v=20260808.7350422"></script>
+<script src="./web/attendance-admin-integrated-7.35.4.23.js?v=20260809.7350423"></script>
 <script src="./web/operational-content-admin-7.35.5.0.12.js?v=20260808.7355012"></script>
 <script src="./web/course-application-admin-7.35.5.0.32.js?v=20260809.7355032"></script>
 <script src="./web/student-login-notice-and-role-access-7.35.5.0.31.js?v=20260809.7355031"></script>
