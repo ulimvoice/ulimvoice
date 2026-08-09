@@ -28,7 +28,7 @@
   <script src="./web/student-login-firebase-direct-7.35.5.0.30.js?v=20260809.7355030r7"></script>
   <script src="./web/student-home-bootstrap-7.35.5.0.31.js?v=20260809.7355031"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260809-7355033-practice-room-firestore-primary">
+<meta name="ulim-build" content="20260809-7355033r4-my-reservation-label">
 <script id="ulim-one-time-cache-clean-7355030">
 (function (global) {
   'use strict';
@@ -2256,8 +2256,8 @@ body.ulim-attendance-modal-open73545{overflow:hidden}
 
       <div class="room-status-row">
         <span class="room-status-chip">가능: 예약 가능</span>
-        <span class="room-status-chip">학생명: 이미 예약됨</span>
-        <span class="room-status-chip">초록색: 내 예약</span>
+        <span class="room-status-chip">이미 예약됨: 다른 사람 예약</span>
+        <span class="room-status-chip">내 예약: 내가 예약한 시간</span>
         <span class="room-status-chip">수업중: 예약 불가</span>
       </div>
 
@@ -9316,7 +9316,7 @@ function renderRoomTimeTable(dateObj) {
                 const displayText = statusText === "관리자차단" ? "사용불가" :
                                     statusText === "사용완료" ? "사용완료" :
                                     statusText === "수업중" ? "수업중" :
-                                    "이미 예약됨";
+                                    isMine ? "내 예약" : "이미 예약됨";
 
                 const canCancel = isMine && reservation.id && !reservation.pending;
 
