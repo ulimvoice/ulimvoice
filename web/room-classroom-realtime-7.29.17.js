@@ -6,6 +6,7 @@
   global.__ULIM_ROOM_CLASSROOM_REALTIME_72916__ = true;
 
   const VERSION = "2026-08-08.729.17-firebase-primary-classroom";
+  const ROOM_FIRESTORE_PRIMARY_SIGNAL_7355033 = true;
   const ENABLED = global.ULIM_ROOM_CLASSROOM_REALTIME_ENABLED !== false;
   const FIREBASE_CONFIG = Object.freeze({
     apiKey: "AIzaSyAW-sqtUQ_mJ6ZS_aV8pTOAKvHTSX-FXUM",
@@ -44,6 +45,8 @@
     revisionPollInFlight: false,
     roomMonth: "",
     roomUnsubscribe: null,
+    roomRefreshTimer: null,
+    roomSnapshotRevisionMs: 0,
     roomMonthData: null,
     roomIndexWrapped: false,
     wrappersInstalled: false,
@@ -969,10 +972,22 @@
 
     const ref = runtime.sdk.doc(runtime.db, "realtimeRoomMonths", month);
     state.roomUnsubscribe = runtime.sdk.onSnapshot(ref, function (snapshot) {
-      state.roomMonthData = snapshot.exists() ? (snapshot.data() || {}) : null;
+      const roomSignal = snapshot.exists() ? (snapshot.data() || {}) : {};
+      state.roomSnapshotRevisionMs = Number(roomSignal.updatedAtMs || roomSignal.revision || Date.now());
+      // 7.35.5.0.33: realtimeRoomMonths is a privacy-safe revision signal only.
+      // Canonical reservation details and mine/owner state always come from the callable owner.
+      state.roomMonthData = null;
       try {
-        if (typeof buildRoomReservationIndexes === "function") buildRoomReservationIndexes();
-        if (typeof renderCurrentRoomReservationView === "function") renderCurrentRoomReservationView();
+        if (state.roomRefreshTimer) clearTimeout(state.roomRefreshTimer);
+        state.roomRefreshTimer = setTimeout(function () {
+          state.roomRefreshTimer = null;
+          if (typeof global.loadRoomReservations === "function") {
+            Promise.resolve(global.loadRoomReservations(true)).catch(function () {});
+            return;
+          }
+          if (typeof buildRoomReservationIndexes === "function") buildRoomReservationIndexes();
+          if (typeof renderCurrentRoomReservationView === "function") renderCurrentRoomReservationView();
+        }, 80);
         setStatus("ready", "실시간 연결됨");
       } catch (error) {
         safeConsole("warn", "[ULIM room realtime render]", error);
@@ -2170,10 +2185,7 @@
     if (typeof global.reserveRoomSlot === "function") {
       const originalReserveRoom = global.reserveRoomSlot;
       global.reserveRoomSlot = async function () {
-        const before = recordsSignature(typeof roomReservations !== "undefined" ? roomReservations : []);
         const result = await originalReserveRoom.apply(this, arguments);
-        const after = recordsSignature(typeof roomReservations !== "undefined" ? roomReservations : []);
-        if (before !== after) await publishRoomSnapshot("RESERVE");
         await subscribeRoomMonth(roomMonthKey());
         return result;
       };
@@ -2182,10 +2194,7 @@
     if (typeof global.cancelRoomReservation === "function") {
       const originalCancelRoom = global.cancelRoomReservation;
       global.cancelRoomReservation = async function () {
-        const before = recordsSignature(typeof roomReservations !== "undefined" ? roomReservations : []);
         const result = await originalCancelRoom.apply(this, arguments);
-        const after = recordsSignature(typeof roomReservations !== "undefined" ? roomReservations : []);
-        if (before !== after) await publishRoomSnapshot("CANCEL");
         await subscribeRoomMonth(roomMonthKey());
         return result;
       };

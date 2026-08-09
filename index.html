@@ -22,12 +22,13 @@
   <link rel="preconnect" href="https://identitytoolkit.googleapis.com" data-ulim-classroom-preconnect="7297">
   <link rel="preconnect" href="https://asia-northeast3-ulim-7b09a.cloudfunctions.net" data-ulim-classroom-preconnect="7297">
   <!-- ULIM 7.34.2: safe Firebase-first staff/student directory integration. -->
-  <script src="./web/room-classroom-realtime-7.29.17.js?v=20260808.72917"></script>
+  <script src="./web/room-classroom-realtime-7.29.17.js?v=20260809.72917r33"></script>
+  <script src="./web/practice-room-firestore-primary-7.35.5.0.33.js?v=20260809.7355033"></script>
   <script src="./web/staff-login-firebase-primary-7.32.7.js?v=20260807.73207"></script>
   <script src="./web/student-login-firebase-direct-7.35.5.0.30.js?v=20260809.7355030r7"></script>
   <script src="./web/student-home-bootstrap-7.35.5.0.31.js?v=20260809.7355031"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260809-7355032-course-admin-ui-convergence">
+<meta name="ulim-build" content="20260809-7355033-practice-room-firestore-primary">
 <script id="ulim-one-time-cache-clean-7355030">
 (function (global) {
   'use strict';
@@ -7458,9 +7459,9 @@ function adminRenderRoomReservationTable() {
             <td><span class="admin-status-badge">${escapeHtml(row.status || '예약')}</span></td>
             <td>${escapeHtml(row.memo || '')}</td>
             <td>
-              <button type="button" class="admin-btn" style="padding:8px 10px; font-size:12px;" onclick="adminSendRoomReservationMessage(${index}, 'confirm')">사용확인</button>
-              <button type="button" class="admin-btn red" style="padding:8px 10px; font-size:12px;" onclick="adminSendRoomReservationMessage(${index}, 'unavailable')">사용불가</button>
-              <button type="button" class="admin-btn orange" style="padding:8px 10px; font-size:12px;" onclick="adminSendRoomReservationMessage(${index}, 'change')">장소·시간 변경</button>
+              <button type="button" class="admin-btn" style="padding:8px 10px; font-size:12px;" onclick="adminProcessRoomReservation7355033(${index}, 'confirm')">사용확인</button>
+              <button type="button" class="admin-btn red" style="padding:8px 10px; font-size:12px;" onclick="adminProcessRoomReservation7355033(${index}, 'unavailable')">사용불가</button>
+              <button type="button" class="admin-btn orange" style="padding:8px 10px; font-size:12px;" onclick="adminProcessRoomReservation7355033(${index}, 'change')">장소·시간 변경</button>
             </td>
         </tr>`;
     });
@@ -7498,17 +7499,17 @@ async function adminSendSelectedRoomReservationMessages(actionType) {
 
     const names = selected.slice(0, 5).map(x => x.row.studentName).join(', ');
     const more = selected.length > 5 ? ` 외 ${selected.length - 5}명` : '';
-    if (!confirm(`선택한 ${selected.length}건의 연습실 예약 알림톡을 발송할까요?\n\n대상: ${names}${more}\n구분: ${adminRoomActionLabel(actionType)}`)) return;
+    if (!confirm(`선택한 ${selected.length}건의 연습실 예약을 처리하고 알림톡을 발송할까요?\n\n대상: ${names}${more}\n구분: ${adminRoomActionLabel(actionType)}`)) return;
 
     let success = 0;
     let failed = 0;
     const errors = [];
 
-    showLoading(`연습실 알림톡 발송 중... 0 / ${selected.length}`);
+    showLoading(`연습실 예약 처리 중... 0 / ${selected.length}`);
     for (let i = 0; i < selected.length; i++) {
         try {
-            showLoading(`연습실 알림톡 발송 중... ${i + 1} / ${selected.length}`);
-            await adminSendRoomReservationMessage(selected[i].index, actionType, option, true);
+            showLoading(`연습실 예약 처리 중... ${i + 1} / ${selected.length}`);
+            await adminProcessRoomReservation7355033(selected[i].index, actionType, option, true);
             success++;
         } catch (e) {
             failed++;
@@ -7516,7 +7517,7 @@ async function adminSendSelectedRoomReservationMessages(actionType) {
         }
     }
     hideLoading();
-    alert(`연습실 알림톡 발송 완료\n\n성공: ${success}건\n실패: ${failed}건${errors.length ? '\n\n확인 필요:\n' + errors.slice(0, 5).join('\n') : ''}`);
+    alert(`연습실 예약 처리 완료\n\n성공: ${success}건\n실패: ${failed}건${errors.length ? '\n\n확인 필요:\n' + errors.slice(0, 5).join('\n') : ''}`);
 }
 
 function adminCollectRoomMessageOptions(actionType, count = 1) {
@@ -8879,8 +8880,6 @@ function adminToggleDailyAll(checked) {
 /* 7.35.5.0 legacy adminSavePayment removed; Firestore module owns this function. */
 
 
-const ROOM_API_URL = GET_API_URL; // 학생부 GAS로 통합: 연습실 예약도 같은 웹앱에서 처리
-
 const ROOM_LIST = [
     "4강의실",
     "5강의실",
@@ -8903,9 +8902,8 @@ let roomReservationCountByDate = Object.create(null);
 let isRoomReservationLoaded = false;
 
 function isRoomApiReady() {
-    return ROOM_API_URL &&
-           ROOM_API_URL.startsWith('https://script.google.com/macros/s/') &&
-           ROOM_API_URL.includes('/exec');
+    return !!(window.__ULIM_PRACTICE_ROOM_FIRESTORE_PRIMARY_7355033__ &&
+              typeof window.__ULIM_PRACTICE_ROOM_FIRESTORE_PRIMARY_7355033__.getMonth === 'function');
 }
 
 function showRoomOverlay(message, id) {
@@ -8947,109 +8945,7 @@ function hideRoomOverlay(id) {
     if (el) el.remove();
 }
 
-function roomJsonp(params, options = {}) {
-    window.__roomJsonpInflight = window.__roomJsonpInflight || {};
-
-    const stableKey = (() => {
-        const copy = Object.assign({}, params || {});
-        delete copy.callback;
-        delete copy._;
-        return JSON.stringify(Object.keys(copy).sort().reduce((acc, key) => {
-            acc[key] = copy[key];
-            return acc;
-        }, {}));
-    })();
-
-    const canReuseInflight = options.cacheBust === false && stableKey;
-    if (canReuseInflight && window.__roomJsonpInflight[stableKey]) {
-        return window.__roomJsonpInflight[stableKey];
-    }
-
-    const promise = new Promise((resolve, reject) => {
-        if (!isRoomApiReady()) {
-            reject(new Error("예약 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요."));
-            return;
-        }
-
-        const callbackName =
-            'roomCallback_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
-
-        const query = new URLSearchParams();
-        Object.keys(params || {}).forEach(key => {
-            if (params[key] !== undefined && params[key] !== null) {
-                query.append(key, params[key]);
-            }
-        });
-        query.append('callback', callbackName);
-        if (options.cacheBust !== false) {
-            query.append('_', Date.now());
-        }
-
-        const script = document.createElement('script');
-        let timer = null;
-        let done = false;
-
-        function cleanup() {
-            try {
-                if (timer) {
-                    clearTimeout(timer);
-                    timer = null;
-                }
-
-                try {
-                    delete window[callbackName];
-                } catch (e) {
-                    window[callbackName] = undefined;
-                }
-
-                if (script && script.parentNode) {
-                    script.parentNode.removeChild(script);
-                }
-            } catch (e) {
-                console.warn('[roomJsonp cleanup ignored]', e);
-            }
-        }
-
-        function finishSuccess(data) {
-            if (done) return;
-            done = true;
-            cleanup();
-            resolve(data);
-        }
-
-        function finishError(error) {
-            if (done) return;
-            done = true;
-            cleanup();
-            reject(error);
-        }
-
-        window[callbackName] = function(data) {
-            finishSuccess(data);
-        };
-
-        script.onerror = function() {
-            finishError(new Error("예약 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요."));
-        };
-
-        timer = setTimeout(() => {
-            finishError(new Error("예약 정보를 불러오는 데 시간이 오래 걸리고 있습니다."));
-        }, 16000);
-
-        script.src = ROOM_API_URL + '?' + query.toString();
-        document.body.appendChild(script);
-    });
-
-    if (canReuseInflight) {
-        window.__roomJsonpInflight[stableKey] = promise;
-        promise.finally(() => {
-            delete window.__roomJsonpInflight[stableKey];
-        });
-    }
-
-    return promise;
-}
-
+/* 7.35.5.0.33: 연습실 예약 I/O는 Firebase callable 단일 owner가 담당합니다. */
 
 function formatRoomDate(date) {
     const y = date.getFullYear();
@@ -9255,23 +9151,18 @@ function applyRoomReservationSuccessLocally(date, room, hour, data) {
 }
 
 function refreshRoomReservationsInBackground(force = true) {
+    const api = window.__ULIM_PRACTICE_ROOM_FIRESTORE_PRIMARY_7355033__;
+    if (!api || typeof api.getMonth !== 'function') return Promise.resolve(null);
     const year = roomCurrentDate.getFullYear();
     const month = roomCurrentDate.getMonth() + 1;
     const cacheKey = getRoomCacheKey(year, month);
-
-    roomJsonp({
-        action: "getRoomReservations",
-        year,
-        month,
-        studentSessionToken: studentSessionToken || localStorage.getItem("studentSessionToken") || ""
-    }, { cacheBust: force }).then(data => {
-        if (!data || data.status !== "success") return;
+    return api.getMonth(year, month).then(data => {
+        if (!data || data.status !== 'success') return null;
         applyRoomReservationData(data);
         saveRoomReservationCache(cacheKey, data);
         renderCurrentRoomReservationView();
-    }).catch(err => {
-        console.warn("연습실 예약 백그라운드 갱신 실패:", err);
-    });
+        return data;
+    }).catch(() => null);
 }
 
 function changeRoomMonth(diff) {
@@ -9284,69 +9175,36 @@ async function loadRoomReservations(force = false) {
     const calendarEl = document.getElementById("roomCalendar");
     const tableEl = document.getElementById("roomTimeTable");
     const titleEl = document.getElementById("selectedRoomDateTitle");
-
     if (!calendarEl) return;
-
-    if (!isRoomApiReady()) {
-        calendarEl.innerHTML = `
-            <div style="grid-column:1/-1; background:#fff3cd; border:1px solid #ffeeba; border-radius:12px; padding:16px; color:#856404; line-height:1.6;">
-                <b>연습실 예약 서비스를 준비 중입니다.</b><br>
-                잠시 후 다시 시도해주세요. 문제가 반복되면 학원에 문의해주세요.
-            </div>
-        `;
-        if (tableEl) tableEl.innerHTML = "";
-        if (titleEl) titleEl.textContent = "예약 서비스 준비 중";
+    const api = window.__ULIM_PRACTICE_ROOM_FIRESTORE_PRIMARY_7355033__;
+    if (!api || typeof api.getMonth !== 'function') {
+        calendarEl.innerHTML = '<div style="grid-column:1/-1;background:#fff3cd;border:1px solid #ffeeba;border-radius:12px;padding:16px;color:#856404;line-height:1.6"><b>연습실 예약 서비스를 준비 중입니다.</b><br>잠시 후 다시 시도해주세요.</div>';
+        if (tableEl) tableEl.innerHTML = '';
+        if (titleEl) titleEl.textContent = '예약 서비스 준비 중';
         return;
     }
-
     const year = roomCurrentDate.getFullYear();
     const month = roomCurrentDate.getMonth() + 1;
     const roomCacheKey = getRoomCacheKey(year, month);
     const cached = !force ? readRoomReservationCache(roomCacheKey) : null;
     const now = Date.now();
     let renderedCached = false;
-
     if (cached && now - Number(cached.savedAt || 0) < ROOM_RESERVATION_STALE_CACHE_MS) {
         applyRoomReservationData(cached);
         renderCurrentRoomReservationView();
         renderedCached = true;
-
-        if (now - Number(cached.savedAt || 0) < ROOM_RESERVATION_CACHE_MS) {
-            return;
-        }
+        if (now - Number(cached.savedAt || 0) < ROOM_RESERVATION_CACHE_MS) return;
     }
-
-    if (!renderedCached) {
-        calendarEl.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:20px;">예약 현황을 불러오는 중...</div>`;
-    }
-
+    if (!renderedCached) calendarEl.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px">예약 현황을 불러오는 중...</div>';
     try {
-        const data = await roomJsonp({
-            action: "getRoomReservations",
-            year,
-            month,
-            studentSessionToken: studentSessionToken || localStorage.getItem("studentSessionToken") || ""
-        }, { cacheBust: force });
-
-        if (!data || data.status !== "success") {
-            throw new Error((data && data.message) || "예약 정보를 불러오지 못했습니다.");
-        }
-
+        const data = await api.getMonth(year, month);
+        if (!data || data.status !== 'success') throw new Error((data && data.message) || '예약 정보를 불러오지 못했습니다.');
         applyRoomReservationData(data);
         saveRoomReservationCache(roomCacheKey, data);
         renderCurrentRoomReservationView();
     } catch (e) {
-        console.error(e);
-
         if (renderedCached) return;
-
-        calendarEl.innerHTML = `
-            <div style="grid-column:1/-1; background:#fde9e9; border:1px solid #ffb3b3; border-radius:12px; padding:16px; color:#b00020; line-height:1.6;">
-                예약 정보를 불러오지 못했습니다.<br>
-                잠시 후 다시 시도해주세요. 계속 반복되면 학원에 문의해주세요.<br>
-                <small>${e.message || ''}</small>
-            </div>
-        `;
+        calendarEl.innerHTML = '<div style="grid-column:1/-1;background:#fde9e9;border:1px solid #ffb3b3;border-radius:12px;padding:16px;color:#b00020;line-height:1.6">예약 정보를 불러오지 못했습니다.<br>잠시 후 다시 시도해주세요.</div>';
     }
 }
 
@@ -9452,17 +9310,7 @@ function renderRoomTimeTable(dateObj) {
             const reservation = roomReservationMap[slotKey];
 
             if (reservation) {
-                const actor = getRoomReservationActor630_();
-                const isMine =
-                    reservation.mine === true ||
-                    (
-                        actor.type === 'student' &&
-                        String(reservation.studentName || "").trim() === String(actor.name || "").trim() &&
-                        (
-                            !String(reservation.phoneLast4 || "").trim() ||
-                            String(reservation.phoneLast4 || "").trim() === String(actor.phoneLast4 || "").trim()
-                        )
-                    );
+                const isMine = reservation.mine === true;
 
                 const statusText = normalizeStatusForMatch(reservation.status);
                 const displayText = statusText === "관리자차단" ? "사용불가" :
@@ -9523,111 +9371,56 @@ function renderRoomTimeTable(dateObj) {
 
 async function reserveRoomSlot(date, room, hour) {
     hour = Number(hour);
-
+    const api = window.__ULIM_PRACTICE_ROOM_FIRESTORE_PRIMARY_7355033__;
     const roomActor = getRoomReservationActor630_();
-    if (!roomActor.authenticated) {
-        alert("학생 또는 교직원 로그인 후 예약할 수 있습니다.");
-        return;
-    }
-
-    if (!isRoomApiReady()) {
-        alert("연습실 예약 서비스를 준비 중입니다.");
-        return;
-    }
-
-    if (Number.isNaN(hour)) {
-        alert("예약 시간 정보가 올바르지 않습니다.");
-        return;
-    }
-
-    const ok = confirm(
-        `${date}\n${room}\n${formatHour(hour)}~${formatHour(hour + 1)}\n예약할까요?`
-    );
-
-    if (!ok) return;
-
+    if (!roomActor.authenticated) return alert('학생 또는 교직원 로그인 후 예약할 수 있습니다.');
+    if (!api || typeof api.createReservation !== 'function') return alert('연습실 예약 서비스를 준비 중입니다.');
+    if (Number.isNaN(hour)) return alert('예약 시간 정보가 올바르지 않습니다.');
+    if (!confirm(`${date}
+${room}
+${formatHour(hour)}~${formatHour(hour + 1)}
+예약할까요?`)) return;
     if (window.__roomReserving) return;
     window.__roomReserving = true;
-    showRoomOverlay("예약 처리중...", "roomReserveLoading");
-
+    showRoomOverlay('예약 처리중...', 'roomReserveLoading');
     try {
-        const data = await roomJsonp({
-            action: "reserveRoom",
-            date,
-            room,
-            startHour: hour,
-            endHour: hour + 1,
-            studentSessionToken: studentSessionToken || localStorage.getItem("studentSessionToken") || ""
-        });
-
-        if (data && data.status === "success") {
-            selectedRoomDate = date;
-
-            applyRoomReservationSuccessLocally(date, room, hour, data);
-            renderRoomCalendar();
-            renderRoomTimeTable(parseRoomDate(date));
-            hideRoomOverlay("roomReserveLoading");
-            alert("예약되었습니다.");
-            refreshRoomReservationsInBackground(true);
-        } else {
-            alert((data && data.message) || "예약에 실패했습니다.");
-        }
-
+        const data = await api.createReservation(date, room, hour);
+        if (!data || data.status !== 'success') throw new Error((data && data.message) || '예약에 실패했습니다.');
+        selectedRoomDate = date;
+        applyRoomReservationSuccessLocally(date, room, hour, data);
+        renderRoomCalendar();
+        renderRoomTimeTable(parseRoomDate(date));
+        alert('예약되었습니다.');
+        refreshRoomReservationsInBackground(true);
     } catch (e) {
-        console.error(e);
-        alert(
-            "예약 저장 중 오류가 발생했습니다.\n" +
-            (e.message || "잠시 후 다시 시도해주세요.")
-        );
+        alert((e && e.message) || '예약 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
     } finally {
-        hideRoomOverlay("roomReserveLoading");
+        hideRoomOverlay('roomReserveLoading');
         window.__roomReserving = false;
     }
 }
 
 async function cancelRoomReservation(id) {
-    if (!isRoomApiReady()) {
-        alert("연습실 예약 서비스를 준비 중입니다.");
-        return;
-    }
-
-    const ok = confirm("이 예약을 취소할까요?");
-    if (!ok) return;
-
+    const api = window.__ULIM_PRACTICE_ROOM_FIRESTORE_PRIMARY_7355033__;
+    if (!api || typeof api.cancelReservation !== 'function') return alert('연습실 예약 서비스를 준비 중입니다.');
+    if (!confirm('이 예약을 취소할까요?')) return;
     if (window.__roomCanceling) return;
     window.__roomCanceling = true;
-    showRoomOverlay("예약 취소중...", "roomCancelLoading");
-
+    showRoomOverlay('예약 취소중...', 'roomCancelLoading');
     try {
-        const data = await roomJsonp({
-            action: "cancelRoom",
-            id,
-            studentSessionToken: studentSessionToken || localStorage.getItem("studentSessionToken") || ""
-        });
-
-        if (data && data.status === "success") {
-            removeLocalRoomReservationById(id);
-            renderRoomCalendar();
-
-            if (selectedRoomDate) {
-                renderRoomTimeTable(parseRoomDate(selectedRoomDate));
-            }
-
-            hideRoomOverlay("roomCancelLoading");
-            alert("예약이 취소되었습니다.");
-            refreshRoomReservationsInBackground(true);
-        } else {
-            alert((data && data.message) || "취소에 실패했습니다.");
-        }
-
+        const currentReservation = (roomReservations || []).find(r => String(r.id || r.reservationId || '').trim() === String(id || '').trim());
+        const reservationDate = currentReservation ? String(currentReservation.date || '').trim() : String(selectedRoomDate || '').trim();
+        const data = await api.cancelReservation(id, reservationDate);
+        if (!data || data.status !== 'success') throw new Error((data && data.message) || '취소에 실패했습니다.');
+        removeLocalRoomReservationById(id);
+        renderRoomCalendar();
+        if (selectedRoomDate) renderRoomTimeTable(parseRoomDate(selectedRoomDate));
+        alert('예약이 취소되었습니다.');
+        refreshRoomReservationsInBackground(true);
     } catch (e) {
-        console.error(e);
-        alert(
-            "예약 취소 중 오류가 발생했습니다.\n" +
-            (e.message || "잠시 후 다시 시도해주세요.")
-        );
+        alert((e && e.message) || '예약 취소 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
     } finally {
-        hideRoomOverlay("roomCancelLoading");
+        hideRoomOverlay('roomCancelLoading');
         window.__roomCanceling = false;
     }
 }
@@ -10894,73 +10687,23 @@ initializeRoomReservationFeature();
 </script>
 <script>
 window.registerRoomPushTokenManual = async function () {
-  alert("푸시 알림 등록을 시작합니다.");
-
   try {
-    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js");
-    const { getMessaging, getToken } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging.js");
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyAW-sqtUQ_mJ6ZS_aV8pTOAKvHTSX-FXUM",
-      authDomain: "ulim-7b09a.firebaseapp.com",
-      projectId: "ulim-7b09a",
-      storageBucket: "ulim-7b09a.firebasestorage.app",
-      messagingSenderId: "364788231295",
-      appId: "1:364788231295:web:b43fb49527bb6af1c6634a",
-      measurementId: "G-V3FH7V87E4"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const messaging = getMessaging(app);
-
+    const api = window.__ULIM_PRACTICE_ROOM_FIRESTORE_PRIMARY_7355033__;
+    if (!api || typeof api.saveAdminPushToken !== 'function') return alert('푸시 알림 기능을 준비하지 못했습니다.');
+    const { initializeApp, getApps, getApp } = await import('https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js');
+    const { getMessaging, getToken } = await import('https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging.js');
+    const firebaseConfig = {apiKey:'AIzaSyAW-sqtUQ_mJ6ZS_aV8pTOAKvHTSX-FXUM',authDomain:'ulim-7b09a.firebaseapp.com',projectId:'ulim-7b09a',storageBucket:'ulim-7b09a.firebasestorage.app',messagingSenderId:'364788231295',appId:'1:364788231295:web:b43fb49527bb6af1c6634a',measurementId:'G-V3FH7V87E4'};
     const permission = await Notification.requestPermission();
-    if (permission !== "granted") {
-      alert("알림 권한을 허용해야 합니다.");
-      return;
-    }
-
-    const registration = await navigator.serviceWorker.register(
-  "/ulimvoice/firebase-messaging-sw.js",
-  { updateViaCache: "none" }
-);
-
-const token = await getToken(messaging, {
-  vapidKey: "BI6tfHhb4rc1M92JzFqVk1j2ZgwAoQDzgmUewsAtWclw5BzMasH8QZSPk-oaMkAL1I_TSGLX17PXCSHJg5pY1OU",
-  serviceWorkerRegistration: registration
-});
-  if (!token) {
-      alert("FCM 토큰 발급 실패");
-      return;
-  }
-    localStorage.setItem("fcmToken", token);
-
-
-    const callbackName = "pushCallback_" + Date.now();
-
-    window[callbackName] = function (data) {
-      delete window[callbackName];
-      if (data && data.status === "success") {
-        alert("푸시 알림 등록 완료");
-      } else {
-        alert((data && data.message) || "푸시 토큰 저장 실패");
-      }
-    };
-
-    const url =
-      "https://script.google.com/macros/s/AKfycbxgLt5ngGxRQJ3WtEtIkmAyUlFQMnAc2y6SjEXnL1tQDUW8ZdRcLh628_inbHmqktNIvg/exec" +
-      "?action=saveAdminPushToken" +
-      "&token=" + encodeURIComponent(token) +
-      "&adminName=" + encodeURIComponent("관리자") +
-      "&deviceInfo=" + encodeURIComponent(navigator.userAgent || "") +
-      "&callback=" + callbackName;
-
-    const script = document.createElement("script");
-    script.src = url;
-    document.body.appendChild(script);
-
+    if (permission !== 'granted') return alert('알림 권한을 허용해야 합니다.');
+    const registration = await navigator.serviceWorker.register('/ulimvoice/firebase-messaging-sw.js', { updateViaCache:'none' });
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    const token = await getToken(getMessaging(app), {vapidKey:'BI6tfHhb4rc1M92JzFqVk1j2ZgwAoQDzgmUewsAtWclw5BzMasH8QZSPk-oaMkAL1I_TSGLX17PXCSHJg5pY1OU',serviceWorkerRegistration:registration});
+    if (!token) return alert('푸시 알림 등록정보를 만들지 못했습니다.');
+    await api.saveAdminPushToken(token, navigator.userAgent || '');
+    localStorage.setItem('fcmToken', token);
+    alert('푸시 알림 등록 완료');
   } catch (err) {
-    console.error(err);
-    alert("푸시 알림 등록 오류: " + err.message);
+    alert('푸시 알림 등록 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
   }
 };</script>
 
@@ -12852,109 +12595,12 @@ function getRoomAdminToken630_() {
 }
 
 function getRoomReservationActor630_() {
-    const staffToken = getRoomAdminToken630_();
-    const staffInfo = (typeof adminReadStaffInfo_ === 'function' ? adminReadStaffInfo_() : null) || getRoomAdminInfo630_();
-
-    if (staffToken) {
-        const info = staffInfo && typeof staffInfo === 'object' ? staffInfo : {};
-        const name = String(
-            info.name ||
-            info.adminName ||
-            info.id ||
-            info.adminId ||
-            '교직원'
-        ).trim();
-
-        const phone4 = String(info.phone || '')
-            .replace(/[^0-9]/g, '')
-            .slice(-4);
-
-        const rawIdentity = String(
-            info.accountUid ||
-            info.uid ||
-            info.adminUid ||
-            info.id ||
-            info.adminId ||
-            staffToken.slice(0, 18) ||
-            'staff'
-        );
-
-        const identity = rawIdentity
-            .replace(/[^0-9A-Za-z가-힣_-]/g, '_');
-
-        return {
-            authenticated: true,
-            type: 'staff',
-            name: name || '교직원',
-            phoneLast4: phone4,
-            instructorName: name || '교직원',
-            identity: 'staff_' + identity,
-            principalUidV2: String(info.principalUidV2 || info.principalUid || '').trim(),
-            params: { adminToken: staffToken }
-        };
-    }
-
-    const token = getStudentSessionToken_();
-    if (token) {
-        const name = String(
-            (typeof studentName !== 'undefined' && studentName) ||
-            localStorage.getItem('studentName') ||
-            ''
-        ).trim();
-
-        return {
-            authenticated: true,
-            type: 'student',
-            name: name,
-            phoneLast4: String(
-                (typeof phoneLast4 !== 'undefined' && phoneLast4) ||
-                localStorage.getItem('phoneLast4') ||
-                ''
-            ).trim(),
-            instructorName: String(
-                (typeof instructorName !== 'undefined' && instructorName) ||
-                localStorage.getItem('instructorName') ||
-                ''
-            ).trim(),
-            identity: 'student_' + token.slice(0, 16),
-            params: { studentSessionToken: token }
-        };
-    }
-
-    return {
-        authenticated: false,
-        type: '',
-        name: '',
-        phoneLast4: '',
-        instructorName: '',
-        identity: 'public',
-        params: {}
-    };
+    const api = window.__ULIM_PRACTICE_ROOM_FIRESTORE_PRIMARY_7355033__;
+    if (api && typeof api.currentActorSnapshot === 'function') return api.currentActorSnapshot();
+    return { authenticated:false, type:'', name:'', phoneLast4:'', instructorName:'', identity:'public', params:{} };
 }
 
-const __ulimOriginalRoomJsonp = window.roomJsonp || roomJsonp;
-roomJsonp = function(params, options = {}) {
-    params = Object.assign({}, params || {});
-
-    if (
-        params.action === 'getRoomReservations' ||
-        params.action === 'reserveRoom' ||
-        params.action === 'cancelRoom'
-    ) {
-        const actor = getRoomReservationActor630_();
-
-        delete params.studentSessionToken;
-        delete params.sessionToken;
-        delete params.adminToken;
-        delete params.phoneLast4;
-
-        Object.keys(actor.params || {}).forEach(function(key) {
-            params[key] = actor.params[key];
-        });
-    }
-
-    return __ulimOriginalRoomJsonp(params, options);
-};
+/* 7.35.5.0.33: room GAS credential injection removed. */
 
 function getRoomCacheKey(year, month) {
     const actor = getRoomReservationActor630_();
@@ -16357,143 +16003,7 @@ ${ruleSummary}`, 'success');
 })();</script>
 
 
-<script>
-(function(){
-  const ROOM_PATCH_VERSION_5_53 = '2026.06.06.054.01';
-
-  const __ulimPreviousRoomJsonp_5_53 = (typeof roomJsonp === 'function') ? roomJsonp : null;
-  const __roomInflight_5_53 = {};
-
-  function buildRoomStableKey_5_53(params) {
-    try {
-      const copy = Object.assign({}, params || {});
-      delete copy.callback;
-      delete copy._;
-      return JSON.stringify(Object.keys(copy).sort().reduce(function(acc, key){
-        acc[key] = copy[key];
-        return acc;
-      }, {}));
-    } catch(e) {
-      return '';
-    }
-  }
-
-  function normalizeRoomParams_5_53(params) {
-    const p = Object.assign({}, params || {});
-
-    if (
-      p.action === 'getRoomReservations' ||
-      p.action === 'reserveRoom' ||
-      p.action === 'cancelRoom'
-    ) {
-      delete p.studentSessionToken;
-      delete p.sessionToken;
-      delete p.adminToken;
-      delete p.phoneLast4;
-
-      let actor = null;
-
-      try {
-        if (typeof getRoomReservationActor630_ === 'function') {
-          actor = getRoomReservationActor630_();
-        }
-      } catch (e) {
-        actor = null;
-      }
-
-      if (actor && actor.authenticated && actor.params) {
-        Object.keys(actor.params).forEach(function(key) {
-          const value = actor.params[key];
-          if (value !== undefined && value !== null && String(value).trim() !== '') {
-            p[key] = value;
-          }
-        });
-      } else {
-        try {
-          if (typeof getStudentSessionToken_ === 'function') {
-            const token = getStudentSessionToken_();
-            if (token) p.studentSessionToken = token;
-          }
-        } catch (e) {}
-      }
-
-      try {
-      } catch (e) {}
-    }
-
-    return p;
-  }
-
-  function parseRoomResponseText_5_53(text) {
-    const raw = String(text || '').trim();
-    if (!raw) throw new Error('예약 응답이 비어 있습니다.');
-    if (/^</.test(raw)) throw new Error('예약 응답을 확인하지 못했습니다.');
-    try { return JSON.parse(raw); } catch(jsonErr) {}
-
-    const m = raw.match(/^[\w.$]+\((.*)\);?$/s);
-    if (m && m[1]) {
-      try { return JSON.parse(m[1]); } catch(e) {}
-    }
-    throw new Error('예약 응답을 확인하지 못했습니다.');
-  }
-
-  async function roomFetchJson_5_53(params, options) {
-    if (typeof GET_API_URL === 'undefined' || !GET_API_URL || !String(GET_API_URL).includes('script.google.com/macros/s/')) {
-      throw new Error('예약 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
-    }
-
-    const query = new URLSearchParams();
-    Object.keys(params || {}).forEach(function(key){
-      if (params[key] !== undefined && params[key] !== null) query.set(key, params[key]);
-    });
-    if (!options || options.cacheBust !== false) query.set('_', String(Date.now()));
-
-    const res = await fetch(GET_API_URL + '?' + query.toString(), {
-      method: 'GET',
-      cache: 'no-store',
-      redirect: 'follow'
-    });
-    const text = await res.text();
-    const data = parseRoomResponseText_5_53(text);
-    if (!res.ok) throw new Error((data && data.message) || '예약 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
-    return data;
-  }
-
-  window.roomJsonp = function(params, options) {
-    options = options || {};
-    const normalized = normalizeRoomParams_5_53(params);
-    const stableKey = buildRoomStableKey_5_53(normalized);
-    const canReuseInflight = options.cacheBust === false && stableKey;
-    if (canReuseInflight && __roomInflight_5_53[stableKey]) return __roomInflight_5_53[stableKey];
-
-    const task = roomFetchJson_5_53(normalized, options).catch(function(fetchErr){
-      if (typeof __ulimPreviousRoomJsonp_5_53 === 'function') {
-        return __ulimPreviousRoomJsonp_5_53(normalized, options).catch(function(jsonpErr){
-          console.warn('[ULIM room 5.53] fetch/jsonp both failed', fetchErr, jsonpErr);
-          throw new Error('예약 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
-        });
-      }
-      console.warn('[ULIM room 5.53] fetch failed', fetchErr);
-      throw new Error('예약 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
-    });
-
-    if (canReuseInflight) {
-      __roomInflight_5_53[stableKey] = task;
-      task.finally(function(){ delete __roomInflight_5_53[stableKey]; });
-    }
-    return task;
-  };
-  try { roomJsonp = window.roomJsonp; } catch(e) {}
-
-  window.addEventListener('pageshow', function(){
-    try {
-      const activeRoom = document.querySelector && document.querySelector('#tabRoom.active');
-      if (activeRoom && typeof loadRoomReservations === 'function') {
-        setTimeout(function(){ loadRoomReservations(true); }, 250);
-      }
-    } catch(e) {}
-  });
-})();</script>
+<!-- 7.35.5.0.33: legacy GAS room transport 5.53 removed; Firestore-primary owns reservation I/O. -->
 
 
 <script>
