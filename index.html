@@ -23,12 +23,12 @@
   <link rel="preconnect" href="https://asia-northeast3-ulim-7b09a.cloudfunctions.net" data-ulim-classroom-preconnect="7297">
   <!-- ULIM 7.34.2: safe Firebase-first staff/student directory integration. -->
   <script src="./web/room-classroom-realtime-7.29.18.js?v=20260809.72918"></script>
-  <script src="./web/practice-room-firestore-primary-7.35.5.0.33.js?v=20260809.7355033"></script>
+  <script src="./web/practice-room-firestore-primary-7.35.5.0.35.js?v=20260811.7355035"></script>
   <script src="./web/staff-login-firebase-primary-7.32.8.js?v=20260809.73208"></script>
   <script src="./web/student-login-firebase-direct-7.35.5.0.30.js?v=20260809.7355030r7"></script>
   <script src="./web/student-home-bootstrap-7.35.5.0.31.js?v=20260809.7355031"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260810-7355034-history-schedule-audience-segmentation">
+<meta name="ulim-build" content="20260811-7355035-staff-attendance-room-convergence">
 <script id="ulim-one-time-cache-clean-7355030">
 (function (global) {
   'use strict';
@@ -5832,6 +5832,12 @@ function activateTabById(tabId) {
 }
 
 function adminReadStaffInfo_() {
+    // Canonical identity: the profile persisted from the currently signed-in Firebase staff user.
+    // Legacy adminInfo remains compatibility data only and cannot outrank this profile.
+    try {
+        const profile = JSON.parse(localStorage.getItem('ulimFirebaseStaffProfile7320') || 'null');
+        if (profile && typeof profile === 'object') return profile;
+    } catch (ignore) {}
     if (adminInfo && typeof adminInfo === 'object') return adminInfo;
     if (window.adminInfo && typeof window.adminInfo === 'object') return window.adminInfo;
     for (const storage of [sessionStorage, localStorage]) {
@@ -5843,10 +5849,6 @@ function adminReadStaffInfo_() {
             }
         } catch (ignore) {}
     }
-    try {
-        const profile = JSON.parse(localStorage.getItem('ulimFirebaseStaffProfile7320') || 'null');
-        if (profile && typeof profile === 'object') return profile;
-    } catch (ignore) {}
     return null;
 }
 
@@ -5995,9 +5997,12 @@ function adminClassBelongsToCurrentTeacher(classItem) {
     if (!adminIsTeacherMode()) return true;
     const teacherKey = adminTeacherKey();
     if (!teacherKey) return false;
-    const classText = adminNormalizeKoreanName((classItem && classItem.className) || '');
-    const teacherText = adminNormalizeKoreanName((classItem && classItem.teacher) || '');
-    return classText.includes(teacherKey) || teacherText.includes(teacherKey) || teacherKey.includes(teacherText);
+    const row = classItem || {};
+    const teacherFields = [row.effectiveInstructorName, row.actualInstructorName, row.instructorName, row.teacher, row.teacherName, row.instructor]
+        .map(adminNormalizeKoreanName).filter(Boolean);
+    if (teacherFields.some(name => name === teacherKey || name.includes(teacherKey) || teacherKey.includes(name))) return true;
+    const classText = adminNormalizeKoreanName(row.className || '');
+    return !!classText && classText.includes(teacherKey);
 }
 
 function adminFilterClassListForRole(classes) {
@@ -7386,6 +7391,8 @@ function normalizeAdminRoomReservationRow(r, index) {
         studentName: String(r.studentName || r.name || '').trim(),
         phoneLast4: String(r.phoneLast4 || r.phoneSuffix || '').trim(),
         studentPhone: String(r.studentPhone || r.phone || '').trim(),
+        parentPhone: String(r.parentPhone || '').trim(),
+        studentUid: String(r.studentUid || '').trim(),
         room: String(r.room || r.roomName || r.practiceRoom || '').trim(),
         startHour: start,
         endHour: end,
@@ -7459,9 +7466,9 @@ function adminRenderRoomReservationTable() {
             <td><span class="admin-status-badge">${escapeHtml(row.status || '예약')}</span></td>
             <td>${escapeHtml(row.memo || '')}</td>
             <td>
-              <button type="button" class="admin-btn" style="padding:8px 10px; font-size:12px;" onclick="adminProcessRoomReservation7355033(${index}, 'confirm')">사용확인</button>
-              <button type="button" class="admin-btn red" style="padding:8px 10px; font-size:12px;" onclick="adminProcessRoomReservation7355033(${index}, 'unavailable')">사용불가</button>
-              <button type="button" class="admin-btn orange" style="padding:8px 10px; font-size:12px;" onclick="adminProcessRoomReservation7355033(${index}, 'change')">장소·시간 변경</button>
+              <button type="button" class="admin-btn" style="padding:8px 10px; font-size:12px;" onclick="adminProcessRoomReservation7355035(${index}, 'confirm')">사용확인</button>
+              <button type="button" class="admin-btn red" style="padding:8px 10px; font-size:12px;" onclick="adminProcessRoomReservation7355035(${index}, 'unavailable')">사용불가</button>
+              <button type="button" class="admin-btn orange" style="padding:8px 10px; font-size:12px;" onclick="adminProcessRoomReservation7355035(${index}, 'change')">장소·시간 변경</button>
             </td>
         </tr>`;
     });
@@ -7496,6 +7503,8 @@ async function adminSendSelectedRoomReservationMessages(actionType) {
 
     const option = adminCollectRoomMessageOptions(actionType, selected.length);
     if (!option) return;
+    option.targets = adminGetRoomRecipientTypes();
+    if (!option.targets.length) return alert('알림톡 수신 대상을 학생 또는 학부모 중 한 명 이상 선택해주세요.');
 
     const names = selected.slice(0, 5).map(x => x.row.studentName).join(', ');
     const more = selected.length > 5 ? ` 외 ${selected.length - 5}명` : '';
@@ -7509,7 +7518,7 @@ async function adminSendSelectedRoomReservationMessages(actionType) {
     for (let i = 0; i < selected.length; i++) {
         try {
             showLoading(`연습실 예약 처리 중... ${i + 1} / ${selected.length}`);
-            await adminProcessRoomReservation7355033(selected[i].index, actionType, option, true);
+            await adminProcessRoomReservation7355035(selected[i].index, actionType, option, true);
             success++;
         } catch (e) {
             failed++;
@@ -7554,6 +7563,45 @@ function adminCollectRoomMessageOptions(actionType, count = 1) {
     }
     return option;
 }
+
+async function adminLoadRoomReservations(showOverlay = true, force = false) {
+    const api = window.__ULIM_PRACTICE_ROOM_FIRESTORE_PRIMARY_7355033__;
+    if (!api || typeof api.listAdmin !== 'function') throw new Error('연습실 예약 관리 기능을 준비하지 못했습니다.');
+    const date = adminRoomDateValue();
+    try {
+        if (showOverlay && typeof showLoading === 'function') showLoading('연습실 예약을 불러오는 중...');
+        const data = await api.listAdmin(date, !!force);
+        const rows = Array.isArray(data && (data.reservations || data.records)) ? (data.reservations || data.records) : [];
+        adminRoomReservations = rows.map(normalizeAdminRoomReservationRow);
+        adminRoomSelectedMap = {};
+        adminRenderRoomReservationTable();
+        return data;
+    } finally {
+        if (showOverlay && typeof hideLoading === 'function') hideLoading();
+    }
+}
+window.adminLoadRoomReservations = adminLoadRoomReservations;
+window.ulimGetAdminRoomReservation7355035 = function(index) { return adminRoomReservations[Number(index)] || null; };
+
+async function adminProcessRoomReservation7355035(index, actionType, option, silent) {
+    const row = adminRoomReservations[Number(index)];
+    if (!row) throw new Error('예약 정보를 찾지 못했습니다.');
+    const api = window.__ULIM_PRACTICE_ROOM_FIRESTORE_PRIMARY_7355033__;
+    if (!api || typeof api.processAdminReservationRecord !== 'function') throw new Error('연습실 예약 처리 기능을 준비하지 못했습니다.');
+    let resolvedOption = option || null;
+    if (!resolvedOption) resolvedOption = adminCollectRoomMessageOptions(actionType, 1);
+    if (!resolvedOption) return null;
+    resolvedOption = Object.assign({}, resolvedOption);
+    if (!Array.isArray(resolvedOption.targets)) resolvedOption.targets = adminGetRoomRecipientTypes();
+    if (!resolvedOption.targets.length) throw new Error('알림톡 수신 대상을 선택해주세요.');
+    const result = await api.processAdminReservationRecord(row, actionType, resolvedOption, !!silent);
+    if (!silent && result && result.notification && result.notification.ok === false) {
+        alert('예약 상태는 반영되었지만 알림톡 발송 결과를 확인해주세요.');
+    }
+    await adminLoadRoomReservations(false, true);
+    return result;
+}
+window.adminProcessRoomReservation7355035 = adminProcessRoomReservation7355035;
 
 function adminRoomActionLabel(actionType) {
     if (actionType === 'unavailable') return '연습실 사용불가';
@@ -9181,7 +9229,7 @@ function refreshRoomReservationsInBackground(force = true) {
 }
 
 function changeRoomMonth(diff) {
-    roomCurrentDate.setMonth(roomCurrentDate.getMonth() + diff);
+    roomCurrentDate = new Date(roomCurrentDate.getFullYear(), roomCurrentDate.getMonth() + Number(diff || 0), 1);
     selectedRoomDate = null;
     loadRoomReservations();
 }
@@ -12156,6 +12204,68 @@ function adminFindClassroomUsageAt_(room, hour) {
     }) || null;
 }
 
+let adminClassroomDragRecord7355035 = null;
+function adminStartClassroomDrag7355035(event, recordId) {
+    if (!adminIsFullAdmin()) return;
+    const row = (adminClassroomUsageRows || []).find(r => String(r.recordId || '') === String(recordId || ''));
+    if (!row || Number(row.endHour) !== Number(row.startHour) + 1 || row.pendingRealtime) return;
+    adminClassroomDragRecord7355035 = row;
+    if (event && event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move';
+        try { event.dataTransfer.setData('text/plain', String(recordId || '')); } catch (ignore) {}
+    }
+}
+function adminClassroomDragOver7355035(event) {
+    if (!adminIsFullAdmin() || !adminClassroomDragRecord7355035) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+}
+async function adminDropClassroomUsage7355035(event, targetRoom, targetHour) {
+    if (event) event.preventDefault();
+    const source = adminClassroomDragRecord7355035;
+    adminClassroomDragRecord7355035 = null;
+    if (!adminIsFullAdmin() || !source) return;
+    const hour = Number(targetHour);
+    if (!Number.isInteger(hour) || !targetRoom) return;
+    if (String(source.room || '').replace(/\s/g, '') === String(targetRoom).replace(/\s/g, '') && Number(source.startHour) === hour) return;
+    if (adminFindClassroomUsageAt_(targetRoom, hour)) return alert('이동할 칸은 이미 사용 중입니다.');
+    if (!confirm(`${source.room} ${adminFormatClassroomHour_(source.startHour)}~${adminFormatClassroomHour_(source.endHour)} → ${targetRoom} ${adminFormatClassroomHour_(hour)}~${adminFormatClassroomHour_(hour + 1)}\n\n강의실 배정을 이동할까요?`)) return;
+    const owner = window.ULIM_ROOM_CLASSROOM_REALTIME_72918 || window.ULIM_ROOM_CLASSROOM_REALTIME_72917 || window.ULIM_ROOM_CLASSROOM_REALTIME_728;
+    if (!owner || typeof owner.preloadRuntime !== 'function') return alert('강의실 실시간 저장 기능을 준비하지 못했습니다.');
+    try {
+        showLoading('강의실 배정을 이동하는 중...');
+        const rt = await owner.preloadRuntime();
+        if (!rt || !rt.auth || !rt.auth.currentUser || typeof rt.commitClassroom !== 'function' || typeof rt.releaseClassroom !== 'function') throw new Error('강의실 저장 연결이 준비되지 않았습니다.');
+        const reqId = () => 'CLASSROOM-DND-7355035-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+        const committed = await rt.commitClassroom({
+            date: adminClassroomUsageDate_(), groups: [{ room: targetRoom, startHour: hour, endHour: hour + 1 }],
+            assignedInstructor: source.instructor || source.adminName || '', className: source.className || source.purpose || '', memo: source.memo || '',
+            forceOverride: false, requestId: reqId()
+        });
+        const commitData = committed && committed.data || {};
+        if (!commitData.ok || (Array.isArray(commitData.conflicts) && commitData.conflicts.length)) throw new Error(commitData.message || '이동할 칸을 확보하지 못했습니다.');
+        try {
+            const released = await rt.releaseClassroom({
+                date: adminClassroomUsageDate_(), room: source.room, startHour: Number(source.startHour), endHour: Number(source.endHour), recordId: source.recordId, requestId: reqId()
+            });
+            const releaseData = released && released.data || {};
+            if (releaseData.ok === false) throw new Error(releaseData.message || '기존 칸 해제에 실패했습니다.');
+        } catch (releaseError) {
+            const accepted = Array.isArray(commitData.accepted) ? commitData.accepted[0] : null;
+            try { await rt.releaseClassroom({ date: adminClassroomUsageDate_(), room: targetRoom, startHour: hour, endHour: hour + 1, recordId: accepted && accepted.recordId || '', requestId: reqId() }); } catch (ignoreRollback) {}
+            throw releaseError;
+        }
+        await adminLoadClassroomUsage(false);
+    } catch (e) {
+        alert(e.message || '강의실 배정 이동에 실패했습니다.');
+    } finally {
+        hideLoading();
+    }
+}
+window.adminStartClassroomDrag7355035 = adminStartClassroomDrag7355035;
+window.adminClassroomDragOver7355035 = adminClassroomDragOver7355035;
+window.adminDropClassroomUsage7355035 = adminDropClassroomUsage7355035;
+
 function adminRenderClassroomUsageTable() {
     const wrap = document.getElementById('adminClassroomUsageTableWrap');
     if (!wrap) return;
@@ -12191,7 +12301,7 @@ function adminRenderClassroomUsageTable() {
                 tableHtml +=
                     '<td class="classroom-usage-cell-used ' + (mine ? 'mine ' : '') + (pending ? 'pending-7296' : '') + '"' +
                     (adminIsFullAdmin() && !pending
-                        ? ' onclick="adminSelectClassroomUsageRecord(\'' + escapeHtml(used.recordId || '') + '\')"'
+                        ? ' draggable="true" ondragstart="adminStartClassroomDrag7355035(event,\'' + escapeHtml(used.recordId || '') + '\')" onclick="adminSelectClassroomUsageRecord(\'' + escapeHtml(used.recordId || '') + '\')"'
                         : '') +
                     '>' +
                     '<div class="ulim-classroom-card-instructor-729">' +
@@ -12220,7 +12330,7 @@ function adminRenderClassroomUsageTable() {
                 window.ulimIsClassroomSlotSaving729_(date, room, hour);
 
             tableHtml +=
-                '<td>' +
+                '<td' + (adminIsFullAdmin() ? ' ondragover="adminClassroomDragOver7355035(event)" ondrop="adminDropClassroomUsage7355035(event,\'' + escapeHtml(room) + '\',' + String(hour) + ')"' : '') + '>' +
                 '<button type="button" class="classroom-usage-empty-btn" ' +
                 'aria-pressed="false" ' +
                 (saving ? 'disabled aria-busy="true" ' : '') +
@@ -24764,7 +24874,7 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 
 <!-- ULIM 7.35.5.0.11: non-attendance Firestore runtime + restored dedicated attendance owner. -->
 <script src="./web/ulim-firestore-primary-7.35.5.0.26.js?v=20260808.7355026"></script>
-<script src="./web/attendance-admin-integrated-7.35.4.33.js?v=20260810.7350433"></script>
+<script src="./web/attendance-admin-integrated-7.35.4.34.js?v=20260811.7350434"></script>
 <script src="./web/operational-content-admin-7.35.5.0.12.js?v=20260808.7355012"></script>
 <script src="./web/course-application-admin-7.35.5.0.32.js?v=20260809.7355032"></script>
 <script src="./web/student-login-notice-and-role-access-7.35.5.0.31.js?v=20260809.7355031"></script>
