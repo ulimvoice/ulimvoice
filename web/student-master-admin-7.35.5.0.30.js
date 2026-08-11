@@ -1,4 +1,5 @@
 /* ULIM_STUDENT_UI_CONSOLIDATION_7355038 */
+/* ULIM_R19R7_STUDENT_ADD_FORM_RESTORE_7355040 */
 (function (global) {
   'use strict';
   if (global.__ULIM_STUDENT_MANAGEMENT_V2_7355020__) {
@@ -295,7 +296,22 @@
       <div class="ulim-student-help"><b>앱 운영 원본은 학생명단입니다.</b> 학생정보와 수강반을 저장하면 출석부와 태블릿에 즉시 반영됩니다. Google Sheets는 매일 오전 6시 백업으로만 갱신됩니다.</div>
       <div id="${STATUS_ID}"></div>
       
-      <details class="ulim-create-box"><summary style="cursor:pointer;font-weight:900;color:#7c3aed;">운영 반 목록 관리</summary>
+            <details class="ulim-create-box" open><summary style="cursor:pointer;font-weight:900;color:#1e3a8a;">학생 추가</summary>
+        <div id="${CREATE_FORM_ID}" class="ulim-create-grid" style="margin-top:12px;">
+          <div class="admin-field"><label>학생명 *</label><input id="ulimNewStudentName7352" autocomplete="off"></div>
+          <div class="admin-field"><label>생년월일</label><input id="ulimNewStudentBirth7352" type="date"></div>
+          <div class="admin-field"><label>학생 전화번호 *</label><input id="ulimNewStudentPhone7352" inputmode="tel" autocomplete="off"></div>
+          <div class="admin-field"><label>보호자 전화번호</label><input id="ulimNewStudentParent7352" inputmode="tel" autocomplete="off"></div>
+          <div class="admin-field"><label>재원상태</label><select id="ulimNewStudentStatus7352"><option value="active">재원</option><option value="leave">휴원</option><option value="withdrawn">퇴원</option></select></div>
+          <div class="admin-field"><label>수강 시작일</label><input id="ulimNewStudentStart7352" type="date" value="${today()}"></div>
+          <div class="admin-field"><label>등록 구분</label><select id="ulimNewStudentType7352"><option value="new">신규</option><option value="existing">기존등록</option></select></div>
+          <div class="admin-field"><label>관리자 메모</label><input id="ulimNewStudentMemo7352"></div>
+          <div class="admin-field wide"><label>수강반 (복수선택)</label><select id="ulimNewStudentClasses7352" multiple size="6"></select><div id="ulimNewStudentTags7352" class="ulim-tags"></div></div>
+          <div class="admin-field wide"><label>담당강사 자동 연결</label><input id="ulimNewStudentInstructors7352" readonly placeholder="수강반을 선택하면 표시됩니다."></div>
+        </div>
+        <div class="ulim-create-actions"><span id="ulimNewStudentPassword7352" class="ulim-password-preview">출결번호·최초 비밀번호: 전화번호 마지막 네 자리</span><button type="button" class="admin-btn blue" onclick="ulimStudentManagementCreate7352()">학생 추가</button></div>
+      </details>
+<details class="ulim-create-box"><summary style="cursor:pointer;font-weight:900;color:#7c3aed;">운영 반 목록 관리</summary>
         <div style="margin:12px 0;padding:11px 13px;border-radius:10px;background:#f5f3ff;color:#5b21b6;font-size:12px;line-height:1.55;"><b>강의실은 반에 고정 저장하지 않습니다.</b> 당일 강의실 사용일지의 날짜·시간·담당강사로 출석부·태블릿·알림톡에 반영됩니다.</div>
         <div class="ulim-create-grid" style="margin-top:12px;">
           <div class="admin-field"><label>담당강사 *</label><select id="ulimClassInstructor7354"></select></div>

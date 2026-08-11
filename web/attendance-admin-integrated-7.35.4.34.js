@@ -1,3 +1,4 @@
+/* ULIM_R19R6_SUBSTITUTE_TEACHER_DISPLAY_7355039 */
 (function (global) {
   'use strict';
 
@@ -1994,7 +1995,7 @@
     header += '<tr><th class="ulim-ledger-no735427">NO</th><th class="ulim-ledger-name735427">학생이름</th>';
     if (safeSessions.length) {
       header += safeSessions.map(function (session) {
-        var badge = session.state === 'cancelled' ? '<span>휴강</span>' : session.state === 'substitute' ? '<span>대강 · ' + escapeHtml(text(session.instructorName || session.teacher || group.instructorName) + 'T') + '</span>' : session.state === 'moved' ? '<span>변경→' + escapeHtml(dateLabel7355033(session.targetDate)) + '</span>' : '';
+        var substituteName = text(session.substituteInstructorName || session.instructorName || session.teacher); if (session.state === 'substitute' && !text(session.substituteInstructorName) && normalize(substituteName) === normalize(group.instructorName)) substituteName = ''; var badge = session.state === 'cancelled' ? '<span>휴강</span>' : session.state === 'substitute' ? '<span>대강 · ' + escapeHtml(substituteName ? substituteName + 'T' : '강사 확인필요') + '</span>' : session.state === 'moved' ? '<span>변경→' + escapeHtml(dateLabel7355033(session.targetDate)) + '</span>' : '';
         return '<th' + (historicalEdit ? '' : ' data-ledger-header="1"') + ' data-class-id="' + escapeHtml(group.classId) + '" data-date="' + escapeHtml(session.date) + '" class="ulim-ledger-date735423"><b>' + escapeHtml(dateLabel7355033(session.date)) + '</b><small>' + escapeHtml(weekdayLabel7355033(session)) + '</small>' + badge + '</th>';
       }).join('');
     } else {
