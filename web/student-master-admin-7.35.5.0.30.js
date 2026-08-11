@@ -309,7 +309,7 @@
       </details>
       <details class="ulim-create-box" open><summary style="cursor:pointer;font-weight:900;color:#0f766e;">학생 로그인 계정</summary>
         <div style="margin:12px 0;padding:11px 13px;border-radius:10px;background:#f0fdfa;color:#115e59;font-size:12px;line-height:1.6;"><b>학생 로그인은 Firebase Auth가 직접 처리합니다.</b> 아이디는 학생명이며 최초 비밀번호는 현재 학생명단의 출결번호 4자리입니다. 전체동기화는 기존 학생 계정을 일괄 생성·갱신하며 기존 UID를 그대로 유지합니다. 이후 학생이 비밀번호를 변경하면 출결번호를 수정해도 개인 비밀번호는 유지됩니다.</div>
-        <div class="ulim-create-actions"><button type="button" class="admin-btn blue" onclick="ulimStudentFirebaseAuthProvisionAll7355030()">학생 로그인 계정 전체동기화</button></div>
+        <div class="ulim-create-actions"></div>
       </details>
       <details class="ulim-create-box"><summary style="cursor:pointer;font-weight:900;color:#7c3aed;">운영 반 목록 관리</summary>
         <div style="margin:12px 0;padding:11px 13px;border-radius:10px;background:#f5f3ff;color:#5b21b6;font-size:12px;line-height:1.55;"><b>강의실은 반에 고정 저장하지 않습니다.</b> 당일 강의실 사용일지의 날짜·시간·담당강사로 출석부·태블릿·알림톡에 반영됩니다.</div>
