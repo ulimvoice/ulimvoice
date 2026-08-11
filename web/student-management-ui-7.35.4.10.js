@@ -3,8 +3,9 @@
 
   if (global.__ULIM_STUDENT_MANAGEMENT_UI_735410__) return;
   global.__ULIM_STUDENT_MANAGEMENT_UI_735410__ = true;
+  global.__ULIM_STUDENT_MANAGEMENT_UI_R19R6_7355039__ = true;
 
-  const VERSION = '2026-08-04.735.04.10';
+  const VERSION = '2026-08-11.735.04.10-r19r6-modal-column-compat';
   const CARD_ID = 'ulimStudentManagementCard7352';
   const TABLE_ID = 'ulimStudentManagementTable7352';
   const SUMMARY_ID = 'ulimStudentManagementSummary7352';
@@ -199,50 +200,46 @@
     });
   }
 
-  function openModal(id) {
-    moveLegacyPanels();
-    moveModalPortalsToBody();
-    try { if (typeof global.hideLoading === 'function') global.hideLoading(); } catch (_ignore) {}
-    const modal = document.getElementById(id);
-    if (!modal) return;
-    const body = modal.querySelector('.ulim-sm-modal-body73546');
-    if (body && !body.children.length && !text(body.textContent)) {
-      body.innerHTML = '<div style="padding:18px;color:#64748b;text-align:center;">화면 준비가 완료되지 않았습니다. 학생목록을 새로고침한 뒤 다시 열어주세요.</div>';
-    }
-    modal.classList.add('open');
-    modal.style.display = 'flex';
-    modal.setAttribute('aria-hidden', 'false');
-    document.body.classList.add('ulim-sm-modal-open73546');
+  function clearModalFallback7355039(target) {
+    if (!target) return;
+    const fallback = target.querySelector('[data-ulim-modal-fallback="7355039"], [data-ulim-modal-fallback="legacy"]');
+    if (fallback) fallback.remove();
+    if (/화면 준비가 완료되지 않았습니다/.test(text(target.textContent)) && !target.querySelector('input,select,textarea,details,.ulim-create-grid')) target.innerHTML = '';
   }
 
-  function closeModal(id) {
-    const modal = document.getElementById(id);
-    if (!modal) return;
-    modal.classList.remove('open');
-    modal.style.display = 'none';
-    modal.setAttribute('aria-hidden', 'true');
-    if (!document.querySelector('.ulim-sm-modal73546.open')) document.body.classList.remove('ulim-sm-modal-open73546');
+  function findLegacyDetails7355039(anchorIds, summaryPattern) {
+    for (const id of anchorIds || []) {
+      const anchor = document.getElementById(id);
+      if (!anchor) continue;
+      const details = anchor.closest('details');
+      if (details) return details;
+      const box = anchor.closest('.ulim-create-box');
+      if (box) return box;
+    }
+    const root = card();
+    if (!root) return null;
+    const all = Array.from(root.querySelectorAll('details, .ulim-create-box'));
+    return all.find(function (node) {
+      const summary = node.querySelector('summary');
+      return summary && summaryPattern.test(text(summary.textContent));
+    }) || null;
   }
 
   function moveLegacyPanels() {
-    const root = card();
-    if (!root) return;
-
-    const studentDetails = document.getElementById('ulimNewStudentName7352')?.closest('details');
-    const classDetails = document.getElementById('ulimClassInstructor7354')?.closest('details');
-    const courseDetails = document.getElementById('ulimCourseWindowMonth7352')?.closest('details');
-
     const targets = [
-      [studentDetails, 'ulimStudentAddModalBody73546'],
-      [classDetails, 'ulimClassAddModalBody73546'],
-      [courseDetails, 'ulimCourseSettingsModalBody73546']
+      [findLegacyDetails7355039(['ulimNewStudentName7352','ulimNewStudentClasses7352','ulimStudentCreateForm7352'], /학생\s*추가/), 'ulimStudentAddModalBody73546'],
+      [findLegacyDetails7355039(['ulimClassInstructor7354','ulimClassBaseName7354','ulimClassTimeSlots7354'], /(운영\s*반\s*목록|반\s*목록|반\s*추가)/), 'ulimClassAddModalBody73546'],
+      [findLegacyDetails7355039(['ulimCourseWindowMonth7352','ulimCourseWindowClasses7352'], /(앱\s*)?수강신청/), 'ulimCourseSettingsModalBody73546']
     ];
+    let moved = 0;
     targets.forEach(function (pair) {
       const node = pair[0];
       const target = document.getElementById(pair[1]);
-      if (!node || !target || node.parentElement === target) return;
-      node.open = true;
-      target.appendChild(node);
+      if (!node || !target) return;
+      clearModalFallback7355039(target);
+      if (node.parentElement !== target) target.appendChild(node);
+      if ('open' in node) node.open = true;
+      moved += 1;
     });
 
     const messageText = document.getElementById('noticeMessageText');
@@ -267,6 +264,59 @@
           <button type="button" class="admin-btn" data-ulim-setting-action="applications">수강신청 불러오기·적용</button>
         </div>`;
     }
+    return moved;
+  }
+
+  function modalReady7355039(modalId, readinessSelector) {
+    const modal = document.getElementById(modalId);
+    const body = modal && modal.querySelector('.ulim-sm-modal-body73546');
+    if (!body) return false;
+    const readiness = readinessSelector ? document.querySelector(readinessSelector) : null;
+    if (readinessSelector && !readiness) return false;
+    return !!body.querySelector('details,.ulim-create-grid,input,select,textarea,.admin-card');
+  }
+
+  function wait7355039(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
+
+  async function ensurePreparedModal7355039(modalId, readinessSelector) {
+    moveLegacyPanels();
+    moveModalPortalsToBody();
+    if (modalReady7355039(modalId, readinessSelector)) return true;
+    if (typeof global.ulimStudentManagementLoad7352 === 'function') {
+      try { await global.ulimStudentManagementLoad7352(false); } catch (_ignore) {}
+    }
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      moveLegacyPanels();
+      moveModalPortalsToBody();
+      if (modalReady7355039(modalId, readinessSelector)) return true;
+      await wait7355039(60);
+    }
+    return false;
+  }
+
+  function openModal(id) {
+    moveLegacyPanels();
+    moveModalPortalsToBody();
+    try { if (typeof global.hideLoading === 'function') global.hideLoading(); } catch (_ignore) {}
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    const body = modal.querySelector('.ulim-sm-modal-body73546');
+    if (body && !body.children.length && !text(body.textContent)) {
+      body.innerHTML = '<div data-ulim-modal-fallback="7355039" style="padding:18px;color:#64748b;text-align:center;">화면을 다시 준비하고 있습니다. 잠시 후 다시 열어주세요.</div>';
+    }
+    modal.classList.add('open');
+    modal.style.display = 'flex';
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('ulim-sm-modal-open73546');
+  }
+
+  function closeModal(id) {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    modal.classList.remove('open');
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+    if (!document.querySelector('.ulim-sm-modal73546.open')) document.body.classList.remove('ulim-sm-modal-open73546');
   }
 
   function setListVisibility(visible) {
@@ -294,14 +344,10 @@
 
   async function openPreparedModal(modalId, readinessSelector) {
     if (!isSuperAdmin()) return alert('전체관리자 권한이 필요합니다.');
-    moveLegacyPanels();
-    moveModalPortalsToBody();
-    const readiness = readinessSelector ? document.querySelector(readinessSelector) : null;
-    const needsLoad = !readiness || (readiness.tagName === 'SELECT' && readiness.options.length === 0);
-    if (needsLoad && typeof global.ulimStudentManagementLoad7352 === 'function') {
-      await global.ulimStudentManagementLoad7352(false);
-      moveLegacyPanels();
-      moveModalPortalsToBody();
+    const ready = await ensurePreparedModal7355039(modalId, readinessSelector);
+    if (!ready) {
+      try { if (typeof global.hideLoading === 'function') global.hideLoading(); } catch (_ignore) {}
+      return alert('화면을 준비하지 못했습니다. 페이지를 새로고침한 뒤 다시 시도해주세요.');
     }
     openModal(modalId);
   }
@@ -332,11 +378,38 @@
     return '재원';
   }
 
+  function normalizedHeader7355039(value) {
+    return text(value).normalize('NFKC').replace(/\s+/g, '').replace(/\/UID/gi, '').toLowerCase();
+  }
+
+  function tableColumnMap7355039(table) {
+    const headRow = table && table.querySelector('thead tr');
+    const result = {};
+    if (!headRow) return result;
+    Array.from(headRow.children).forEach(function (cell, index) {
+      if (cell.querySelector('#ulimStudentMasterCheck73546')) { result.select = index; return; }
+      const label = normalizedHeader7355039(cell.textContent);
+      if (label === '재원상태') result.status = index;
+      else if (label.indexOf('출결번호') === 0) result.attendance = index;
+      else if (label === '학생명') result.name = index;
+      else if (label === '구분') result.audience = index;
+      else if (label === '처리구분') result.operation = index;
+      else if (label === '처리일') result.operationDate = index;
+      else if (label === '수강반') result.classes = index;
+      else if (label === '담당강사') result.instructor = index;
+      else if (label === '관리') result.manage = index;
+    });
+    return result;
+  }
+
   function snapshotRow(row) {
     const key = getRowKey(row);
     if (!key) return null;
+    const table = row.closest('table');
+    const columns = tableColumnMap7355039(table);
     const cells = row.children;
-    const attendanceInput = cells[2] ? cells[2].querySelector('input') : null;
+    const attendanceCell = Number.isInteger(columns.attendance) ? cells[columns.attendance] : null;
+    const attendanceInput = attendanceCell ? attendanceCell.querySelector('input') : null;
     const nameInput = getRowInput(row, '_name');
     const phoneInput = getRowInput(row, '_phone');
     const parentInput = getRowInput(row, '_parent');
@@ -393,10 +466,7 @@
     transformQueued = false;
     const root = document.getElementById(TABLE_ID);
     const table = root && root.querySelector('table');
-    if (!table) {
-      updateSelectedCount();
-      return;
-    }
+    if (!table) { updateSelectedCount(); return; }
 
     const headRow = table.querySelector('thead tr');
     if (headRow && !headRow.querySelector('#ulimStudentMasterCheck73546')) {
@@ -414,14 +484,12 @@
       });
     }
 
-    const headers = headRow ? Array.from(headRow.children) : [];
-    const headerMap = {
-      0: '선택', 1: '재원상태', 2: '출결번호', 3: '학생명', 8: '처리구분', 10: '수강반', 11: '담당강사', 14: '관리'
-    };
-    headers.forEach(function (cell, index) {
-      const wanted = Object.prototype.hasOwnProperty.call(headerMap, index);
-      cell.classList.toggle('ulim-sm-hidden-col73546', !wanted);
-      if (wanted && index !== 0) cell.textContent = headerMap[index];
+    const columns = tableColumnMap7355039(table);
+    const visibleKeys = new Set(['select','status','attendance','name','audience','operation','classes','instructor','manage']);
+    const wantedIndexes = new Set(Object.keys(columns).filter(function (key) { return visibleKeys.has(key); }).map(function (key) { return columns[key]; }));
+    Array.from(headRow ? headRow.children : []).forEach(function (cell, index) {
+      cell.classList.toggle('ulim-sm-hidden-col73546', !wantedIndexes.has(index));
+      if (index === columns.attendance) cell.textContent = '출결번호';
     });
 
     Array.from(table.querySelectorAll('tbody tr[data-row-key]')).forEach(function (row) {
@@ -438,16 +506,12 @@
       }
 
       const cells = Array.from(row.children);
-      const wantedIndexes = new Set([0, 1, 2, 3, 8, 10, 11, 14]);
-      cells.forEach(function (cell, index) {
-        cell.classList.toggle('ulim-sm-hidden-col73546', !wantedIndexes.has(index));
-      });
+      cells.forEach(function (cell, index) { cell.classList.toggle('ulim-sm-hidden-col73546', !wantedIndexes.has(index)); });
+      if (Number.isInteger(columns.attendance) && cells[columns.attendance]) cells[columns.attendance].dataset.ulimVisible = 'attendance';
+      if (Number.isInteger(columns.classes) && cells[columns.classes]) cells[columns.classes].dataset.ulimVisible = 'classes';
+      if (Number.isInteger(columns.instructor) && cells[columns.instructor]) cells[columns.instructor].dataset.ulimVisible = 'instructor';
 
-      if (cells[2]) cells[2].dataset.ulimVisible = 'attendance';
-      if (cells[10]) cells[10].dataset.ulimVisible = 'classes';
-      if (cells[11]) cells[11].dataset.ulimVisible = 'instructor';
-
-      const nameCell = cells[3];
+      const nameCell = Number.isInteger(columns.name) ? cells[columns.name] : null;
       const nameInput = getRowInput(row, '_name');
       if (nameCell && nameInput && !nameCell.querySelector('.ulim-sm-name-wrap73546')) {
         const wrap = document.createElement('div');
@@ -455,54 +519,33 @@
         nameCell.insertBefore(wrap, nameCell.firstChild);
         wrap.appendChild(nameInput);
         const gear = document.createElement('button');
-        gear.type = 'button';
-        gear.className = 'ulim-sm-gear73546';
-        gear.textContent = '⚙';
-        gear.title = '학생 상세정보';
+        gear.type = 'button'; gear.className = 'ulim-sm-gear73546'; gear.textContent = '⚙'; gear.title = '학생 상세정보';
         gear.addEventListener('click', function () { openDetailModal(key); });
         wrap.appendChild(gear);
       }
 
-      const operationCell = cells[8];
+      const operationCell = Number.isInteger(columns.operation) ? cells[columns.operation] : null;
       const operationDate = getRowInput(row, '_operation_date');
       if (operationCell && operationDate && operationDate.parentElement !== operationCell) {
-        operationDate.classList.add('ulim-sm-operation-date73546');
-        operationDate.title = '처리일';
-        operationCell.appendChild(operationDate);
+        operationDate.classList.add('ulim-sm-operation-date73546'); operationDate.title = '처리일'; operationCell.appendChild(operationDate);
       }
 
-      const actionCell = cells[14];
+      const actionCell = Number.isInteger(columns.manage) ? cells[columns.manage] : null;
       if (actionCell && !actionCell.querySelector('[data-ulim-row-action="save"]')) {
-        actionCell.innerHTML = '';
-        actionCell.classList.add('ulim-sm-row-actions73548');
+        actionCell.innerHTML = ''; actionCell.classList.add('ulim-sm-row-actions73548');
         const saveButton = document.createElement('button');
-        saveButton.type = 'button';
-        saveButton.className = 'admin-btn blue';
-        saveButton.textContent = '저장';
-        saveButton.setAttribute('data-ulim-row-action', 'save');
-        saveButton.addEventListener('click', function () {
-          if (typeof global.ulimStudentManagementSaveRow7352 === 'function') global.ulimStudentManagementSaveRow7352(key);
-        });
+        saveButton.type = 'button'; saveButton.className = 'admin-btn blue'; saveButton.textContent = '저장'; saveButton.setAttribute('data-ulim-row-action', 'save');
+        saveButton.addEventListener('click', function () { if (typeof global.ulimStudentManagementSaveRow7352 === 'function') global.ulimStudentManagementSaveRow7352(key); });
         const deleteButton = document.createElement('button');
-        deleteButton.type = 'button';
-        deleteButton.className = 'admin-btn red';
-        deleteButton.textContent = '삭제';
-        deleteButton.setAttribute('data-ulim-row-action', 'delete');
-        deleteButton.addEventListener('click', function () {
-          if (typeof global.ulimStudentManagementRetire7352 === 'function') global.ulimStudentManagementRetire7352(key, 'withdraw_delete');
-        });
-        actionCell.appendChild(saveButton);
-        actionCell.appendChild(deleteButton);
+        deleteButton.type = 'button'; deleteButton.className = 'admin-btn red'; deleteButton.textContent = '삭제'; deleteButton.setAttribute('data-ulim-row-action', 'delete');
+        deleteButton.addEventListener('click', function () { if (typeof global.ulimStudentManagementRetire7352 === 'function') global.ulimStudentManagementRetire7352(key, 'withdraw_delete'); });
+        actionCell.appendChild(saveButton); actionCell.appendChild(deleteButton);
       }
 
       const rowCheck = row.querySelector('input[data-ulim-row-check="1"]');
       if (rowCheck) rowCheck.checked = selectedKeys.has(key);
-      if (selectedKeys.has(key)) {
-        const snapshot = snapshotRow(row);
-        if (snapshot) selectedStudents.set(key, snapshot);
-      }
+      if (selectedKeys.has(key)) { const snapshot = snapshotRow(row); if (snapshot) selectedStudents.set(key, snapshot); }
     });
-
     updateSelectedCount();
   }
 
