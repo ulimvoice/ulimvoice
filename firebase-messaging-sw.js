@@ -1,25 +1,11 @@
-/* 울림연기학원 Push 전용 Service Worker 7.35.5.0.10
- * - 앱 화면(index/navigation)을 가로채거나 캐시하지 않습니다.
- * - 과거 ulim-navigation-* 화면 캐시를 활성화 시 모두 삭제합니다.
- * - 기존 Web Push 알림 기능만 유지합니다.
- */
+/* 울림연기학원 PWA 푸시 알림용 Service Worker - 7.35.5.0.37 */
 
-const ULIM_SW_VERSION = '2026.08.07.7350510-push-only';
-
-self.addEventListener('install', () => {
+self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(
-        keys
-          .filter((key) => key.startsWith('ulim-navigation-'))
-          .map((key) => caches.delete(key))
-      ))
-      .then(() => self.clients.claim())
-  );
+  event.waitUntil(self.clients.claim());
 });
 
 self.addEventListener('message', (event) => {
@@ -28,18 +14,11 @@ self.addEventListener('message', (event) => {
   }
 });
 
-/*
- * 중요:
- * fetch 이벤트를 등록하지 않습니다.
- * index.html과 화면 이동 요청은 브라우저가 항상 네트워크에서 직접 받습니다.
- */
-
 self.addEventListener('push', (event) => {
   let payload = {};
-
   try {
     payload = event.data ? event.data.json() : {};
-  } catch (_error) {
+  } catch (_ignore) {
     payload = {};
   }
 
@@ -53,6 +32,7 @@ self.addEventListener('push', (event) => {
   const body =
     data.body ||
     `${data.studentName || '학생'} 학생이 ${data.room || ''} ${data.startTime || ''}~${data.endTime || ''}에 연습실 예약을 신청했습니다.`;
+  const url = data.url || 'https://ulimvoice.github.io/ulimvoice/?open=admin-room';
 
   event.waitUntil(
     self.registration.showNotification(title, {
@@ -61,7 +41,7 @@ self.addEventListener('push', (event) => {
       badge: '/ulimvoice/appdata/logo.png',
       tag: data.reservationId || 'ulim-room-reservation',
       data: {
-        url: data.url || 'https://ulimvoice.github.io/ulimvoice/',
+        url,
         reservationId: data.reservationId || '',
         studentName: data.studentName || '',
         date: data.date || '',
@@ -76,21 +56,22 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const url =
-    (event.notification.data && event.notification.data.url) ||
-    'https://ulimvoice.github.io/ulimvoice/';
+  const data = event.notification.data || {};
+  const url = data.url || 'https://ulimvoice.github.io/ulimvoice/?open=admin-room';
 
-  event.waitUntil(
-    clients
-      .matchAll({ type: 'window', includeUncontrolled: true })
-      .then((clientList) => {
-        for (const client of clientList) {
-          if (client.url.includes('/ulimvoice/') && 'focus' in client) {
-            return client.focus();
-          }
+  event.waitUntil((async () => {
+    const clientList = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of clientList) {
+      if (!client.url.includes('/ulimvoice/') || !('focus' in client)) continue;
+      if ('navigate' in client) {
+        try {
+          await client.navigate(url);
+        } catch (_ignore) {
+          try { client.postMessage({ type: 'ULIM_OPEN_ADMIN_ROOM', url, data }); } catch (_ignorePost) {}
         }
-
-        return clients.openWindow(url);
-      })
-  );
+      }
+      return client.focus();
+    }
+    return clients.openWindow(url);
+  })());
 });
