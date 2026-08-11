@@ -23,12 +23,12 @@
   <link rel="preconnect" href="https://asia-northeast3-ulim-7b09a.cloudfunctions.net" data-ulim-classroom-preconnect="7297">
   <!-- ULIM 7.34.2: safe Firebase-first staff/student directory integration. -->
   <script src="./web/room-classroom-realtime-7.29.18.js?v=20260809.72918"></script>
-  <script src="./web/practice-room-firestore-primary-7.35.5.0.35.js?v=20260811.7355035"></script>
+  <script src="./web/practice-room-firestore-primary-7.35.5.0.36.js?v=20260811.7355036"></script>
   <script src="./web/staff-login-firebase-primary-7.32.8.js?v=20260809.73208"></script>
   <script src="./web/student-login-firebase-direct-7.35.5.0.30.js?v=20260809.7355030r7"></script>
   <script src="./web/student-home-bootstrap-7.35.5.0.31.js?v=20260809.7355031"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260811-7355035-staff-attendance-room-convergence">
+<meta name="ulim-build" content="20260811-7355036-practice-room-admin-calendar-group-fix">
 <script id="ulim-one-time-cache-clean-7355030">
 (function (global) {
   'use strict';
@@ -265,6 +265,90 @@ audio { width: 100%; height: 40px; }
 }
 .room-day.selected .room-count {
     color:white;
+}
+.admin-room-day-modal7355036 {
+    position:fixed;
+    inset:0;
+    z-index:1000000;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+    background:rgba(15,23,42,.48);
+}
+.admin-room-day-modal7355036.open {
+    display:flex;
+}
+.admin-room-day-dialog7355036 {
+    width:min(760px, 96vw);
+    max-height:86vh;
+    overflow:auto;
+    background:#fff;
+    border-radius:18px;
+    box-shadow:0 20px 60px rgba(15,23,42,.25);
+    padding:20px;
+}
+.admin-room-day-head7355036 {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    margin-bottom:14px;
+}
+.admin-room-day-close7355036 {
+    border:0;
+    border-radius:10px;
+    background:#eef2f7;
+    color:#334155;
+    font-weight:900;
+    padding:9px 12px;
+    cursor:pointer;
+}
+.admin-room-group-card7355036 {
+    border:1px solid #dbe4ee;
+    border-radius:14px;
+    padding:14px;
+    margin-top:10px;
+    background:#fff;
+}
+.admin-room-group-title7355036 {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    flex-wrap:wrap;
+    font-weight:900;
+    color:#111827;
+}
+.admin-room-group-meta7355036 {
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(145px,1fr));
+    gap:8px;
+    margin-top:10px;
+    font-size:13px;
+    color:#475569;
+}
+.admin-room-group-actions7355036 {
+    display:flex;
+    gap:7px;
+    flex-wrap:wrap;
+    margin-top:12px;
+}
+.admin-room-group-hours7355036 {
+    display:inline-block;
+    margin-left:6px;
+    padding:2px 7px;
+    border-radius:999px;
+    background:#eff6ff;
+    color:#2563eb;
+    font-size:11px;
+    font-weight:900;
+}
+.admin-room-calendar-note7355036 {
+    margin:10px 0 14px;
+    color:#64748b;
+    font-size:13px;
+    line-height:1.5;
 }
 .room-table-wrap {
     overflow-x:auto;
@@ -2607,24 +2691,37 @@ body.ulim-attendance-modal-open73545{overflow:hidden}
 
         <div id="adminPanelRoom" class="admin-panel">
           <div class="admin-card admin-full-only">
-            <h3 style="margin-top:0;">연습실 예약 알림톡</h3>
+            <h3 style="margin-top:0;">연습실 예약 관리</h3>
             <p style="font-size:14px; color:#666; line-height:1.6; margin-top:-4px;">
-              예약한 학생 명단을 확인한 뒤 <b>연습실 사용확인</b>, <b>연습실 사용불가</b>, <b>장소·시간 변경</b> 알림톡을 선택 발송합니다.<br>
-              현관 비밀번호와 알림톡 설정은 운영 설정값을 사용하며 발송내역은 매일 오전 6시에 백업됩니다.
+              학생 페이지 연습실 예약과 같은 월간 달력입니다. 날짜를 누르면 그날 <b>누가 · 어느 연습실을 · 몇 시부터 몇 시까지</b> 예약했는지 한 번에 확인할 수 있습니다.<br>
+              같은 학생이 같은 연습실을 연속으로 예약한 시간은 하나의 예약 묶음으로 표시되며, 사용승인·사용불가·장소·시간 변경도 한 번에 처리합니다.
             </p>
+
+            <div class="room-month-nav">
+              <button type="button" onclick="adminChangeRoomMonth7355036(-1)">⬅ 이전달</button>
+              <h3 id="adminRoomMonthTitle7355036" style="margin:0; text-align:center;">예약 달력</h3>
+              <button type="button" onclick="adminChangeRoomMonth7355036(1)">다음달 ➡</button>
+            </div>
+
+            <button type="button" class="room-refresh-btn" onclick="adminLoadRoomMonth7355036(true)" style="width:100%; margin-bottom:12px;">
+              🔄 예약 현황 새로고침
+            </button>
+
+            <div id="adminRoomCalendar7355036" class="room-calendar"></div>
+            <div class="admin-room-calendar-note7355036">
+              날짜를 누르면 해당 날짜 예약 상세창이 열립니다. 달력의 예약 건수는 1시간 예약칸 기준이며, 상세창에서는 연속 예약을 묶어서 표시합니다.
+            </div>
+
+            <input type="date" id="adminRoomDate" style="display:none;" aria-hidden="true">
 
             <div class="admin-grid">
               <div class="admin-field">
-                <label for="adminRoomDate">예약일</label>
-                <input type="date" id="adminRoomDate" onchange="adminLoadRoomReservations(false, true)">
-              </div>
-              <div class="admin-field">
                 <label for="adminRoomKeyword">학생명 / 전화뒷자리 / 연습실 검색</label>
-                <input type="text" id="adminRoomKeyword" placeholder="예: 홍길동, 5875, 4강의실" oninput="adminRenderRoomReservationTable()">
+                <input type="text" id="adminRoomKeyword" placeholder="예: 홍길동, 5875, 4강의실" oninput="adminRenderRoomReservationTable(); adminRenderRoomDayDetail7355036();">
               </div>
               <div class="admin-field">
                 <label for="adminRoomStatusFilter">상태 필터</label>
-                <select id="adminRoomStatusFilter" onchange="adminRenderRoomReservationTable()">
+                <select id="adminRoomStatusFilter" onchange="adminRenderRoomReservationTable(); adminRenderRoomDayDetail7355036();">
                   <option value="">전체</option>
                   <option value="예약">예약</option>
                   <option value="확정">확정</option>
@@ -2638,23 +2735,31 @@ body.ulim-attendance-modal-open73545{overflow:hidden}
               <b style="width:100%; color:#111827;">수신 대상</b>
               <label><input type="checkbox" id="roomRecipientStudent" checked> 학생</label>
               <label><input type="checkbox" id="roomRecipientParent"> 학부모</label>
-              <div class="admin-permission-note" style="width:100%;">기본은 학생에게 발송합니다. 학부모에게도 보내려면 학부모를 체크하세요.</div>
+              <div class="admin-permission-note" style="width:100%;">예약 처리 자체는 즉시 완료되고, 알림톡은 발송 대기열에서 백그라운드 처리됩니다.</div>
             </div>
 
             <div class="admin-btn-row">
-              <button type="button" class="admin-btn blue" onclick="adminLoadRoomReservations(true, true)">예약 불러오기</button>
               <button type="button" class="admin-btn gray" onclick="adminSelectAllRoomReservations(true)">전체선택</button>
               <button type="button" class="admin-btn gray" onclick="adminSelectAllRoomReservations(false)">전체해제</button>
-              <button type="button" class="admin-btn" onclick="adminSendSelectedRoomReservationMessages('confirm')">선택 사용확인</button>
+              <button type="button" class="admin-btn" onclick="adminSendSelectedRoomReservationMessages('confirm')">선택 사용승인</button>
               <button type="button" class="admin-btn red" onclick="adminSendSelectedRoomReservationMessages('unavailable')">선택 사용불가</button>
               <button type="button" class="admin-btn orange" onclick="adminSendSelectedRoomReservationMessages('change')">선택 장소·시간 변경</button>
             </div>
 
             <div class="admin-summary" style="margin-top:10px;">
-              <span class="admin-chip" id="adminRoomSummary">예약 0건</span>
+              <span class="admin-chip" id="adminRoomSummary">날짜를 선택해주세요</span>
             </div>
             <div id="adminRoomReservationTableWrap" class="admin-table-wrap" style="margin-top:12px;"></div>
-            <div id="adminRoomPreview" class="admin-message-preview" style="display:none;"></div>
+
+            <div id="adminRoomDayModal7355036" class="admin-room-day-modal7355036" role="dialog" aria-modal="true" aria-labelledby="adminRoomSelectedDateTitle7355036">
+              <div class="admin-room-day-dialog7355036" onclick="event.stopPropagation()">
+                <div class="admin-room-day-head7355036">
+                  <h3 id="adminRoomSelectedDateTitle7355036" style="margin:0;">예약 상세</h3>
+                  <button type="button" class="admin-room-day-close7355036" onclick="adminCloseRoomDayModal7355036()">닫기</button>
+                </div>
+                <div id="adminRoomDayDetail7355036"></div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -5694,7 +5799,11 @@ let adminNoticeTargetRows = [];
 let adminNoticeSelectedMap = {};
 let adminNoticeClassStudentCache = {};
 let adminRoomReservations = [];
+let adminRoomMonthReservations7355036 = [];
 let adminRoomSelectedMap = {};
+let adminRoomCurrentDate7355036 = new Date();
+let adminRoomSelectedDate7355036 = '';
+let adminRoomGroupMap7355036 = Object.create(null);
 
 const ADMIN_NOTICE_FIXED_CLASS_LIST = [
   "[김하은T] 토요일 초등 더빙반 (10:30~12:00)",
@@ -7379,14 +7488,22 @@ function adminRoomDateValue() {
     return el ? el.value : getTodayInputValue();
 }
 
-/* 7.35.5.0 legacy adminLoadRoomReservations removed; Firestore module owns this function. */
+function adminRoomHourNumber7355036(value) {
+    if (value === null || value === undefined || value === '') return null;
+    if (typeof value === 'number' && Number.isFinite(value)) return Math.round(value);
+    const m = String(value).match(/(\d{1,2})/);
+    return m ? Number(m[1]) : null;
+}
 
 function normalizeAdminRoomReservationRow(r, index) {
-    const start = adminFormatRoomHour(r.startHour || r.startTime || '');
-    const end = adminFormatRoomHour(r.endHour || r.endTime || '');
+    const startValue = adminRoomHourNumber7355036(r.startHour ?? r.startTime ?? '');
+    const endValue = adminRoomHourNumber7355036(r.endHour ?? r.endTime ?? '');
+    const start = adminFormatRoomHour(startValue === null ? (r.startHour || r.startTime || '') : startValue);
+    const end = adminFormatRoomHour(endValue === null ? (r.endHour || r.endTime || '') : endValue);
     const rawTime = String(r.time || r.timeText || '').trim();
     return {
         id: String(r.id || r.reservationId || r.rowNumber || index + 1),
+        reservationId: String(r.reservationId || r.id || r.rowNumber || index + 1),
         date: String(r.date || r.reserveDate || '').trim(),
         studentName: String(r.studentName || r.name || '').trim(),
         phoneLast4: String(r.phoneLast4 || r.phoneSuffix || '').trim(),
@@ -7396,6 +7513,8 @@ function normalizeAdminRoomReservationRow(r, index) {
         room: String(r.room || r.roomName || r.practiceRoom || '').trim(),
         startHour: start,
         endHour: end,
+        startHourValue: startValue,
+        endHourValue: endValue === null && startValue !== null ? startValue + 1 : endValue,
         time: start && end ? `${start}~${end}` : (rawTime || start || ''),
         status: String(r.status || '예약').trim(),
         memo: String(r.memo || r.note || r.reason || '').trim(),
@@ -7412,125 +7531,424 @@ function adminFormatRoomHour(value) {
     return `${String(Number(m[1])).padStart(2, '0')}:00`;
 }
 
-function adminRoomRowKey(row, index) {
-    return [row.id || index, row.date, row.studentName, row.room, row.startHour].join('|');
+function adminRoomStatusGroupKey7355036(value) {
+    return String(value || '').trim().normalize('NFKC').replace(/\s+/g, '').toLowerCase();
 }
 
-function adminVisibleRoomReservations() {
+function adminBuildRoomReservationGroups7355036(rows) {
+    const source = (Array.isArray(rows) ? rows : []).slice().sort((a, b) => {
+        const ai = String(a.studentUid || `${a.studentName}|${a.phoneLast4}`);
+        const bi = String(b.studentUid || `${b.studentName}|${b.phoneLast4}`);
+        return [
+            String(a.date || ''),
+            ai,
+            String(a.room || ''),
+            adminRoomStatusGroupKey7355036(a.status),
+            String(a.startHourValue ?? 99).padStart(2, '0')
+        ].join('|').localeCompare([
+            String(b.date || ''),
+            bi,
+            String(b.room || ''),
+            adminRoomStatusGroupKey7355036(b.status),
+            String(b.startHourValue ?? 99).padStart(2, '0')
+        ].join('|'), 'ko');
+    });
+
+    const groups = [];
+    let current = null;
+    source.forEach(row => {
+        const identity = String(row.studentUid || `${row.studentName}|${row.phoneLast4}`);
+        const start = Number(row.startHourValue);
+        const end = Number(row.endHourValue);
+        const compatible = current &&
+            current.date === row.date &&
+            current.identity === identity &&
+            current.room === row.room &&
+            current.statusKey === adminRoomStatusGroupKey7355036(row.status) &&
+            Number.isFinite(start) &&
+            start === current.endHourValue;
+
+        if (!compatible) {
+            current = {
+                rows: [],
+                reservationIds: [],
+                identity,
+                date: row.date,
+                studentName: row.studentName,
+                phoneLast4: row.phoneLast4,
+                room: row.room,
+                status: row.status,
+                statusKey: adminRoomStatusGroupKey7355036(row.status),
+                memo: row.memo,
+                startHourValue: Number.isFinite(start) ? start : null,
+                endHourValue: Number.isFinite(end) ? end : (Number.isFinite(start) ? start + 1 : null)
+            };
+            groups.push(current);
+        }
+        current.rows.push(row);
+        current.reservationIds.push(String(row.reservationId || row.id || ''));
+        if (Number.isFinite(end)) current.endHourValue = end;
+    });
+
+    adminRoomGroupMap7355036 = Object.create(null);
+    groups.forEach(group => {
+        group.groupKey = group.reservationIds.filter(Boolean).join('~');
+        group.selectionKey = group.groupKey || [group.date, group.studentName, group.room, group.startHourValue].join('|');
+        group.time = group.startHourValue !== null && group.endHourValue !== null
+            ? `${adminFormatRoomHour(group.startHourValue)}~${adminFormatRoomHour(group.endHourValue)}`
+            : group.rows.map(row => row.time).filter(Boolean).join(', ');
+        group.hourCount = Math.max(1, group.rows.length);
+        adminRoomGroupMap7355036[group.groupKey] = group;
+    });
+    return groups;
+}
+
+function adminVisibleRoomReservationGroups7355036() {
     const keyword = String(document.getElementById('adminRoomKeyword')?.value || '').replace(/\s+/g, '').toLowerCase();
     const status = String(document.getElementById('adminRoomStatusFilter')?.value || '').trim();
-    return adminRoomReservations
-        .map((row, index) => ({ row, index }))
-        .filter(item => {
-            const r = item.row;
-            if (status && !String(r.status || '').includes(status)) return false;
-            if (!keyword) return true;
-            const hay = [r.studentName, r.phoneLast4, r.studentPhone, r.room, r.time, r.status, r.memo].join('|').replace(/\s+/g, '').toLowerCase();
-            return hay.includes(keyword);
+    const groups = adminBuildRoomReservationGroups7355036(adminRoomReservations);
+    return groups.filter(group => {
+        if (status && !String(group.status || '').includes(status)) return false;
+        if (!keyword) return true;
+        const hay = [
+            group.studentName,
+            group.phoneLast4,
+            group.room,
+            group.time,
+            group.status,
+            group.memo
+        ].join('|').replace(/\s+/g, '').toLowerCase();
+        return hay.includes(keyword);
+    });
+}
+
+function adminRoomActionButtonsHtml7355036(group) {
+    const key = escapeHtml(group.groupKey || '');
+    return `
+      <div class="admin-room-group-actions7355036">
+        <button type="button" class="admin-btn" style="padding:8px 10px; font-size:12px;" data-room-group-key="${key}" data-room-group-action="confirm">사용승인</button>
+        <button type="button" class="admin-btn red" style="padding:8px 10px; font-size:12px;" data-room-group-key="${key}" data-room-group-action="unavailable">사용불가</button>
+        <button type="button" class="admin-btn orange" style="padding:8px 10px; font-size:12px;" data-room-group-key="${key}" data-room-group-action="change">장소·시간 변경</button>
+      </div>
+    `;
+}
+
+function adminBindRoomActionButtons7355036(root) {
+    if (!root) return;
+    root.querySelectorAll('[data-room-group-key][data-room-group-action]').forEach(button => {
+        if (button.dataset.roomGroupBound === '7355036') return;
+        button.dataset.roomGroupBound = '7355036';
+        button.addEventListener('click', async event => {
+            event.preventDefault();
+            event.stopPropagation();
+            const key = String(button.dataset.roomGroupKey || '');
+            const action = String(button.dataset.roomGroupAction || '');
+            button.disabled = true;
+            try {
+                if (typeof showLoading === 'function') showLoading('연습실 예약 처리 중...');
+                await adminProcessRoomReservationGroup7355036(key, action);
+            } catch (error) {
+                alert((error && error.message) || '연습실 예약 처리 중 오류가 발생했습니다.');
+            } finally {
+                if (typeof hideLoading === 'function') hideLoading();
+                button.disabled = false;
+            }
         });
+    });
 }
 
 function adminRenderRoomReservationTable() {
     const wrap = document.getElementById('adminRoomReservationTableWrap');
     if (!wrap) return;
 
-    const visible = adminVisibleRoomReservations();
-    const checked = visible.filter(({ row, index }) => adminRoomSelectedMap[adminRoomRowKey(row, index)]).length;
-    const summary = document.getElementById('adminRoomSummary');
-    if (summary) summary.textContent = `예약 ${visible.length}건 / 선택 ${checked}건`;
-
-    if (!adminRoomReservations.length) {
-        wrap.innerHTML = `<div style="padding:18px; color:#666;">예약일을 선택한 뒤 <b>예약 불러오기</b>를 눌러주세요.</div>`;
+    if (!adminRoomSelectedDate7355036) {
+        wrap.innerHTML = `<div style="padding:18px; color:#666;">달력에서 날짜를 선택해주세요.</div>`;
+        const summary = document.getElementById('adminRoomSummary');
+        if (summary) summary.textContent = '날짜를 선택해주세요';
         return;
     }
 
+    const visible = adminVisibleRoomReservationGroups7355036();
+    const checked = visible.filter(group => adminRoomSelectedMap[group.selectionKey]).length;
+    const summary = document.getElementById('adminRoomSummary');
+    if (summary) {
+        const hours = visible.reduce((sum, group) => sum + group.hourCount, 0);
+        summary.textContent = `${adminRoomSelectedDate7355036} · 예약 ${visible.length}묶음 / ${hours}시간 · 선택 ${checked}묶음`;
+    }
+
     if (!visible.length) {
-        wrap.innerHTML = `<div style="padding:18px; color:#666;">조건에 맞는 예약이 없습니다.</div>`;
+        wrap.innerHTML = `<div style="padding:18px; color:#666;">선택한 날짜에 조건에 맞는 예약이 없습니다.</div>`;
         return;
     }
 
     let html = `<table class="admin-table"><thead><tr>
         <th style="width:44px;">선택</th>
-        <th>예약일</th><th>학생명</th><th>전화뒷자리</th><th>연습실</th><th>시간</th><th>상태</th><th>메모</th><th style="min-width:280px;">알림톡</th>
+        <th>학생명</th><th>전화뒷자리</th><th>연습실</th><th>예약시간</th><th>상태</th><th>메모</th><th style="min-width:280px;">처리</th>
     </tr></thead><tbody>`;
 
-    visible.forEach(({ row, index }) => {
-        const key = adminRoomRowKey(row, index);
+    visible.forEach(group => {
+        const selectionKey = escapeHtml(group.selectionKey || '');
         html += `<tr>
-            <td><input type="checkbox" ${adminRoomSelectedMap[key] ? 'checked' : ''} onchange="adminToggleRoomReservation(${index}, this.checked)"></td>
-            <td>${escapeHtml(row.date || '')}</td>
-            <td><b>${escapeHtml(row.studentName || '')}</b></td>
-            <td>${escapeHtml(row.phoneLast4 || '')}</td>
-            <td>${escapeHtml(row.room || '')}</td>
-            <td>${escapeHtml(row.time || '')}</td>
-            <td><span class="admin-status-badge">${escapeHtml(row.status || '예약')}</span></td>
-            <td>${escapeHtml(row.memo || '')}</td>
-            <td>
-              <button type="button" class="admin-btn" style="padding:8px 10px; font-size:12px;" onclick="adminProcessRoomReservation7355035(${index}, 'confirm')">사용확인</button>
-              <button type="button" class="admin-btn red" style="padding:8px 10px; font-size:12px;" onclick="adminProcessRoomReservation7355035(${index}, 'unavailable')">사용불가</button>
-              <button type="button" class="admin-btn orange" style="padding:8px 10px; font-size:12px;" onclick="adminProcessRoomReservation7355035(${index}, 'change')">장소·시간 변경</button>
-            </td>
+            <td><input type="checkbox" data-room-select-key="${selectionKey}" ${adminRoomSelectedMap[group.selectionKey] ? 'checked' : ''}></td>
+            <td><b>${escapeHtml(group.studentName || '')}</b>${group.hourCount > 1 ? `<span class="admin-room-group-hours7355036">${group.hourCount}시간 연속</span>` : ''}</td>
+            <td>${escapeHtml(group.phoneLast4 || '')}</td>
+            <td>${escapeHtml(group.room || '')}</td>
+            <td><b>${escapeHtml(group.time || '')}</b></td>
+            <td><span class="admin-status-badge">${escapeHtml(group.status || '예약')}</span></td>
+            <td>${escapeHtml(group.memo || '')}</td>
+            <td>${adminRoomActionButtonsHtml7355036(group)}</td>
         </tr>`;
     });
 
     html += `</tbody></table>`;
     wrap.innerHTML = html;
+
+    wrap.querySelectorAll('[data-room-select-key]').forEach(input => {
+        input.addEventListener('change', () => {
+            adminRoomSelectedMap[String(input.dataset.roomSelectKey || '')] = !!input.checked;
+            adminRenderRoomReservationTable();
+            adminRenderRoomDayDetail7355036();
+        });
+    });
+    adminBindRoomActionButtons7355036(wrap);
 }
 
-function adminToggleRoomReservation(index, checked) {
-    const row = adminRoomReservations[index];
-    if (!row) return;
-    adminRoomSelectedMap[adminRoomRowKey(row, index)] = !!checked;
-    adminRenderRoomReservationTable();
+function adminRenderRoomDayDetail7355036() {
+    const detail = document.getElementById('adminRoomDayDetail7355036');
+    const title = document.getElementById('adminRoomSelectedDateTitle7355036');
+    if (!detail) return;
+    if (title) title.textContent = adminRoomSelectedDate7355036 ? `${adminRoomSelectedDate7355036} 예약 상세` : '예약 상세';
+
+    const groups = adminVisibleRoomReservationGroups7355036();
+    if (!groups.length) {
+        detail.innerHTML = `<div style="padding:18px;color:#64748b;">이 날짜에는 표시할 예약이 없습니다.</div>`;
+        return;
+    }
+
+    detail.innerHTML = groups.map(group => `
+      <div class="admin-room-group-card7355036">
+        <div class="admin-room-group-title7355036">
+          <div>
+            ${escapeHtml(group.studentName || '이름 없음')}
+            ${group.hourCount > 1 ? `<span class="admin-room-group-hours7355036">${group.hourCount}시간 연속예약</span>` : ''}
+          </div>
+          <span class="admin-status-badge">${escapeHtml(group.status || '예약')}</span>
+        </div>
+        <div class="admin-room-group-meta7355036">
+          <div><b>연습실</b><br>${escapeHtml(group.room || '-')}</div>
+          <div><b>예약시간</b><br>${escapeHtml(group.time || '-')}</div>
+          <div><b>전화뒷자리</b><br>${escapeHtml(group.phoneLast4 || '-')}</div>
+          <div><b>메모</b><br>${escapeHtml(group.memo || '-')}</div>
+        </div>
+        ${adminRoomActionButtonsHtml7355036(group)}
+      </div>
+    `).join('');
+    adminBindRoomActionButtons7355036(detail);
 }
+
+function adminOpenRoomDayModal7355036() {
+    const modal = document.getElementById('adminRoomDayModal7355036');
+    if (!modal) return;
+    adminRenderRoomDayDetail7355036();
+    modal.classList.add('open');
+    modal.onclick = event => {
+        if (event.target === modal) adminCloseRoomDayModal7355036();
+    };
+}
+
+function adminCloseRoomDayModal7355036() {
+    const modal = document.getElementById('adminRoomDayModal7355036');
+    if (modal) modal.classList.remove('open');
+}
+
+function adminRenderRoomCalendar7355036() {
+    const container = document.getElementById('adminRoomCalendar7355036');
+    const monthTitle = document.getElementById('adminRoomMonthTitle7355036');
+    if (!container) return;
+
+    const year = adminRoomCurrentDate7355036.getFullYear();
+    const month = adminRoomCurrentDate7355036.getMonth();
+    if (monthTitle) monthTitle.textContent = `${year}년 ${month + 1}월`;
+
+    const first = new Date(year, month, 1);
+    const last = new Date(year, month + 1, 0);
+    const todayKey = formatRoomDate(new Date());
+    const counts = Object.create(null);
+    (adminRoomMonthReservations7355036 || []).forEach(row => {
+        if (!row.date) return;
+        counts[row.date] = (counts[row.date] || 0) + 1;
+    });
+
+    container.innerHTML = '';
+    ['일','월','화','수','목','금','토'].forEach(day => {
+        const div = document.createElement('div');
+        div.className = 'room-day-name';
+        div.textContent = day;
+        container.appendChild(div);
+    });
+
+    for (let i = 0; i < first.getDay(); i++) {
+        const empty = document.createElement('div');
+        empty.className = 'room-day empty';
+        container.appendChild(empty);
+    }
+
+    for (let d = 1; d <= last.getDate(); d++) {
+        const date = new Date(year, month, d);
+        const dateKey = formatRoomDate(date);
+        const div = document.createElement('div');
+        div.className = 'room-day';
+        if (adminRoomSelectedDate7355036 === dateKey) div.classList.add('selected');
+        if (dateKey === todayKey) div.classList.add('today');
+        div.innerHTML = `<div>${d}일</div><span class="room-count">예약 ${counts[dateKey] || 0}건</span>`;
+        div.addEventListener('click', () => adminSelectRoomDate7355036(dateKey, true));
+        container.appendChild(div);
+    }
+}
+
+function adminSelectRoomDate7355036(dateKey, openModal = false) {
+    adminRoomSelectedDate7355036 = String(dateKey || '');
+    const dateInput = document.getElementById('adminRoomDate');
+    if (dateInput) dateInput.value = adminRoomSelectedDate7355036;
+    adminRoomReservations = (adminRoomMonthReservations7355036 || [])
+        .filter(row => row.date === adminRoomSelectedDate7355036);
+    adminRoomSelectedMap = {};
+    adminRenderRoomCalendar7355036();
+    adminRenderRoomReservationTable();
+    adminRenderRoomDayDetail7355036();
+    if (openModal) adminOpenRoomDayModal7355036();
+}
+
+async function adminLoadRoomMonth7355036(showOverlay = true) {
+    const api = window.__ULIM_PRACTICE_ROOM_FIRESTORE_PRIMARY_7355033__;
+    if (!api || typeof api.listAdminMonth !== 'function') throw new Error('연습실 예약 관리 기능을 준비하지 못했습니다.');
+    const year = adminRoomCurrentDate7355036.getFullYear();
+    const month = adminRoomCurrentDate7355036.getMonth() + 1;
+
+    try {
+        if (showOverlay && typeof showLoading === 'function') showLoading('연습실 예약 달력을 불러오는 중...');
+        const data = await api.listAdminMonth(year, month);
+        const rows = Array.isArray(data && (data.reservations || data.records)) ? (data.reservations || data.records) : [];
+        adminRoomMonthReservations7355036 = rows.map(normalizeAdminRoomReservationRow);
+        const selectedMonth = adminRoomSelectedDate7355036 ? adminRoomSelectedDate7355036.slice(0, 7) : '';
+        const currentMonth = `${year}-${String(month).padStart(2, '0')}`;
+        if (selectedMonth !== currentMonth) {
+            adminRoomSelectedDate7355036 = '';
+            adminRoomReservations = [];
+            adminRoomSelectedMap = {};
+        } else {
+            adminRoomReservations = adminRoomMonthReservations7355036.filter(row => row.date === adminRoomSelectedDate7355036);
+        }
+        adminRenderRoomCalendar7355036();
+        adminRenderRoomReservationTable();
+        adminRenderRoomDayDetail7355036();
+        return data;
+    } finally {
+        if (showOverlay && typeof hideLoading === 'function') hideLoading();
+    }
+}
+
+function adminChangeRoomMonth7355036(diff) {
+    adminRoomCurrentDate7355036 = new Date(
+        adminRoomCurrentDate7355036.getFullYear(),
+        adminRoomCurrentDate7355036.getMonth() + Number(diff || 0),
+        1
+    );
+    adminRoomSelectedDate7355036 = '';
+    adminRoomReservations = [];
+    adminRoomSelectedMap = {};
+    adminCloseRoomDayModal7355036();
+    Promise.resolve(adminLoadRoomMonth7355036(false)).catch(error => {
+        alert((error && error.message) || '연습실 예약 달력을 불러오지 못했습니다.');
+    });
+}
+
+async function adminLoadRoomReservations(showOverlay = true, force = false) {
+    const api = window.__ULIM_PRACTICE_ROOM_FIRESTORE_PRIMARY_7355033__;
+    if (!api || typeof api.listAdmin !== 'function') throw new Error('연습실 예약 관리 기능을 준비하지 못했습니다.');
+    const date = adminRoomDateValue();
+    try {
+        if (showOverlay && typeof showLoading === 'function') showLoading('연습실 예약을 불러오는 중...');
+        const data = await api.listAdmin(date, !!force);
+        const rows = Array.isArray(data && (data.reservations || data.records)) ? (data.reservations || data.records) : [];
+        const normalizedRows = rows.map(normalizeAdminRoomReservationRow);
+        adminRoomSelectedDate7355036 = date;
+        adminRoomReservations = normalizedRows;
+        const monthKey = date.slice(0, 7);
+        adminRoomMonthReservations7355036 = (adminRoomMonthReservations7355036 || [])
+            .filter(row => row.date.slice(0, 7) !== monthKey || row.date !== date)
+            .concat(normalizedRows);
+        adminRoomSelectedMap = {};
+        adminRenderRoomCalendar7355036();
+        adminRenderRoomReservationTable();
+        adminRenderRoomDayDetail7355036();
+        return data;
+    } finally {
+        if (showOverlay && typeof hideLoading === 'function') hideLoading();
+    }
+}
+window.adminLoadRoomReservations = adminLoadRoomReservations;
+window.adminLoadRoomMonth7355036 = adminLoadRoomMonth7355036;
+window.adminChangeRoomMonth7355036 = adminChangeRoomMonth7355036;
+window.adminCloseRoomDayModal7355036 = adminCloseRoomDayModal7355036;
 
 function adminSelectAllRoomReservations(checked) {
-    adminVisibleRoomReservations().forEach(({ row, index }) => {
-        adminRoomSelectedMap[adminRoomRowKey(row, index)] = !!checked;
+    adminVisibleRoomReservationGroups7355036().forEach(group => {
+        adminRoomSelectedMap[group.selectionKey] = !!checked;
     });
     adminRenderRoomReservationTable();
+    adminRenderRoomDayDetail7355036();
 }
 
-function adminSelectedRoomReservations() {
-    return adminRoomReservations
-        .map((row, index) => ({ row, index }))
-        .filter(({ row, index }) => adminRoomSelectedMap[adminRoomRowKey(row, index)]);
+function adminSelectedRoomReservationGroups7355036() {
+    return adminVisibleRoomReservationGroups7355036()
+        .filter(group => adminRoomSelectedMap[group.selectionKey]);
 }
 
 async function adminSendSelectedRoomReservationMessages(actionType) {
-    const selected = adminSelectedRoomReservations();
+    const selected = adminSelectedRoomReservationGroups7355036();
     if (!selected.length) return alert('선택된 예약이 없습니다.');
+    if (actionType === 'change' && selected.length > 1) {
+        return alert('장소·시간 변경은 연속 예약 묶음 하나씩 처리해주세요.');
+    }
 
-    const option = adminCollectRoomMessageOptions(actionType, selected.length);
+    const option = adminCollectRoomMessageOptions(actionType, selected[0].hourCount || 1);
     if (!option) return;
     option.targets = adminGetRoomRecipientTypes();
     if (!option.targets.length) return alert('알림톡 수신 대상을 학생 또는 학부모 중 한 명 이상 선택해주세요.');
 
-    const names = selected.slice(0, 5).map(x => x.row.studentName).join(', ');
+    const names = selected.slice(0, 5).map(group => group.studentName).join(', ');
     const more = selected.length > 5 ? ` 외 ${selected.length - 5}명` : '';
-    if (!confirm(`선택한 ${selected.length}건의 연습실 예약을 처리하고 알림톡을 발송할까요?\n\n대상: ${names}${more}\n구분: ${adminRoomActionLabel(actionType)}`)) return;
+    if (!confirm(`선택한 ${selected.length}묶음의 연습실 예약을 처리할까요?\n\n대상: ${names}${more}\n구분: ${adminRoomActionLabel(actionType)}\n\n예약 상태는 즉시 반영되고 알림톡은 백그라운드에서 발송됩니다.`)) return;
 
     let success = 0;
     let failed = 0;
     const errors = [];
 
-    showLoading(`연습실 예약 처리 중... 0 / ${selected.length}`);
-    for (let i = 0; i < selected.length; i++) {
-        try {
-            showLoading(`연습실 예약 처리 중... ${i + 1} / ${selected.length}`);
-            await adminProcessRoomReservation7355035(selected[i].index, actionType, option, true);
-            success++;
-        } catch (e) {
-            failed++;
-            errors.push(`${selected[i].row.studentName}: ${e.message || e}`);
+    if (typeof showLoading === 'function') showLoading(`연습실 예약 처리 중... 0 / ${selected.length}`);
+    try {
+        for (let i = 0; i < selected.length; i++) {
+            try {
+                if (typeof showLoading === 'function') showLoading(`연습실 예약 처리 중... ${i + 1} / ${selected.length}`);
+                await adminProcessRoomReservationGroup7355036(selected[i].groupKey, actionType, option, true, true);
+                success++;
+            } catch (e) {
+                failed++;
+                errors.push(`${selected[i].studentName}: ${e.message || e}`);
+            }
         }
+    } finally {
+        if (typeof hideLoading === 'function') hideLoading();
     }
-    hideLoading();
-    alert(`연습실 예약 처리 완료\n\n성공: ${success}건\n실패: ${failed}건${errors.length ? '\n\n확인 필요:\n' + errors.slice(0, 5).join('\n') : ''}`);
+
+    await adminLoadRoomMonth7355036(false);
+    if (adminRoomSelectedDate7355036) adminSelectRoomDate7355036(adminRoomSelectedDate7355036, false);
+    alert(`연습실 예약 처리 완료\n\n성공: ${success}묶음\n실패: ${failed}묶음${success ? '\n알림톡: 발송 대기열 등록 완료' : ''}${errors.length ? '\n\n확인 필요:\n' + errors.slice(0, 5).join('\n') : ''}`);
 }
 
 function adminCollectRoomMessageOptions(actionType, count = 1) {
     const option = {};
+    const hours = Math.max(1, Number(count || 1));
     if (actionType === 'unavailable') {
         const reason = prompt('연습실 사용불가 사유를 입력해주세요.', '학원 사정');
         if (reason === null) return null;
@@ -7551,7 +7969,8 @@ function adminCollectRoomMessageOptions(actionType, count = 1) {
         if (newDate === null) return null;
         const newRoom = prompt('변경된 연습실/장소를 입력해주세요.', '');
         if (newRoom === null) return null;
-        const newTime = prompt('변경된 시간을 입력해주세요. 예: 15:00~16:00', '');
+        const defaultEnd = Math.min(22, 10 + hours);
+        const newTime = prompt(`변경된 시간을 입력해주세요. 연속 ${hours}시간이면 같은 길이로 입력합니다.`, `10:00~${String(defaultEnd).padStart(2, '0')}:00`);
         if (newTime === null) return null;
         option.newDate = newDate.trim() || defaultDate;
         option.newRoom = newRoom.trim();
@@ -7564,49 +7983,38 @@ function adminCollectRoomMessageOptions(actionType, count = 1) {
     return option;
 }
 
-async function adminLoadRoomReservations(showOverlay = true, force = false) {
-    const api = window.__ULIM_PRACTICE_ROOM_FIRESTORE_PRIMARY_7355033__;
-    if (!api || typeof api.listAdmin !== 'function') throw new Error('연습실 예약 관리 기능을 준비하지 못했습니다.');
-    const date = adminRoomDateValue();
-    try {
-        if (showOverlay && typeof showLoading === 'function') showLoading('연습실 예약을 불러오는 중...');
-        const data = await api.listAdmin(date, !!force);
-        const rows = Array.isArray(data && (data.reservations || data.records)) ? (data.reservations || data.records) : [];
-        adminRoomReservations = rows.map(normalizeAdminRoomReservationRow);
-        adminRoomSelectedMap = {};
-        adminRenderRoomReservationTable();
-        return data;
-    } finally {
-        if (showOverlay && typeof hideLoading === 'function') hideLoading();
-    }
-}
-window.adminLoadRoomReservations = adminLoadRoomReservations;
-window.ulimGetAdminRoomReservation7355035 = function(index) { return adminRoomReservations[Number(index)] || null; };
+async function adminProcessRoomReservationGroup7355036(groupKey, actionType, option, silent, deferReload) {
+    const group = adminRoomGroupMap7355036[String(groupKey || '')] ||
+        adminBuildRoomReservationGroups7355036(adminRoomReservations).find(item => item.groupKey === String(groupKey || ''));
+    if (!group || !group.rows.length) throw new Error('예약 정보를 찾지 못했습니다.');
 
-async function adminProcessRoomReservation7355035(index, actionType, option, silent) {
-    const row = adminRoomReservations[Number(index)];
-    if (!row) throw new Error('예약 정보를 찾지 못했습니다.');
     const api = window.__ULIM_PRACTICE_ROOM_FIRESTORE_PRIMARY_7355033__;
-    if (!api || typeof api.processAdminReservationRecord !== 'function') throw new Error('연습실 예약 처리 기능을 준비하지 못했습니다.');
+    if (!api || typeof api.processAdminReservationGroup !== 'function') throw new Error('연습실 예약 처리 기능을 준비하지 못했습니다.');
+
     let resolvedOption = option || null;
-    if (!resolvedOption) resolvedOption = adminCollectRoomMessageOptions(actionType, 1);
+    if (!resolvedOption) resolvedOption = adminCollectRoomMessageOptions(actionType, group.hourCount || 1);
     if (!resolvedOption) return null;
     resolvedOption = Object.assign({}, resolvedOption);
     if (!Array.isArray(resolvedOption.targets)) resolvedOption.targets = adminGetRoomRecipientTypes();
     if (!resolvedOption.targets.length) throw new Error('알림톡 수신 대상을 선택해주세요.');
-    const result = await api.processAdminReservationRecord(row, actionType, resolvedOption, !!silent);
-    if (!silent && result && result.notification && result.notification.ok === false) {
-        alert('예약 상태는 반영되었지만 알림톡 발송 결과를 확인해주세요.');
+
+    const result = await api.processAdminReservationGroup(group.rows, actionType, resolvedOption, !!silent);
+    if (!silent) {
+        const queued = result && result.notification && result.notification.queued === true;
+        alert(`${adminRoomActionLabel(actionType)} 완료\n\n${group.studentName} · ${group.room} · ${group.time}${queued ? '\n알림톡은 발송 대기열에 등록되었습니다.' : ''}`);
     }
-    await adminLoadRoomReservations(false, true);
+    if (!deferReload) {
+        await adminLoadRoomMonth7355036(false);
+        if (adminRoomSelectedDate7355036) adminSelectRoomDate7355036(adminRoomSelectedDate7355036, false);
+    }
     return result;
 }
-window.adminProcessRoomReservation7355035 = adminProcessRoomReservation7355035;
+window.adminProcessRoomReservationGroup7355036 = adminProcessRoomReservationGroup7355036;
 
 function adminRoomActionLabel(actionType) {
     if (actionType === 'unavailable') return '연습실 사용불가';
     if (actionType === 'change') return '장소·시간 변경';
-    return '연습실 사용확인';
+    return '연습실 사용승인';
 }
 
 /* 7.35.5.0: legacy adminSendRoomReservationMessage removed; Firestore primary module owns this function. */
@@ -7711,8 +8119,14 @@ function showAdminPanel(panelId) {
 
     if (panelId === 'adminPanelRoom' && isFull) {
         adminInitDates();
-        if (!adminRoomReservations.length) adminLoadRoomReservations(false, false);
-        else adminRenderRoomReservationTable();
+        if (!adminRoomMonthReservations7355036.length) {
+            Promise.resolve(adminLoadRoomMonth7355036(false)).catch(error => {
+                alert((error && error.message) || '연습실 예약 달력을 불러오지 못했습니다.');
+            });
+        } else {
+            adminRenderRoomCalendar7355036();
+            adminRenderRoomReservationTable();
+        }
     }
 }
 
@@ -9463,22 +9877,68 @@ ${formatHour(hour)}~${formatHour(hour + 1)}
     }
 }
 
+function getConsecutiveMineRoomReservationGroup7355036(id) {
+    const idText = String(id || '').trim();
+    const target = (roomReservations || []).find(r => String(r.id || r.reservationId || '').trim() === idText);
+    if (!target || target.mine !== true) return target ? [target] : [];
+    const date = String(target.date || '');
+    const room = normalizeRoomTextForMatch(target.room);
+    const rows = (roomReservations || [])
+        .filter(r => r.mine === true &&
+            String(r.date || '') === date &&
+            normalizeRoomTextForMatch(r.room) === room &&
+            normalizeStatusForMatch(r.status) !== '취소')
+        .sort((a, b) => Number(normalizeHourForMatch(a.startHour)) - Number(normalizeHourForMatch(b.startHour)));
+    const targetIndex = rows.findIndex(r => String(r.id || r.reservationId || '').trim() === idText);
+    if (targetIndex < 0) return [target];
+
+    let left = targetIndex;
+    let right = targetIndex;
+    while (left > 0) {
+        const prev = rows[left - 1];
+        const cur = rows[left];
+        if (Number(normalizeHourForMatch(prev.endHour)) !== Number(normalizeHourForMatch(cur.startHour))) break;
+        left--;
+    }
+    while (right < rows.length - 1) {
+        const cur = rows[right];
+        const next = rows[right + 1];
+        if (Number(normalizeHourForMatch(cur.endHour)) !== Number(normalizeHourForMatch(next.startHour))) break;
+        right++;
+    }
+    return rows.slice(left, right + 1);
+}
+
 async function cancelRoomReservation(id) {
     const api = window.__ULIM_PRACTICE_ROOM_FIRESTORE_PRIMARY_7355033__;
-    if (!api || typeof api.cancelReservation !== 'function') return alert('연습실 예약 서비스를 준비 중입니다.');
-    if (!confirm('이 예약을 취소할까요?')) return;
+    if (!api || typeof api.cancelReservationGroup !== 'function') return alert('연습실 예약 서비스를 준비 중입니다.');
+
+    const group = getConsecutiveMineRoomReservationGroup7355036(id);
+    if (!group.length) return alert('취소할 예약정보를 찾지 못했습니다.');
+    const ids = group.map(r => String(r.id || r.reservationId || '').trim()).filter(Boolean);
+    const first = group[0];
+    const last = group[group.length - 1];
+    const reservationDate = String(first.date || selectedRoomDate || '').trim();
+    const start = Number(normalizeHourForMatch(first.startHour));
+    const end = Number(normalizeHourForMatch(last.endHour));
+    const timeText = Number.isFinite(start) && Number.isFinite(end)
+        ? `${formatHour(start)}~${formatHour(end)}`
+        : '';
+
+    if (!confirm(group.length > 1
+        ? `${reservationDate}\n${first.room}\n${timeText}\n\n연속 ${group.length}시간 예약을 한 번에 취소할까요?`
+        : '이 예약을 취소할까요?')) return;
+
     if (window.__roomCanceling) return;
     window.__roomCanceling = true;
-    showRoomOverlay('예약 취소중...', 'roomCancelLoading');
+    showRoomOverlay(group.length > 1 ? '연속 예약 취소중...' : '예약 취소중...', 'roomCancelLoading');
     try {
-        const currentReservation = (roomReservations || []).find(r => String(r.id || r.reservationId || '').trim() === String(id || '').trim());
-        const reservationDate = currentReservation ? String(currentReservation.date || '').trim() : String(selectedRoomDate || '').trim();
-        const data = await api.cancelReservation(id, reservationDate);
+        const data = await api.cancelReservationGroup(ids, reservationDate);
         if (!data || data.status !== 'success') throw new Error((data && data.message) || '취소에 실패했습니다.');
-        removeLocalRoomReservationById(id);
+        ids.forEach(removeLocalRoomReservationById);
         renderRoomCalendar();
         if (selectedRoomDate) renderRoomTimeTable(parseRoomDate(selectedRoomDate));
-        alert('예약이 취소되었습니다.');
+        alert(group.length > 1 ? `연속 ${group.length}시간 예약이 한 번에 취소되었습니다.` : '예약이 취소되었습니다.');
         refreshRoomReservationsInBackground(true);
     } catch (e) {
         alert((e && e.message) || '예약 취소 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
@@ -18629,6 +19089,9 @@ ${ruleSummary}`, 'success');
             adminAttendanceRecords = [];
             adminDailyEvalRows = [];
             adminRoomReservations = [];
+            adminRoomMonthReservations7355036 = [];
+            adminRoomSelectedDate7355036 = '';
+            adminRoomSelectedMap = {};
             adminVocalPracticeLogs = [];
             adminClassroomUsageRows = [];
             adminStudentsLoaded = false;
@@ -23324,6 +23787,8 @@ body {
       if (typeof adminNoticeSelectedMap !== 'undefined') adminNoticeSelectedMap = {};
       if (typeof adminNoticeClassStudentCache !== 'undefined') adminNoticeClassStudentCache = {};
       if (typeof adminRoomReservations !== 'undefined') adminRoomReservations = [];
+      if (typeof adminRoomMonthReservations7355036 !== 'undefined') adminRoomMonthReservations7355036 = [];
+      if (typeof adminRoomSelectedDate7355036 !== 'undefined') adminRoomSelectedDate7355036 = '';
       if (typeof adminRoomSelectedMap !== 'undefined') adminRoomSelectedMap = {};
       if (typeof adminClassList !== 'undefined') adminClassList = [];
       if (typeof adminAttendanceRecords !== 'undefined') adminAttendanceRecords = [];
@@ -24711,7 +25176,9 @@ body.full-admin-mode #adminPanelRoom .admin-full-only {
         setTimeout(function () {
           try {
             if (typeof adminInitDates === 'function') adminInitDates();
-            if (typeof adminLoadRoomReservations === 'function') {
+            if (typeof adminLoadRoomMonth7355036 === 'function') {
+              adminLoadRoomMonth7355036(false);
+            } else if (typeof adminLoadRoomReservations === 'function') {
               adminLoadRoomReservations(false, true);
             }
           } catch (error) {
