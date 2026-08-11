@@ -23,12 +23,12 @@
   <link rel="preconnect" href="https://asia-northeast3-ulim-7b09a.cloudfunctions.net" data-ulim-classroom-preconnect="7297">
   <!-- ULIM 7.34.2: safe Firebase-first staff/student directory integration. -->
   <script src="./web/room-classroom-realtime-7.29.18.js?v=20260809.72918"></script>
-  <script src="./web/practice-room-firestore-primary-7.35.5.0.36.js?v=20260811.7355036"></script>
+  <script src="./web/practice-room-firestore-primary-7.35.5.0.37.js?v=20260811.7355037"></script>
   <script src="./web/staff-login-firebase-primary-7.32.8.js?v=20260809.73208"></script>
   <script src="./web/student-login-firebase-direct-7.35.5.0.30.js?v=20260809.7355030r7"></script>
   <script src="./web/student-home-bootstrap-7.35.5.0.31.js?v=20260809.7355031"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260811-7355036-practice-room-admin-calendar-group-fix">
+<meta name="ulim-build" content="20260811-7355037-practice-room-popup-push-alimtalk-fix">
 <script id="ulim-one-time-cache-clean-7355030">
 (function (global) {
   'use strict';
@@ -2692,10 +2692,6 @@ body.ulim-attendance-modal-open73545{overflow:hidden}
         <div id="adminPanelRoom" class="admin-panel">
           <div class="admin-card admin-full-only">
             <h3 style="margin-top:0;">연습실 예약 관리</h3>
-            <p style="font-size:14px; color:#666; line-height:1.6; margin-top:-4px;">
-              학생 페이지 연습실 예약과 같은 월간 달력입니다. 날짜를 누르면 그날 <b>누가 · 어느 연습실을 · 몇 시부터 몇 시까지</b> 예약했는지 한 번에 확인할 수 있습니다.<br>
-              같은 학생이 같은 연습실을 연속으로 예약한 시간은 하나의 예약 묶음으로 표시되며, 사용승인·사용불가·장소·시간 변경도 한 번에 처리합니다.
-            </p>
 
             <div class="room-month-nav">
               <button type="button" onclick="adminChangeRoomMonth7355036(-1)">⬅ 이전달</button>
@@ -2708,54 +2704,18 @@ body.ulim-attendance-modal-open73545{overflow:hidden}
             </button>
 
             <div id="adminRoomCalendar7355036" class="room-calendar"></div>
-            <div class="admin-room-calendar-note7355036">
-              날짜를 누르면 해당 날짜 예약 상세창이 열립니다. 달력의 예약 건수는 1시간 예약칸 기준이며, 상세창에서는 연속 예약을 묶어서 표시합니다.
-            </div>
-
             <input type="date" id="adminRoomDate" style="display:none;" aria-hidden="true">
-
-            <div class="admin-grid">
-              <div class="admin-field">
-                <label for="adminRoomKeyword">학생명 / 전화뒷자리 / 연습실 검색</label>
-                <input type="text" id="adminRoomKeyword" placeholder="예: 홍길동, 5875, 4강의실" oninput="adminRenderRoomReservationTable(); adminRenderRoomDayDetail7355036();">
-              </div>
-              <div class="admin-field">
-                <label for="adminRoomStatusFilter">상태 필터</label>
-                <select id="adminRoomStatusFilter" onchange="adminRenderRoomReservationTable(); adminRenderRoomDayDetail7355036();">
-                  <option value="">전체</option>
-                  <option value="예약">예약</option>
-                  <option value="확정">확정</option>
-                  <option value="사용완료">사용완료</option>
-                  <option value="사용불가">사용불가</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="admin-recipient-row admin-full-only" style="margin:8px 0 12px;">
-              <b style="width:100%; color:#111827;">수신 대상</b>
-              <label><input type="checkbox" id="roomRecipientStudent" checked> 학생</label>
-              <label><input type="checkbox" id="roomRecipientParent"> 학부모</label>
-              <div class="admin-permission-note" style="width:100%;">예약 처리 자체는 즉시 완료되고, 알림톡은 발송 대기열에서 백그라운드 처리됩니다.</div>
-            </div>
-
-            <div class="admin-btn-row">
-              <button type="button" class="admin-btn gray" onclick="adminSelectAllRoomReservations(true)">전체선택</button>
-              <button type="button" class="admin-btn gray" onclick="adminSelectAllRoomReservations(false)">전체해제</button>
-              <button type="button" class="admin-btn" onclick="adminSendSelectedRoomReservationMessages('confirm')">선택 사용승인</button>
-              <button type="button" class="admin-btn red" onclick="adminSendSelectedRoomReservationMessages('unavailable')">선택 사용불가</button>
-              <button type="button" class="admin-btn orange" onclick="adminSendSelectedRoomReservationMessages('change')">선택 장소·시간 변경</button>
-            </div>
-
-            <div class="admin-summary" style="margin-top:10px;">
-              <span class="admin-chip" id="adminRoomSummary">날짜를 선택해주세요</span>
-            </div>
-            <div id="adminRoomReservationTableWrap" class="admin-table-wrap" style="margin-top:12px;"></div>
 
             <div id="adminRoomDayModal7355036" class="admin-room-day-modal7355036" role="dialog" aria-modal="true" aria-labelledby="adminRoomSelectedDateTitle7355036">
               <div class="admin-room-day-dialog7355036" onclick="event.stopPropagation()">
                 <div class="admin-room-day-head7355036">
                   <h3 id="adminRoomSelectedDateTitle7355036" style="margin:0;">예약 상세</h3>
                   <button type="button" class="admin-room-day-close7355036" onclick="adminCloseRoomDayModal7355036()">닫기</button>
+                </div>
+                <div class="admin-recipient-row admin-full-only" style="margin:4px 0 14px;">
+                  <b style="width:100%; color:#111827;">알림톡 발송 대상</b>
+                  <label><input type="checkbox" id="roomRecipientStudent" checked> 학생</label>
+                  <label><input type="checkbox" id="roomRecipientParent"> 학부모</label>
                 </div>
                 <div id="adminRoomDayDetail7355036"></div>
               </div>
@@ -6052,6 +6012,11 @@ function openAdminPage() {
         if (loginBox) loginBox.style.display = 'none';
         if (dashboard) dashboard.style.display = 'block';
         applyAdminPermissions();
+        if (typeof adminConsumeRoomDeepLink7355037 === 'function') {
+            window.setTimeout(() => {
+                Promise.resolve(adminConsumeRoomDeepLink7355037()).catch(() => {});
+            }, 0);
+        }
         let legacyToken = '';
         try { legacyToken = String(adminToken || window.adminToken || '').trim(); } catch (ignore) {}
         if (legacyToken && typeof adminLoadInitialData === 'function') adminLoadInitialData();
@@ -7891,6 +7856,68 @@ window.adminLoadRoomReservations = adminLoadRoomReservations;
 window.adminLoadRoomMonth7355036 = adminLoadRoomMonth7355036;
 window.adminChangeRoomMonth7355036 = adminChangeRoomMonth7355036;
 window.adminCloseRoomDayModal7355036 = adminCloseRoomDayModal7355036;
+
+function adminReadRoomDeepLink7355037() {
+    try {
+        const url = new URL(window.location.href);
+        if (url.searchParams.get('open') !== 'admin-room') return null;
+        const date = String(url.searchParams.get('date') || '').trim();
+        return {
+            date: /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : '',
+            reservationId: String(url.searchParams.get('reservationId') || '').trim()
+        };
+    } catch (_ignore) {
+        return null;
+    }
+}
+
+function adminClearRoomDeepLink7355037() {
+    try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('open');
+        url.searchParams.delete('date');
+        url.searchParams.delete('reservationId');
+        history.replaceState(history.state, '', url.pathname + (url.search ? url.search : '') + url.hash);
+    } catch (_ignore) {}
+}
+
+async function adminConsumeRoomDeepLink7355037() {
+    const link = adminReadRoomDeepLink7355037();
+    if (!link) return false;
+    if (!adminHasStaffSession() || !adminIsFullAdmin()) return false;
+
+    if (link.date) {
+        const parts = link.date.split('-').map(Number);
+        adminRoomCurrentDate7355036 = new Date(parts[0], parts[1] - 1, 1);
+        adminRoomSelectedDate7355036 = link.date;
+    }
+
+    showAdminPanel('adminPanelRoom');
+    await adminLoadRoomMonth7355036(false);
+    if (link.date) adminSelectRoomDate7355036(link.date, true);
+    adminClearRoomDeepLink7355037();
+    return true;
+}
+window.adminConsumeRoomDeepLink7355037 = adminConsumeRoomDeepLink7355037;
+
+function adminBootRoomDeepLink7355037() {
+    if (!adminReadRoomDeepLink7355037()) return;
+    if (!adminHasStaffSession()) return;
+    openAdminPage();
+}
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => window.setTimeout(adminBootRoomDeepLink7355037, 0), { once:true });
+} else {
+    window.setTimeout(adminBootRoomDeepLink7355037, 0);
+}
+window.addEventListener('pageshow', () => window.setTimeout(adminBootRoomDeepLink7355037, 0));
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', event => {
+        const data = event && event.data || {};
+        if (data.type !== 'ULIM_OPEN_ADMIN_ROOM' || !data.url) return;
+        window.location.assign(String(data.url));
+    });
+}
 
 function adminSelectAllRoomReservations(checked) {
     adminVisibleRoomReservationGroups7355036().forEach(group => {
