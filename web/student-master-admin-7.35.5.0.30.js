@@ -1,3 +1,4 @@
+/* ULIM_STUDENT_UI_CONSOLIDATION_7355038 */
 (function (global) {
   'use strict';
   if (global.__ULIM_STUDENT_MANAGEMENT_V2_7355020__) {
@@ -213,7 +214,8 @@
     if (!wrap) return;
     if (!classes.length) { wrap.innerHTML = '<div style="font-size:12px;color:#64748b;">등록된 반이 없습니다.</div>'; return; }
     wrap.innerHTML = classes.map(function (item) {
-      return `<div class="ulim-class-catalog-row"><span>${escapeHtml(item.className)}</span><button type="button" class="admin-btn" onclick="ulimClassCatalogRetire7354('${escapeHtml(item.classId)}')">사용중지</button></div>`;
+      const group=text(item.audienceGroup);
+      return `<div class="ulim-class-catalog-row"><span class="ulim-class-catalog-name7355038">${escapeHtml(item.className)}</span><select class="ulim-class-audience7355038" id="ulimClassAudienceExisting7355038_${escapeHtml(item.classId)}"><option value="adult"${group==='adult'?' selected':''}>성인반</option><option value="youth"${group==='youth'?' selected':''}>청소년반</option></select><button type="button" class="admin-btn" onclick="ulimClassAudienceSave7355038('${escapeHtml(item.classId)}')">구분 저장</button><button type="button" class="admin-btn" onclick="ulimClassCatalogRetire7354('${escapeHtml(item.classId)}')">사용중지</button></div>`;
     }).join('');
   }
   function statusLabel(value) {
@@ -268,7 +270,7 @@
       #${STATUS_ID}{display:none;white-space:pre-line;padding:11px 13px;border-radius:10px;margin:10px 0;font-size:13px;font-weight:700;position:relative;z-index:4}#${STATUS_ID}[data-state="ok"]{display:block;background:#ecfdf5;color:#166534}#${STATUS_ID}[data-state="warn"]{display:block;background:#fffbeb;color:#92400e}#${STATUS_ID}[data-state="error"]{display:block;background:#fff1f2;color:#9f1239}#${STATUS_ID}[data-state="loading"]{display:block;background:#eff6ff;color:#1d4ed8}
       #${CARD_ID} .ulim-create-box{margin:14px 0;padding:14px;border:1px solid #bfdbfe;background:#f8fbff;border-radius:14px}#${CARD_ID} .ulim-create-grid{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:10px}#${CARD_ID} .wide{grid-column:span 2}
       #${CARD_ID} .ulim-create-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap;margin-top:12px}#${CARD_ID} .ulim-password-preview{margin-right:auto;padding:8px 10px;border-radius:9px;background:#fff7ed;color:#9a3412;font-size:12px;font-weight:800}
-      #${CARD_ID} .ulim-time-slots{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:7px}#${CARD_ID} .ulim-time-slot{display:flex;align-items:center;gap:5px;padding:7px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;font-size:11px;cursor:pointer}#${CARD_ID} .ulim-time-slot input{width:auto}#${CARD_ID} .ulim-class-catalog-list{display:grid;gap:6px;max-height:280px;overflow:auto}#${CARD_ID} .ulim-class-catalog-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid #e2e8f0;border-radius:9px;background:#fff;font-size:12px}#${CARD_ID} .ulim-class-catalog-row span{font-weight:700}
+      #${CARD_ID} .ulim-time-slots{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:7px}#${CARD_ID} .ulim-time-slot{display:flex;align-items:center;gap:5px;padding:7px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;font-size:11px;cursor:pointer}#${CARD_ID} .ulim-time-slot input{width:auto}#${CARD_ID} .ulim-class-catalog-list{display:grid;gap:6px;max-height:280px;overflow:auto}#${CARD_ID} .ulim-class-catalog-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid #e2e8f0;border-radius:9px;background:#fff;font-size:12px}#${CARD_ID} .ulim-class-catalog-row span{font-weight:700}#${CARD_ID} .ulim-class-catalog-name7355038{flex:1 1 420px;min-width:240px}#${CARD_ID} .ulim-class-audience7355038{width:150px;flex:0 0 150px}#${CARD_ID} .ulim-audience-meta7355038{margin-top:4px;font-size:10px;color:#64748b;white-space:nowrap}
       #${CARD_ID} .ulim-toolbar{display:grid;grid-template-columns:minmax(220px,1fr) 160px auto;gap:10px;align-items:end;margin:14px 0}#${CARD_ID} .ulim-toolbar-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
       #${CARD_ID} .ulim-table-wrap{overflow:auto;border:1px solid #e2e8f0;border-radius:12px}#${CARD_ID} table{width:100%;min-width:1940px;border-collapse:collapse;background:#fff}#${CARD_ID} th{position:sticky;top:0;z-index:2;background:#f8fafc;color:#334155;font-size:12px;padding:9px;border-bottom:1px solid #cbd5e1;white-space:nowrap}#${CARD_ID} td{padding:7px;border-bottom:1px solid #edf2f7;vertical-align:top}#${CARD_ID} td input,#${CARD_ID} td select,#${CARD_ID} .ulim-create-grid input,#${CARD_ID} .ulim-create-grid select{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:8px;padding:8px;background:#fff;font-size:12px}#${CARD_ID} td select[multiple]{min-width:260px}
       #${CARD_ID} tr.ulim-dirty-row{background:#fffbea}#${CARD_ID} tr.ulim-saving-row{opacity:.58}#${CARD_ID} .ulim-operation-note{font-size:10px;color:#64748b;line-height:1.45;margin-top:4px;max-width:180px}#${CARD_ID} .ulim-student-uid{margin-top:4px;font-size:10px;color:#94a3b8}#${CARD_ID} .ulim-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;max-width:310px}#${CARD_ID} .ulim-student-class-tag{display:inline-flex;padding:3px 7px;border-radius:999px;background:#dbeafe;color:#1e40af;font-size:10px;font-weight:800}#${CARD_ID} .ulim-student-class-tag.legacy{background:#fef3c7;color:#92400e}#${CARD_ID} .ulim-student-empty-tag{font-size:10px;color:#94a3b8}
@@ -292,30 +294,13 @@
       <h3 style="margin-top:0;">학생정보 관리</h3>
       <div class="ulim-student-help"><b>앱 운영 원본은 학생명단입니다.</b> 학생정보와 수강반을 저장하면 출석부와 태블릿에 즉시 반영됩니다. Google Sheets는 매일 오전 6시 백업으로만 갱신됩니다.</div>
       <div id="${STATUS_ID}"></div>
-      <details class="ulim-create-box" open><summary style="cursor:pointer;font-weight:900;color:#1e3a8a;">학생 추가</summary>
-        <div id="${CREATE_FORM_ID}" class="ulim-create-grid" style="margin-top:12px;">
-          <div class="admin-field"><label>학생명 *</label><input id="ulimNewStudentName7352" autocomplete="off"></div>
-          <div class="admin-field"><label>생년월일</label><input id="ulimNewStudentBirth7352" type="date"></div>
-          <div class="admin-field"><label>학생 전화번호 *</label><input id="ulimNewStudentPhone7352" inputmode="tel" autocomplete="off"></div>
-          <div class="admin-field"><label>보호자 전화번호</label><input id="ulimNewStudentParent7352" inputmode="tel" autocomplete="off"></div>
-          <div class="admin-field"><label>재원상태</label><select id="ulimNewStudentStatus7352"><option value="active">재원</option><option value="leave">휴원</option><option value="withdrawn">퇴원</option></select></div>
-          <div class="admin-field"><label>수강 시작일</label><input id="ulimNewStudentStart7352" type="date" value="${today()}"></div>
-          <div class="admin-field"><label>등록 구분</label><select id="ulimNewStudentType7352"><option value="new">신규</option><option value="existing">기존등록</option></select></div>
-          <div class="admin-field"><label>관리자 메모</label><input id="ulimNewStudentMemo7352"></div>
-          <div class="admin-field wide"><label>수강반 (복수선택)</label><select id="ulimNewStudentClasses7352" multiple size="6"></select><div id="ulimNewStudentTags7352" class="ulim-tags"></div></div>
-          <div class="admin-field wide"><label>담당강사 자동 연결</label><input id="ulimNewStudentInstructors7352" readonly placeholder="수강반을 선택하면 표시됩니다."></div>
-        </div>
-        <div class="ulim-create-actions"><span id="ulimNewStudentPassword7352" class="ulim-password-preview">최초 비밀번호: 출결번호 4자리</span><button type="button" class="admin-btn blue" onclick="ulimStudentManagementCreate7352()">학생 추가</button></div>
-      </details>
-      <details class="ulim-create-box" open><summary style="cursor:pointer;font-weight:900;color:#0f766e;">학생 로그인 계정</summary>
-        <div style="margin:12px 0;padding:11px 13px;border-radius:10px;background:#f0fdfa;color:#115e59;font-size:12px;line-height:1.6;"><b>학생 로그인은 Firebase Auth가 직접 처리합니다.</b> 아이디는 학생명이며 최초 비밀번호는 현재 학생명단의 출결번호 4자리입니다. 전체동기화는 기존 학생 계정을 일괄 생성·갱신하며 기존 UID를 그대로 유지합니다. 이후 학생이 비밀번호를 변경하면 출결번호를 수정해도 개인 비밀번호는 유지됩니다.</div>
-        <div class="ulim-create-actions"></div>
-      </details>
+      
       <details class="ulim-create-box"><summary style="cursor:pointer;font-weight:900;color:#7c3aed;">운영 반 목록 관리</summary>
         <div style="margin:12px 0;padding:11px 13px;border-radius:10px;background:#f5f3ff;color:#5b21b6;font-size:12px;line-height:1.55;"><b>강의실은 반에 고정 저장하지 않습니다.</b> 당일 강의실 사용일지의 날짜·시간·담당강사로 출석부·태블릿·알림톡에 반영됩니다.</div>
         <div class="ulim-create-grid" style="margin-top:12px;">
           <div class="admin-field"><label>담당강사 *</label><select id="ulimClassInstructor7354"></select></div>
           <div class="admin-field wide"><label>반명 *</label><input id="ulimClassBaseName7354" placeholder="목요일 연기기초"></div>
+          <div class="admin-field"><label>반 구분</label><select id="ulimClassAudience7355038"><option value="">자동(반명 기준)</option><option value="adult">성인반</option><option value="youth">청소년반</option></select></div>
           <div class="admin-field wide"><label>수업시간 (복수·연속선택)</label><div id="ulimClassTimeSlots7354" class="ulim-time-slots">${timeSlotsHtml()}</div></div>
           <div class="admin-field wide"><label>생성될 반명</label><input id="ulimClassPreview7354" readonly></div>
           <div class="admin-field wide"><label>현재 사용 중인 반</label><div id="ulimClassCatalogList7354" class="ulim-class-catalog-list"></div></div>
@@ -376,6 +361,7 @@
     const student = raw || {};
     return {
       studentUid: text(student.studentUid), name: text(student.name), birthDate: text(student.birthDate),
+      audienceGroup: text(student.audienceGroup), audienceGroupAuto: text(student.audienceGroupAuto), audienceGroupOverride: text(student.audienceGroupOverride), audienceGroupSource: text(student.audienceGroupSource),
       studentPhone: text(student.studentPhone), parentPhone: text(student.parentPhone), attendanceNo: text(student.attendanceNo),
       enrollmentStatus: text(student.enrollmentStatus) || 'active', registrationCancelled: student.registrationCancelled === true,
       initialRegisteredDate: text(student.initialRegisteredDate), privacyConsent: student.privacyConsent === true,
@@ -430,6 +416,7 @@
       changeAttendanceNo: text(document.getElementById(key + '_attendance_no') && document.getElementById(key + '_attendance_no').value).replace(/\D/g, '') !== text(current.attendanceNo).replace(/\D/g, ''),
       name: text(document.getElementById(key + '_name') && document.getElementById(key + '_name').value),
       birthDate: text(document.getElementById(key + '_birth') && document.getElementById(key + '_birth').value),
+      audienceGroupOverride: text(document.getElementById(key + '_audience') && document.getElementById(key + '_audience').value),
       studentPhone: text(document.getElementById(key + '_phone') && document.getElementById(key + '_phone').value),
       parentPhone: text(document.getElementById(key + '_parent') && document.getElementById(key + '_parent').value),
       enrollmentStatus: text(document.getElementById(key + '_status') && document.getElementById(key + '_status').value) || 'active',
@@ -440,6 +427,12 @@
       privacyConsent: current.privacyConsent === true, portraitConsent: current.portraitConsent === true,
       preserveLegacyClassNames: unique(current.legacyUnmappedClassNames)
     };
+  }
+  function audienceLabel7355038(value) { return value === 'adult' ? '성인' : value === 'youth' ? '청소년' : '미분류'; }
+  function audienceSourceLabel7355038(student) { return student && student.audienceGroupSource === 'manual' ? '관리자' : (student && student.audienceGroupSource === 'auto_birth_year' ? '자동' : '자동'); }
+  function audienceSelectHtml7355038(student, key, disabled) {
+    const override=text(student && student.audienceGroupOverride);
+    return '<select id="'+key+'_audience" data-row-key="'+key+'"'+(disabled?' disabled':'')+'><option value=""'+(!override?' selected':'')+'>자동</option><option value="adult"'+(override==='adult'?' selected':'')+'>성인</option><option value="youth"'+(override==='youth'?' selected':'')+'>청소년</option></select><div class="ulim-audience-meta7355038">현재 '+audienceLabel7355038(text(student&&student.audienceGroup))+' · '+audienceSourceLabel7355038(student)+'</div>';
   }
   function render() {
     const wrap = document.getElementById(TABLE_ID); if (!wrap) return; rowKeyMap.clear();
@@ -452,6 +445,7 @@
       return `<tr${rowClass ? ' class="' + rowClass + '"' : ''} data-row-key="${key}" data-student-uid="${escapeHtml(student.studentUid)}">
         <td>${statusSelect}</td><td><input id="${key}_attendance_no" data-row-key="${key}" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" value="${escapeHtml(student.attendanceNo)}"><div class="ulim-student-uid">UID ${escapeHtml(maskedUid(student.studentUid))}</div></td>
         <td><input id="${key}_name" data-row-key="${key}" value="${escapeHtml(student.name)}"></td><td><input id="${key}_birth" type="date" data-row-key="${key}" value="${escapeHtml(student.birthDate)}"></td>
+        <td>${audienceSelectHtml7355038(student,key,cancelled)}</td>
         <td><input id="${key}_phone" data-row-key="${key}" value="${escapeHtml(student.studentPhone)}"></td><td><input id="${key}_parent" data-row-key="${key}" value="${escapeHtml(student.parentPhone)}"></td>
         <td><input id="${key}_start" type="date" data-row-key="${key}" value="${escapeHtml(student.initialRegisteredDate)}"></td>
         <td><select id="${key}_operation" data-row-key="${key}"${cancelled ? ' disabled' : ''}><option value="existing">일반 수정</option><option value="new">신규 추가</option><option value="class_move">반이동</option><option value="makeup">보강</option></select><div id="${key}_operation_note" class="ulim-operation-note">수강반을 수정하면 출석부·태블릿에 즉시 반영됩니다.</div></td>
@@ -461,7 +455,7 @@
         <td>${studentSyncHtml(student)}</td><td><div class="ulim-row-actions"><button type="button" class="admin-btn blue" onclick="ulimStudentManagementSaveRow7352('${key}')">저장</button>${student.retryable ? `<button type="button" class="admin-btn" onclick="ulimStudentManagementRetry7352('${key}')">로그인 재시도</button>` : ''}<button type="button" class="admin-btn" onclick="ulimStudentFirebasePasswordReset7355030('${key}')">비밀번호 초기화</button><button type="button" class="admin-btn" onclick="ulimStudentManagementRetire7352('${key}','withdraw')">퇴원</button><button type="button" class="admin-btn red" onclick="ulimStudentManagementRetire7352('${key}','cancel')">등록취소</button></div></td>
       </tr>`;
     }).join('');
-    wrap.innerHTML = `<table><thead><tr><th>재원상태</th><th>출결번호/UID</th><th>학생명</th><th>생년월일</th><th>학생전화</th><th>보호자전화</th><th>최초 등록일</th><th>처리구분</th><th>처리일</th><th>수강반</th><th>담당강사</th><th>관리자 메모</th><th>저장상태</th><th>관리</th></tr></thead><tbody>${rows}</tbody></table>`; updateSummary();
+    wrap.innerHTML = `<table><thead><tr><th>재원상태</th><th>출결번호/UID</th><th>학생명</th><th>생년월일</th><th>구분</th><th>학생전화</th><th>보호자전화</th><th>최초 등록일</th><th>처리구분</th><th>처리일</th><th>수강반</th><th>담당강사</th><th>관리자 메모</th><th>저장상태</th><th>관리</th></tr></thead><tbody>${rows}</tbody></table>`; updateSummary();
   }
   function updateRowClassPreview(key) {
     const ids = selectedValues(document.getElementById(key + '_classes'));
@@ -510,7 +504,7 @@
     loadingPromise = (async function () {
       setStatus('학생정보와 운영 반 목록을 불러오는 중...', 'loading');
       const result = await call('listStudentManagementAdmin7352', { requestId: requestId('student-list-7355016') });
-      classes = (Array.isArray(result.classes) ? result.classes : []).map(function (item) { return { classId:text(item.classId), className:text(item.className), instructorUid:text(item.instructorUid), instructorName:text(item.instructorName), selectable:item.selectable!==false, baseName:text(item.baseName), weekday:Number(item.weekday), startTime:text(item.startTime), endTime:text(item.endTime), timeSlots:Array.isArray(item.timeSlots)?item.timeSlots.map(Number):[] }; }).filter(function (item) { return item.classId && item.className; });
+      classes = (Array.isArray(result.classes) ? result.classes : []).map(function (item) { return { classId:text(item.classId), className:text(item.className), instructorUid:text(item.instructorUid), instructorName:text(item.instructorName), audienceGroup:text(item.audienceGroup), selectable:item.selectable!==false, baseName:text(item.baseName), weekday:Number(item.weekday), startTime:text(item.startTime), endTime:text(item.endTime), timeSlots:Array.isArray(item.timeSlots)?item.timeSlots.map(Number):[] }; }).filter(function (item) { return item.classId && item.className; });
       teachers = (Array.isArray(result.teachers) ? result.teachers : []).map(function (item) { return { instructorUid:text(item.instructorUid), instructorName:text(item.instructorName) }; }).filter(function (item) { return item.instructorUid && item.instructorName; });
       students = (Array.isArray(result.students) ? result.students : []).map(normalizeStudent); filtered = students.slice(); dirtyKeys.clear(); renderCreateClasses(); render(); publishDirectory7355016('student-list-load', { studentCount: students.length, classCount: classes.length });
       const hidden = Number(result.hiddenIncomplete || 0); setStatus('학생 ' + students.length + '명과 운영 반 ' + classes.length + '개를 불러왔습니다.' + (hidden ? '\n정보가 불완전한 문서 ' + hidden + '건은 제외했습니다.' : ''), hidden ? 'warn' : 'ok'); return true;
@@ -521,7 +515,7 @@
     try {
       showLoading('운영 반 목록을 다시 불러오는 중...');
       const result = await call('getStudentClassCatalogAdmin7352', { requestId: requestId('class-list-7355016') });
-      classes = (Array.isArray(result.classes) ? result.classes : []).map(function (item) { return { classId:text(item.classId), className:text(item.className), instructorUid:text(item.instructorUid), instructorName:text(item.instructorName), selectable:item.selectable!==false, baseName:text(item.baseName), weekday:Number(item.weekday), startTime:text(item.startTime), endTime:text(item.endTime), timeSlots:Array.isArray(item.timeSlots)?item.timeSlots.map(Number):[] }; });
+      classes = (Array.isArray(result.classes) ? result.classes : []).map(function (item) { return { classId:text(item.classId), className:text(item.className), instructorUid:text(item.instructorUid), instructorName:text(item.instructorName), audienceGroup:text(item.audienceGroup), selectable:item.selectable!==false, baseName:text(item.baseName), weekday:Number(item.weekday), startTime:text(item.startTime), endTime:text(item.endTime), timeSlots:Array.isArray(item.timeSlots)?item.timeSlots.map(Number):[] }; });
       teachers = (Array.isArray(result.teachers) ? result.teachers : teachers).map(function (item) { return { instructorUid:text(item.instructorUid), instructorName:text(item.instructorName) }; }).filter(function (item) { return item.instructorUid && item.instructorName; });
       renderCreateClasses(); if (!dirtyKeys.size) render(); dispatchClassCatalogChanged7355016('class-catalog-reload', { classCount: classes.length }); setStatus('운영 반 ' + classes.length + '개를 다시 불러왔습니다.', 'ok');
     } catch (error) { setStatus(text(error && error.message) || '반 목록을 불러오지 못했습니다.', 'error'); } finally { hideLoading(); }
@@ -573,7 +567,7 @@
       if (edits.length === 1) result={results:[await call('updateStudentAdmin7352', Object.assign({},edits[0],{requestId:requestId('student-update-7355016')}))]};
       else result=await call('updateStudentsBatchAdmin7352',{edits:edits,requestId:requestId('student-batch-7355016')});
       const results=Array.isArray(result.results)?result.results:[]; const failed=results.filter(function(item){return item.ok===false;}); const succeeded=new Set(results.filter(function(item){return item.ok!==false;}).map(function(item){return text(item.studentUid);}));
-      edits.forEach(function (edit) { if (results.length && !succeeded.has(edit.studentUid)) return; const student=students.find(function(item){return item.studentUid===edit.studentUid;}); if(student){student.attendanceNo=edit.attendanceNo;student.studentNo=edit.attendanceNo;student.name=edit.name;student.birthDate=edit.birthDate;student.studentPhone=edit.studentPhone;student.parentPhone=edit.parentPhone;student.enrollmentStatus=edit.enrollmentStatus;student.initialRegisteredDate=edit.initialRegisteredDate;student.memo=edit.memo;student.selectedClassIds=unique(edit.classIds);student.classNames=selectedClassDetails(edit.classIds).map(function(item){return item.className;}).filter(Boolean);student.instructorNames=selectedClassDetails(edit.classIds).map(function(item){return item.instructorName;}).filter(Boolean);student.sheetSyncState='backup_0600';student.sheetSyncMessage='매일 오전 6시 백업';student.retryable=false;} const key=selectedKeys.find(function(candidate){return (rowKeyMap.get(candidate)||'')===edit.studentUid;}); if(key) dirtyKeys.delete(key); });
+      edits.forEach(function (edit) { if (results.length && !succeeded.has(edit.studentUid)) return; const student=students.find(function(item){return item.studentUid===edit.studentUid;}); if(student){student.attendanceNo=edit.attendanceNo;student.studentNo=edit.attendanceNo;student.name=edit.name;student.birthDate=edit.birthDate;student.audienceGroupOverride=edit.audienceGroupOverride;student.audienceGroup=edit.audienceGroupOverride||student.audienceGroupAuto||'';student.audienceGroupSource=edit.audienceGroupOverride?'manual':(student.audienceGroupAuto?'auto_birth_year':'unclassified');student.studentPhone=edit.studentPhone;student.parentPhone=edit.parentPhone;student.enrollmentStatus=edit.enrollmentStatus;student.initialRegisteredDate=edit.initialRegisteredDate;student.memo=edit.memo;student.selectedClassIds=unique(edit.classIds);student.classNames=selectedClassDetails(edit.classIds).map(function(item){return item.className;}).filter(Boolean);student.instructorNames=selectedClassDetails(edit.classIds).map(function(item){return item.instructorName;}).filter(Boolean);student.sheetSyncState='backup_0600';student.sheetSyncMessage='매일 오전 6시 백업';student.retryable=false;} const key=selectedKeys.find(function(candidate){return (rowKeyMap.get(candidate)||'')===edit.studentUid;}); if(key) dirtyKeys.delete(key); });
       applyFilter(); dispatchRosterChanged7355016('student-updated', { studentUids: edits.map(function(edit){return edit.studentUid;}) });
       if(failed.length) setStatus('저장 완료 후 확인이 필요한 학생이 '+failed.length+'명 있습니다.\n'+failed.slice(0,5).map(function(item){return text(item.message);}).join('\n'),'warn'); else setStatus('학생정보 '+edits.length+'명의 변경사항을 저장했습니다. 출석부·태블릿에 즉시 반영되며 시트는 오전 6시에 백업됩니다.','ok');
     } catch(error){setStatus(text(error&&error.message)||'학생정보를 저장하지 못했습니다.','error');alert(text(error&&error.message)||'학생정보를 저장하지 못했습니다.');}
@@ -641,7 +635,11 @@
     const instructorUid=text(document.getElementById('ulimClassInstructor7354')&&document.getElementById('ulimClassInstructor7354').value); const baseName=text(document.getElementById('ulimClassBaseName7354')&&document.getElementById('ulimClassBaseName7354').value); const hours=selectedClassHours();
     if(!instructorUid)return alert('담당강사를 선택해주세요.'); if(!baseName)return alert('반명을 입력해주세요.'); if(!/(월요일|화요일|수요일|목요일|금요일|토요일|일요일)/.test(baseName))return alert('반명에 수업 요일을 포함해주세요.'); if(!hours.length||!contiguousHours(hours))return alert('수업시간을 연속으로 선택해주세요.');
     const preview=classPreviewText(); if(!confirm(preview+'\n\n이 반을 추가할까요?'))return;
-    try{showLoading('반 목록에 추가하는 중...');const result=await call('saveClassCatalogAdmin7354',{instructorUid:instructorUid,baseName:baseName,hours:hours,requestId:requestId('class-save-7355016')});document.getElementById('ulimClassBaseName7354').value='';document.querySelectorAll('#ulimClassTimeSlots7354 input[type="checkbox"]').forEach(function(input){input.checked=false;});await reloadClasses();setStatus(text(result.message)||'반을 추가했습니다.','ok');}catch(error){setStatus(text(error&&error.message)||'반을 추가하지 못했습니다.','error');alert(text(error&&error.message)||'반을 추가하지 못했습니다.');}finally{hideLoading();}
+    try{showLoading('반 목록에 추가하는 중...');const audienceGroup=text(document.getElementById('ulimClassAudience7355038')&&document.getElementById('ulimClassAudience7355038').value);const result=await call('saveClassCatalogAdmin7354',{instructorUid:instructorUid,baseName:baseName,hours:hours,audienceGroup:audienceGroup,requestId:requestId('class-save-7355016')});if(document.getElementById('ulimClassAudience7355038'))document.getElementById('ulimClassAudience7355038').value='';document.getElementById('ulimClassBaseName7354').value='';document.querySelectorAll('#ulimClassTimeSlots7354 input[type="checkbox"]').forEach(function(input){input.checked=false;});await reloadClasses();setStatus(text(result.message)||'반을 추가했습니다.','ok');}catch(error){setStatus(text(error&&error.message)||'반을 추가하지 못했습니다.','error');alert(text(error&&error.message)||'반을 추가하지 못했습니다.');}finally{hideLoading();}
+  }
+  async function saveClassAudience7355038(classId) {
+    const item=classById(classId); if(!item)return; const select=document.getElementById('ulimClassAudienceExisting7355038_'+classId); const audienceGroup=text(select&&select.value);
+    try{showLoading('반 구분 저장 중...');const result=await call('saveClassAudienceAdmin7355034',{classId:classId,audienceGroup:audienceGroup});item.audienceGroup=text(result.audienceGroup)||audienceGroup;renderClassManagerList7354();setStatus(text(result.message)||'반 구분을 저장했습니다.','ok');}catch(error){setStatus(text(error&&error.message)||'반 구분을 저장하지 못했습니다.','error');alert(text(error&&error.message)||'반 구분을 저장하지 못했습니다.');}finally{hideLoading();}
   }
   async function retireClassCatalog7354(classId) {
     const item=classById(classId); if(!item||!confirm(item.className+'\n\n이 반을 사용중지할까요? 기존 기록은 유지됩니다.'))return;
@@ -700,7 +698,7 @@
   }
   function install() {
     if(installed)return; installed=true; injectStyles(); injectPanel(); bindUi(); installPanelHook();
-    global.ulimStudentManagementLoad7352=load; global.ulimStudentDirectoryGet7355016=function(){return global.__ULIM_STUDENT_DIRECTORY_7355016__ || publishDirectory7355016('snapshot-read',{});}; global.ulimStudentDirectoryEnsure7355016=async function(force){if(force===true || !global.__ULIM_STUDENT_DIRECTORY_7355016__) await load(force===true); return global.__ULIM_STUDENT_DIRECTORY_7355016__ || publishDirectory7355016('snapshot-ensure',{});}; global.ulimStudentDirectoryPatch7355016=patchStudentFromExternal7355016; global.ulimStudentManagementCreate7352=createStudent; global.ulimStudentManagementSaveRow7352=saveRow; global.ulimStudentManagementSaveAll7352=saveAll; global.ulimStudentManagementRetry7352=retry; global.ulimStudentManagementReloadClasses7352=reloadClasses; global.ulimClassCatalogSave7354=saveClassCatalog7354; global.ulimClassCatalogRetire7354=retireClassCatalog7354; global.ulimStudentManagementWindow7352=configureApplicationWindow; global.ulimStudentManagementRetire7352=retire; global.ulimStudentFirebaseAuthProvisionAll7355030=provisionStudentFirebaseAuthAll7355030; global.ulimStudentFirebasePasswordReset7355030=resetStudentFirebasePassword7355030;
+    global.ulimStudentManagementLoad7352=load; global.ulimStudentDirectoryGet7355016=function(){return global.__ULIM_STUDENT_DIRECTORY_7355016__ || publishDirectory7355016('snapshot-read',{});}; global.ulimStudentDirectoryEnsure7355016=async function(force){if(force===true || !global.__ULIM_STUDENT_DIRECTORY_7355016__) await load(force===true); return global.__ULIM_STUDENT_DIRECTORY_7355016__ || publishDirectory7355016('snapshot-ensure',{});}; global.ulimStudentDirectoryPatch7355016=patchStudentFromExternal7355016; global.ulimStudentManagementCreate7352=createStudent; global.ulimStudentManagementSaveRow7352=saveRow; global.ulimStudentManagementSaveAll7352=saveAll; global.ulimStudentManagementRetry7352=retry; global.ulimStudentManagementReloadClasses7352=reloadClasses; global.ulimClassCatalogSave7354=saveClassCatalog7354; global.ulimClassAudienceSave7355038=saveClassAudience7355038; global.ulimClassCatalogRetire7354=retireClassCatalog7354; global.ulimStudentManagementWindow7352=configureApplicationWindow; global.ulimStudentManagementRetire7352=retire; global.ulimStudentFirebaseAuthProvisionAll7355030=provisionStudentFirebaseAuthAll7355030; global.ulimStudentFirebasePasswordReset7355030=resetStudentFirebasePassword7355030;
     global.addEventListener('ulim-firebase-token-invalid',function(){setStatus('로그인 시간이 만료되었습니다. 다시 로그인해주세요.','error');});
   }
 
