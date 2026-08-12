@@ -3,7 +3,8 @@
   if (global.__ULIM_STAFF_ACCOUNT_ADMIN_73436__) return;
   global.__ULIM_STAFF_ACCOUNT_ADMIN_73436__ = true;
 
-  const VERSION = '2026-08-01.734.03.6';
+  const VERSION = '2026-08-12.735.05.0.45-drive-folder-firestore-primary';
+  const DRIVE_FOLDER_FIRESTORE_PRIMARY_7355045 = true;
   let accounts = [];
   let listLoadingPromise = null;
   let sheetSyncPromise = null;
@@ -165,6 +166,7 @@
           <div class="admin-field"><label>로그인 ID</label><input id="ulimStaffNewLoginId7342" autocomplete="off" placeholder="예: kimcs"></div>
           <div class="admin-field"><label>이름</label><input id="ulimStaffNewName7342" placeholder="강사명"></div>
           <div class="admin-field"><label>전화번호</label><input id="ulimStaffNewPhone7342" placeholder="선택 입력"></div>
+          <div class="admin-field"><label>Google Drive 폴더</label><input id="ulimStaffNewDriveFolder7355045" placeholder="폴더 URL 또는 폴더 ID"></div>
           <div class="admin-field"><label>역할</label><select id="ulimStaffNewRole7342"><option value="teacher">강사</option><option value="admin">관리자</option><option value="superAdmin">전체관리자</option></select></div>
           <div class="admin-field"><label>임시 비밀번호</label><input id="ulimStaffNewPassword7342" type="password" autocomplete="new-password" placeholder="6자 이상"></div>
           <div class="admin-field"><label>최초 로그인</label><select id="ulimStaffNewMustChange7342"><option value="true">비밀번호 변경 필요</option><option value="false">변경 없이 사용</option></select></div>
@@ -202,6 +204,7 @@
         <td><input id="${key}_name" value="${escapeHtml(account.name)}" placeholder="${incomplete ? '복구할 이름 입력' : ''}">${incompleteLabel(account)}</td>
         <td><input id="${key}_login" value="${escapeHtml(account.loginId)}" placeholder="${incomplete ? '복구할 로그인 ID 입력' : ''}"><div class="ulim-staff-account-id">UID ${escapeHtml(maskedUid(account.firebaseUid))}</div></td>
         <td><input id="${key}_phone" value="${escapeHtml(account.phone || '')}"></td>
+        <td><input id="${key}_drive" value="${escapeHtml(account.driveFolderId || '')}" placeholder="Drive 폴더 URL/ID" style="min-width:220px"></td>
         <td><select id="${key}_role"><option value="teacher"${account.role === 'teacher' ? ' selected' : ''}>강사</option><option value="admin"${account.role === 'admin' ? ' selected' : ''}>관리자</option><option value="superAdmin"${account.role === 'superAdmin' ? ' selected' : ''}>전체관리자</option></select></td>
         <td><select id="${key}_active"><option value="true"${account.active === true ? ' selected' : ''}>사용</option><option value="false"${account.active !== true ? ' selected' : ''}>중지</option></select></td>
         <td>${credentialLabel(account)}<br><select id="${key}_must" style="margin-top:5px"><option value="false"${account.mustChangePassword !== true ? ' selected' : ''}>변경완료</option><option value="true"${account.mustChangePassword === true ? ' selected' : ''}>임시암호</option></select></td>
@@ -213,7 +216,7 @@
         </div></td>
       </tr>`;
     }).join('');
-    wrap.innerHTML = `<table class="ulim-staff-account-table"><thead><tr><th>이름</th><th>로그인 ID</th><th>전화번호</th><th>역할</th><th>상태</th><th>암호상태</th><th>시트호환</th><th>관리</th></tr></thead><tbody>${rows}</tbody></table>`;
+    wrap.innerHTML = `<table class="ulim-staff-account-table"><thead><tr><th>이름</th><th>로그인 ID</th><th>전화번호</th><th>Google Drive 폴더</th><th>역할</th><th>상태</th><th>암호상태</th><th>시트호환</th><th>관리</th></tr></thead><tbody>${rows}</tbody></table>`;
   }
   function accountFromDoc(doc) {
     const user = doc && typeof doc.data === 'function' ? (doc.data() || {}) : {};
@@ -222,6 +225,7 @@
       loginId: text(user.loginId || user.adminId || user.legacyAdminId),
       name: text(user.name || user.displayName || user.teacherName || user.adminName),
       phone: text(user.phone || user.phoneNumber),
+      driveFolderId: text(user.driveFolderId),
       role: text(user.role) || 'teacher',
       active: user.active === true,
       mustChangePassword: user.mustChangePassword === true,
@@ -382,6 +386,7 @@
     const loginId = text(document.getElementById('ulimStaffNewLoginId7342')?.value);
     const name = text(document.getElementById('ulimStaffNewName7342')?.value);
     const phone = text(document.getElementById('ulimStaffNewPhone7342')?.value);
+    const driveFolderId = text(document.getElementById('ulimStaffNewDriveFolder7355045')?.value);
     const role = text(document.getElementById('ulimStaffNewRole7342')?.value) || 'teacher';
     const password = String(document.getElementById('ulimStaffNewPassword7342')?.value || '');
     const mustChangePassword = text(document.getElementById('ulimStaffNewMustChange7342')?.value) !== 'false';
@@ -389,8 +394,8 @@
     if (!confirm(name + ' 교직원 계정을 생성할까요?')) return;
     try {
       showLoading('교직원 계정 생성 중...');
-      await call('createStaffAccountAdmin', { loginId, name, phone, role, password, mustChangePassword });
-      ['ulimStaffNewLoginId7342','ulimStaffNewName7342','ulimStaffNewPhone7342','ulimStaffNewPassword7342'].forEach(function (id) { const el = document.getElementById(id); if (el) el.value = ''; });
+      await call('createStaffAccountAdmin', { loginId, name, phone, driveFolderId, role, password, mustChangePassword });
+      ['ulimStaffNewLoginId7342','ulimStaffNewName7342','ulimStaffNewPhone7342','ulimStaffNewDriveFolder7355045','ulimStaffNewPassword7342'].forEach(function (id) { const el = document.getElementById(id); if (el) el.value = ''; });
       rowEditDirty = false;
       await refreshFirestoreOnly({ force: true, reason: 'create' });
       alert('교직원 계정이 생성되었습니다.');
@@ -404,6 +409,7 @@
       name: text(document.getElementById(key + '_name')?.value),
       loginId: text(document.getElementById(key + '_login')?.value),
       phone: text(document.getElementById(key + '_phone')?.value),
+      driveFolderId: text(document.getElementById(key + '_drive')?.value),
       role: text(document.getElementById(key + '_role')?.value),
       active: text(document.getElementById(key + '_active')?.value) === 'true',
       mustChangePassword: text(document.getElementById(key + '_must')?.value) === 'true'
