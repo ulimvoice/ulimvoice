@@ -27,9 +27,9 @@
   global.__ULIM_ATTENDANCE_ADMIN_INTEGRATED_735413__ = true;
   global.__ULIM_ATTENDANCE_ADMIN_INTEGRATED_735410__ = true;
   global.__ULIM_ATTENDANCE_DIRECTORY_AUTH_GUARD_735414__ = true;
-  global.ULIM_ATTENDANCE_ADMIN_INTEGRATED_VERSION = '2026-08-13.735.04.34-special-status-final-convergence-7355047A';
+  global.ULIM_ATTENDANCE_ADMIN_INTEGRATED_VERSION = '2026-08-13.735.04.34-registration-event-single-owner-7355048';
 
-  var VERSION = '2026-08-13.735.04.34-special-status-final-convergence-7355047A';
+  var VERSION = '2026-08-13.735.04.34-registration-event-single-owner-7355048';
   var loadSequence = 0;
   var directoryCache = null;
   var directoryLoadedAt = 0;
@@ -1674,9 +1674,9 @@
     var allowDirect = mode === 'makeup' || mode === 'daily_special';
     document.getElementById('ulimAttendanceAddDirectWrap735423').style.display = allowDirect ? 'block' : 'none';
     var hints = {
-      new: '체크한 수업일부터 해당 반에 신규 등록합니다. 월초 신규는 학생이름을 노란색으로, 월중 신규는 발생일을 노란색으로 표시합니다.',
-      class_move: '가장 빠른 체크일을 반이동일로 기록하고 체크한 수업일에만 이 달 출석대상으로 반영합니다. 월초 반이동은 학생이름을 초록색으로 표시합니다.',
-      makeup: '체크한 날짜에만 보강으로 추가하며 출석부 맨 아래에 보라색 학생이름으로 표시합니다.',
+      new: '신규 처리일 이후 첫 실제 수업일에만 특이사항 신규와 노란색 학생이름을 표시합니다.',
+      class_move: '반이동 처리일 이후 새 반의 첫 실제 수업일에만 특이사항 반이동과 보라색 학생이름을 표시합니다.',
+      makeup: '지정한 날짜에만 보강으로 추가하며 초록색 학생이름으로 표시합니다.',
       daily_special: '체크한 날짜에만 일일특강 학생으로 추가합니다.',
       existing: '기존 학생의 현재 수강반 구성을 변경합니다. 신규·반이동 표시는 남기지 않습니다.'
     };
@@ -1928,7 +1928,7 @@
     if (!eligible) return '<button type="button" class="ulim-ledger-empty735423" data-ledger-add="1" title="학생 추가">＋</button>';
     var status = cleanAttendanceStatus7355014(cell.status || cell.attendanceStatus);
     var special = text(cell.specialStatus);
-    var kind = specialKind7355033(special || cell.registrationType);
+    var kind = specialKind7355033(special);
     var specialLabel = specialLabel7355033(special);
     var showDateSpecial = !!specialLabel && !(text(cell.specialDisplayScope) === 'name' && (kind === 'new' || kind === 'class_move'));
     return '<div class="ulim-ledger-cell-actions735423' + (cell && cell.__saving735425 ? ' saving' : '') + '"><button type="button" data-ledger-status="출석" class="ulim-ledger-ox735423 ' + (status === '출석' ? 'on-o' : '') + '">O</button><button type="button" data-ledger-status="결석" class="ulim-ledger-ox735423 ' + (status === '결석' ? 'on-x' : '') + '">X</button><button type="button" data-ledger-detail="1" class="ulim-ledger-more735423" title="당일 메모">⋯</button></div>' + (showDateSpecial ? '<div class="ulim-ledger-special735423' + specialCss7355033(special) + '">' + escapeHtml(specialLabel) + '</div>' : '');
@@ -1940,10 +1940,10 @@
     var eligibleCells = safeSessions.map(function (session) { return cells[session.date] || {}; }).filter(function (cell) { return cell.eligible === true; });
     for (var i = 0; i < eligibleCells.length; i += 1) {
       var cell = eligibleCells[i];
-      var kind = specialKind7355033(cell.specialStatus || cell.registrationType);
+      var kind = specialKind7355033(cell.specialStatus);
       if (text(cell.specialDisplayScope) === 'name' && (kind === 'new' || kind === 'class_move')) return kind === 'new' ? '신규' : '반이동';
     }
-    if (eligibleCells.length && eligibleCells.every(function (cell) { return specialKind7355033(cell.specialStatus || cell.registrationType) === 'makeup'; })) return '보강';
+    if (eligibleCells.length && eligibleCells.every(function (cell) { return specialKind7355033(cell.specialStatus) === 'makeup'; })) return '보강';
     return '';
   }
 
