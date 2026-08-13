@@ -1,4 +1,4 @@
-/* ULIM_STUDENT_UI_CONSOLIDATION_7355038 */
+﻿/* ULIM_STUDENT_UI_CONSOLIDATION_7355038 */
 /* ULIM_R19R7_STUDENT_ADD_FORM_RESTORE_7355040 */
 (function (global) {
   'use strict';
@@ -17,7 +17,7 @@
   // Compatibility marker for 7.35.4.10/7.35.5.0 readiness checks.
   global.__ULIM_STUDENT_MANAGEMENT_V2_735410__ = true;
 
-  const VERSION = '2026-08-13.735.05.0.49-roster-convergence-single-owner';
+  const VERSION = '2026-08-14.735.05.0.51-admin-practice-reset-controls';
   const PANEL_ID = 'adminPanelStudentManagement7352';
   const CARD_ID = 'ulimStudentManagementCard7352';
   const STATUS_ID = 'ulimStudentManagementStatus7352';
@@ -637,15 +637,42 @@
     if (!studentUid) return;
     const no = text(student.attendanceNo).replace(/\D/g, '').slice(-4);
     if (!/^\d{4}$/.test(no)) return alert('출결번호가 4자리가 아닙니다. 출결번호를 먼저 저장해주세요.');
-    if (!confirm(text(student.name) + ' 학생의 로그인 비밀번호를 현재 출결번호 ' + no + '로 초기화할까요?\n다음 로그인 후 학생이 새 비밀번호로 변경할 수 있습니다.')) return;
+    if (!confirm(text(student.name) + ' 학생의 로그인 비밀번호를 현재 출결번호 ' + no + '로 초기화할까요?\n다음 로그인 후 학생이 새 비밀번호로 변경할 수 있습니다.')) return null;
     try {
       showLoading('학생 비밀번호 초기화 중...');
       const result = await call('resetStudentFirebasePasswordAdmin7355030', { studentUid: studentUid });
       setStatus(text(result.message) || '학생 비밀번호를 출결번호로 초기화했습니다.', 'ok');
       await load(true);
+      return result || { ok:true, message:'학생 비밀번호를 출결번호로 초기화했습니다.' };
     } catch (error) {
       setStatus(text(error && error.message) || '학생 비밀번호 초기화에 실패했습니다.', 'error');
       alert(text(error && error.message) || '학생 비밀번호 초기화에 실패했습니다.');
+      return null;
+    } finally { hideLoading(); }
+  }
+
+  async function resetStudentPracticeDaily7355051(key, scope) {
+    if (!isSuperAdmin()) return alert('전체관리자 권한이 필요합니다.');
+    const studentUid = rowKeyMap.get(key) || '';
+    const student = students.find(function(item){ return item.studentUid === studentUid; }) || {};
+    if (!studentUid) return alert('학생정보를 다시 불러와주세요.');
+    const cleanScope = text(scope || 'all');
+    const labels = { vocal:'발성훈련', standard:'표준발음', past:'기출문제', all:'발성훈련·표준발음·기출문제' };
+    const label = labels[cleanScope] || labels.all;
+    if (!confirm(text(student.name) + ' 학생의 ' + label + ' 오늘 사용제한을 초기화할까요?\n기존 연습기록과 장기 진도는 삭제하지 않습니다.')) return null;
+    try {
+      showLoading(label + ' 오늘 사용제한 초기화 중...');
+      const result = await call('resetStudentPracticeDailyLimitsAdmin7355051', {
+        studentUid: studentUid,
+        scopes: cleanScope === 'all' ? ['vocal','standard','past'] : [cleanScope],
+        requestId: requestId('practice-limit-reset-7355051')
+      });
+      setStatus(text(result.message) || (label + ' 오늘 사용제한을 초기화했습니다.'), 'ok');
+      return result || { ok:true, message:label + ' 오늘 사용제한을 초기화했습니다.' };
+    } catch (error) {
+      setStatus(text(error && error.message) || (label + ' 오늘 사용제한 초기화에 실패했습니다.'), 'error');
+      alert(text(error && error.message) || (label + ' 오늘 사용제한 초기화에 실패했습니다.'));
+      return null;
     } finally { hideLoading(); }
   }
 
@@ -720,7 +747,7 @@
   }
   function install() {
     if(installed)return; installed=true; injectStyles(); injectPanel(); bindUi(); installPanelHook();
-    global.ulimStudentManagementLoad7352=load; global.ulimStudentDirectoryGet7355016=function(){return global.__ULIM_STUDENT_DIRECTORY_7355016__ || publishDirectory7355016('snapshot-read',{});}; global.ulimStudentDirectoryEnsure7355016=async function(force){if(force===true || !global.__ULIM_STUDENT_DIRECTORY_7355016__) await load(force===true); return global.__ULIM_STUDENT_DIRECTORY_7355016__ || publishDirectory7355016('snapshot-ensure',{});}; global.ulimStudentDirectoryPatch7355016=patchStudentFromExternal7355016; global.ulimStudentManagementCreate7352=createStudent; global.ulimStudentManagementSaveRow7352=saveRow; global.ulimStudentManagementSaveAll7352=saveAll; global.ulimStudentManagementRetry7352=retry; global.ulimStudentManagementReloadClasses7352=reloadClasses; global.ulimClassCatalogSave7354=saveClassCatalog7354; global.ulimClassAudienceSave7355038=saveClassAudience7355038; global.ulimClassCatalogRetire7354=retireClassCatalog7354; global.ulimStudentManagementWindow7352=configureApplicationWindow; global.ulimStudentManagementRetire7352=retire; global.ulimStudentFirebaseAuthProvisionAll7355030=provisionStudentFirebaseAuthAll7355030; global.ulimStudentFirebasePasswordReset7355030=resetStudentFirebasePassword7355030;
+    global.ulimStudentManagementLoad7352=load; global.ulimStudentDirectoryGet7355016=function(){return global.__ULIM_STUDENT_DIRECTORY_7355016__ || publishDirectory7355016('snapshot-read',{});}; global.ulimStudentDirectoryEnsure7355016=async function(force){if(force===true || !global.__ULIM_STUDENT_DIRECTORY_7355016__) await load(force===true); return global.__ULIM_STUDENT_DIRECTORY_7355016__ || publishDirectory7355016('snapshot-ensure',{});}; global.ulimStudentDirectoryPatch7355016=patchStudentFromExternal7355016; global.ulimStudentManagementCreate7352=createStudent; global.ulimStudentManagementSaveRow7352=saveRow; global.ulimStudentManagementSaveAll7352=saveAll; global.ulimStudentManagementRetry7352=retry; global.ulimStudentManagementReloadClasses7352=reloadClasses; global.ulimClassCatalogSave7354=saveClassCatalog7354; global.ulimClassAudienceSave7355038=saveClassAudience7355038; global.ulimClassCatalogRetire7354=retireClassCatalog7354; global.ulimStudentManagementWindow7352=configureApplicationWindow; global.ulimStudentManagementRetire7352=retire; global.ulimStudentFirebaseAuthProvisionAll7355030=provisionStudentFirebaseAuthAll7355030; global.ulimStudentFirebasePasswordReset7355030=resetStudentFirebasePassword7355030; global.ulimStudentPracticeDailyReset7355051=resetStudentPracticeDaily7355051;
     global.addEventListener('ulim-firebase-token-invalid',function(){setStatus('로그인 시간이 만료되었습니다. 다시 로그인해주세요.','error');});
   }
 

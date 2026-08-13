@@ -1,11 +1,11 @@
-(function (global) {
+﻿(function (global) {
   'use strict';
 
   if (global.__ULIM_STUDENT_MANAGEMENT_UI_735410__) return;
   global.__ULIM_STUDENT_MANAGEMENT_UI_735410__ = true;
   global.__ULIM_STUDENT_MANAGEMENT_UI_R19R6_7355039__ = true;
 
-  const VERSION = '2026-08-11.735.04.10-r19r6-modal-column-compat';
+  const VERSION = '2026-08-14.735.04.10-r26-admin-reset-controls';
   const CARD_ID = 'ulimStudentManagementCard7352';
   const TABLE_ID = 'ulimStudentManagementTable7352';
   const SUMMARY_ID = 'ulimStudentManagementSummary7352';
@@ -167,6 +167,12 @@
       .ulim-sm-detail-grid73546 input,.ulim-sm-detail-grid73546 textarea{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:10px;padding:10px 11px;background:#fff;font-size:14px}
       .ulim-sm-detail-grid73546 textarea{min-height:120px;resize:vertical}
       .ulim-sm-detail-wide73546{grid-column:1/-1}
+      .ulim-sm-account-reset7355051{grid-column:1/-1;border:1px solid #dbe4ef;border-radius:14px;padding:14px;background:#f8fafc}
+      .ulim-sm-account-reset-title7355051{font-size:14px;font-weight:900;color:#0f172a;margin-bottom:4px}
+      .ulim-sm-account-reset-help7355051{font-size:12px;color:#64748b;margin-bottom:10px;line-height:1.45}
+      .ulim-sm-account-reset-grid7355051{display:grid;grid-template-columns:repeat(2,minmax(170px,1fr));gap:8px}
+      .ulim-sm-account-reset-grid7355051 .admin-btn{min-height:42px}
+      .ulim-sm-account-reset-status7355051{min-height:20px;margin-top:10px;font-size:12px;font-weight:800;color:#475569;white-space:pre-wrap}
       .ulim-sm-manage-actions73546{display:grid;grid-template-columns:repeat(2,minmax(160px,1fr));gap:10px}
       .ulim-sm-manage-actions73546 .admin-btn{min-height:46px}
       #ulimStudentMessageModalBody73546>.admin-card{box-shadow:none!important;border:0!important;padding:0!important;margin:0!important}
@@ -179,7 +185,7 @@
         .ulim-sm-primary73546 .admin-btn{flex:1 1 calc(50% - 8px)}
         .ulim-sm-list-header73546{align-items:flex-start;flex-direction:column}
         .ulim-sm-list-actions73546{width:100%}.ulim-sm-list-actions73546 .admin-btn{flex:1}
-        .ulim-sm-detail-grid73546,.ulim-sm-settings-grid73546,.ulim-sm-manage-actions73546{grid-template-columns:1fr}
+        .ulim-sm-detail-grid73546,.ulim-sm-settings-grid73546,.ulim-sm-manage-actions73546,.ulim-sm-account-reset-grid7355051{grid-template-columns:1fr}
         .ulim-sm-modal-panel73546{width:98vw;max-height:94vh}
       }
     `;
@@ -575,6 +581,18 @@
         <div><label>학부모 전화번호</label><input id="ulimDetailParent73546" inputmode="tel" value="${escapeHtml(parent && parent.value)}"></div>
         <div><label>등록일</label><input id="ulimDetailStart73546" type="date" value="${escapeHtml(start && start.value)}"></div>
         <div class="ulim-sm-detail-wide73546"><label>관리자 메모 · 학생 개인 특이사항</label><textarea id="ulimDetailMemo73546" placeholder="학생 개인의 특이사항이나 관리자 확인 내용을 입력하세요.">${escapeHtml(memo && memo.value)}</textarea></div>
+        <div class="ulim-sm-account-reset7355051">
+          <div class="ulim-sm-account-reset-title7355051">계정 · 오늘 사용제한 초기화</div>
+          <div class="ulim-sm-account-reset-help7355051">초기화해도 기존 연습기록과 장기 진도는 삭제되지 않습니다.</div>
+          <div class="ulim-sm-account-reset-grid7355051">
+            <button type="button" class="admin-btn red" data-ulim-student-reset7355051="password">비밀번호 초기화</button>
+            <button type="button" class="admin-btn" data-ulim-student-reset7355051="vocal">발성훈련 오늘 제한 초기화</button>
+            <button type="button" class="admin-btn" data-ulim-student-reset7355051="standard">표준발음 오늘 제한 초기화</button>
+            <button type="button" class="admin-btn" data-ulim-student-reset7355051="past">기출문제 오늘 제한 초기화</button>
+            <button type="button" class="admin-btn orange" data-ulim-student-reset7355051="all">전체 오늘 제한 초기화</button>
+          </div>
+          <div id="ulimDetailResetStatus7355051" class="ulim-sm-account-reset-status7355051"></div>
+        </div>
       </div>`;
     openModal('ulimStudentDetailModal73546');
   }
@@ -714,6 +732,32 @@
     openModal('ulimStudentMessageModal73546');
   }
 
+  async function runStudentReset7355051(action) {
+    const statusEl = document.getElementById('ulimDetailResetStatus7355051');
+    const setStatus7355051 = function(message, error) {
+      if (!statusEl) return;
+      statusEl.textContent = text(message);
+      statusEl.style.color = error ? '#b91c1c' : '#166534';
+    };
+    if (!currentDetailKey) return setStatus7355051('학생정보를 다시 불러와주세요.', true);
+    try {
+      if (action === 'password') {
+        if (typeof global.ulimStudentFirebasePasswordReset7355030 !== 'function') return setStatus7355051('비밀번호 초기화 기능을 준비하지 못했습니다.', true);
+        setStatus7355051('비밀번호 초기화를 확인하고 있습니다.', false);
+        const result = await global.ulimStudentFirebasePasswordReset7355030(currentDetailKey);
+        if (result && result.ok !== false) setStatus7355051(text(result.message) || '비밀번호를 현재 출결번호로 초기화했습니다.', false);
+        else if (result === null) setStatus7355051('', false);
+        return;
+      }
+      if (typeof global.ulimStudentPracticeDailyReset7355051 !== 'function') return setStatus7355051('오늘 사용제한 초기화 기능을 준비하지 못했습니다.', true);
+      const result = await global.ulimStudentPracticeDailyReset7355051(currentDetailKey, action || 'all');
+      if (result && result.ok !== false) setStatus7355051(text(result.message) || '오늘 사용제한을 초기화했습니다.', false);
+      else if (result === null) setStatus7355051('', false);
+    } catch (error) {
+      setStatus7355051(text(error && error.message) || '초기화하지 못했습니다.', true);
+    }
+  }
+
   function runSettingAction(action) {
     closeModal('ulimStudentSettingsModal73546');
     const map = {
@@ -750,6 +794,11 @@
       const closeButton = event.target.closest('[data-ulim-close-modal]');
       if (closeButton) {
         closeModal(closeButton.getAttribute('data-ulim-close-modal'));
+        return;
+      }
+      const resetButton7355051 = event.target.closest('[data-ulim-student-reset7355051]');
+      if (resetButton7355051) {
+        runStudentReset7355051(resetButton7355051.getAttribute('data-ulim-student-reset7355051'));
         return;
       }
       const settingButton = event.target.closest('[data-ulim-setting-action]');
