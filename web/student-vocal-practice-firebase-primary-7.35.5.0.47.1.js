@@ -5,7 +5,7 @@
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_R21A_7355042__ = true;
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_7355041__ = true;
 
-  const VERSION = '2026-08-14.735.05.0.50C-r25.3-drive-response-class-link';
+  const VERSION = '2026-08-14.735.05.0.50D-r25.4-server-finalize-discovery';
   const DRIVE_FOLDER_FIRESTORE_PRIMARY_7355045 = true;
   const DRIVE_RESUMABLE_DIRECT_7355047 = true;
   const CUTOVER_DATE = '2026-08-12';
@@ -577,6 +577,23 @@
     }
   }
 
+  async function readDriveMetadata7355050D(response, timeoutMs) {
+    const ms = Math.max(500, Number(timeoutMs || 1800));
+    try {
+      const result = await Promise.race([
+        response.text().then(function(body){
+          const raw = text(body);
+          if (!raw) return {};
+          try { return JSON.parse(raw); } catch (_ignore) { return {}; }
+        }),
+        new Promise(function(resolve){ setTimeout(function(){ resolve({ __ulimBodyTimeout:true }); }, ms); })
+      ]);
+      return result && result.__ulimBodyTimeout ? {} : (result || {});
+    } catch (_ignore2) {
+      return {};
+    }
+  }
+
   async function probeDriveOffset7355047(sessionUrl, total) {
     const response = await fetchDriveWithTimeout7355050C(sessionUrl, {
       method:'PUT',
@@ -588,7 +605,7 @@
       return { complete:false, offset:next == null ? 0 : next };
     }
     if (response.ok) {
-      const metadata = await response.json().catch(function(){ return {}; });
+      const metadata = await readDriveMetadata7355050D(response, 1800);
       return { complete:true, offset:total, metadata:metadata };
     }
     if (response.status === 404) throw new Error('녹음 업로드 연결이 만료되었습니다. 다시 시도해주세요.');
@@ -639,7 +656,7 @@
         }
         recoveries = 0;
       } else if (response.ok) {
-        metadata = await response.json().catch(function(){ return {}; });
+        metadata = await readDriveMetadata7355050D(response, 1800);
         offset = total;
       } else if (response.status >= 500 || response.status === 429) {
         if (recoveries >= 3) throw new Error('녹음 파일 전송 실패 (' + response.status + ')');
@@ -659,14 +676,14 @@
       } catch (_ignore) {}
     }
     const fileId = text(metadata && metadata.id);
-    if (!fileId) throw new Error('녹음 파일 저장 결과를 확인하지 못했습니다.');
     return {
       fileId:fileId,
       folderId:text(session.folderId),
       instructorUid:text(session.instructorUid),
       instructor:text(session.instructor),
       webViewLink:text(metadata && metadata.webViewLink),
-      fileName:text(metadata && metadata.name || session.fileName)
+      fileName:text(metadata && metadata.name || session.fileName),
+      discoveryRequired:!fileId
     };
   }
   async function uploadVocalDriveResumable7355047(begin, blob) {
@@ -761,7 +778,7 @@
 
     let coreValue;
     try {
-      if (typeof showLoading === 'function') showLoading('녹음 파일 확인 및 링크를 만드는 중입니다...');
+      if (typeof showLoading === 'function') showLoading('Drive 파일을 서버에서 확인하고 링크를 만드는 중입니다...');
       const corePromise = call('finalizeStudentVocalPractice7355041', {
         recordId:begin.recordId, date:date, sentenceId:text(currentTrainObj.id), cycleKey:text(currentTrainObj.cycleKey),
         sentence:text(currentTrainObj.text), originalSentence:text(currentTrainObj.text), standardPronunciation:text(currentTrainObj.pron),
