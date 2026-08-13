@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 
 
 <html lang="ko">
@@ -3639,10 +3639,54 @@ function trainPrev(){
         renderTrain();
     }
 }
-function trainNext(){
-    if(step<6) {
+let vocalStep6UploadInFlight7355050B = false;
+
+async function trainNext(){
+    if (step < 6) {
         step++;
         renderTrain();
+        return;
+    }
+
+    if (step !== 6 || !currentTrainObj) return;
+
+    if (isRecording) {
+        return alert('녹음을 먼저 종료해주세요.');
+    }
+
+    if (!lastRecordedBlob || !Number(lastRecordedBlob.size || 0)) {
+        return alert('최종녹음을 먼저 완료해주세요.');
+    }
+
+    if (vocalStep6UploadInFlight7355050B) return;
+
+    const btnNext = document.getElementById('btn_next');
+    vocalStep6UploadInFlight7355050B = true;
+
+    if (btnNext) {
+        btnNext.disabled = true;
+        btnNext.textContent = '업로드 중...';
+    }
+
+    try {
+        const result = await completeTraining();
+
+        if (result && result.ok === true) {
+            if (btnNext) {
+                btnNext.disabled = true;
+                btnNext.textContent = '완료 ✓';
+            }
+            return result;
+        }
+
+        if (btnNext) {
+            btnNext.disabled = false;
+            btnNext.textContent = '업로드 ➡';
+        }
+
+        return result;
+    } finally {
+        vocalStep6UploadInFlight7355050B = false;
     }
 }
 
@@ -3655,7 +3699,7 @@ function renderTrain(){
     const btnNext = document.getElementById("btn_next");
 
     const T=["","STEP1 모음을 호흡으로","STEP2 모음을 소리로","STEP3 자음과 함께 호흡으로 읽기","STEP4 자음과 함께 소리내어 읽기","STEP5 자연스럽게 호흡으로 읽기", "STEP6 최종녹음 및 업로드"];
-    const D=["","모음 입모양 신경쓰며 호흡으로 한글자씩 읽기","모음 입모양 신경쓰며 소리내어 한글자씩 읽기","자음과 함께 입모양을 신경쓰며 한글자씩 호흡으로 읽기","자음과 함께 입모양을 신경쓰며 한글자씩 소리내어 읽기","자연스럽게 한문장을 한 호흡으로 소리내어 읽기","한 문장을 일정한 호흡과 소리로 녹음한 뒤 파일을 업로드합니다."];
+    const D=["","모음 입모양 신경쓰며 호흡으로 한글자씩 읽기","모음 입모양 신경쓰며 소리내어 한글자씩 읽기","자음과 함께 입모양을 신경쓰며 한글자씩 호흡으로 읽기","자음과 함께 입모양을 신경쓰며 한글자씩 소리내어 읽기","자연스럽게 한문장을 한 호흡으로 소리내어 읽기","한 문장을 일정한 호흡과 소리로 녹음한 뒤 다음 버튼을 누르면 자동으로 업로드됩니다."];
 
     if (!currentTrainObj) {
         step = 0;
@@ -3678,7 +3722,15 @@ function renderTrain(){
          <div class='train-main-text'>${showText}</div>`;
 
     btnPrev.disabled = (step === 1);
-    btnNext.disabled = (step === 7);
+
+    if (step === 6) {
+        const hasFinalRecording7355050B = !!(lastRecordedBlob && Number(lastRecordedBlob.size || 0) > 0);
+        btnNext.disabled = !hasFinalRecording7355050B || vocalStep6UploadInFlight7355050B;
+        btnNext.textContent = vocalStep6UploadInFlight7355050B ? '업로드 중...' : '업로드 ➡';
+    } else {
+        btnNext.disabled = false;
+        btnNext.textContent = '다음 ➡';
+    }
 
     const recBox = document.getElementById("recordBox");
     const micBtn = document.getElementById("micBtn");
@@ -3686,12 +3738,12 @@ function renderTrain(){
     const aiSection = document.getElementById("aiSection");
     const recSection = document.getElementById("recSection");
 
-    btnComplete.style.display = (step === 6) ? 'flex' : 'none';
+    if (btnComplete) btnComplete.style.display = 'none';
 
     if(step === 6) {
         recBox.style.display = 'block';
         micBtn.textContent = '🎤';
-        recStatus.textContent = "최종 녹음을 완료한 뒤 파일 업로드를 눌러주세요.";
+        recStatus.textContent = lastRecordedBlob && Number(lastRecordedBlob.size || 0) > 0 ? "녹음 완료. 다음 버튼을 누르면 자동 업로드됩니다." : "최종 녹음을 완료해주세요.";
         aiSection.style.display = 'none';
         recSection.style.display = 'block';
         document.getElementById("resultBox").style.display = 'none';
@@ -4475,7 +4527,15 @@ async function toggleRecord() {
 
             audioChunks = [];
             recognitionResult = '';
+            lastRecordedBlob = null;
             window.trainingFinalAiResult = null;
+
+            const nextButton7355050B = document.getElementById('btn_next');
+            if (nextButton7355050B) {
+                nextButton7355050B.disabled = true;
+                nextButton7355050B.textContent = '녹음 중...';
+            }
+
             mediaRecorder.start();
             startTime = Date.now();
             isRecording = true;
@@ -4492,6 +4552,24 @@ async function toggleRecord() {
             mediaRecorder.addEventListener("dataavailable", e => { if (e.data && e.data.size) audioChunks.push(e.data); });
             mediaRecorder.addEventListener("stop", async () => {
                 const audioBlob = new Blob(audioChunks, { type: getActualRecorderMimeType_(mediaRecorder, options, 'audio/mp4') });
+
+                if (!audioBlob || Number(audioBlob.size || 0) <= 0) {
+                    lastRecordedBlob = null;
+                    stream.getTracks().forEach(track => track.stop());
+
+                    const nextButton7355050B = document.getElementById('btn_next');
+                    if (nextButton7355050B) {
+                        nextButton7355050B.disabled = true;
+                        nextButton7355050B.textContent = '업로드 ➡';
+                    }
+
+                    const recStatus7355050B = document.getElementById('recStatus');
+                    if (recStatus7355050B) recStatus7355050B.textContent = '녹음 파일을 만들지 못했습니다. 다시 녹음해주세요.';
+
+                    alert('녹음 파일을 만들지 못했습니다. 마이크 권한을 확인한 뒤 다시 녹음해주세요.');
+                    return;
+                }
+
                 lastRecordedBlob = audioBlob;
                 const audioUrl = URL.createObjectURL(audioBlob);
                 const audio = document.getElementById('myAudio');
@@ -4506,7 +4584,14 @@ async function toggleRecord() {
                 stream.getTracks().forEach(track => track.stop());
                 window.trainingFinalAiResult = null;
                 recognitionResult = '';
-                document.getElementById('recStatus').textContent = '녹음 완료. 파일 업로드를 눌러주세요.';
+                document.getElementById('recStatus').textContent = '녹음 완료. 다음 버튼을 누르면 자동 업로드됩니다.';
+
+                const nextButton7355050B = document.getElementById('btn_next');
+                if (nextButton7355050B) {
+                    nextButton7355050B.disabled = false;
+                    nextButton7355050B.textContent = '업로드 ➡';
+                }
+
                 const el = document.getElementById('sttResult');
                 if (el) el.textContent = '';
                 const b = document.getElementById('accBadge');
@@ -24055,7 +24140,8 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 <!-- ULIM R20: vocalization Firestore-primary authority; GAS remains media/history compatibility only. -->
 <script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260813.73550500"></script>
 <script id="ulim-vocal-primary-bind-7355041">
-window.__ULIM_VOCAL_PRIMARY_BUILD_7355041__='20260813-7355050-r25-vocal-reliability';
+window.__ULIM_VOCAL_PRIMARY_BUILD_7355041__='20260814-7355050b-r25.2-step6-next-upload';
+window.__ULIM_VOCAL_STEP6_NEXT_UPLOAD_BUILD_7355050B__='20260814-7355050b';
 window.__ULIM_PRACTICE_INTELLIGENCE_BUILD_7355042__='20260813-7355050-r25-vocal-reliability';
 try { window.fetchServerTrainingSentence_ = fetchServerTrainingSentence_; } catch(_e) {}
 try { window.trainNew = trainNew; } catch(_e) {}
