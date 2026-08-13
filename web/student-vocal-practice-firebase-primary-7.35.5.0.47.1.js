@@ -5,7 +5,7 @@
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_R21A_7355042__ = true;
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_7355041__ = true;
 
-  const VERSION = '2026-08-12.735.05.0.47.1-r23a-resumable-recovery';
+  const VERSION = '2026-08-13.735.05.0.50-r25-vocal-reliability-convergence';
   const DRIVE_FOLDER_FIRESTORE_PRIMARY_7355045 = true;
   const DRIVE_RESUMABLE_DIRECT_7355047 = true;
   const CUTOVER_DATE = '2026-08-12';
@@ -54,6 +54,7 @@
   function callableError(error, fallback) {
     const raw = text(error && error.message);
     if (/already-exists/i.test(text(error && error.code)) || /오늘은 연습을 완료했습니다/.test(raw)) return '오늘은 연습을 완료했습니다.';
+    if (/failed-precondition/i.test(text(error && error.code)) && raw) return raw;
     if (!raw || /internal|deadline-exceeded|unavailable/i.test(text(error && error.code))) return fallback || '연습정보 연결이 지연되었습니다. 잠시 후 다시 시도해주세요.';
     return raw;
   }
@@ -118,12 +119,12 @@
 
   async function getToday(options) {
     options = options || {};
-    try { return await call('getStudentVocalPracticeToday7355041', { date: options.date || kstDateKey() }); }
+    try { return await call('getStudentVocalPracticeToday7355041', { date: options.date || kstDateKey(), reroll: options.reroll === true }); }
     catch (error) { throw new Error(callableError(error, '오늘의 발성훈련 정보를 불러오지 못했습니다.')); }
   }
   async function getTrainingSentence(options) {
     options = options || {};
-    const state = await getToday({ date: options.date || kstDateKey() });
+    const state = await getToday({ date: options.date || kstDateKey(), reroll: options.reroll === true });
     if (state.completed) return { ok:true, status:'completed', completed:true, message:'오늘은 연습을 완료했습니다.', date:state.date, dailyLimit:state.dailyLimit };
     const raw = sentenceById(state.sentenceId);
     if (!raw) throw new Error('오늘 배정된 발성훈련 문장을 100문장 데이터에서 찾지 못했습니다.');
@@ -138,7 +139,10 @@
     if (calendar) calendar.style.display = 'none';
     try { if (typeof showLoading === 'function') showLoading('오늘의 발성훈련 문장을 불러오는 중입니다...'); } catch (_ignore) {}
     try {
-      const item = await getTrainingSentence({ forceRefresh:true });
+      const today = kstDateKey();
+      const currentDate = text(global.currentTrainObj && global.currentTrainObj.firebasePracticeDate || (typeof currentTrainObj !== 'undefined' && currentTrainObj && currentTrainObj.firebasePracticeDate) || '');
+      const reroll = !!currentDate && currentDate === today;
+      const item = await getTrainingSentence({ forceRefresh:true, reroll:reroll });
       if (item.status === 'completed') { alert(item.message || '오늘은 연습을 완료했습니다.'); return null; }
       if (typeof buildTrainingObjectFromSentence_ !== 'function') throw new Error('발성훈련 화면을 준비하지 못했습니다.');
       currentTrainObj = buildTrainingObjectFromSentence_(item);

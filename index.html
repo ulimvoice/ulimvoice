@@ -69,7 +69,7 @@
 
 
 <script src="appdata/etude/data.js"></script>
-<script src="appdata/vocalization/data.js"></script>
+<script src="appdata/vocalization/data.js?v=20260813.73550500"></script>
 <script src="appdata/past_questions/data.js"></script>
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js" defer></script>
 <link rel="manifest" href="./manifest-index.json">
@@ -3546,7 +3546,7 @@ function buildTrainingObjectFromSentence_(item) {
             rules = result.rules || [];
         }
     } catch (e) {
-        console.warn('표준발음 변환 실패, 원문으로 대체:', e);
+        // 운영 화면에서는 변환 실패를 콘솔에 출력하지 않고 원문으로 대체합니다.
     }
     return {
         id: String((item && item.id) || ('LOCAL_' + Date.now())),
@@ -3603,19 +3603,19 @@ async function safeSetTrainingProAudio_(audioUrl) {
     try {
         const res = await fetch(url, { method: "GET", cache: "no-store" });
         if (!res || !res.ok) {
-            console.warn("[ULIM vocal audio] 프로 예시 음성 파일 없음:", url);
+            // 예시 파일이 없으면 조용히 비활성화합니다.
             resetTrainingProAudioUi_("예시 없음");
             return;
         }
     } catch (e) {
-        console.warn("[ULIM vocal audio] 프로 예시 음성 확인 실패:", e);
+        // 예시 음성 확인 실패는 운영 화면에서 조용히 비활성화합니다.
         resetTrainingProAudioUi_("예시 없음");
         return;
     }
 
     proAudio.style.display = "block";
     proAudio.onerror = function() {
-        console.warn("[ULIM vocal audio] 프로 예시 음성 로드 실패:", url);
+        // 예시 음성 로드 실패는 운영 화면에서 조용히 비활성화합니다.
         resetTrainingProAudioUi_("예시 없음");
     };
     proAudio.onloadedmetadata = function() {
@@ -24053,10 +24053,10 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 
 
 <!-- ULIM R20: vocalization Firestore-primary authority; GAS remains media/history compatibility only. -->
-<script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260812.73550471"></script>
+<script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260813.73550500"></script>
 <script id="ulim-vocal-primary-bind-7355041">
-window.__ULIM_VOCAL_PRIMARY_BUILD_7355041__='20260812-7355043-r21a-replacement-ctc-gop-vocal';
-window.__ULIM_PRACTICE_INTELLIGENCE_BUILD_7355042__='20260812-7355043-r21a-replacement-ctc-gop-vocal';
+window.__ULIM_VOCAL_PRIMARY_BUILD_7355041__='20260813-7355050-r25-vocal-reliability';
+window.__ULIM_PRACTICE_INTELLIGENCE_BUILD_7355042__='20260813-7355050-r25-vocal-reliability';
 try { window.fetchServerTrainingSentence_ = fetchServerTrainingSentence_; } catch(_e) {}
 try { window.trainNew = trainNew; } catch(_e) {}
 try { window.completeTraining = completeTraining; } catch(_e) {}
