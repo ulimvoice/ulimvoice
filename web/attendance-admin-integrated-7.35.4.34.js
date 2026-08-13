@@ -27,9 +27,9 @@
   global.__ULIM_ATTENDANCE_ADMIN_INTEGRATED_735413__ = true;
   global.__ULIM_ATTENDANCE_ADMIN_INTEGRATED_735410__ = true;
   global.__ULIM_ATTENDANCE_DIRECTORY_AUTH_GUARD_735414__ = true;
-  global.ULIM_ATTENDANCE_ADMIN_INTEGRATED_VERSION = '2026-08-11.735.04.34-staff-identity-roster-convergence';
+  global.ULIM_ATTENDANCE_ADMIN_INTEGRATED_VERSION = '2026-08-13.735.04.34-special-status-final-convergence-7355047A';
 
-  var VERSION = '2026-08-11.735.04.34-staff-identity-roster-convergence';
+  var VERSION = '2026-08-13.735.04.34-special-status-final-convergence-7355047A';
   var loadSequence = 0;
   var directoryCache = null;
   var directoryLoadedAt = 0;
@@ -432,20 +432,18 @@
   }
 
   function attendanceSpecialStatus7355014(record) {
+    // specialStatus is the server-owned display value. registrationType is persistent
+    // membership metadata and must not make 신규/반이동 reappear on later sessions.
     var raw = [
       record && record.specialStatus,
       record && record.specialType,
-      record && record.registrationType,
       record && record.kind,
-      record && record.colorStatus,
-      record && record.enrollmentStatus,
-      record && record.studentStatus
+      record && record.colorStatus
     ].map(text).filter(Boolean).join(' ');
-    var found = [];
-    ['보강','신규','반이동','휴원','일일특강'].forEach(function (word) {
-      if (raw.indexOf(word) >= 0 && found.indexOf(word) < 0) found.push(word);
-    });
-    return found.join(' / ');
+    var kind = specialKind7355033(raw);
+    if (kind) return specialLabel7355033(kind);
+    if (raw.indexOf('휴원') >= 0) return '휴원';
+    return '';
   }
 
   function specialKind7355033(value) {
@@ -472,10 +470,12 @@
 
   function attendancePersistedSpecial735431(record) {
     var direct = text(record && (record.specialStatus || record.specialType || record.kind));
-    if (specialKind7355033(direct) === 'existing') return '';
-    if (direct) return direct;
-    var registrationType = text(record && record.registrationType);
-    return specialKind7355033(registrationType) === 'existing' ? '' : registrationType;
+    var kind = specialKind7355033(direct);
+    // 신규/반이동은 studentEnrollments에서 매 조회 시 계산하므로 attendance 문서에
+    // 다시 저장하지 않습니다. 보강/일일특강만 명시적 세션 특이사항으로 보존합니다.
+    if (kind === 'new' || kind === 'class_move' || kind === 'existing') return '';
+    if (kind === 'makeup' || kind === 'daily_special') return specialLabel7355033(kind);
+    return direct;
   }
 
   function attendanceNameSpecial7355033(record) {
@@ -988,8 +988,8 @@
       '#adminAttendanceTableWrap .ulim-attendance-student-link735410:hover{color:#2563eb;}',
       '#adminAttendanceTableWrap .ulim-att-student-name-wrap735421{display:inline-flex;align-items:center;gap:7px;min-width:0;padding:3px 7px;border-radius:7px;}',
       '.ulim-special-new-735430{background:#fef3c7!important;color:#92400e!important;border-color:#fde68a!important;}',
-      '.ulim-special-class-move-735430{background:#dcfce7!important;color:#166534!important;border-color:#86efac!important;}',
-      '.ulim-special-makeup-735430{background:#f3e8ff!important;color:#7e22ce!important;border-color:#d8b4fe!important;}',
+      '.ulim-special-class-move-735430{background:#f3e8ff!important;color:#7e22ce!important;border-color:#d8b4fe!important;}',
+      '.ulim-special-makeup-735430{background:#dcfce7!important;color:#166534!important;border-color:#86efac!important;}',
       '.ulim-special-daily-special-735430{background:#dbeafe!important;color:#1d4ed8!important;border-color:#93c5fd!important;}',
       '.ulim-att-student-settings735421{width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;color:#334155;font-size:14px;line-height:1;cursor:pointer;padding:0;flex:0 0 auto;}',
       '.ulim-att-student-settings735421:hover{background:#dbeafe;border-color:#93c5fd;color:#1d4ed8;}',
@@ -2843,9 +2843,9 @@
     document.head.appendChild(style);
   }
   function install() {
-    global.__ULIM_ATTENDANCE_SINGLE_OWNER_7355016__ = 'attendance-admin-integrated-7.35.4.33';
-    global.__ULIM_ATTENDANCE_SINGLE_OWNER_7355015__ = 'attendance-admin-integrated-7.35.4.33';
-    global.__ULIM_ATTENDANCE_SINGLE_OWNER_7355014__ = 'attendance-admin-integrated-7.35.4.33';
+    global.__ULIM_ATTENDANCE_SINGLE_OWNER_7355016__ = 'attendance-admin-integrated-7.35.4.34';
+    global.__ULIM_ATTENDANCE_SINGLE_OWNER_7355015__ = 'attendance-admin-integrated-7.35.4.34';
+    global.__ULIM_ATTENDANCE_SINGLE_OWNER_7355014__ = 'attendance-admin-integrated-7.35.4.34';
     global.__ULIM_ATTENDANCE_NO_AUTO_REFRESH_7355016__ = true;
     global.__ULIM_ATTENDANCE_NO_AUTO_REFRESH_7355015__ = true;
     global.__ULIM_ATTENDANCE_NO_AUTO_REFRESH_7355014__ = true;
