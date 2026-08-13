@@ -27,9 +27,9 @@
   global.__ULIM_ATTENDANCE_ADMIN_INTEGRATED_735413__ = true;
   global.__ULIM_ATTENDANCE_ADMIN_INTEGRATED_735410__ = true;
   global.__ULIM_ATTENDANCE_DIRECTORY_AUTH_GUARD_735414__ = true;
-  global.ULIM_ATTENDANCE_ADMIN_INTEGRATED_VERSION = '2026-08-13.735.04.34-registration-event-single-owner-7355048';
+  global.ULIM_ATTENDANCE_ADMIN_INTEGRATED_VERSION = '2026-08-13.735.04.34-roster-convergence-single-owner-7355049';
 
-  var VERSION = '2026-08-13.735.04.34-registration-event-single-owner-7355048';
+  var VERSION = '2026-08-13.735.04.34-roster-convergence-single-owner-7355049';
   var loadSequence = 0;
   var directoryCache = null;
   var directoryLoadedAt = 0;
@@ -806,7 +806,7 @@
       var data = await loadFromFirebase(context);
 
       if (sequence !== loadSequence || contextKey(attendanceContext()) !== key) return { stale: true };
-      if (text(data && data.source) !== 'firestore_canonical_roster_7355016') {
+      if (text(data && data.source) !== 'firestore_canonical_roster_7355049') {
         throw new Error('최신 학생명단 출석부 서버가 아직 반영되지 않았습니다. 이전 명단은 표시하지 않습니다.');
       }
       var records = Array.isArray(data && data.records) ? data.records : [];
@@ -2683,17 +2683,37 @@
     var modal = ensureAllClassesModal735410();
     modal.style.display = 'block';
     modal.style.pointerEvents = 'auto';
-    if (allClassesState735410.ledger) {
+    if (allClassesState735410.ledger && !allClassesState735410.refreshAvailable) {
       renderAllClassesBoardLocal735410();
       updateAllClassesRefreshButton735426(false);
     } else {
-      loadAllClassesData735410(false, 'open-initial').catch(function () {});
+      loadAllClassesData735410(allClassesState735410.refreshAvailable === true, 'open-or-stale').catch(function () {});
     }
+  }
+  function invalidateWholeLedger7355049() {
+    var modal = document.getElementById('ulimAllClassesAttendanceModal735410');
+    if (modal && modal.style.display === 'block') {
+      markAllClassesRefreshAvailable735426();
+      return false;
+    }
+    allClassesState735410.ledger = null;
+    allClassesState735410.lastLoadedAt = 0;
+    allClassesState735410.refreshAvailable = false;
+    return true;
   }
   function scheduleRealtimeAttendanceRefresh735423(detail) {
     if(allClassesState735410.actionInFlight)return;
+    var revisionReason7355049 = normalize(detail && detail.reason);
+    if (revisionReason7355049.indexOf('student_change') >= 0 || revisionReason7355049.indexOf('enrollment_change') >= 0 || revisionReason7355049.indexOf('course_application') >= 0) {
+      attendanceAddDirectory735410 = null;
+      directoryCache = null;
+      directoryLoadedAt = 0;
+      allClassesState735410.directory = null;
+    }
     clearTimeout(allClassesState735410.reloadTimer);allClassesState735410.reloadTimer=setTimeout(function(){
-      var modal=document.getElementById('ulimAllClassesAttendanceModal735410');if(modal&&modal.style.display==='block'){markAllClassesRefreshAvailable735426();return;}
+      var modal=document.getElementById('ulimAllClassesAttendanceModal735410');
+      if(modal&&modal.style.display==='block'){markAllClassesRefreshAvailable735426();return;}
+      invalidateWholeLedger7355049();
       if(attendancePanelActive7355016()){
         if(attendanceDraftDirty7355014){attendanceRealtimePending735423=true;return;}
         var selected=text(document.getElementById('adminAttendanceClass')&&document.getElementById('adminAttendanceClass').value);if(selected&&selected!=='전체반'){attendanceRealtimePending735423=false;safeLoadAttendanceSnapshot(false);}
@@ -2797,13 +2817,16 @@
     global.__ULIM_ATTENDANCE_STUDENT_EVENTS_7355016__ = true;
     global.addEventListener('ulim-student-directory-updated', function () {
       syncSharedDirectoryIntoAttendance7355027(false);
+      invalidateWholeLedger7355049();
     });
     global.addEventListener('ulim-class-catalog-updated', function () {
       syncSharedDirectoryIntoAttendance7355027(false);
+      invalidateWholeLedger7355049();
       reloadEffectiveAttendanceClasses7355027();
     });
     global.addEventListener('ulim-student-roster-updated', function () {
       syncSharedDirectoryIntoAttendance7355027(true);
+      invalidateWholeLedger7355049();
     });
   }
 

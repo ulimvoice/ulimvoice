@@ -17,7 +17,7 @@
   // Compatibility marker for 7.35.4.10/7.35.5.0 readiness checks.
   global.__ULIM_STUDENT_MANAGEMENT_V2_735410__ = true;
 
-  const VERSION = '2026-08-09.735.05.0.30-student-firebase-direct-auth';
+  const VERSION = '2026-08-13.735.05.0.49-roster-convergence-single-owner';
   const PANEL_ID = 'adminPanelStudentManagement7352';
   const CARD_ID = 'ulimStudentManagementCard7352';
   const STATUS_ID = 'ulimStudentManagementStatus7352';
@@ -423,9 +423,11 @@
   function rowData(key) {
     const uid = rowKeyMap.get(key) || '';
     const current = students.find(function (student) { return student.studentUid === uid; }) || {};
-    const classIds = selectedValues(document.getElementById(key + '_classes'));
+    let classIds = selectedValues(document.getElementById(key + '_classes'));
     const originalClassIds = unique(current.selectedClassIds);
     const registrationType = text(document.getElementById(key + '_operation') && document.getElementById(key + '_operation').value) || 'existing';
+    // "신규 추가"는 membership 추가 전용입니다. 기존 반을 실수로 해제하지 않습니다.
+    if (registrationType === 'new') classIds = unique(originalClassIds.concat(classIds));
     return {
       studentUid: uid,
       attendanceNo: text(document.getElementById(key + '_attendance_no') && document.getElementById(key + '_attendance_no').value).replace(/\D/g, ''),
@@ -464,7 +466,7 @@
         <td>${audienceSelectHtml7355038(student,key,cancelled)}</td>
         <td><input id="${key}_phone" data-row-key="${key}" value="${escapeHtml(student.studentPhone)}"></td><td><input id="${key}_parent" data-row-key="${key}" value="${escapeHtml(student.parentPhone)}"></td>
         <td><input id="${key}_start" type="date" data-row-key="${key}" value="${escapeHtml(student.initialRegisteredDate)}"></td>
-        <td><select id="${key}_operation" data-row-key="${key}"${cancelled ? ' disabled' : ''}><option value="existing">일반 수정</option><option value="new">신규 추가</option><option value="class_move">반이동</option><option value="makeup">보강</option></select><div id="${key}_operation_note" class="ulim-operation-note">수강반을 수정하면 출석부·태블릿에 즉시 반영됩니다.</div></td>
+        <td><select id="${key}_operation" data-row-key="${key}"${cancelled ? ' disabled' : ''}><option value="existing">일반 수정</option><option value="new">신규 추가</option><option value="class_move">반이동</option></select><div id="${key}_operation_note" class="ulim-operation-note">수강반을 수정하면 출석부·태블릿에 즉시 반영됩니다.</div></td>
         <td><input id="${key}_operation_date" type="date" data-row-key="${key}"${cancelled ? ' disabled' : ''}></td>
         <td><select id="${key}_classes" data-row-key="${key}" multiple size="4"${cancelled ? ' disabled' : ''}>${classOptionsHtml(student.selectedClassIds)}</select><div id="${key}_tags" class="ulim-tags">${tagsHtml(student.selectedClassIds, student.legacyUnmappedClassNames)}</div></td>
         <td><input id="${key}_instructors" value="${escapeHtml(teacherNames)}" readonly></td><td><input id="${key}_memo" data-row-key="${key}" value="${escapeHtml(student.memo)}"></td>
@@ -483,8 +485,12 @@
   function handleOperationModeChange(key) {
     const modeEl = document.getElementById(key + '_operation'); const dateEl = document.getElementById(key + '_operation_date'); const note = document.getElementById(key + '_operation_note');
     const mode = text(modeEl && modeEl.value) || 'existing';
-    if ((mode === 'class_move' || mode === 'makeup') && dateEl && !dateEl.value) dateEl.value = today();
-    if (note) note.textContent = mode === 'class_move' ? '처리일부터 기존 반을 종료하고 선택 반으로 이동합니다.' : (mode === 'makeup' ? '선택 날짜에만 보강으로 추가합니다.' : (mode === 'new' ? '선택 반을 추가하고 기존 반은 유지합니다.' : '선택한 반목록을 최종 수강반으로 저장합니다. 반을 모두 해제하면 반 미지정 상태로 저장됩니다.'));
+    if ((mode === 'class_move' || mode === 'new') && dateEl && !dateEl.value) dateEl.value = today();
+    if (note) note.textContent = mode === 'class_move'
+      ? '처리일부터 기존 반을 종료하고 선택한 새 반으로 이동합니다.'
+      : (mode === 'new'
+          ? '처리일부터 선택한 새 반을 추가합니다. 기존 수강반은 유지됩니다.'
+          : '선택한 반목록을 현재 수강반으로 저장합니다. 신규·반이동 표시 없이 즉시 반영됩니다.');
     updateRowClassPreview(key);
   }
 
@@ -575,7 +581,7 @@
   }
   async function saveKeys(keys) {
     const selectedKeys = unique(keys).filter(function (key) { return rowKeyMap.has(key); }); const edits = selectedKeys.map(rowData); if (!edits.length) return alert('수정된 학생정보가 없습니다.');
-    for (const edit of edits) { const error = validateInput(edit); if (error) return alert(edit.name + ': ' + error); if ((edit.registrationType === 'class_move' || edit.registrationType === 'makeup') && !edit.operationDate) return alert(edit.name + ': 처리일을 선택해주세요.'); }
+    for (const edit of edits) { const error = validateInput(edit); if (error) return alert(edit.name + ': ' + error); if ((edit.registrationType === 'class_move' || edit.registrationType === 'new') && !edit.operationDate) return alert(edit.name + ': 처리일을 선택해주세요.'); }
     if (!confirm('학생 ' + edits.length + '명의 변경사항을 저장할까요?\n수강반 변경은 출석부와 태블릿에 즉시 반영됩니다.')) return;
     selectedKeys.forEach(function (key) { const row=document.querySelector('tr[data-row-key="'+key+'"]'); if(row) row.classList.add('ulim-saving-row'); });
     try {
