@@ -1,11 +1,11 @@
-(function (global) {
+﻿(function (global) {
   'use strict';
   if (global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_7355047__) return;
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_7355047__ = true;
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_R21A_7355042__ = true;
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_7355041__ = true;
 
-  const VERSION = '2026-08-13.735.05.0.50-r25-vocal-reliability-convergence';
+  const VERSION = '2026-08-14.735.05.0.50C-r25.3-drive-response-class-link';
   const DRIVE_FOLDER_FIRESTORE_PRIMARY_7355045 = true;
   const DRIVE_RESUMABLE_DIRECT_7355047 = true;
   const CUTOVER_DATE = '2026-08-12';
@@ -564,12 +564,25 @@
     const value = Number(match[1]);
     return Number.isFinite(value) ? value + 1 : null;
   }
+  async function fetchDriveWithTimeout7355050C(url, options, timeoutMs) {
+    const ms = Math.max(3000, Number(timeoutMs || 15000));
+    if (typeof AbortController !== 'function') return fetch(url, options || {});
+    const controller = new AbortController();
+    const timer = setTimeout(function(){ try { controller.abort(); } catch (_ignore) {} }, ms);
+    try {
+      const merged = Object.assign({}, options || {}, { signal:controller.signal });
+      return await fetch(url, merged);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   async function probeDriveOffset7355047(sessionUrl, total) {
-    const response = await fetch(sessionUrl, {
+    const response = await fetchDriveWithTimeout7355050C(sessionUrl, {
       method:'PUT',
       headers:{ 'Content-Range':'bytes */' + total },
       body:null
-    });
+    }, 12000);
     if (response.status === 308) {
       const next = parseDriveRangeEnd7355047(response.headers.get('Range'));
       return { complete:false, offset:next == null ? 0 : next };
@@ -596,15 +609,21 @@
       const chunk = blob.slice(offset, end, mime);
       let response;
       try {
-        response = await fetch(sessionUrl, {
+        response = await fetchDriveWithTimeout7355050C(sessionUrl, {
           method:'PUT',
           headers:{ 'Content-Type':mime, 'Content-Range':'bytes ' + offset + '-' + (end - 1) + '/' + total },
           body:chunk
-        });
+        }, 20000);
       } catch (networkError) {
         if (recoveries >= 3) throw networkError;
         recoveries += 1;
-        const probed = await probeDriveOffset7355047(sessionUrl, total);
+        let probed;
+        try {
+          probed = await probeDriveOffset7355047(sessionUrl, total);
+        } catch (probeError) {
+          if (recoveries >= 3) throw probeError;
+          continue;
+        }
         if (probed.complete) { metadata = probed.metadata || {}; offset = total; break; }
         offset = probed.offset;
         continue;
@@ -742,7 +761,7 @@
 
     let coreValue;
     try {
-      if (typeof showLoading === 'function') showLoading('연습 기록을 저장하는 중입니다...');
+      if (typeof showLoading === 'function') showLoading('녹음 파일 확인 및 링크를 만드는 중입니다...');
       const corePromise = call('finalizeStudentVocalPractice7355041', {
         recordId:begin.recordId, date:date, sentenceId:text(currentTrainObj.id), cycleKey:text(currentTrainObj.cycleKey),
         sentence:text(currentTrainObj.text), originalSentence:text(currentTrainObj.text), standardPronunciation:text(currentTrainObj.pron),
@@ -751,10 +770,10 @@
       });
       const coreResult = await Promise.race([
         corePromise.then(function(value){ return { ok:true, value:value }; }).catch(function(error){ return { ok:false, error:error }; }),
-        new Promise(function(resolve){ setTimeout(function(){ resolve({ ok:false, timeout:true }); },12000); })
+        new Promise(function(resolve){ setTimeout(function(){ resolve({ ok:false, timeout:true }); },55000); })
       ]);
       if (!coreResult || coreResult.ok !== true) {
-        if (coreResult && coreResult.timeout) throw new Error('연습 기록 저장 응답이 지연되고 있습니다. 잠시 후 기록을 확인해주세요.');
+        if (coreResult && coreResult.timeout) throw new Error('Google Drive 파일 확인과 링크 생성 응답이 지연되고 있습니다. 잠시 후 연습일지를 다시 확인해주세요.');
         throw coreResult && coreResult.error || new Error('연습 기록 저장에 실패했습니다.');
       }
       coreValue = coreResult.value || {};

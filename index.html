@@ -20676,15 +20676,79 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
   }
 
   function practiceClass706(log) {
-    return String(
-      log && (
-        log.className ||
-        log.currentClass ||
-        log.studentClass ||
-        log.classTitle ||
-        log.courseName
-      ) || ''
+    log = log || {};
+
+    const direct = String(
+      log.className ||
+      log.currentClass ||
+      log.studentClass ||
+      log.classTitle ||
+      log.courseName ||
+      ''
     ).trim();
+    if (direct) return direct;
+
+    const loggedClassNames = Array.isArray(log.classNames)
+      ? Array.from(new Set(log.classNames.map(function(value){ return String(value || '').trim(); }).filter(Boolean)))
+      : [];
+    if (loggedClassNames.length) return loggedClassNames.join(', ');
+
+    let found = null;
+    const logUid = String(log.studentUid || log.studentIdentityKey || '').trim();
+
+    try {
+      const students = (typeof adminStudents !== 'undefined' && Array.isArray(adminStudents)) ? adminStudents : [];
+
+      if (logUid) {
+        found = students.find(function(student) {
+          return String(
+            student && (
+              student.studentUid ||
+              student.uid ||
+              student.studentIdentityKey ||
+              student.identityKey
+            ) || ''
+          ).trim() === logUid;
+        }) || null;
+      }
+
+      if (!found && typeof adminFindStudentByNoName_ === 'function') {
+        found = adminFindStudentByNoName_(log);
+      }
+
+      if (!found) {
+        const nameKey = String(log.studentName || '').replace(/\s+/g, '').trim();
+        if (nameKey) {
+          const sameName = students.filter(function(student) {
+            return String(student && (student.name || student.studentName) || '').replace(/\s+/g, '').trim() === nameKey;
+          });
+          if (sameName.length === 1) found = sameName[0];
+        }
+      }
+    } catch (_ignore) {}
+
+    if (!found) return '';
+
+    const names = [];
+    if (Array.isArray(found.classNames)) {
+      found.classNames.forEach(function(value) {
+        const clean = String(value || '').trim();
+        if (clean && names.indexOf(clean) < 0) names.push(clean);
+      });
+    }
+
+    [
+      found.className,
+      found.currentClass,
+      found.class,
+      found['반명']
+    ].forEach(function(value) {
+      String(value || '').split(/[\n,;]+/).map(function(item){ return item.trim(); }).filter(Boolean).forEach(function(item) {
+        if (names.indexOf(item) < 0) names.push(item);
+      });
+    });
+
+    return names.join(', ');
   }
 
   function practiceStudentKey706(log) {
@@ -24138,10 +24202,11 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 
 
 <!-- ULIM R20: vocalization Firestore-primary authority; GAS remains media/history compatibility only. -->
-<script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260813.73550500"></script>
+<script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260814.73550500C"></script>
 <script id="ulim-vocal-primary-bind-7355041">
 window.__ULIM_VOCAL_PRIMARY_BUILD_7355041__='20260814-7355050b-r25.2-step6-next-upload';
 window.__ULIM_VOCAL_STEP6_NEXT_UPLOAD_BUILD_7355050B__='20260814-7355050b';
+window.__ULIM_VOCAL_DRIVE_RESPONSE_CLASS_LINK_BUILD_7355050C__='20260814-7355050c';
 window.__ULIM_PRACTICE_INTELLIGENCE_BUILD_7355042__='20260813-7355050-r25-vocal-reliability';
 try { window.fetchServerTrainingSentence_ = fetchServerTrainingSentence_; } catch(_e) {}
 try { window.trainNew = trainNew; } catch(_e) {}
