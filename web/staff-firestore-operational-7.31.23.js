@@ -7,13 +7,14 @@
   global.__ULIM_STAFF_FIRESTORE_OPERATIONAL_73120__ = true;
   global.__ULIM_STAFF_FIRESTORE_OPERATIONAL_73119__ = true;
 
-  const VERSION = '2026-08-09.731.23-attendance-revision-events';
-  const CACHE_PREFIX = 'ulim_staff_fsop_73120_';
+  const VERSION = '2026-08-13.731.24-roster-convergence-single-owner';
+  const CACHE_PREFIX = 'ulim_staff_fsop_7355049_';
   const inflight = new Map();
   let runtimePromise = null;
   let revisionEnsurePromise73112 = null;
   let operationalAttendanceUnsubscribe73123 = null;
   let operationalAttendanceRevision73123 = 0;
+  let dailyRosterRevisionTimer7355049 = 0;
   const revisionListeners7318 = {
     attendance: {
       date: '', classId: '', scopeId: '', unsubscribe: null,
@@ -2571,6 +2572,20 @@ function attendanceMinimal(row) {
             scope: 'global', revision: revision, reason: text(data.reason), details: data.details || {}, source: 'operationalRealtimeRevisions'
           } }));
         } catch (_ignoreOperationalRevision) {}
+        // 학생명단/수강반 변경도 같은 canonical roster revision을 사용합니다.
+        // 일일평가가 열려 있으면 stale local cache를 우회해 동일 roster를 다시 읽습니다.
+        if (revisionPanelActive73116('daily') && revisionSelectionReady73116('daily')) {
+          clearTimeout(dailyRosterRevisionTimer7355049);
+          dailyRosterRevisionTimer7355049 = setTimeout(function () {
+            if (!revisionPanelActive73116('daily') || !revisionSelectionReady73116('daily')) return;
+            if (typeof global.adminLoadDailyEvalStudents !== 'function') return;
+            Promise.resolve(global.adminLoadDailyEvalStudents(false, {
+              source: 'canonical-roster-revision-7355049',
+              bypassCache: true,
+              revision: revision
+            })).catch(function () {});
+          }, 280);
+        }
       }, function () { operationalAttendanceUnsubscribe73123 = null; });
     } catch (_ignoreOperationalBind) {}
   }
