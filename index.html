@@ -15018,16 +15018,26 @@ ${ruleSummary}`, isFallback ? "success" : "success");
         userKey: ((isAdmin ? 'ADMIN_' : 'TEACHER_') + String(aInfo.id || aInfo.name || aToken.slice(0,12))).replace(/[^0-9A-Za-z가-힣_-]/g, '_')
       };
     }
+    let directProfile7355051 = null;
+    try {
+      const directAuth7355051 = window.__ULIM_STUDENT_FIREBASE_DIRECT_AUTH_7355030__;
+      directProfile7355051 = directAuth7355051 && typeof directAuth7355051.currentProfile === 'function'
+        ? directAuth7355051.currentProfile()
+        : null;
+    } catch (_ignoreDirect7355051) {}
+    const directUid7355051 = String(directProfile7355051 && directProfile7355051.studentUid || '').trim();
     const sToken = (typeof getStudentSessionToken_ === 'function') ? getStudentSessionToken_() : ((typeof studentSessionToken !== 'undefined' ? studentSessionToken : '') || localStorage.getItem('studentSessionToken') || '');
-    const sName = (typeof studentName !== 'undefined' && studentName) ? studentName : (localStorage.getItem('studentName') || '게스트');
+    const sName = String(directProfile7355051 && directProfile7355051.name || ((typeof studentName !== 'undefined' && studentName) ? studentName : (localStorage.getItem('studentName') || '게스트'))).trim() || '게스트';
+    const sNo7355051 = String(directProfile7355051 && directProfile7355051.attendanceNo || ((typeof studentNo !== 'undefined' ? studentNo : '') || localStorage.getItem('studentNo') || '')).trim();
+    const isStudent7355051 = !!(directUid7355051 || sToken);
     return {
-      type: sToken ? 'student' : 'guest',
+      type: isStudent7355051 ? 'student' : 'guest',
       token: sToken,
-      id: (typeof studentNo !== 'undefined' ? studentNo : '') || localStorage.getItem('studentNo') || '',
+      id: sNo7355051 || directUid7355051,
       name: sName,
       role: '학생',
       instructor: (typeof instructorName !== 'undefined' ? instructorName : '') || localStorage.getItem('instructorName') || '',
-      userKey: sToken ? ('SESSION_' + sToken.slice(0,16)) : ((sName && sName !== '게스트') ? ('NAME_' + sName).replace(/[^0-9A-Za-z가-힣_-]/g, '_') : (typeof pronGetDeviceKey === 'function' ? pronGetDeviceKey() : 'guest'))
+      userKey: directUid7355051 ? ('UID_' + directUid7355051) : (sToken ? ('SESSION_' + sToken.slice(0,16)) : ((sName && sName !== '게스트') ? ('NAME_' + sName).replace(/[^0-9A-Za-z가-힣_-]/g, '_') : (typeof pronGetDeviceKey === 'function' ? pronGetDeviceKey() : 'guest')))
     };
   };
 
@@ -24135,10 +24145,10 @@ window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = false;
 
 <!-- ULIM 7.33.1: stable Firebase token guard + clean console baseline. -->
 <script src="./web/staff-account-admin-7.34.3.6.js?v=20260801.734036"></script>
-<script src="./web/student-master-admin-7.35.5.0.30.js?v=20260813.73550490"></script>
+<script src="./web/student-master-admin-7.35.5.0.30.js?v=20260814.73550510"></script>
 <script src="./web/audience-segmentation-7.35.5.0.34.js?v=20260811.7355038"></script>
 <!-- ULIM 7.35.4.7: compact student management UI. -->
-<script src="./web/student-management-ui-7.35.4.10.js?v=20260813.73550490"></script>
+<script src="./web/student-management-ui-7.35.4.10.js?v=20260814.73550510"></script>
 <script id="ulim-general-teacher-firebase-auth-bootstrap-7-31-5">
 /* ULIM 7.35.5.0.25: obsolete 7.31.5 Firebase bootstrap disabled.
    staff-login-firebase-primary-7.32.8 is the single authentication owner. */
@@ -24216,12 +24226,13 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 
 
 <!-- ULIM R20: vocalization Firestore-primary authority; GAS remains media/history compatibility only. -->
-<script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260814.73550500D"></script>
+<script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260814.73550510"></script>
 <script id="ulim-vocal-primary-bind-7355041">
 window.__ULIM_VOCAL_PRIMARY_BUILD_7355041__='20260814-7355050b-r25.2-step6-next-upload';
 window.__ULIM_VOCAL_STEP6_NEXT_UPLOAD_BUILD_7355050B__='20260814-7355050b';
 window.__ULIM_VOCAL_DRIVE_RESPONSE_CLASS_LINK_BUILD_7355050C__='20260814-7355050c';
 window.__ULIM_VOCAL_SERVER_FINALIZE_DISCOVERY_BUILD_7355050D__='20260814-7355050d';
+window.__ULIM_R26_BOUNDED_UPLOAD_ADMIN_RESET_BUILD_7355051__='20260814-7355051';
 window.__ULIM_PRACTICE_INTELLIGENCE_BUILD_7355042__='20260813-7355050-r25-vocal-reliability';
 try { window.fetchServerTrainingSentence_ = fetchServerTrainingSentence_; } catch(_e) {}
 try { window.trainNew = trainNew; } catch(_e) {}
