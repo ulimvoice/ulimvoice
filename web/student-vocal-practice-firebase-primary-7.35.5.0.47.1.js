@@ -5,7 +5,7 @@
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_R21A_7355042__ = true;
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_7355041__ = true;
 
-  const VERSION = '2026-08-14.735.05.0.51-r26-bounded-upload-server-finalize';
+  const VERSION = '2026-08-14.735.05.0.52-r27-finalize-ack-class-authority';
   const DRIVE_FOLDER_FIRESTORE_PRIMARY_7355045 = true;
   const DRIVE_RESUMABLE_DIRECT_7355047 = true;
   const CUTOVER_DATE = '2026-08-12';
@@ -673,6 +673,63 @@
   }
 
 
+  function delay7355052(ms) {
+    return new Promise(function(resolve){
+      setTimeout(resolve, Math.max(0, Number(ms || 0)));
+    });
+  }
+
+  async function waitForCanonicalFinalize7355052(recordId, date, maxWaitMs) {
+    const deadline = Date.now() + Math.max(5000, Number(maxWaitMs || 22000));
+    await delay7355052(1200);
+
+    while (Date.now() < deadline) {
+      try {
+        const status = await call('getStudentVocalPracticeCompletionStatus7355052', {
+          recordId:text(recordId),
+          date:text(date)
+        });
+        if (status && status.completed === true && text(status.fileUrl)) return status;
+        if (status && /finalize_error|session_error/i.test(text(status.archiveState))) {
+          return Object.assign({}, status, { terminalError:true });
+        }
+      } catch (_statusError7355052) {}
+      await delay7355052(1200);
+    }
+    return null;
+  }
+
+  async function resolveCanonicalFinalize7355052(finalizePromise, recordId, date) {
+    let directError = null;
+
+    const directSuccess = Promise.resolve(finalizePromise).then(function(value){
+      return { source:'direct', value:value || {} };
+    }).catch(function(error){
+      directError = error;
+      return new Promise(function(){});
+    });
+
+    const observedSuccess = waitForCanonicalFinalize7355052(recordId, date, 22000).then(function(value){
+      if (value && value.completed === true && text(value.fileUrl)) {
+        return { source:'status', value:value };
+      }
+      if (value && value.terminalError) {
+        directError = directError || new Error(text(value.archiveError) || '연습기록 마무리에 실패했습니다.');
+      }
+      return new Promise(function(){});
+    });
+
+    const timeout = delay7355052(24000).then(function(){
+      return { source:'timeout', value:null };
+    });
+
+    const winner = await Promise.race([directSuccess, observedSuccess, timeout]);
+    if (winner && winner.source !== 'timeout' && winner.value) return winner.value;
+    if (directError) throw directError;
+    throw new Error('녹음파일은 보관되었지만 완료 확인이 지연되고 있습니다. 잠시 후 발성훈련 기록을 다시 확인해주세요.');
+  }
+
+
   async function completeTrainingFromPage() {
     const btnComplete = document.getElementById('btnComplete');
     if (typeof step !== 'undefined' && (step !== 6 || !currentTrainObj)) return alert('최종녹음 단계에서 녹음을 완료해야 업로드할 수 있습니다.');
@@ -746,21 +803,13 @@
     let coreValue;
     try {
       if (typeof showLoading === 'function') showLoading('Drive 파일을 확인하고 연습기록을 마무리하는 중입니다...');
-      const corePromise = call('finalizeStudentVocalPractice7355041', {
+      const finalizePromise7355052 = call('finalizeStudentVocalPractice7355041', {
         recordId:begin.recordId, date:date, sentenceId:text(currentTrainObj.id), cycleKey:text(currentTrainObj.cycleKey),
         sentence:text(currentTrainObj.text), originalSentence:text(currentTrainObj.text), standardPronunciation:text(currentTrainObj.pron),
         recognizedText:analysis && analysis.recognizedText || '', aiSource:'', aiComment:'', analysisText:'',
         driveUploads:uploadResult.driveUploads || [], mimeType:mime, fileSize:lastRecordedBlob.size || 0
       });
-      const coreResult = await Promise.race([
-        corePromise.then(function(value){ return { ok:true, value:value }; }).catch(function(error){ return { ok:false, error:error }; }),
-        new Promise(function(resolve){ setTimeout(function(){ resolve({ ok:false, timeout:true }); },55000); })
-      ]);
-      if (!coreResult || coreResult.ok !== true) {
-        if (coreResult && coreResult.timeout) throw new Error('Google Drive 파일 확인과 링크 생성 응답이 지연되고 있습니다. 잠시 후 연습일지를 다시 확인해주세요.');
-        throw coreResult && coreResult.error || new Error('연습 기록 저장에 실패했습니다.');
-      }
-      coreValue = coreResult.value || {};
+      coreValue = await resolveCanonicalFinalize7355052(finalizePromise7355052, begin.recordId, date);
     } catch (error) {
       try { if (typeof hideLoading === 'function') hideLoading(); } catch (_ignore2) {}
       return alert(callableError(error, '녹음은 보관됐지만 연습 기록 저장을 완료하지 못했습니다. 다시 시도해주세요.'));

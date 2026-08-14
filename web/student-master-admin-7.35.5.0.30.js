@@ -17,7 +17,7 @@
   // Compatibility marker for 7.35.4.10/7.35.5.0 readiness checks.
   global.__ULIM_STUDENT_MANAGEMENT_V2_735410__ = true;
 
-  const VERSION = '2026-08-14.735.05.0.51-admin-practice-reset-controls';
+  const VERSION = '2026-08-14.735.05.0.52-class-directory-authority';
   const PANEL_ID = 'adminPanelStudentManagement7352';
   const CARD_ID = 'ulimStudentManagementCard7352';
   const STATUS_ID = 'ulimStudentManagementStatus7352';
@@ -375,6 +375,22 @@
   }
   function normalizeStudent(raw) {
     const student = raw || {};
+    const selectedClassIds7355052 = unique(student.selectedClassIds || student.classIds || student.classUids);
+    const derivedClassNames7355052 = selectedClassDetails(selectedClassIds7355052)
+      .map(function(item){ return text(item && item.className); })
+      .filter(Boolean);
+    const classNames7355052 = unique(
+      (Array.isArray(student.classNames) ? student.classNames : [])
+        .concat(derivedClassNames7355052)
+        .concat(unique(student.legacyUnmappedClassNames))
+    );
+    const derivedInstructorNames7355052 = selectedClassDetails(selectedClassIds7355052)
+      .map(function(item){ return text(item && item.instructorName); })
+      .filter(Boolean);
+    const instructorNames7355052 = unique(
+      (Array.isArray(student.instructorNames) ? student.instructorNames : [])
+        .concat(derivedInstructorNames7355052)
+    );
     return {
       studentUid: text(student.studentUid), name: text(student.name), birthDate: text(student.birthDate),
       audienceGroup: text(student.audienceGroup), audienceGroupAuto: text(student.audienceGroupAuto), audienceGroupOverride: text(student.audienceGroupOverride), audienceGroupSource: text(student.audienceGroupSource),
@@ -382,8 +398,9 @@
       enrollmentStatus: text(student.enrollmentStatus) || 'active', registrationCancelled: student.registrationCancelled === true,
       initialRegisteredDate: text(student.initialRegisteredDate), privacyConsent: student.privacyConsent === true,
       portraitConsent: student.portraitConsent === true, mustChangePassword: student.mustChangePassword !== false,
-      memo: text(student.memo), selectedClassIds: unique(student.selectedClassIds),
-      legacyUnmappedClassNames: unique(student.legacyUnmappedClassNames), instructorNames: unique(student.instructorNames),
+      memo: text(student.memo), selectedClassIds: selectedClassIds7355052,
+      classNames: classNames7355052,
+      legacyUnmappedClassNames: unique(student.legacyUnmappedClassNames), instructorNames: instructorNames7355052,
       dataSaveState: text(student.dataSaveState) || 'complete', sheetSyncState: 'backup_0600', sheetSyncMessage: '매일 오전 6시 백업',
       authSyncState: text(student.authSyncState) || 'complete', authSyncMessage: text(student.authSyncMessage),
       attendanceSyncState: text(student.attendanceSyncState) || 'complete', attendanceSyncMessage: text(student.attendanceSyncMessage),
