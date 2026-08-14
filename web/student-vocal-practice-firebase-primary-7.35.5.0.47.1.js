@@ -5,7 +5,7 @@
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_R21A_7355042__ = true;
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_7355041__ = true;
 
-  const VERSION = '2026-08-14.735.05.0.52-r27-finalize-ack-class-authority';
+  const VERSION = '2026-08-14.735.05.0.53-r28-ui-ack-existing-log-authority';
   const DRIVE_FOLDER_FIRESTORE_PRIMARY_7355045 = true;
   const DRIVE_RESUMABLE_DIRECT_7355047 = true;
   const CUTOVER_DATE = '2026-08-12';
@@ -673,62 +673,90 @@
   }
 
 
-  function delay7355052(ms) {
+  function delay7355053(ms) {
     return new Promise(function(resolve){
       setTimeout(resolve, Math.max(0, Number(ms || 0)));
     });
   }
 
-  async function waitForCanonicalFinalize7355052(recordId, date, maxWaitMs) {
-    const deadline = Date.now() + Math.max(5000, Number(maxWaitMs || 22000));
-    await delay7355052(1200);
+  function canonicalLogMatch7355053(log, recordId) {
+    if (!log || text(log.recordId) !== text(recordId)) return false;
+    const fileUrl = text(log.fileUrl || log.audioUrl);
+    const state = text(log.state || log.archiveState || 'complete').toLowerCase();
+    return !!fileUrl && state !== 'finalize_error' && state !== 'session_error';
+  }
+
+  async function readCanonicalCompletionFromExistingLogs7355053(recordId, date) {
+    const parsed = new Date(String(date || kstDateKey()) + 'T12:00:00+09:00');
+    const validDate = Number.isFinite(parsed.getTime());
+    const now = new Date();
+    const year = validDate ? parsed.getFullYear() : now.getFullYear();
+    const month = validDate ? parsed.getMonth() + 1 : now.getMonth() + 1;
+
+    const data = await call('listStudentPracticeLogs7355041', { year:year, month:month });
+    const logs = Array.isArray(data && data.logs) ? data.logs : [];
+    const found = logs.find(function(log){
+      return canonicalLogMatch7355053(log, recordId);
+    }) || null;
+
+    if (!found) return null;
+    return {
+      ok:true,
+      source:'existing-practice-log',
+      recordId:text(found.recordId),
+      fileUrl:text(found.fileUrl || found.audioUrl),
+      audioUrl:text(found.fileUrl || found.audioUrl),
+      fileId:text(found.fileId),
+      folderId:text(found.folderId),
+      archiveCopies:Array.isArray(found.archiveCopies) ? found.archiveCopies : [],
+      archiveState:text(found.archiveState || found.state) || 'complete',
+      className:text(found.className),
+      classNames:Array.isArray(found.classNames) ? found.classNames : []
+    };
+  }
+
+  async function waitForCanonicalFinalize7355053(recordId, date, maxWaitMs) {
+    const deadline = Date.now() + Math.max(4000, Number(maxWaitMs || 15000));
+    await delay7355053(700);
 
     while (Date.now() < deadline) {
       try {
-        const status = await call('getStudentVocalPracticeCompletionStatus7355052', {
-          recordId:text(recordId),
-          date:text(date)
-        });
-        if (status && status.completed === true && text(status.fileUrl)) return status;
-        if (status && /finalize_error|session_error/i.test(text(status.archiveState))) {
-          return Object.assign({}, status, { terminalError:true });
-        }
-      } catch (_statusError7355052) {}
-      await delay7355052(1200);
+        const found = await readCanonicalCompletionFromExistingLogs7355053(recordId, date);
+        if (found && found.fileUrl) return found;
+      } catch (_existingLogReadError7355053) {}
+      await delay7355053(1100);
     }
     return null;
   }
 
-  async function resolveCanonicalFinalize7355052(finalizePromise, recordId, date) {
+  async function resolveCanonicalFinalize7355053(finalizePromise, recordId, date) {
     let directError = null;
 
     const directSuccess = Promise.resolve(finalizePromise).then(function(value){
-      return { source:'direct', value:value || {} };
+      const result = value || {};
+      if (text(result.fileUrl || result.audioUrl)) {
+        return { source:'direct', value:result };
+      }
+      return new Promise(function(){});
     }).catch(function(error){
       directError = error;
       return new Promise(function(){});
     });
 
-    const observedSuccess = waitForCanonicalFinalize7355052(recordId, date, 22000).then(function(value){
-      if (value && value.completed === true && text(value.fileUrl)) {
-        return { source:'status', value:value };
-      }
-      if (value && value.terminalError) {
-        directError = directError || new Error(text(value.archiveError) || '연습기록 마무리에 실패했습니다.');
-      }
+    const observedSuccess = waitForCanonicalFinalize7355053(recordId, date, 15000).then(function(value){
+      if (value && text(value.fileUrl)) return { source:'existing-log', value:value };
       return new Promise(function(){});
     });
 
-    const timeout = delay7355052(24000).then(function(){
+    const hardTimeout = delay7355053(18000).then(function(){
       return { source:'timeout', value:null };
     });
 
-    const winner = await Promise.race([directSuccess, observedSuccess, timeout]);
+    const winner = await Promise.race([directSuccess, observedSuccess, hardTimeout]);
     if (winner && winner.source !== 'timeout' && winner.value) return winner.value;
     if (directError) throw directError;
     throw new Error('녹음파일은 보관되었지만 완료 확인이 지연되고 있습니다. 잠시 후 발성훈련 기록을 다시 확인해주세요.');
   }
-
 
   async function completeTrainingFromPage() {
     const btnComplete = document.getElementById('btnComplete');
@@ -801,18 +829,27 @@
     }
 
     let coreValue;
+    let finalizeUiSafety7355053 = null;
     try {
       if (typeof showLoading === 'function') showLoading('Drive 파일을 확인하고 연습기록을 마무리하는 중입니다...');
-      const finalizePromise7355052 = call('finalizeStudentVocalPractice7355041', {
+
+      finalizeUiSafety7355053 = setTimeout(function(){
+        try { if (typeof hideLoading === 'function') hideLoading(); } catch (_ignoreSafety7355053) {}
+      }, 20000);
+
+      const finalizePromise7355053 = call('finalizeStudentVocalPractice7355041', {
         recordId:begin.recordId, date:date, sentenceId:text(currentTrainObj.id), cycleKey:text(currentTrainObj.cycleKey),
         sentence:text(currentTrainObj.text), originalSentence:text(currentTrainObj.text), standardPronunciation:text(currentTrainObj.pron),
         recognizedText:analysis && analysis.recognizedText || '', aiSource:'', aiComment:'', analysisText:'',
         driveUploads:uploadResult.driveUploads || [], mimeType:mime, fileSize:lastRecordedBlob.size || 0
       });
-      coreValue = await resolveCanonicalFinalize7355052(finalizePromise7355052, begin.recordId, date);
+
+      coreValue = await resolveCanonicalFinalize7355053(finalizePromise7355053, begin.recordId, date);
     } catch (error) {
       try { if (typeof hideLoading === 'function') hideLoading(); } catch (_ignore2) {}
       return alert(callableError(error, '녹음은 보관됐지만 연습 기록 저장을 완료하지 못했습니다. 다시 시도해주세요.'));
+    } finally {
+      if (finalizeUiSafety7355053) clearTimeout(finalizeUiSafety7355053);
     }
 
     const canonicalUpload = {
