@@ -17,7 +17,7 @@
   // Compatibility marker for 7.35.4.10/7.35.5.0 readiness checks.
   global.__ULIM_STUDENT_MANAGEMENT_V2_735410__ = true;
 
-  const VERSION = '2026-08-14.735.05.0.52-class-directory-authority';
+  const VERSION = '2026-08-14.735.05.0.53-firebase-admin-authority';
   const PANEL_ID = 'adminPanelStudentManagement7352';
   const CARD_ID = 'ulimStudentManagementCard7352';
   const STATUS_ID = 'ulimStudentManagementStatus7352';
@@ -133,10 +133,35 @@
     const value = text(uid);
     return value ? '•••' + value.slice(-7) : '';
   }
+  function canonicalAdminInfo7355053() {
+    try {
+      if (typeof global.adminReadStaffInfo_ === 'function') {
+        const canonical = global.adminReadStaffInfo_();
+        if (canonical && typeof canonical === 'object') return canonical;
+      }
+    } catch (_canonicalAdminReadError7355053) {}
+
+    try {
+      const raw = localStorage.getItem('ulimFirebaseStaffProfile7320') || '';
+      if (raw) {
+        const profile = JSON.parse(raw);
+        if (profile && typeof profile === 'object') return profile;
+      }
+    } catch (_firebaseProfileReadError7355053) {}
+
+    return global.adminInfo && typeof global.adminInfo === 'object' ? global.adminInfo : {};
+  }
+
   function isSuperAdmin() {
-    const info = global.adminInfo || {};
-    const role = normalize(info.firebaseRole || info.role);
-    return role === 'super' || role === 'superadmin' || role === normalize('전체관리자') || role === normalize('전체관리') || role === normalize('원장');
+    const info = canonicalAdminInfo7355053();
+    const role = normalize(info.firebaseRole || info.role || info.adminRole || info.permission);
+    return role === 'super' ||
+      role === 'superadmin' ||
+      role === 'fulladmin' ||
+      role === normalize('전체관리자') ||
+      role === normalize('전체관리') ||
+      role === normalize('최고관리자') ||
+      role === normalize('원장');
   }
   function roomRealtime() {
     return global.ULIM_ROOM_CLASSROOM_REALTIME_72917 || global.ULIM_ROOM_CLASSROOM_REALTIME_72916 || global.ULIM_ROOM_CLASSROOM_REALTIME_728 || global.ULIM_ROOM_CLASSROOM_REALTIME_727 || global.ULIM_ROOM_CLASSROOM_REALTIME_721 || null;
