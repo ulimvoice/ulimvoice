@@ -5,7 +5,7 @@
 <meta name="theme-color" content="#16a34a">
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<meta name="ulim-tablet-build" content="20260808-7355027-tablet-snapshot-compat" />
+<meta name="ulim-tablet-build" content="20260815-7355062-tablet-callable-schema-contract" />
 <title>울림연기학원 등하원 체크 2026.06.06.046.01</title>
 <style>
   :root {
@@ -453,14 +453,21 @@ body {
  * - Google Sheets는 오전 6시/관리자 백업 전용
  * - 등하원 알림톡은 Firebase Functions → SOLAPI 직접 발송
  ****************************************************/
-const TABLET_APP_VERSION = "2026.08.08.7.35.5.0.27-tablet-snapshot-compat";
-const TABLET_SNAPSHOT_COMPATIBLE_VERSIONS = new Set([
-  "2026-08-08.tablet-canonical-roster-7355019",
-  "2026-08-08.tablet-canonical-roster-7355021-classroom-usage",
-  "2026-08-08.tablet-canonical-roster-7355027-leave-schedule"
-]);
-function isCompatibleTabletSnapshotVersion7355027(value) {
-  return TABLET_SNAPSHOT_COMPATIBLE_VERSIONS.has(String(value || ""));
+const TABLET_APP_VERSION = "2026.08.15.7.35.5.0.62-tablet-callable-schema-contract";
+/* ULIM 7.35.5.0.62
+ * Firebase Callable owns release/version authority.
+ * The browser accepts a snapshot by stable schema + Seoul calendar date.
+ * data.version remains diagnostic metadata only.
+ */
+function isTabletSnapshotContract7355062(data, expectedDate) {
+  return !!(
+    data &&
+    data.status === "success" &&
+    data.attendanceMap &&
+    typeof data.attendanceMap === "object" &&
+    !Array.isArray(data.attendanceMap) &&
+    String(data.date || "") === String(expectedDate || getTodayKey())
+  );
 }
 const TABLET_DEBUG = false;
 const TABLET_FIREBASE_CONFIG = {
@@ -689,13 +696,7 @@ async function loadTabletFirestoreSnapshot() {
     return runtime.getSnapshot({ date: expectedDate });
   });
   const data = result && result.data ? result.data : null;
-  if (
-    data &&
-    data.status === "success" &&
-    data.attendanceMap &&
-    String(data.date || "") === expectedDate &&
-    isCompatibleTabletSnapshotVersion7355027(data.version)
-  ) {
+  if (isTabletSnapshotContract7355062(data, expectedDate)) {
     tabletLastCallableRefreshAt7355016 = Date.now();
     if (!saveDailySnapshot(data)) throw new Error("오늘 날짜 수업정보를 저장하지 못했습니다.");
     return data;
@@ -843,13 +844,7 @@ function clearStaleTabletLocalData() {
 
 function saveDailySnapshot(data) {
   const today = getTodayKey();
-  if (
-    !data ||
-    data.status !== "success" ||
-    !data.attendanceMap ||
-    String(data.date || "") !== today ||
-    !isCompatibleTabletSnapshotVersion7355027(data.version)
-  ) return false;
+  if (!isTabletSnapshotContract7355062(data, today)) return false;
   tabletPreload = data;
   tabletPreloadAt = Date.now();
   localStorage.setItem(DAILY_SNAPSHOT_KEY, JSON.stringify(data));
@@ -866,10 +861,7 @@ function loadDailySnapshotFromLocal() {
     const raw = localStorage.getItem(DAILY_SNAPSHOT_KEY);
     if (!raw) return null;
     const data = JSON.parse(raw);
-    if (!data || data.status !== "success" || !data.attendanceMap) return null;
-    // 7.35.5.0.14 accepts canonical Firestore snapshots and the immediately previous local snapshot format.
-    if (String(data.date || "") !== getTodayKey()) return null;
-    if (!isCompatibleTabletSnapshotVersion7355027(data.version)) return null;
+    if (!isTabletSnapshotContract7355062(data, getTodayKey())) return null;
     tabletPreload = data;
     tabletPreloadAt = Number(localStorage.getItem(DAILY_SNAPSHOT_AT_KEY) || 0) || Date.now();
     return data;
