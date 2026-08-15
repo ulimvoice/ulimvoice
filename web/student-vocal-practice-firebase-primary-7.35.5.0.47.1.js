@@ -5,7 +5,7 @@
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_R21A_7355042__ = true;
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_7355041__ = true;
 
-  const VERSION = '2026-08-14.735.05.0.54-r29-firestore-practice-single-owner';
+  const VERSION = '2026-08-15.735.05.0.55-r29.2-practice-month-all-types';
   const DRIVE_FOLDER_FIRESTORE_PRIMARY_7355045 = true;
   const DRIVE_RESUMABLE_DIRECT_7355047 = true;
   const CUTOVER_DATE = '2026-08-12';
@@ -910,7 +910,7 @@
     let firebaseData;
     try { firebaseData = await call('listStudentPracticeLogs7355041', { year:Number(year), month:month }); }
     catch (error) { throw new Error(callableError(error, '발성훈련 기록을 불러오지 못했습니다.')); }
-    const firebaseLogs = Array.isArray(firebaseData.logs) ? firebaseData.logs.filter(isVocal) : [];
+    const firebaseLogs = Array.isArray(firebaseData.logs) ? firebaseData.logs : [];
     const logs = firebaseLogs.map(function(log){ return Object.assign({}, log, { sourceAuthority:'firestore' }); });
     setPracticeMap(logs, Number(year), Number(monthIndex));
     try { if (typeof global.ulimRefreshPracticeUnread606 === 'function') global.ulimRefreshPracticeUnread606(); } catch (_ignore) {}
