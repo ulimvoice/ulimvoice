@@ -5,9 +5,11 @@
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_R21A_7355042__ = true;
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_7355041__ = true;
 
-  const VERSION = '2026-08-16.735.05.0.65-r29.6-bounded-upload-ack-link-recovery';
+  const VERSION = '2026-08-16.735.05.0.66-r29.6-r2-server-drive-proxy';
   const DRIVE_FOLDER_FIRESTORE_PRIMARY_7355045 = true;
-  const DRIVE_RESUMABLE_DIRECT_7355047 = true;
+  const DRIVE_RESUMABLE_DIRECT_7355047 = false;
+  const DRIVE_RESUMABLE_SERVER_PROXY_7355066 = true;
+  const DRIVE_PROXY_CHUNK_BYTES_7355066 = 4 * 1024 * 1024;
   const CUTOVER_DATE = '2026-08-12';
   const CONSENT_POLICY_VERSION = '2026-08-12.ulim-voice-research-v1';
   const VAPID_KEY = 'BI6tfHhb4rc1M92JzFqVk1j2ZgwAoQDzgmUewsAtWclw5BzMasH8QZSPk-oaMkAL1I_TSGLX17PXCSHJg5pY1OU';
@@ -585,43 +587,39 @@
   function driveUploadSessions7355047(begin) {
     return Array.isArray(begin && begin.archiveUploadSessions) ? begin.archiveUploadSessions.filter(function(item){ return item && item.sessionUrl && item.folderId; }) : [];
   }
-  async function fetchDriveWithTimeout7355051(url, options, timeoutMs) {
-    const ms = Math.max(3000, Number(timeoutMs || 18000));
-    if (typeof AbortController !== 'function') {
-      return Promise.race([
-        fetch(url, options || {}),
-        new Promise(function(_resolve, reject){
-          setTimeout(function(){ reject(new Error('DRIVE_UPLOAD_TIMEOUT_7355051')); }, ms);
-        })
-      ]);
+  function blobChunkBase647355066(blob) {
+    return new Promise(function(resolve, reject){
+      if (!blob || !blob.size) return reject(new Error('녹음 파일 조각이 비어 있습니다.'));
+      if (typeof FileReader !== 'function') return reject(new Error('이 브라우저에서 녹음 파일 전송을 지원하지 않습니다.'));
+      const reader = new FileReader();
+      reader.onerror = function(){ reject(new Error('녹음 파일을 읽지 못했습니다.')); };
+      reader.onload = function(){
+        const raw = String(reader.result || '');
+        const comma = raw.indexOf(',');
+        const base64 = comma >= 0 ? raw.slice(comma + 1) : raw;
+        if (!base64) return reject(new Error('녹음 파일 인코딩에 실패했습니다.'));
+        resolve(base64);
+      };
+      reader.readAsDataURL(blob);
+    });
+  }
+  async function uploadDriveChunkWithRetry7355066(payload) {
+    let lastError = null;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        return await callWithTimeout7355065('uploadStudentPracticeDriveChunk7355066', payload, 55000);
+      } catch (error) {
+        lastError = error;
+        const code = text(error && error.code).toLowerCase();
+        const message = text(error && error.message);
+        if (!/unavailable|deadline-exceeded|internal/.test(code) && !/timeout|지연|network/i.test(message)) throw error;
+        if (attempt < 2) await delay7355065(700 + attempt * 900);
+      }
     }
-    const controller = new AbortController();
-    const timer = setTimeout(function(){ try { controller.abort(); } catch (_ignore) {} }, ms);
-    try {
-      return await fetch(url, Object.assign({}, options || {}, { signal:controller.signal }));
-    } finally {
-      clearTimeout(timer);
-    }
+    throw lastError || new Error('Google Drive 파일 전송이 지연되었습니다.');
   }
 
-  async function readDriveMetadata7355051(response, timeoutMs) {
-    const ms = Math.max(500, Number(timeoutMs || 1500));
-    try {
-      const result = await Promise.race([
-        response.text().then(function(body){
-          const raw = text(body);
-          if (!raw) return {};
-          try { return JSON.parse(raw); } catch (_ignore) { return {}; }
-        }),
-        new Promise(function(resolve){ setTimeout(function(){ resolve({ __ulimTimedOut:true }); }, ms); })
-      ]);
-      return result && result.__ulimTimedOut ? {} : (result || {});
-    } catch (_ignore2) {
-      return {};
-    }
-  }
-
-  async function uploadOneDriveSession7355051(session, blob, copyIndex, copyCount) {
+  async function uploadOneDriveSession7355051(session, blob, copyIndex, copyCount, recordId) {
     const sessionUrl = text(session && session.sessionUrl);
     if (!/^https:\/\/www\.googleapis\.com\/upload\/drive\/v3\/files\?/i.test(sessionUrl)) {
       throw new Error('녹음 보관 연결주소가 올바르지 않습니다.');
@@ -629,64 +627,71 @@
     const total = Number(blob && blob.size || 0);
     if (!total) throw new Error('녹음 파일이 비어 있습니다.');
     const mime = text(blob && blob.type || session.mimeType || 'audio/mp4').split(';')[0] || 'audio/mp4';
-
-    try {
-      if (typeof showLoading === 'function') {
-        const copyText = copyCount > 1 ? ' · 보관 ' + copyIndex + '/' + copyCount : '';
-        showLoading('녹음 파일을 Drive로 보내는 중입니다...' + copyText);
-      }
-    } catch (_ignore) {}
-
-    let response = null;
+    let offset = 0;
     let metadata = {};
-    let transportState = 'server_discovery';
-    let hardError = '';
-
-    try {
-      response = await fetchDriveWithTimeout7355051(sessionUrl, {
-        method:'PUT',
-        headers:{
-          'Content-Type':mime,
-          'Content-Range':'bytes 0-' + (total - 1) + '/' + total
-        },
-        body:blob
-      }, 18000);
-
-      if (response && response.ok) {
-        metadata = await readDriveMetadata7355051(response, 1500);
-        transportState = text(metadata && metadata.id) ? 'client_confirmed' : 'server_discovery';
-      } else if (response && (response.status === 308 || response.status === 408 || response.status === 429 || response.status >= 500)) {
-        transportState = 'server_discovery';
-      } else if (response) {
-        hardError = '녹음 파일 전송 실패 (' + response.status + ')';
+    let safety = 0;
+    let noProgress = 0;
+    while (offset < total) {
+      safety += 1;
+      if (safety > 64) throw new Error('녹음 파일 전송 범위를 확인하지 못했습니다.');
+      const endExclusive = Math.min(total, offset + DRIVE_PROXY_CHUNK_BYTES_7355066);
+      const chunk = blob.slice(offset, endExclusive, mime);
+      const base64 = await blobChunkBase647355066(chunk);
+      try {
+        if (typeof showLoading === 'function') {
+          const copyText = copyCount > 1 ? ' · 보관 ' + copyIndex + '/' + copyCount : '';
+          const percent = Math.max(1, Math.min(99, Math.round((offset / total) * 100)));
+          showLoading('녹음 파일을 Drive로 보내는 중입니다... ' + percent + '%' + copyText);
+        }
+      } catch (_ignore) {}
+      const result = await uploadDriveChunkWithRetry7355066({
+        recordId:text(recordId),
+        sessionUrl:sessionUrl,
+        folderId:text(session.folderId),
+        start:offset,
+        total:total,
+        mimeType:mime,
+        chunkBase64:base64
+      });
+      if (result && result.complete === true) {
+        metadata = result || {};
+        offset = total;
+        break;
       }
-    } catch (_networkOrTimeout) {
-      // The request may already have been committed by Drive even when the browser
-      // does not receive the final response. The server is the final authority.
-      transportState = 'server_discovery';
+      const nextOffset = Number(result && result.nextOffset);
+      if (!Number.isFinite(nextOffset) || nextOffset < offset || nextOffset > total) {
+        throw new Error('Google Drive가 다음 업로드 위치를 반환하지 않았습니다.');
+      }
+      if (nextOffset === offset) {
+        noProgress += 1;
+        if (noProgress >= 3) throw new Error('Google Drive 업로드가 진행되지 않았습니다. 잠시 후 다시 시도해주세요.');
+        await delay7355065(600 + noProgress * 500);
+        continue;
+      }
+      noProgress = 0;
+      offset = nextOffset;
     }
-
-    if (hardError) throw new Error(hardError);
-
-    const fileId = text(metadata && metadata.id);
+    const fileId = text(metadata && metadata.fileId);
     return {
       fileId:fileId,
       folderId:text(session.folderId),
       instructorUid:text(session.instructorUid),
       instructor:text(session.instructor),
       webViewLink:text(metadata && metadata.webViewLink),
-      fileName:text(metadata && metadata.name || session.fileName),
+      fileName:text(metadata && metadata.fileName || session.fileName),
       discoveryRequired:!fileId,
-      transportState:transportState
+      transportState:fileId ? 'server_proxy_confirmed' : 'server_discovery'
     };
   }
   async function uploadVocalDriveResumable7355047(begin, blob) {
     const sessions = driveUploadSessions7355047(begin);
     if (!sessions.length) throw new Error('녹음 보관 연결을 준비하지 못했습니다.');
+    const recordId = text(begin && begin.recordId);
+    if (!recordId) throw new Error('연습 기록 식별값이 없습니다.');
     const uploads = [];
     const errors = [];
     for (let i = 0; i < sessions.length; i += 1) {
-      try { uploads.push(await uploadOneDriveSession7355051(sessions[i], blob, i + 1, sessions.length)); }
+      try { uploads.push(await uploadOneDriveSession7355051(sessions[i], blob, i + 1, sessions.length, recordId)); }
       catch (error) { errors.push({ folderId:text(sessions[i].folderId), instructor:text(sessions[i].instructor), message:text(error && error.message) }); }
     }
     if (!uploads.length) throw new Error(errors[0] && errors[0].message || '녹음 파일을 보관하지 못했습니다.');
