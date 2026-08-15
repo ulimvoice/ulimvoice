@@ -2898,35 +2898,185 @@ document.querySelectorAll('.tab').forEach(t => {
         document.getElementById(t.dataset.tab).classList.add('active');
     };
 });
-async function promptAndAuthenticate() {
+function getStudentFirebaseIdentityToken7355054_() {
+    try {
+        const auth = window.__ULIM_STUDENT_FIREBASE_DIRECT_AUTH_7355030__;
+        const profile = auth && typeof auth.currentProfile === 'function' ? auth.currentProfile() : null;
+        const uid = String(profile && (profile.studentUid || profile.firebaseAuthUid) || '').trim();
+        return uid ? 'FIREBASE:' + uid : '';
+    } catch (_ignore7355055) {
+        return '';
+    }
+}
+window.getStudentFirebaseIdentityToken7355054_ = getStudentFirebaseIdentityToken7355054_;
+
+function applyStudentFirebaseProfile7355055_(profile) {
+    profile = profile || {};
+    studentName = String(profile.name || '').trim();
+    studentNo = String(profile.attendanceNo || '').trim();
+    instructorName = String(Array.isArray(profile.instructorNames) ? (profile.instructorNames[0] || '') : '').trim();
+    phoneLast4 = '';
+    studentSessionToken = '';
+    studentMustChangePassword = profile.mustChangePassword === true;
+
+    try {
+        localStorage.setItem('studentName', studentName);
+        localStorage.setItem('studentNo', studentNo);
+        localStorage.setItem('instructorName', instructorName);
+        localStorage.setItem('ulimLastMode', 'student');
+        localStorage.setItem('studentMustChangePassword', studentMustChangePassword ? 'Y' : 'N');
+        localStorage.removeItem('studentSessionToken');
+        localStorage.removeItem('phoneLast4');
+    } catch (_ignore7355055) {}
+    updateFilenameConstants();
+    return profile;
+}
+
+async function loginStudentFirebase7355055_(name, password) {
     const auth = window.__ULIM_STUDENT_FIREBASE_DIRECT_AUTH_7355030__;
     if (!auth || typeof auth.login !== 'function') {
-        alert('학생 로그인 기능을 준비하지 못했습니다. 페이지를 다시 열어주세요.');
-        return false;
+        throw new Error('학생 로그인 기능을 준비하지 못했습니다. 페이지를 다시 열어주세요.');
     }
+    const profile = await auth.login(String(name || '').trim(), String(password || ''));
+    if (!profile) throw new Error('학생 이름 또는 비밀번호가 일치하지 않습니다.');
+    applyStudentFirebaseProfile7355055_(profile);
+    if (typeof showMainContent === 'function') showMainContent(true);
+    if (typeof renderStudentAccountBar_ === 'function') renderStudentAccountBar_();
+    if (profile.mustChangePassword === true && typeof changeStudentPasswordByPrompt === 'function') {
+        setTimeout(function(){ changeStudentPasswordByPrompt(true, password); }, 120);
+    }
+    return profile;
+}
+
+async function promptAndAuthenticate() {
     const name = prompt('학생 이름을 입력해주세요.');
     if (!name) return false;
     const password = prompt('학생 비밀번호를 입력해주세요.');
     if (!password) return false;
     try {
-        const profile = await auth.login(name, password);
-        studentName = String(profile && profile.name || name).trim();
-        studentNo = String(profile && profile.attendanceNo || '').trim();
-        instructorName = String(profile && Array.isArray(profile.instructorNames) && profile.instructorNames[0] || '').trim();
-        phoneLast4 = '';
-        studentSessionToken = profile && profile.studentUid ? 'FIREBASE:' + profile.studentUid : 'FIREBASE';
-        localStorage.setItem('studentName', studentName);
-        localStorage.setItem('studentNo', studentNo);
-        localStorage.setItem('instructorName', instructorName);
-        localStorage.removeItem('phoneLast4');
-        localStorage.removeItem('studentSessionToken');
-        updateFilenameConstants();
+        await loginStudentFirebase7355055_(name, password);
         return true;
     } catch (error) {
         alert(error && error.message ? error.message : '학생 로그인에 실패했습니다.');
         return false;
     }
 }
+
+async function authenticateStudentFromInputs() {
+    const nameInput = document.getElementById('studentNameInput');
+    const pwInput = document.getElementById('phoneLast4Input');
+    const name = nameInput ? nameInput.value.trim() : '';
+    const password = pwInput ? pwInput.value : '';
+    if (!name || !password) return alert('학생 이름과 비밀번호를 입력해주세요.');
+    try {
+        if (typeof showLoading === 'function') showLoading('로그인 정보 확인 중...');
+        await loginStudentFirebase7355055_(name, password);
+    } catch (error) {
+        alert(error && error.message ? error.message : '학생 로그인에 실패했습니다.');
+    } finally {
+        try { if (typeof hideLoading === 'function') hideLoading(); } catch (_ignore7355055) {}
+    }
+}
+
+async function checkStudentName() {
+    const storedName = String(studentName || localStorage.getItem('studentName') || '').trim();
+    if (storedName === '게스트') {
+        studentName = '게스트';
+        studentNo = 'GUEST';
+        instructorName = '기본';
+        phoneLast4 = '';
+        studentSessionToken = '';
+        updateFilenameConstants();
+        if (typeof showMainContent === 'function') showMainContent(false);
+        return true;
+    }
+
+    const auth = window.__ULIM_STUDENT_FIREBASE_DIRECT_AUTH_7355030__;
+    if (auth && typeof auth.restore === 'function') {
+        try {
+            const profile = await auth.restore();
+            if (profile) {
+                applyStudentFirebaseProfile7355055_(profile);
+                if (typeof showMainContent === 'function') showMainContent(true);
+                if (typeof renderStudentAccountBar_ === 'function') renderStudentAccountBar_();
+                return true;
+            }
+        } catch (_ignore7355055) {}
+    }
+
+    studentSessionToken = '';
+    try { localStorage.removeItem('studentSessionToken'); } catch (_ignore7355055b) {}
+    if (typeof showStudentLoginPanel === 'function') showStudentLoginPanel();
+    else showLoginOverlay();
+    return false;
+}
+
+async function guestLogin() {
+    try {
+        const auth = window.__ULIM_STUDENT_FIREBASE_DIRECT_AUTH_7355030__;
+        if (auth && typeof auth.signOut === 'function') await auth.signOut();
+    } catch (_ignore7355055) {}
+    studentName = '게스트';
+    instructorName = '기본';
+    phoneLast4 = '';
+    studentNo = 'GUEST';
+    studentSessionToken = '';
+    studentMustChangePassword = false;
+    try {
+        localStorage.setItem('studentName', studentName);
+        localStorage.setItem('instructorName', instructorName);
+        localStorage.setItem('studentNo', studentNo);
+        localStorage.setItem('ulimLastMode', 'student');
+        localStorage.removeItem('studentSessionToken');
+        localStorage.removeItem('studentMustChangePassword');
+        localStorage.removeItem('phoneLast4');
+    } catch (_ignore7355055b) {}
+    updateFilenameConstants();
+    if (typeof showMainContent === 'function') showMainContent(false);
+    if (typeof renderStudentAccountBar_ === 'function') renderStudentAccountBar_();
+    return true;
+}
+
+function getTrainingStudentIdentity_() {
+    let profile = null;
+    try {
+        const auth = window.__ULIM_STUDENT_FIREBASE_DIRECT_AUTH_7355030__;
+        if (auth && typeof auth.currentProfile === 'function') profile = auth.currentProfile();
+    } catch (_ignore7355055) {}
+    return {
+        studentUid: String(profile && profile.studentUid || '').trim(),
+        studentNo: String(profile && profile.attendanceNo || studentNo || '').trim(),
+        studentName: String(profile && profile.name || studentName || localStorage.getItem('studentName') || '게스트').trim(),
+        phoneLast4: '',
+        deviceKey: (typeof pronGetDeviceKey === 'function' ? pronGetDeviceKey() : (localStorage.getItem('ulimDeviceKey') || ''))
+    };
+}
+
+function getRoomReservationActor630_() {
+    const api = window.__ULIM_PRACTICE_ROOM_FIRESTORE_PRIMARY_7355033__;
+    if (api && typeof api.currentActorSnapshot === 'function') return api.currentActorSnapshot();
+    return { authenticated:false, type:'', name:'', phoneLast4:'', instructorName:'', identity:'public', params:{} };
+}
+
+function getRoomCacheKey(year, month) {
+    const actor = getRoomReservationActor630_();
+    const actorKey = String(actor && actor.identity || 'public').slice(0, 48);
+    return `${year}-${String(month).padStart(2, '0')}-${actorKey}`;
+}
+
+function getRoomLocalStorageKey(cacheKey) {
+    return `ulimRoomReservationCache_secure_${cacheKey}`;
+}
+
+function loadStudentVocalPracticeLogsForMonth_(year, month, force = false) {
+    const api = window.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_API_7355041__;
+    if (!api || typeof api.loadMonth !== 'function') return Promise.resolve({ ok:false, status:'firebase_not_ready', logs:[] });
+    return api.loadMonth(Number(year), Number(month), !!force).then(function(data){
+        try { if (typeof renderCalendar === 'function') renderCalendar(Number(year), Number(month)); } catch (_ignore7355055) {}
+        return data;
+    }).catch(function(){ return { ok:false, status:'load_failed', logs:[] }; });
+}
+window.loadStudentVocalPracticeLogsForMonth_ = loadStudentVocalPracticeLogsForMonth_;
 
 function updateFilenameConstants() {
     const filenameBase = `${instructorName}_${studentName}_${phoneLast4}`;
@@ -10463,12 +10613,23 @@ function pronTodayKey() {
     const dd = String(d.getDate()).padStart(2, "0");
     return `${yyyy}${mm}${dd}`;
 }
+function pronGetPracticeUserKey7355055_() {
+    let profile = null;
+    try {
+        const auth = window.__ULIM_STUDENT_FIREBASE_DIRECT_AUTH_7355030__;
+        if (auth && typeof auth.currentProfile === 'function') profile = auth.currentProfile();
+    } catch (_ignore7355055) {}
+    const uid = String(profile && profile.studentUid || '').trim();
+    if (uid) return 'UID_' + uid;
+    const name = String(studentName || localStorage.getItem('studentName') || 'guest').trim();
+    return 'NAME_' + name.replace(/[^0-9A-Za-z가-힣_-]/g, '_');
+}
 function pronGetLocalEtriUsed() {
-    const key = `pronEtriUsed_${pronTodayKey()}_${pronGetEtriUserKey()}`;
+    const key = `pronEtriUsed_${pronTodayKey()}_${pronGetPracticeUserKey7355055_()}`;
     return Number(localStorage.getItem(key) || "0") || 0;
 }
 function pronSetLocalEtriUsed(used) {
-    const key = `pronEtriUsed_${pronTodayKey()}_${pronGetEtriUserKey()}`;
+    const key = `pronEtriUsed_${pronTodayKey()}_${pronGetPracticeUserKey7355055_()}`;
     localStorage.setItem(key, String(Math.max(0, Number(used) || 0)));
 }
 function pronSetAdvancedStatus(message, type) {
@@ -12607,28 +12768,34 @@ function showStudentLoginPanel() {
     if (pwInput) pwInput.value = '';
 }
 
-function studentSecureLogout() {
-    if (!confirm('학생 로그아웃할까요?')) return;
+async function studentSecureLogout() {
+    if (!confirm('학생 로그아웃할까요?')) return false;
+    try { sessionStorage.setItem('ULIM_EXPLICIT_LOGOUT_IN_PROGRESS', 'Y'); } catch (_ignore7355055) {}
+    try {
+        const auth = window.__ULIM_STUDENT_FIREBASE_DIRECT_AUTH_7355030__;
+        if (auth && typeof auth.signOut === 'function') await auth.signOut();
+    } catch (_ignore7355055b) {}
 
-    if (typeof clearStudentSecureSession_ === 'function') {
-        clearStudentSecureSession_();
-    } else {
-        studentSessionToken = '';
-        localStorage.removeItem('studentSessionToken');
-        localStorage.removeItem('studentMustChangePassword');
-        localStorage.removeItem('phoneLast4');
-        localStorage.removeItem('studentNo');
-    }
-
+    studentSessionToken = '';
     studentName = '';
+    studentNo = '';
     instructorName = '';
-    localStorage.removeItem('studentName');
-    localStorage.removeItem('instructorName');
-    localStorage.removeItem('savedVocalIds');
-    localStorage.removeItem('vocalRecords');
-
-    renderStudentAccountBar_();
-    showStudentLoginPanel();
+    phoneLast4 = '';
+    studentMustChangePassword = false;
+    try {
+        localStorage.removeItem('studentSessionToken');
+        localStorage.removeItem('studentName');
+        localStorage.removeItem('studentNo');
+        localStorage.removeItem('instructorName');
+        localStorage.removeItem('phoneLast4');
+        localStorage.removeItem('studentMustChangePassword');
+        localStorage.removeItem('savedVocalIds');
+        localStorage.removeItem('vocalRecords');
+        localStorage.removeItem('ulimLastMode');
+    } catch (_ignore7355055c) {}
+    if (typeof renderStudentAccountBar_ === 'function') renderStudentAccountBar_();
+    if (typeof showStudentLoginPanel === 'function') showStudentLoginPanel();
+    return true;
 }
 async function findStudentPasswordByPrompt() { alert('비밀번호 초기화가 필요하면 데스크에 문의해주세요.'); return false; }
 
@@ -13378,9 +13545,138 @@ window.__ulimRimiAnalyzingAssetVersion = "5-27";</script>
 <script>
 window.__ulimRimiAnalyzingInsideButtonVersion = "5-28";</script>
 
+<script id="ulim-training-ai-firebase-primary-7355055">
+window.__ULIM_TRAINING_AI_FIREBASE_PRIMARY_7355055__ = true;
+window.trainingFinalAiInProgress = false;
+window.trainingFinalAiActiveRequestId = '';
 
+function trainingAiTimeout_(ms, message) {
+    return new Promise(function(_, reject){
+        setTimeout(function(){ reject(new Error(message || '리미 분석 시간이 오래 걸리고 있습니다. 잠시 후 다시 시도해주세요.')); }, Number(ms) || 30000);
+    });
+}
 
+function isTrainingAiLimitError_(err) {
+    const msg = String((err && err.message) || err || '');
+    return /오늘\s*최종\s*AI\s*분석은\s*이미\s*사용|이미\s*사용|limit|연습을\s*완료/i.test(msg);
+}
 
+function setTrainingAiLoadingState_(isLoading) {
+    const btn = document.getElementById('trainingAiAnalyzeBtn');
+    const btnLabel = document.getElementById('trainingAiAnalyzeBtnLabel');
+    const titleText = document.getElementById('aiSectionTitleText');
+    const loadingVisual = document.getElementById('aiLoadingVisual');
+    const sttEl = document.getElementById('sttResult');
+    const badge = document.getElementById('accBadge');
+    if (loadingVisual) { loadingVisual.classList.remove('show'); loadingVisual.style.display = 'none'; }
+    if (btn) {
+        btn.disabled = !!isLoading;
+        btn.dataset.loading = isLoading ? '1' : '0';
+        btn.style.opacity = isLoading ? '.9' : '1';
+        btn.style.transform = isLoading ? 'scale(0.98)' : 'scale(1)';
+        if (isLoading) {
+            btn.classList.add('training-ai-loading');
+            btn.innerHTML = '<img class="training-ai-loading-img" src="assets/rimi_analyzing.gif" alt="리미 분석 중">';
+        } else {
+            btn.classList.remove('training-ai-loading');
+            btn.textContent = 'AI';
+        }
+    }
+    if (btnLabel) btnLabel.textContent = isLoading ? '분석 중...' : 'AI 분석';
+    if (titleText) titleText.textContent = isLoading ? '분석 중...' : 'AI 분석 결과';
+    if (sttEl) sttEl.classList.remove('hidden-during-loading');
+    if (badge) badge.classList.remove('hidden-during-loading');
+}
+
+function renderTrainingFinalAiLimitState_(message) {
+    setTrainingAiLoadingState_(false);
+    const resultBox = document.getElementById('resultBox');
+    const aiSection = document.getElementById('aiSection');
+    const recSection = document.getElementById('recSection');
+    if (resultBox) resultBox.style.display = 'block';
+    if (aiSection) aiSection.style.display = 'block';
+    if (recSection) recSection.style.display = 'block';
+    const safeMessage = message || '오늘 리미 분석은 이미 사용했습니다. 내일 다시 이용해주세요.';
+    const sttEl = document.getElementById('sttResult');
+    const badge = document.getElementById('accBadge');
+    const recStatus = document.getElementById('recStatus');
+    if (sttEl) sttEl.textContent = safeMessage;
+    if (badge) { badge.className = 'accuracy-badge acc-wait'; badge.textContent = '사용완료'; }
+    if (recStatus) recStatus.textContent = safeMessage;
+}
+
+function resetTrainingFinalAiRequestState_() {
+    window.trainingFinalAiInProgress = false;
+    window.trainingFinalAiActiveRequestId = '';
+    if (trainingFinalAiPollingTimer) {
+        clearTimeout(trainingFinalAiPollingTimer);
+        trainingFinalAiPollingTimer = null;
+    }
+    setTrainingAiLoadingState_(false);
+}
+
+function buildTrainingFinalRequestId_() {
+    if (window.trainingFinalAiActiveRequestId) return window.trainingFinalAiActiveRequestId;
+    const ident = getTrainingStudentIdentity_();
+    const namePart = String(ident.studentName || 'guest').replace(/[^0-9A-Za-z가-힣_-]/g, '_').slice(0, 18);
+    return 'TRAIN_AI_' + namePart + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+}
+
+async function checkVocalTrainingTodayCompletedFromServer_(options = {}) {
+    const api = window.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_API_7355041__;
+    if (!api || typeof api.checkToday !== 'function') return { completed:false, source:'firebase_not_ready' };
+    return api.checkToday(options || {});
+}
+
+async function runTrainingFinalAiAnalysis_(audioBlob, options = {}) {
+    if (!audioBlob) throw new Error('녹음 파일이 없습니다.');
+    if (!currentTrainObj) throw new Error('연습 문장이 없습니다.');
+    const api = window.__ULIM_PRACTICE_INTELLIGENCE_API_7355042__;
+    if (!api || typeof api.analyzePracticeBlob !== 'function') throw new Error('발성 분석 기능을 준비하지 못했습니다.');
+
+    const analysis = await api.analyzePracticeBlob({
+        blob: audioBlob,
+        sentence: String(currentTrainObj.text || ''),
+        originalSentence: String(currentTrainObj.text || ''),
+        standardPronunciation: String(currentTrainObj.pron || ''),
+        serverScore: false
+    });
+    const features = analysis && analysis.features || {};
+    const recognized = String(analysis && analysis.recognizedText || recognitionResult || '').trim();
+    const matchScoreRaw = Number(features.ctcPronunciationScore || features.pronunciationMatchScore || 0);
+    const matchScore = Number.isFinite(matchScoreRaw) ? Math.max(0, Math.min(100, matchScoreRaw)) : 0;
+    const score5 = 1 + (matchScore / 100) * 4;
+    const metrics = {
+        durationSec: Number(features.durationSec || 0),
+        avgRms: Number(features.avgRms || features.rmsMean || 0),
+        silenceRatio: Number(features.silenceRatio || 0),
+        syllablesPerSec: Number(features.syllablesPerSec || 0)
+    };
+    const generalAnalysisText = typeof buildTrainingFinalGeneralAnalysisText_ === 'function'
+        ? buildTrainingFinalGeneralAnalysisText_(recognized, Math.round(matchScore), metrics)
+        : ('인식결과: ' + (recognized || '인식 결과 없음') + '\n문장 일치도: ' + Math.round(matchScore) + '%');
+    const result = {
+        ok: true,
+        status: 'success',
+        source: 'firebase_practice_analysis',
+        analysisSource: 'firebase_primary',
+        recognized: recognized,
+        score: score5,
+        scoreText: score5.toFixed(1) + ' / 5',
+        comment: generalAnalysisText,
+        analysisText: generalAnalysisText,
+        generalAnalysisText: generalAnalysisText,
+        message: '리미 분석 완료',
+        requestSentence: String(currentTrainObj.text || ''),
+        standardPronunciation: String(currentTrainObj.pron || ''),
+        metrics: metrics,
+        features: features
+    };
+    recognitionResult = recognized;
+    if (typeof renderTrainingFinalAiResult_ === 'function') renderTrainingFinalAiResult_(result);
+    return result;
+}
+</script>
 
 <script>
 window.__ulimTrainingAi30SecFallbackVersion = "5-30";
@@ -15824,8 +16120,6 @@ ${ruleSummary}`, isFallback ? "success" : "success");
         return { year: d.getFullYear(), month: d.getMonth() };
     }
 
-    window.loadStudentVocalPracticeLogsForMonth_ = loadStudentVocalPracticeLogsForMonth_;
-    try { loadStudentVocalPracticeLogsForMonth_ = window.loadStudentVocalPracticeLogsForMonth_; } catch(e) {}
 
     window.toggleCalendar = async function() {
         const calendarArea = document.getElementById('calendarDisplayArea');
@@ -16099,16 +16393,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
   });
 })();</script>
 
-<script id="ulim-auth-gate-firebase-only-7355054">
-(function(){
- 'use strict';
- window.__ULIM_AUTH_GATE_FIREBASE_ONLY_7355054__=true;
- function applyStudent(p){if(!p)return false;try{studentName=p.name||'';studentNo=p.attendanceNo||'';instructorName=Array.isArray(p.instructorNames)?(p.instructorNames[0]||''):'';phoneLast4='';studentSessionToken=p.studentUid?'FIREBASE:'+p.studentUid:'';}catch(_e){}try{localStorage.setItem('studentName',p.name||'');localStorage.setItem('studentNo',p.attendanceNo||'');localStorage.setItem('instructorName',Array.isArray(p.instructorNames)?(p.instructorNames[0]||''):'');localStorage.setItem('ulimLastMode','student');localStorage.removeItem('studentSessionToken');localStorage.removeItem('phoneLast4');}catch(_e){}try{if(typeof showMainContent==='function')showMainContent(true);if(typeof renderStudentAccountBar_==='function')renderStudentAccountBar_();}catch(_e){}return true;}
- window.studentSecureLogout=async function(){try{const a=window.__ULIM_STUDENT_FIREBASE_DIRECT_AUTH_7355030__;if(a&&typeof a.signOut==='function')await a.signOut();}catch(_e){}try{studentName='';studentNo='';instructorName='';studentSessionToken='';localStorage.removeItem('studentName');localStorage.removeItem('studentNo');localStorage.removeItem('instructorName');localStorage.removeItem('studentSessionToken');localStorage.removeItem('ulimLastMode');}catch(_e){}try{if(typeof showStudentLoginPanel==='function')showStudentLoginPanel();}catch(_e){}return true;};
- async function restore(){const a=window.__ULIM_STUDENT_FIREBASE_DIRECT_AUTH_7355030__;if(!a||typeof a.restore!=='function')return;const p=await a.restore();if(p)applyStudent(p);}
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){restore().catch(function(){});},{once:true});else restore().catch(function(){});
-})();
-</script>
+<script id="ulim-auth-gate-firebase-only-7355055">window.__ULIM_AUTH_GATE_FIREBASE_ONLY_7355055__=true;</script>
 <style id="ulim-ai-learning-eval-style-595">
 .ulim-practice-type-standard{background:#ecfeff!important;color:#0e7490!important;}
 .ulim-eval-editor{margin-top:14px;padding:16px;border:1px solid #dbeafe;border-radius:18px;background:linear-gradient(180deg,#f8fbff,#fff);}
@@ -17105,8 +17390,6 @@ async function uploadPronRecord(message){
 
   
 
-  window.loadStudentVocalPracticeLogsForMonth_ = loadStudentVocalPracticeLogsForMonth_;
-  try { loadStudentVocalPracticeLogsForMonth_ = window.loadStudentVocalPracticeLogsForMonth_; } catch(e) {}
 
   function rerenderVisible(year, month){
     try { if (typeof renderCalendar === 'function') renderCalendar(year, month); } catch(e) {}
@@ -19996,21 +20279,20 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 
 
 <!-- ULIM R20: vocalization Firestore-primary authority; GAS remains media/history compatibility only. -->
-<script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260814.73550540"></script>
+<script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260815.73550550"></script>
 <script id="ulim-vocal-primary-bind-7355041">
 window.__ULIM_VOCAL_PRIMARY_BUILD_7355041__='20260814-7355050b-r25.2-step6-next-upload';
 window.__ULIM_VOCAL_STEP6_NEXT_UPLOAD_BUILD_7355050B__='20260814-7355050b';
 window.__ULIM_VOCAL_DRIVE_RESPONSE_CLASS_LINK_BUILD_7355050C__='20260814-7355050c';
 window.__ULIM_VOCAL_SERVER_FINALIZE_DISCOVERY_BUILD_7355050D__='20260814-7355050d';
 window.__ULIM_VOCAL_FINALIZE_ACK_CLASS_AUTHORITY_BUILD_7355052__='20260814-7355052-r27';
-window.__ULIM_FIRESTORE_SINGLE_OWNER_BUILD_7355054__='20260814-7355054-r29';
+window.__ULIM_FIRESTORE_SINGLE_OWNER_BUILD_7355055__='20260815-7355055-r29.2-startup-runtime-fix';
 window.__ULIM_R26_BOUNDED_UPLOAD_ADMIN_RESET_BUILD_7355051__='20260814-7355051';
 window.__ULIM_PRACTICE_INTELLIGENCE_BUILD_7355042__='20260813-7355050-r25-vocal-reliability';
 try { window.fetchServerTrainingSentence_ = fetchServerTrainingSentence_; } catch(_e) {}
 try { window.trainNew = trainNew; } catch(_e) {}
 try { window.completeTraining = completeTraining; } catch(_e) {}
 try { window.checkVocalTrainingTodayCompletedFromServer_ = checkVocalTrainingTodayCompletedFromServer_; } catch(_e) {}
-try { window.loadStudentVocalPracticeLogsForMonth_ = loadStudentVocalPracticeLogsForMonth_; } catch(_e) {}
 </script>
 </body>
 </html>
