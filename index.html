@@ -42,7 +42,7 @@
   <link rel="preconnect" href="https://identitytoolkit.googleapis.com" data-ulim-classroom-preconnect="7297">
   <link rel="preconnect" href="https://asia-northeast3-ulim-7b09a.cloudfunctions.net" data-ulim-classroom-preconnect="7297">
   <!-- ULIM 7.34.2: safe Firebase-first staff/student directory integration. -->
-  <script src="./web/room-classroom-realtime-7.29.19.js?v=20260815.73550580"></script>
+  <script src="./web/room-classroom-realtime-7.29.19.js?v=20260816.73550660"></script>
   <script src="./web/practice-room-firestore-primary-7.35.5.0.37.js?v=20260815.73550580"></script>
   <script src="./web/staff-login-firebase-primary-7.32.9.js?v=20260816.73550650"></script>
   <script src="./web/student-login-firebase-direct-7.35.5.0.30.js?v=20260815.73550580"></script>
@@ -16874,6 +16874,31 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
   }
   function practiceEvaluationHasValue595(ev){return !!(ev&&(String(ev.scoreJson||'').trim()||String(ev.comment||'').trim()));}
   function defsFor(log){return isR21VocalRecord595(log)?R21_VOCAL_SCORE_DEFS:(SCORE_DEFS[taskType(log)]||[]);}
+  function adminOtherTeacherEvaluations595(log){
+    let full=false;
+    try{full=typeof adminIsFullAdmin==='function'?adminIsFullAdmin():document.body.classList.contains('full-admin-mode');}catch(_e){full=false;}
+    if(!full)return '';
+    const evaluations=Array.isArray(log&&log.teacherEvaluations)?log.teacherEvaluations:[];
+    if(!evaluations.length)return '';
+    const identity=currentEvaluatorIdentity595();
+    const ownKeys=new Set(identity.keys||[]),ownNames=new Set(identity.names||[]);
+    const others=evaluations.filter(practiceEvaluationHasValue595).filter(function(ev){
+      const key=normalizeEvaluatorValue595(ev&&ev.evaluatorKey),name=normalizeEvaluatorValue595(ev&&ev.teacherName);
+      return !((key&&ownKeys.has(key))||(name&&ownNames.has(name)));
+    });
+    if(!others.length)return '';
+    const cards=others.map(function(ev){
+      const scores=safeJson(ev&& (ev.scoreJson||ev.scores)||{});
+      const rows=defsFor(log).filter(function(def){return scores[def[0]]!=null&&scores[def[0]]!=='';}).map(function(def){
+        return `<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid #eef2f7;"><span>${esc(def[1])}</span><b>${esc(scores[def[0]])}/5</b></div>`;
+      }).join('');
+      const teacher=String(ev&&ev.teacherName||'선생님').trim()||'선생님';
+      const comment=String(ev&&ev.comment||'').trim();
+      const saved=String(ev&& (ev.savedAt||ev.updatedAt)||'').trim();
+      return `<div style="border:1px solid #dbeafe;border-radius:14px;padding:12px;margin-top:10px;background:#f8fbff;"><div style="font-weight:900;color:#1e3a8a;margin-bottom:8px;">${esc(teacher)} 선생님 평가</div>${rows}${comment?`<div style="margin-top:10px;padding:10px;border-radius:10px;background:#fff;white-space:pre-wrap;line-height:1.6;">${esc(comment)}</div>`:''}${saved?`<div style="margin-top:8px;font-size:12px;color:#64748b;">${esc(saved)}</div>`:''}</div>`;
+    }).join('');
+    return `<div style="margin-top:16px;padding-top:14px;border-top:2px solid #e2e8f0;"><div style="font-weight:900;color:#334155;">관리자 열람 · 다른 강사 평가 ${others.length}건</div>${cards}</div>`;
+  }
   function scoreButtons(idx,key,value){let h='';for(let n=1;n<=5;n++)h+=`<button type="button" class="ulim-score-btn ${Number(value)===n?'selected':''}" data-idx="${idx}" data-key="${esc(key)}" data-value="${n}" onclick="ulimSetPracticeScore595(this)">${n}</button>`;return h;}
   function scoreEditor(log,idx){
     const type=taskType(log);
@@ -17201,6 +17226,7 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
           ${aiHtml}
           ${audioHtml}
           ${scoreEditor(log,idx)}
+          ${adminOtherTeacherEvaluations595(log)}
           ${finalMeta}
         </div>
 
@@ -20495,7 +20521,7 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 
 
 <!-- ULIM R20: vocalization Firestore-primary authority; GAS remains media/history compatibility only. -->
-<script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260816.73550650"></script>
+<script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260816.73550660"></script>
 <script id="ulim-vocal-primary-bind-7355041">
 window.__ULIM_VOCAL_PRIMARY_BUILD_7355041__='20260814-7355050b-r25.2-step6-next-upload';
 window.__ULIM_VOCAL_STEP6_NEXT_UPLOAD_BUILD_7355050B__='20260814-7355050b';
