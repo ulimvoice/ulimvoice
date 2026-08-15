@@ -2634,6 +2634,7 @@ body.ulim-attendance-modal-open73545{overflow:hidden}
             </div>
             <div id="adminVocalPracticeList"></div>
           </div>
+          <div id="adminPracticeContentAdminSlot"></div>
         </div>
 
 
@@ -2893,7 +2894,6 @@ let instructorFolderId = '';
 
 // GAS is intentionally restricted to the Google-only bridge.
 // Operational reads/writes/auth are owned by Firebase Auth + Firestore + Functions.
-const DRIVE_BRIDGE_API_URL = 'https://script.google.com/macros/s/AKfycbyS3QUvrjNbwvaw92_g-QKQyN3Yito8DAdpAjxUzfnsuVf3Ce7ccuaXIv651U7FnYF4/exec';
 
 
 let currentFilenameBase = `${instructorName}_${studentName}_${phoneLast4}`;
@@ -3562,7 +3562,7 @@ function buildTrainingObjectFromSentence_(item) {
 }
 async function fetchServerTrainingSentence_(options) {
 const api = window.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_API_7355041__;
-  if (!api || typeof api.getTrainingSentence !== 'function') throw new Error('발성훈련 Firebase 기능을 준비 중입니다. 잠시 후 다시 시도해주세요.');
+  if (!api || typeof api.getTrainingSentence !== 'function') throw new Error('발성훈련 기능을 준비 중입니다. 잠시 후 다시 시도해주세요.');
   return api.getTrainingSentence(options || {});
 }
 async function recordServerTrainingSentenceComplete_() {
@@ -3630,7 +3630,7 @@ async function safeSetTrainingProAudio_(audioUrl) {
 
 async function trainNew(){
 const api = window.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_API_7355041__;
-  if (!api || typeof api.startTrainingFromPage !== 'function') return alert('발성훈련 Firebase 기능을 준비 중입니다. 잠시 후 다시 시도해주세요.');
+  if (!api || typeof api.startTrainingFromPage !== 'function') return alert('발성훈련 기능을 준비 중입니다. 잠시 후 다시 시도해주세요.');
   return api.startTrainingFromPage();
 }
 
@@ -4707,65 +4707,51 @@ function sanitizePastQuestionScriptText_(rawText) {
 async function rollPastQuestion(gender) {
     const genderKey = String(gender || '').toLowerCase() === 'female' ? 'female' : 'male';
     const genderLabel = genderKey === 'female' ? '여자' : '남자';
-
     const customBox = document.getElementById('pastCustomBox');
     if (customBox) customBox.classList.remove('active');
-
     const resultBox = document.getElementById('pastResultBox');
     const audioEl = document.getElementById('pastAudio');
     if (resultBox) resultBox.style.display = 'none';
     if (audioEl) audioEl.removeAttribute('src');
     resetPastUploadState_();
-
     setPastQuestionButtonsLoading_(true);
     setPastRoleDisplay_(genderLabel + ' 기출문제 불러오는 중...', true);
     document.getElementById("pastLinesDisplay").textContent = '잠시만 기다려주세요.';
-
     try {
         showLoading('기출 대본을 불러오는 중입니다...');
-        const result = await driveBridgeJsonpRequest7355054({
-            action: 'getRandomPastQuestionDriveScript',
-            gender: genderKey
-        }, 15000);
+        const api = window.__ULIM_PRACTICE_INTELLIGENCE_API_7355042__ || window.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_API_7355041__;
+        if (!api || typeof api.getRandomPastQuestion !== 'function') throw new Error('기출 대본 기능을 준비하지 못했습니다.');
+        const result = await api.getRandomPastQuestion({ gender:genderKey });
         hideLoading();
-
-        if (!result || result.status !== 'success') {
-            throw new Error(result && result.message ? result.message : '기출 대본을 불러오지 못했습니다.');
-        }
-
+        if (!result || result.status !== 'success') throw new Error(result && result.message ? result.message : '기출 대본을 불러오지 못했습니다.');
         const rawScriptText = String(result.content || '').trim();
         const scriptText = sanitizePastQuestionScriptText_(rawScriptText);
         if (!scriptText) throw new Error('대본 내용이 비어 있습니다.');
-
         const scriptNo = String(result.scriptNo || result.number || '').trim();
         const title = String(result.title || result.fileName || '').trim();
         const role = String(result.role || (genderLabel + ' 기출 ' + (scriptNo ? scriptNo + '번' : '대본'))).trim();
-
         pastCurrentQuestion = {
             role: role,
             lines: scriptText,
             gender: genderKey,
-            sourceMode: 'drive',
+            sourceMode: 'firestore',
             fileId: String(result.fileId || '').trim(),
             fileName: title || role,
             scriptNo: scriptNo,
             sourceGender: genderKey
         };
-
         setPastRoleDisplay_('', false);
         document.getElementById("pastLinesDisplay").textContent = scriptText;
     } catch (err) {
         hideLoading();
-        void ('[기출문제 Drive 랜덤 불러오기 실패]', err);
         pastCurrentQuestion = null;
         setPastRoleDisplay_('버튼을 눌러 대본을 뽑아주세요', true);
         document.getElementById("pastLinesDisplay").textContent = '-';
-        alert('기출문제 대본을 불러오지 못했습니다. 학원에 문의해주세요.');
+        alert((err && err.message) || '기출문제 대본을 불러오지 못했습니다. 학원에 문의해주세요.');
     } finally {
         setPastQuestionButtonsLoading_(false);
     }
 }
-
 function showPastCustomWriter() {
     const customBox = document.getElementById('pastCustomBox');
     if (customBox) customBox.classList.add('active');
@@ -7787,6 +7773,7 @@ function showAdminPanel(panelId) {
 
     if (panelId === 'adminPanelVocalPractice') {
         adminInitVocalPracticePanel_();
+        adminRenderPracticeContentAdmin7355063_();
         adminLoadVocalPracticeLogs(false);
     }
 
@@ -10737,23 +10724,6 @@ async function pronBlobToEtriAudioBase64(blob) {
         return { base64: pronArrayBufferToBase64(rawBuffer), mimeType: blob.type || "audio/webm", sampleRate: "original" };
     }
 }
-function driveBridgeJsonpRequest7355054(params, timeoutMs = 12000) {
-    params = params || {};
-    if (String(params.action || '') !== 'getRandomPastQuestionDriveScript') {
-        return Promise.reject(new Error('이 요청은 Firebase Functions에서 처리해야 합니다.'));
-    }
-    return new Promise((resolve,reject)=>{
-        const callback='ulimDriveBridge_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
-        const script=document.createElement('script');let done=false;
-        const timer=setTimeout(()=>finish(new Error('기출 대본을 불러오는 시간이 초과되었습니다.')),Math.max(3000,Number(timeoutMs)||12000));
-        function cleanup(){clearTimeout(timer);try{delete window[callback];}catch(_e){}try{script.remove();}catch(_e){}}
-        function finish(error,data){if(done)return;done=true;cleanup();error?reject(error):resolve(data||{});}
-        window[callback]=data=>finish(null,data);
-        const query=new URLSearchParams();Object.keys(params).forEach(k=>{if(params[k]!=null)query.set(k,String(params[k]));});query.set('callback',callback);query.set('_',String(Date.now()));
-        script.onerror=()=>finish(new Error('기출 대본 연결에 실패했습니다.'));script.src=DRIVE_BRIDGE_API_URL+'?'+query.toString();document.head.appendChild(script);
-    });
-}
-function pronJsonpRequest(params, timeoutMs = 12000) { return driveBridgeJsonpRequest7355054(params, timeoutMs); }
 
 
 
@@ -11927,6 +11897,118 @@ function getStudentVocalPracticeLogsByDate_(dateKey) {
     return studentVocalPracticeLogMap.get(dateKey) || [];
 }
 
+
+function adminPracticeContentApi7355063_() {
+    return window.__ULIM_PRACTICE_INTELLIGENCE_API_7355042__ || window.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_API_7355041__ || null;
+}
+function adminPracticeContentTime7355063_(ms) {
+    const value = Number(ms || 0);
+    if (!value) return '-';
+    try { return new Date(value).toLocaleString('ko-KR', { timeZone:'Asia/Seoul' }); } catch (_e) { return '-'; }
+}
+function adminSwitchPracticeContentTab7355063_(name) {
+    document.querySelectorAll('#adminPracticeContentAdminSlot [data-content-pane]').forEach(function(el){
+        el.style.display = el.getAttribute('data-content-pane') === name ? 'block' : 'none';
+    });
+    document.querySelectorAll('#adminPracticeContentAdminSlot [data-content-tab]').forEach(function(btn){
+        const active = btn.getAttribute('data-content-tab') === name;
+        btn.style.background = active ? '#0f766e' : '#e2e8f0';
+        btn.style.color = active ? '#fff' : '#334155';
+    });
+}
+async function adminLoadPracticeContentStatus7355063_() {
+    if (!adminIsFullAdmin()) return;
+    const api = adminPracticeContentApi7355063_();
+    if (!api || typeof api.getPracticeContentAdminStatus !== 'function') return;
+    try {
+        const data = await api.getPracticeContentAdminStatus();
+        const vocal = data && data.vocal || {};
+        const past = data && data.pastQuestion || {};
+        const vocalStatus = document.getElementById('adminVocalContentStatus7355063');
+        const pastStatus = document.getElementById('adminPastContentStatus7355063');
+        const link = document.getElementById('adminPastDriveLink7355063');
+        if (vocalStatus) vocalStatus.innerHTML =
+            '<b>현재 세트:</b> ' + escapeHtml_(vocal.activeSetId || '-') + '<br>' +
+            '<b>문장 수:</b> ' + Number(vocal.sentenceCount || 0) + '개<br>' +
+            '<b>생성:</b> ' + escapeHtml_(adminPracticeContentTime7355063_(vocal.generatedAtMs)) + '<br>' +
+            '<b>다음 갱신 기준:</b> ' + escapeHtml_(adminPracticeContentTime7355063_(vocal.expiresAtMs)) +
+            (vocal.lastError ? '<br><span style="color:#b91c1c;">최근 오류: ' + escapeHtml_(vocal.lastError) + '</span>' : '');
+        if (link && !link.value) link.value = String(past.driveFolderUrl || '');
+        if (pastStatus) pastStatus.innerHTML =
+            '<b>마지막 갱신:</b> ' + escapeHtml_(adminPracticeContentTime7355063_(past.lastSyncedAtMs)) + '<br>' +
+            '<b>남자:</b> ' + Number(past.maleCount || 0) + '개 · <b>여자:</b> ' + Number(past.femaleCount || 0) + '개 · <b>전체:</b> ' + Number(past.lastSyncCount || 0) + '개' +
+            (past.lastError ? '<br><span style="color:#b91c1c;">최근 오류: ' + escapeHtml_(past.lastError) + '</span>' : '');
+    } catch (_e) {}
+}
+async function adminRefreshVocalSentenceSet7355063_() {
+    if (!adminIsFullAdmin()) return;
+    if (!confirm('발성훈련 100문장을 지금 새로 생성할까요? 현재 학생에게 이미 배정된 오늘 문장은 유지됩니다.')) return;
+    const api = adminPracticeContentApi7355063_();
+    if (!api || typeof api.refreshVocalSentenceSetAdmin !== 'function') return alert('발성 문장 관리 기능을 준비하지 못했습니다.');
+    try {
+        showLoading('새 발성훈련 100문장을 생성하는 중입니다...');
+        await api.refreshVocalSentenceSetAdmin();
+        hideLoading();
+        await adminLoadPracticeContentStatus7355063_();
+        alert('새 발성훈련 100문장 세트를 생성했습니다.');
+    } catch (err) { hideLoading(); alert((err && err.message) || '발성 문장 생성에 실패했습니다.'); }
+}
+async function adminSavePastDriveLink7355063_() {
+    if (!adminIsFullAdmin()) return;
+    const input = document.getElementById('adminPastDriveLink7355063');
+    const url = String(input && input.value || '').trim();
+    if (!url) return alert('Google Drive 기출 대본 폴더 링크를 입력해주세요.');
+    const api = adminPracticeContentApi7355063_();
+    if (!api || typeof api.savePastQuestionDriveLinkAdmin !== 'function') return alert('기출 대본 관리 기능을 준비하지 못했습니다.');
+    try {
+        showLoading('기출 대본 폴더 링크를 저장하는 중입니다...');
+        await api.savePastQuestionDriveLinkAdmin(url);
+        hideLoading();
+        await adminLoadPracticeContentStatus7355063_();
+        alert('기출 대본 폴더 링크를 저장했습니다.');
+    } catch (err) { hideLoading(); alert((err && err.message) || '링크 저장에 실패했습니다.'); }
+}
+async function adminSyncPastQuestionCatalog7355063_() {
+    if (!adminIsFullAdmin()) return;
+    const api = adminPracticeContentApi7355063_();
+    if (!api || typeof api.syncPastQuestionCatalogAdmin !== 'function') return alert('기출 대본 갱신 기능을 준비하지 못했습니다.');
+    try {
+        showLoading('Drive 기출 대본을 운영자료로 갱신하는 중입니다...');
+        const result = await api.syncPastQuestionCatalogAdmin();
+        hideLoading();
+        await adminLoadPracticeContentStatus7355063_();
+        alert('기출 대본을 갱신했습니다. ' + Number(result && result.count || 0) + '개');
+    } catch (err) { hideLoading(); alert((err && err.message) || '기출 대본 갱신에 실패했습니다.'); }
+}
+function adminRenderPracticeContentAdmin7355063_() {
+    const slot = document.getElementById('adminPracticeContentAdminSlot');
+    if (!slot) return;
+    if (!adminIsFullAdmin()) { slot.replaceChildren(); return; }
+    if (slot.dataset.ready7355063 !== '1') {
+        slot.dataset.ready7355063 = '1';
+        slot.innerHTML = `
+          <div class="admin-card" style="margin-top:14px;">
+            <h3 style="margin:0 0 12px;">연습 콘텐츠 관리</h3>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+              <button type="button" data-content-tab="vocal" onclick="adminSwitchPracticeContentTab7355063_('vocal')" style="border:0;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer;">발성 100문장 관리</button>
+              <button type="button" data-content-tab="past" onclick="adminSwitchPracticeContentTab7355063_('past')" style="border:0;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer;">기출 링크·갱신</button>
+            </div>
+            <div data-content-pane="vocal">
+              <p style="font-size:13px;color:#64748b;line-height:1.6;">발성훈련 문장은 100일 단위로 자동 갱신됩니다.</p>
+              <div id="adminVocalContentStatus7355063" style="padding:12px;background:#f8fafc;border-radius:12px;line-height:1.7;">불러오는 중...</div>
+              <div class="admin-btn-row"><button type="button" class="admin-btn blue" onclick="adminRefreshVocalSentenceSet7355063_()">100문장 지금 갱신</button></div>
+            </div>
+            <div data-content-pane="past" style="display:none;">
+              <p style="font-size:13px;color:#64748b;line-height:1.6;">m1~m100, f1~f100 대본이 들어 있는 Google Drive 폴더 링크를 저장하면 운영자료가 월 1회 자동 갱신됩니다.</p>
+              <div class="admin-field"><label for="adminPastDriveLink7355063">Google Drive 기출 대본 폴더 링크</label><input type="url" id="adminPastDriveLink7355063" placeholder="https://drive.google.com/drive/folders/..."></div>
+              <div class="admin-btn-row"><button type="button" class="admin-btn" onclick="adminSavePastDriveLink7355063_()">링크 저장</button><button type="button" class="admin-btn blue" onclick="adminSyncPastQuestionCatalog7355063_()">지금 갱신</button></div>
+              <div id="adminPastContentStatus7355063" style="padding:12px;background:#f8fafc;border-radius:12px;line-height:1.7;">불러오는 중...</div>
+            </div>
+          </div>`;
+        adminSwitchPracticeContentTab7355063_('vocal');
+    }
+    adminLoadPracticeContentStatus7355063_();
+}
 
 function adminInitVocalPracticePanel_() {
     const dateInput = document.getElementById('adminVocalPracticeDate');
@@ -16334,7 +16416,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
 
     window.uploadPastQuestionRecord = async function(){
   const canonical = typeof uploadPastQuestionRecord === 'function' ? uploadPastQuestionRecord : null;
-  if (!canonical || canonical === window.uploadPastQuestionRecord) throw new Error('기출문제 Firebase 저장 기능을 준비하지 못했습니다.');
+  if (!canonical || canonical === window.uploadPastQuestionRecord) throw new Error('기출문제 저장 기능을 준비하지 못했습니다.');
   return canonical();
 };
 
@@ -20305,7 +20387,7 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 
 
 <!-- ULIM R20: vocalization Firestore-primary authority; GAS remains media/history compatibility only. -->
-<script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260815.73550580"></script>
+<script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260816.73550630"></script>
 <script id="ulim-vocal-primary-bind-7355041">
 window.__ULIM_VOCAL_PRIMARY_BUILD_7355041__='20260814-7355050b-r25.2-step6-next-upload';
 window.__ULIM_VOCAL_STEP6_NEXT_UPLOAD_BUILD_7355050B__='20260814-7355050b';
@@ -20315,6 +20397,7 @@ window.__ULIM_VOCAL_FINALIZE_ACK_CLASS_AUTHORITY_BUILD_7355052__='20260814-73550
 window.__ULIM_FIRESTORE_SINGLE_OWNER_BUILD_7355055__='20260815-7355058-r29.4.2-classroom-ui-transport-fix';
 window.__ULIM_R26_BOUNDED_UPLOAD_ADMIN_RESET_BUILD_7355051__='20260814-7355051';
 window.__ULIM_PRACTICE_INTELLIGENCE_BUILD_7355042__='20260813-7355050-r25-vocal-reliability';
+window.__ULIM_PRACTICE_CONTENT_BUILD_7355063__='20260816-7355063-r29.5-firestore-content-async-drive-finalize';
 try { window.fetchServerTrainingSentence_ = fetchServerTrainingSentence_; } catch(_e) {}
 try { window.trainNew = trainNew; } catch(_e) {}
 try { window.completeTraining = completeTraining; } catch(_e) {}
