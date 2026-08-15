@@ -2,7 +2,7 @@
   'use strict';
   if(global.__ULIM_STAFF_LOGIN_FIREBASE_PRIMARY_7329__)return;
   global.__ULIM_STAFF_LOGIN_FIREBASE_PRIMARY_7329__=true;
-  const VERSION='2026-08-14.732.09-firebase-auth-only';
+  const VERSION='2026-08-15.732.09.1-dom-input-contract-fix';
   const PROFILE_KEY='ulimFirebaseStaffProfile7320';
   const LOGOUT_KEY='ULIM_STAFF_EXPLICIT_LOGOUT_7322';
   const DOMAIN='auth.ulimvoice.app';
@@ -56,7 +56,10 @@
   async function login(id,password){
     if(loginPromise)return loginPromise;
     loginPromise=(async function(){
-      const cleanId=text(id),pw=String(password==null?'':password);if(!cleanId||!pw)throw new Error('교직원 ID와 비밀번호를 입력해주세요.');
+      const idEl=document.getElementById('adminIdInput'),pwEl=document.getElementById('adminPwInput');
+      const cleanId=text(id==null?(idEl?idEl.value:''):id);
+      const pw=String(password==null?(pwEl?pwEl.value:''):password);
+      if(!cleanId||!pw)throw new Error('교직원 ID와 비밀번호를 입력해주세요.');
       try{localStorage.removeItem(LOGOUT_KEY);sessionStorage.removeItem(LOGOUT_KEY);}catch(_e){}
       const rt=await runtime();const o=owner();if(o&&typeof o.resetStableTokenGuard==='function')o.resetStableTokenGuard('');
       const email=await deriveLoginEmail(cleanId);if(rt.auth.currentUser)try{await rt.sdk.signOut(rt.auth);}catch(_e){}
