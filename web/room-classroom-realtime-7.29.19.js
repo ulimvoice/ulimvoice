@@ -3,7 +3,7 @@
   if (global.__ULIM_ROOM_CLASSROOM_REALTIME_72919__) return;
   global.__ULIM_ROOM_CLASSROOM_REALTIME_72919__ = true;
 
-  const VERSION = '2026-08-15.729.21-server-read-ui-single-owner';
+  const VERSION = '2026-08-16.729.22-student-classroom-poll-guard';
   const FIREBASE_CONFIG = Object.freeze({
     apiKey: 'AIzaSyAW-sqtUQ_mJ6ZS_aV8pTOAKvHTSX-FXUM',
     authDomain: 'ulim-7b09a.firebaseapp.com',
@@ -74,6 +74,19 @@
   async function forceReauthenticate(){ return ensureAuthenticated(); }
   async function getStableIdToken(rt,force){ rt=rt||await ensureAuthenticated(); if(!rt||!rt.auth.currentUser)throw new Error('Firebase 로그인이 필요합니다.'); return rt.sdk.getIdToken(rt.auth.currentUser,force===true); }
   async function getStableIdTokenResult(rt,force){ rt=rt||await ensureAuthenticated(); if(!rt||!rt.auth.currentUser)throw new Error('Firebase 로그인이 필요합니다.'); return rt.sdk.getIdTokenResult(rt.auth.currentUser,force===true); }
+  function normalizedRole72922(value){return text(value).replace(/\s+/g,'').toLowerCase();}
+  function isStaffRole72922(value){const role=normalizedRole72922(value);return ['teacher','admin','superadmin','강사','관리자','전체관리자'].indexOf(role)>=0;}
+  async function isStaffSession72922(rt){
+    rt=rt||await ensureAuthenticated();
+    if(!rt||!rt.auth||!rt.auth.currentUser)return false;
+    try{const token=await rt.sdk.getIdTokenResult(rt.auth.currentUser,false);const claims=token&&token.claims||{};return isStaffRole72922(claims.role||claims.adminRole||claims.staffRole);}
+    catch(_e){return false;}
+  }
+  function stopClassroomSubscription72922(){
+    try{if(state.classroomUnsub)state.classroomUnsub();}catch(_e){}
+    try{if(state.classroomPoll)clearInterval(state.classroomPoll);}catch(_e2){}
+    state.classroomUnsub=null;state.classroomPoll=null;state.classroomDate='';
+  }
   function resetStableTokenGuard(){ return true; }
   function callable(rt,name){ return rt.sdk.httpsCallable(rt.functions,name); }
   function data(v){return v&&v.data?v.data:v||{};}
@@ -96,7 +109,7 @@
     date=text(date||dateKey());
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw new Error('사용일을 확인해주세요.');
     const rt=await ensureAuthenticated();
-    if(!rt||!rt.auth||!rt.auth.currentUser)throw new Error('교직원 로그인이 필요합니다.');
+    if(!rt||!rt.auth||!rt.auth.currentUser||!(await isStaffSession72922(rt)))throw new Error('교직원 로그인이 필요합니다.');
     if(typeof rt.getClassroomDay!=='function')throw new Error('강의실 조회 기능을 준비하지 못했습니다.');
     const payload=data(await rt.getClassroomDay({date:date,requestId:'CLASSROOM-READ-7355058-'+Date.now()}));
     const rows=normalizeClassroomRows(payload.records,date);
@@ -115,6 +128,7 @@
   async function subscribeClassroom(date){
     date=text(date||dateKey()); if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return null;
     const rt=await ensureAuthenticated(); if(!rt)return null;
+    if(!(await isStaffSession72922(rt))){stopClassroomSubscription72922();return null;}
     if(state.classroomDate===date&&state.classroomUnsub)return true;
     try{if(state.classroomUnsub)state.classroomUnsub();}catch(_e){}
     try{if(state.classroomPoll)clearInterval(state.classroomPoll);}catch(_e){}
@@ -178,7 +192,8 @@
   async function loadClassroom(date){ const target=text(date||dateKey()); const records=await readClassroomRecords(target); subscribeClassroom(target).catch(function(){}); return {status:'success',records:records}; }
   async function start(){
     const rt=await ensureAuthenticated(); if(!rt)return null;
-    const d=dateKey();if(d)subscribeClassroom(d).catch(function(){});
+    if(await isStaffSession72922(rt)){const d=dateKey();if(d)subscribeClassroom(d).catch(function(){});}
+    else stopClassroomSubscription72922();
     subscribeRoomMonth(monthKey()).catch(function(){});
     return rt;
   }
