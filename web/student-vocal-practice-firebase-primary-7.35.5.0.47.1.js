@@ -1,11 +1,11 @@
-﻿(function (global) {
+(function (global) {
   'use strict';
   if (global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_7355047__) return;
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_7355047__ = true;
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_R21A_7355042__ = true;
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_7355041__ = true;
 
-  const VERSION = '2026-08-14.735.05.0.53-r28-ui-ack-existing-log-authority';
+  const VERSION = '2026-08-14.735.05.0.54-r29-firestore-practice-single-owner';
   const DRIVE_FOLDER_FIRESTORE_PRIMARY_7355045 = true;
   const DRIVE_RESUMABLE_DIRECT_7355047 = true;
   const CUTOVER_DATE = '2026-08-12';
@@ -1012,6 +1012,116 @@
     });
   }
 
+  function normalizeArchiveTaskType7355054(value) {
+    const raw = text(value).toLowerCase().replace(/[\s-]+/g, '_');
+    if (['standard_pronunciation','standard','pronunciation','pron','표준발음'].indexOf(raw) >= 0) return 'standard_pronunciation';
+    if (['past_question','past','pastquestion','기출','기출문제'].indexOf(raw) >= 0) return 'past_question';
+    throw new Error('지원하지 않는 연습기록 종류입니다.');
+  }
+
+  async function analyzePracticeBlob7355054(input) {
+    input = input || {};
+    const blob = input.blob;
+    if (!blob || !Number(blob.size || 0)) throw new Error('분석할 녹음 파일이 없습니다.');
+    const sentence = text(input.sentence || input.originalSentence);
+    let local = null;
+    try { local = await analyzeForUpload(blob, sentence); } catch (_ignore) { local = null; }
+    let scored = null;
+    if (input.serverScore !== false && typeof blobToBase64 === 'function') {
+      try {
+        const base64 = await blobToBase64(blob);
+        scored = await requestPronunciationAnalysis7355043(
+          text(input.recordId),
+          base64,
+          text(blob.type || input.mimeType || 'audio/mp4').split(';')[0],
+          sentence,
+          text(input.standardPronunciation)
+        );
+      } catch (_ignore2) { scored = null; }
+    }
+    return mergePronunciationSummary7355043(local, scored);
+  }
+
+  async function archivePracticeBlob7355054(input) {
+    input = input || {};
+    const blob = input.blob;
+    if (!blob || !Number(blob.size || 0)) throw new Error('업로드할 녹음 파일이 없습니다.');
+    if (Number(blob.size || 0) > 30 * 1024 * 1024) throw new Error('녹음 파일은 30MB 이하만 보관할 수 있습니다.');
+    const taskType = normalizeArchiveTaskType7355054(input.taskType || input.recordCategory || input.category);
+    const mimeType = text(blob.type || input.mimeType || 'audio/mp4').split(';')[0] || 'audio/mp4';
+    const date = text(input.practiceDate || input.date) || kstDateKey();
+    const sentenceId = text(input.sentenceId || input.vocalId || input.scriptId || input.questionId);
+    const common = {
+      taskType:taskType,
+      date:date,
+      practiceDate:date,
+      recordId:text(input.recordId),
+      sentenceId:sentenceId,
+      vocalId:text(input.vocalId || sentenceId),
+      scriptId:text(input.scriptId || sentenceId),
+      questionId:text(input.questionId || sentenceId),
+      sentence:text(input.sentence || input.originalSentence),
+      originalSentence:text(input.originalSentence || input.sentence),
+      standardPronunciation:text(input.standardPronunciation),
+      scriptSource:text(input.scriptSource || input.source),
+      scriptFileId:text(input.scriptFileId),
+      scriptFileName:text(input.scriptFileName),
+      gender:text(input.gender),
+      analysisMode:text(input.analysisMode),
+      mimeType:mimeType,
+      fileSize:Number(blob.size || 0)
+    };
+
+    const begin = await call('beginStudentPracticeArchive7355054', common);
+    const upload = await uploadVocalDriveResumable7355047(begin, blob);
+    let analysis = input.analysis && typeof input.analysis === 'object' ? input.analysis : null;
+    if (!analysis && input.analyze === true) {
+      try {
+        analysis = await analyzePracticeBlob7355054(Object.assign({}, input, { blob:blob, recordId:begin.recordId }));
+      } catch (_ignore) { analysis = null; }
+    }
+
+    const finalize = await call('finalizeStudentPracticeArchive7355054', Object.assign({}, common, {
+      recordId:text(begin.recordId),
+      driveUploads:upload.driveUploads || [],
+      recognizedText:text(input.recognizedText || input.localWhisperText || (analysis && analysis.recognizedText)),
+      localWhisperText:text(input.localWhisperText || input.recognizedText || (analysis && analysis.recognizedText)),
+      aiSource:text(input.aiSource || (analysis && (analysis.analysisProvider || analysis.model))),
+      aiComment:text(input.aiComment || input.analysisText),
+      analysisText:text(input.analysisText || input.aiComment),
+      analysis:analysis || {}
+    }));
+
+    const intelligencePayload = {
+      recordId:text(begin.recordId),
+      taskType:taskType,
+      practiceDate:date,
+      sentenceId:sentenceId,
+      sentence:common.sentence,
+      standardPronunciation:common.standardPronunciation,
+      fileUrl:text(finalize.fileUrl || finalize.audioUrl),
+      fileId:text(finalize.fileId),
+      folderId:text(finalize.folderId),
+      archiveRequestId:'',
+      mimeType:mimeType,
+      fileSize:Number(blob.size || 0),
+      analysis:analysis ? {
+        features:analysis.features || {},
+        recognizedText:text(analysis.recognizedText),
+        provider:text(analysis.analysisProvider),
+        model:text(analysis.model)
+      } : null
+    };
+    call('completePracticeIntelligence7355042', intelligencePayload).catch(function(){ queueIntelligenceRetry7355042(intelligencePayload); });
+    return Object.assign({}, finalize, { uploadErrors:upload.uploadErrors || [] });
+  }
+
+  async function markPracticeLogsViewed7355054(recordIds) {
+    const ids = Array.from(new Set((Array.isArray(recordIds) ? recordIds : []).map(text).filter(Boolean))).slice(0,100);
+    if (!ids.length) return { ok:true, updated:0 };
+    return call('markStudentPracticeLogsViewed7355054', { recordIds:ids });
+  }
+
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ bootPracticeFeedbackDeepLink(0); }, 0); }, { once:true });
   else setTimeout(function(){ bootPracticeFeedbackDeepLink(0); }, 0);
   global.addEventListener('pageshow', function(){ setTimeout(function(){ bootPracticeFeedbackDeepLink(0); }, 0); });
@@ -1028,6 +1138,7 @@
     checkToday:checkToday, beginCompletion:beginCompletion, completeTrainingFromPage:completeTrainingFromPage, loadMonth:loadMonth,
     authSnapshot:authSnapshot, ensureResearchConsent:ensureResearchConsent, prewarmPronunciationEngine:prewarmPronunciationEngine, ensurePushToken:ensurePushToken, promptPushToken:promptPushToken,
     listStaffPracticeRecords:listStaffPracticeRecords, saveTeacherEvaluation:saveTeacherEvaluation, refreshTeacherComments:refreshTeacherComments,
+    archivePracticeBlob:archivePracticeBlob7355054, analyzePracticeBlob:analyzePracticeBlob7355054, markPracticeLogsViewed:markPracticeLogsViewed7355054,
     showResultTabs:showResultTabs, hideResultTabs:hideResultTabs, consumePracticeFeedbackDeepLink:consumePracticeFeedbackDeepLink
   });
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_API_7355041__ = api;
