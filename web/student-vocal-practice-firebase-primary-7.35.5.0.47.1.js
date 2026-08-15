@@ -5,7 +5,7 @@
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_R21A_7355042__ = true;
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_7355041__ = true;
 
-  const VERSION = '2026-08-16.735.05.0.63-r29.5-content-firestore-async-drive-finalize';
+  const VERSION = '2026-08-16.735.05.0.65-r29.6-bounded-upload-ack-link-recovery';
   const DRIVE_FOLDER_FIRESTORE_PRIMARY_7355045 = true;
   const DRIVE_RESUMABLE_DIRECT_7355047 = true;
   const CUTOVER_DATE = '2026-08-12';
@@ -72,6 +72,34 @@
     const fn = rt.sdk.httpsCallable(rt.functions, name);
     const response = await fn(payload || {});
     return response && response.data || {};
+  }
+  function delay7355065(ms) { return new Promise(function(resolve){ setTimeout(resolve, Math.max(0, Number(ms) || 0)); }); }
+  async function callWithTimeout7355065(name, payload, timeoutMs) {
+    let timer = null;
+    try {
+      return await Promise.race([
+        call(name, payload),
+        new Promise(function(_resolve, reject){ timer=setTimeout(function(){ const error=new Error('CALL_TIMEOUT_7355065'); error.code='deadline-exceeded'; reject(error); }, Math.max(1000, Number(timeoutMs)||12000)); })
+      ]);
+    } finally { if (timer) clearTimeout(timer); }
+  }
+  function isAcceptedCompletionState7355065(status) {
+    const state=text(status&&status.state),archive=text(status&&status.archiveState);
+    return state==='complete'||state==='processing_archive'||['upload_received','finalize_processing','finalize_retry','complete','partial_success'].indexOf(archive)>=0;
+  }
+  async function acceptVocalCompletion7355065(payload) {
+    try {
+      const result=await callWithTimeout7355065('finalizeStudentVocalPractice7355041',payload,12000);
+      if(result&&(result.accepted===true||isAcceptedCompletionState7355065(result)))return result;
+    } catch (_ackError7355065) {}
+    for(let attempt=0;attempt<5;attempt++){
+      try {
+        const status=await callWithTimeout7355065('getStudentVocalPracticeCompletionStatus7355052',{recordId:payload.recordId,date:payload.date},6000);
+        if(isAcceptedCompletionState7355065(status))return Object.assign({ok:true,accepted:true,processing:text(status.state)!=='complete'},status);
+      } catch (_statusError7355065) {}
+      await delay7355065(900+attempt*400);
+    }
+    throw new Error('녹음 파일은 보관됐지만 연습 기록 접수를 확인하지 못했습니다. 잠시 후 다시 시도해주세요.');
   }
   async function authSnapshot() {
     const rt = await runtime();
@@ -746,7 +774,7 @@
     let acceptedRecord;
     try {
       if (typeof showLoading === 'function') showLoading('연습 기록을 저장하는 중입니다...');
-      acceptedRecord = await call('finalizeStudentVocalPractice7355041', {
+      acceptedRecord = await acceptVocalCompletion7355065({
         recordId:begin.recordId,
         date:date,
         sentenceId:text(currentTrainObj.id),

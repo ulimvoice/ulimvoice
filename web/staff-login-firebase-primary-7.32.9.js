@@ -2,12 +2,12 @@
   'use strict';
   if(global.__ULIM_STAFF_LOGIN_FIREBASE_PRIMARY_7329__)return;
   global.__ULIM_STAFF_LOGIN_FIREBASE_PRIMARY_7329__=true;
-  const VERSION='2026-08-15.732.09.1-dom-input-contract-fix';
+  const VERSION='2026-08-16.732.09.2-refresh-session-restore';
   const PROFILE_KEY='ulimFirebaseStaffProfile7320';
   const LOGOUT_KEY='ULIM_STAFF_EXPLICIT_LOGOUT_7322';
   const DOMAIN='auth.ulimvoice.app';
   const ROLES=['teacher','admin','superAdmin'];
-  let loginPromise=null,restoreInstalled=false,lastLoginId='';
+  let loginPromise=null,restorePromise=null,lastLoginId='';
   function text(v){return String(v==null?'':v).trim();}
   function norm(v){return text(v).normalize('NFKC').toLowerCase();}
   function owner(){return global.ULIM_ROOM_CLASSROOM_REALTIME_72919||global.ULIM_ROOM_CLASSROOM_REALTIME_72918||global.ULIM_ROOM_CLASSROOM_REALTIME_72917||null;}
@@ -32,7 +32,7 @@
     return {id,name,role:roleLabel(role),firebaseRole:role,phone:text(claims.phone||same.phone),mustChangePassword:same.mustChangePassword===true,accountUid:text(claims.accountUid||claims.teacherUid||same.accountUid||user.uid),principalUidV2:text(claims.principalUidV2||same.principalUidV2||user.uid),firebaseAuthUid:user.uid,permissions:claims.permissions||same.permissions||null,passwordLoginEnabled:true,authVersion:claims.authVersion};
   }
   function saveProfile(profile){
-    global.adminInfo=profile||{};global.adminModeActive=true;
+    global.adminInfo=profile||{};global.adminModeActive=true;global.__ULIM_STAFF_FIREBASE_SESSION_READY_7329__=true;
     try{adminInfo=global.adminInfo;adminModeActive=true;}catch(_e){}
     try{localStorage.setItem('adminInfo',JSON.stringify(profile||{}));localStorage.setItem(PROFILE_KEY,JSON.stringify(profile||{}));localStorage.setItem('ulimLastMode','admin');localStorage.removeItem(LOGOUT_KEY);sessionStorage.removeItem(LOGOUT_KEY);}catch(_e){}
     try{global.adminToken='FIREBASE_AUTH';adminToken='FIREBASE_AUTH';localStorage.removeItem('adminToken');sessionStorage.removeItem('adminToken');}catch(_e){}
@@ -47,7 +47,7 @@
     try{if(typeof global.applyAdminPermissions==='function')global.applyAdminPermissions();}catch(_e){}
   }
   function showLogin(){
-    global.adminInfo=null;global.adminModeActive=false;try{adminInfo=null;adminModeActive=false;adminToken='';}catch(_e){}
+    global.adminInfo=null;global.adminModeActive=false;global.__ULIM_STAFF_FIREBASE_SESSION_READY_7329__=false;try{adminInfo=null;adminModeActive=false;adminToken='';}catch(_e){}
     try{localStorage.removeItem('adminInfo');localStorage.removeItem(PROFILE_KEY);localStorage.removeItem('adminToken');localStorage.removeItem('ulimLastMode');sessionStorage.removeItem('adminToken');}catch(_e){}
     try{document.body.classList.remove('admin-mode','teacher-mode','full-admin-mode');}catch(_e){}
     const overlay=document.getElementById('loginOverlay'),wrapper=document.querySelector('.wrapper'),box=document.getElementById('adminLoginBox'),dash=document.getElementById('adminDashboard');
@@ -89,13 +89,35 @@
     showLogin();return true;
   }
   async function restore(){
-    if(restoreInstalled)return;restoreInstalled=true;const rt=await runtime();
-    rt.sdk.onAuthStateChanged(rt.auth,async function(user){
-      if(!user)return;try{if(localStorage.getItem(LOGOUT_KEY)==='Y'||sessionStorage.getItem(LOGOUT_KEY)==='Y')return;}catch(_e){}
-      try{const tr=await rt.sdk.getIdTokenResult(user,false),role=text(tr&&tr.claims&&tr.claims.role);if(!ROLES.includes(role))return;const p=await readProfile(rt,'');lastLoginId=p.id||'';saveProfile(p);showShell();try{global.dispatchEvent(new CustomEvent('ulim-firebase-auth-ready',{detail:{uid:p.firebaseAuthUid,role:p.firebaseRole,version:VERSION,reason:'staff-restore'}}));}catch(_e){} }catch(_e){}
-    });
+    if(restorePromise)return restorePromise;
+    restorePromise=(async function(){
+      const rt=await runtime();
+      return await new Promise(function(resolve){
+        let settled=false,unsub=null;const finish=function(value){if(settled)return;settled=true;try{if(unsub)unsub();}catch(_e){}resolve(!!value);};
+        const timer=setTimeout(function(){global.__ULIM_STAFF_FIREBASE_SESSION_READY_7329__=false;finish(false);},12000);
+        try{
+          unsub=rt.sdk.onAuthStateChanged(rt.auth,async function(user){
+            clearTimeout(timer);
+            if(!user){global.__ULIM_STAFF_FIREBASE_SESSION_READY_7329__=false;finish(false);return;}
+            try{if(localStorage.getItem(LOGOUT_KEY)==='Y'||sessionStorage.getItem(LOGOUT_KEY)==='Y'){global.__ULIM_STAFF_FIREBASE_SESSION_READY_7329__=false;finish(false);return;}}catch(_e){}
+            try{
+              const tr=await rt.sdk.getIdTokenResult(user,false),role=text(tr&&tr.claims&&tr.claims.role);
+              if(!ROLES.includes(role)){global.__ULIM_STAFF_FIREBASE_SESSION_READY_7329__=false;finish(false);return;}
+              const p=await readProfile(rt,'');lastLoginId=p.id||'';saveProfile(p);showShell();
+              try{global.dispatchEvent(new CustomEvent('ulim-firebase-auth-ready',{detail:{uid:p.firebaseAuthUid,role:p.firebaseRole,version:VERSION,reason:'staff-restore'}}));}catch(_e){}
+              finish(true);
+            }catch(_e){global.__ULIM_STAFF_FIREBASE_SESSION_READY_7329__=false;finish(false);}
+          },function(){clearTimeout(timer);global.__ULIM_STAFF_FIREBASE_SESSION_READY_7329__=false;finish(false);});
+        }catch(_e){clearTimeout(timer);global.__ULIM_STAFF_FIREBASE_SESSION_READY_7329__=false;finish(false);}
+      });
+    })();
+    return restorePromise;
+  }
+  async function waitForRestore(timeoutMs){
+    const ms=Math.max(1000,Number(timeoutMs)||12000);
+    return Promise.race([restore(),new Promise(function(resolve){setTimeout(function(){resolve(false);},ms);})]);
   }
   function install(){global.adminLogin=login;global.changeAdminPasswordByPrompt=changePassword;global.adminLogout=logout;try{adminLogin=login;changeAdminPasswordByPrompt=changePassword;adminLogout=logout;}catch(_e){}restore().catch(function(){});}
-  global.__ULIM_STAFF_LOGIN_FIREBASE_PRIMARY_7329_API__=Object.freeze({version:VERSION,login,logout,restore,changePassword,deriveLoginEmail});
+  global.__ULIM_STAFF_LOGIN_FIREBASE_PRIMARY_7329_API__=Object.freeze({version:VERSION,login,logout,restore,waitForRestore,changePassword,deriveLoginEmail});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 })(typeof window!=='undefined'?window:globalThis);
