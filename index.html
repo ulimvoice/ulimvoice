@@ -17,16 +17,36 @@
     ].forEach(function (name) { target[name] = noop; });
   })(window);
   </script>
+  <script id="ulim-service-worker-owner-7355058">
+  (function () {
+    'use strict';
+    if (!('serviceWorker' in navigator)) return;
+    async function installSingleWorker7355058() {
+      try {
+        if (window.caches && typeof window.caches.keys === 'function') {
+          const keys = await window.caches.keys();
+          await Promise.all(keys.filter(name => /^ulimvoice-cache-/i.test(String(name || ''))).map(name => window.caches.delete(name)));
+        }
+      } catch (_ignoreCache7355058) {}
+      try {
+        const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js', { scope: './', updateViaCache: 'none' });
+        if (registration && typeof registration.update === 'function') await registration.update();
+      } catch (_ignoreWorker7355058) {}
+    }
+    if (document.readyState === 'complete') installSingleWorker7355058();
+    else window.addEventListener('load', installSingleWorker7355058, { once: true });
+  })();
+  </script>
 
   <link rel="preconnect" href="https://www.gstatic.com" crossorigin data-ulim-classroom-preconnect="7297">
   <link rel="preconnect" href="https://identitytoolkit.googleapis.com" data-ulim-classroom-preconnect="7297">
   <link rel="preconnect" href="https://asia-northeast3-ulim-7b09a.cloudfunctions.net" data-ulim-classroom-preconnect="7297">
   <!-- ULIM 7.34.2: safe Firebase-first staff/student directory integration. -->
-  <script src="./web/room-classroom-realtime-7.29.19.js?v=20260815.73550570"></script>
-  <script src="./web/practice-room-firestore-primary-7.35.5.0.37.js?v=20260811.7355037"></script>
-  <script src="./web/staff-login-firebase-primary-7.32.9.js?v=20260815.73550570"></script>
-  <script src="./web/student-login-firebase-direct-7.35.5.0.30.js?v=20260815.73550570"></script>
-  <script src="./web/student-home-bootstrap-7.35.5.0.31.js?v=20260809.7355031"></script>
+  <script src="./web/room-classroom-realtime-7.29.19.js?v=20260815.73550580"></script>
+  <script src="./web/practice-room-firestore-primary-7.35.5.0.37.js?v=20260815.73550580"></script>
+  <script src="./web/staff-login-firebase-primary-7.32.9.js?v=20260815.73550580"></script>
+  <script src="./web/student-login-firebase-direct-7.35.5.0.30.js?v=20260815.73550580"></script>
+  <script src="./web/student-home-bootstrap-7.35.5.0.31.js?v=20260815.73550580"></script>
 <meta charset="UTF-8">
 <meta name="ulim-build" content="20260811-7355040-student-add-substitute-fix">
 <script id="ulim-one-time-cache-clean-7355030">
@@ -2623,7 +2643,7 @@ body.ulim-attendance-modal-open73545{overflow:hidden}
             <p style="font-size:14px; color:#666; line-height:1.6; margin-top:-4px;">
               강의실별 사용 현황을 시간표 형태로 확인합니다.<br>
               표의 [사용] 버튼을 누르면 운영자료에 즉시 반영되어 다른 사용자 화면에도 표시됩니다.<br>
-              운영 원본은 Firestore이며 Google Sheets는 매일 오전 6시 백업에만 사용합니다.
+              사용 현황은 운영자료에 바로 저장되며 백업자료는 별도로 유지됩니다.
             </p>
 
             <div class="classroom-usage-form-grid">
@@ -6029,12 +6049,10 @@ async function adminApi(action, params = {}) {
     }
     if(name==='adminGetClassroomUsage'){
         const date=String(params.date||'').trim();
-        if(typeof room.subscribeClassroom==='function')await room.subscribeClassroom(date);
-        let records=Array.isArray(window.adminClassroomUsageRows)?window.adminClassroomUsageRows:[];
-        if(typeof room.readClassroomRecords==='function'){
-            try{records=await room.readClassroomRecords(date);}catch(_e){}
-        }
-        return {status:'success',records:Array.isArray(records)?records:[],source:'firestore'};
+        if(typeof room.readClassroomRecords!=='function')throw new Error('강의실 조회 기능을 준비하지 못했습니다.');
+        const records=await room.readClassroomRecords(date);
+        if(typeof room.subscribeClassroom==='function')Promise.resolve(room.subscribeClassroom(date)).catch(function(){});
+        return {status:'success',records:Array.isArray(records)?records:[],source:'operational'};
     }
     if(name==='adminGetClassroomUsageOptions'){
         const rooms=['2강의실','3강의실','녹음실','4강의실','5강의실','신체훈련실'];
@@ -12171,6 +12189,18 @@ let adminClassroomUsageOptionsLoadedDate = '';
 let adminClassroomUsageRows = [];
 let adminClassroomUsageLoadedDate = '';
 
+function adminClassroomRuntimeOwner_() {
+    return window.ULIM_ROOM_CLASSROOM_REALTIME_72919 || null;
+}
+
+async function adminEnsureClassroomRuntime_() {
+    const owner = adminClassroomRuntimeOwner_();
+    if (!owner || typeof owner.ensureAuthenticated !== 'function') throw new Error('강의실 기능을 준비하지 못했습니다.');
+    const rt = await owner.ensureAuthenticated();
+    if (!rt || !rt.auth || !rt.auth.currentUser) throw new Error('교직원 로그인이 필요합니다.');
+    return { owner, rt };
+}
+
 async function adminClassroomUsageDateChanged718_() {
     await adminLoadClassroomUsage(true);
 }
@@ -12206,12 +12236,12 @@ function adminRenderClassroomUsageOptionControls_() {
 }
 
 async function adminLoadClassroomUsageOptions(force = false) {
-    if (!adminToken) return;
+    await adminEnsureClassroomRuntime_();
     const date = adminClassroomUsageDate_();
     if (!force && adminClassroomUsageOptionsLoadedDate === date && ADMIN_CLASSROOM_USAGE_INSTRUCTORS.length && ADMIN_CLASSROOM_USAGE_ROOMS.length) return;
 
     try {
-        const data = await adminApi('adminGetClassroomUsageOptions', { adminToken, date, noCache: 1 });
+        const data = await adminApi('adminGetClassroomUsageOptions', { date, noCache: 1 });
         if (Array.isArray(data.rooms) && data.rooms.length) ADMIN_CLASSROOM_USAGE_ROOMS = data.rooms;
         if (Array.isArray(data.instructors)) ADMIN_CLASSROOM_USAGE_INSTRUCTORS = data.instructors;
         adminClassroomUsageOptionsLoadedDate = date;
@@ -12245,6 +12275,9 @@ function adminInitClassroomUsagePanel() {
         endEl.value = '11';
         endEl.dataset.ready = '1';
     }
+
+    const tableWrap = document.getElementById('adminClassroomUsageTableWrap');
+    if (tableWrap && !tableWrap.querySelector('table')) adminRenderClassroomUsageTable();
 }
 
 function adminClassroomUsageDate_() {
@@ -12258,22 +12291,25 @@ function adminClassroomUsageIsMine_(row) {
 }
 
 async function adminLoadClassroomUsage(showOverlay = true) {
-    if (!adminToken) return;
     adminInitClassroomUsagePanel();
     const date = adminClassroomUsageDate_();
+    const summary = document.getElementById('adminClassroomUsageSummary');
     try {
+        await adminEnsureClassroomRuntime_();
         if (showOverlay) showLoading('강의실 사용 현황 불러오는 중...');
         await adminLoadClassroomUsageOptions(true);
-        const data = await adminApi('adminGetClassroomUsage', { adminToken, date });
-        if (showOverlay) hideLoading();
+        const data = await adminApi('adminGetClassroomUsage', { date });
         adminClassroomUsageRows = Array.isArray(data.records) ? data.records : [];
         adminClassroomUsageLoadedDate = date;
         adminRenderClassroomUsageTable();
-        const summary = document.getElementById('adminClassroomUsageSummary');
-        if (summary) summary.textContent = data.message || `${date} 사용중 ${adminClassroomUsageRows.length}건`;
+        if (summary) summary.textContent = `${date} 사용중 ${adminClassroomUsageRows.length}건`;
+        return data;
     } catch (e) {
+        if (summary) summary.textContent = '강의실 현황을 불러오지 못했습니다.';
+        if (showOverlay) alert((e && e.message) || '강의실 사용 현황 조회에 실패했습니다.');
+        return null;
+    } finally {
         if (showOverlay) hideLoading();
-        alert(e.message || '강의실 사용 현황 조회에 실패했습니다.');
     }
 }
 
@@ -12312,14 +12348,14 @@ async function adminDropClassroomUsage7355035(event, targetRoom, targetHour) {
     if (String(source.room || '').replace(/\s/g, '') === String(targetRoom).replace(/\s/g, '') && Number(source.startHour) === hour) return;
     if (adminFindClassroomUsageAt_(targetRoom, hour)) return alert('이동할 칸은 이미 사용 중입니다.');
     if (!confirm(`${source.room} ${adminFormatClassroomHour_(source.startHour)}~${adminFormatClassroomHour_(source.endHour)} → ${targetRoom} ${adminFormatClassroomHour_(hour)}~${adminFormatClassroomHour_(hour + 1)}\n\n강의실 배정을 이동할까요?`)) return;
-    const owner = window.ULIM_ROOM_CLASSROOM_REALTIME_72918 || window.ULIM_ROOM_CLASSROOM_REALTIME_72917 || window.ULIM_ROOM_CLASSROOM_REALTIME_728;
-    if (!owner || typeof owner.preloadRuntime !== 'function') return alert('강의실 실시간 저장 기능을 준비하지 못했습니다.');
+    const owner = adminClassroomRuntimeOwner_();
+    if (!owner || typeof owner.ensureAuthenticated !== 'function') return alert('강의실 저장 기능을 준비하지 못했습니다.');
     try {
         showLoading('강의실 배정을 이동하는 중...');
-        const rt = await owner.preloadRuntime();
-        if (!rt || !rt.auth || !rt.auth.currentUser || typeof rt.commitClassroom !== 'function' || typeof rt.releaseClassroom !== 'function') throw new Error('강의실 저장 연결이 준비되지 않았습니다.');
+        await adminEnsureClassroomRuntime_();
+        if (typeof owner.commitClassroom !== 'function' || typeof owner.releaseClassroom !== 'function') throw new Error('강의실 저장 기능을 준비하지 못했습니다.');
         const reqId = () => 'CLASSROOM-DND-7355035-' + Date.now() + '-' + Math.random().toString(36).slice(2);
-        const committed = await rt.commitClassroom({
+        const committed = await owner.commitClassroom({
             date: adminClassroomUsageDate_(), groups: [{ room: targetRoom, startHour: hour, endHour: hour + 1 }],
             assignedInstructor: source.instructor || source.adminName || '', className: source.className || source.purpose || '', memo: source.memo || '',
             forceOverride: false, requestId: reqId()
@@ -12327,14 +12363,14 @@ async function adminDropClassroomUsage7355035(event, targetRoom, targetHour) {
         const commitData = committed && committed.data || {};
         if (!commitData.ok || (Array.isArray(commitData.conflicts) && commitData.conflicts.length)) throw new Error(commitData.message || '이동할 칸을 확보하지 못했습니다.');
         try {
-            const released = await rt.releaseClassroom({
+            const released = await owner.releaseClassroom({
                 date: adminClassroomUsageDate_(), room: source.room, startHour: Number(source.startHour), endHour: Number(source.endHour), recordId: source.recordId, requestId: reqId()
             });
             const releaseData = released && released.data || {};
             if (releaseData.ok === false) throw new Error(releaseData.message || '기존 칸 해제에 실패했습니다.');
         } catch (releaseError) {
             const accepted = Array.isArray(commitData.accepted) ? commitData.accepted[0] : null;
-            try { await rt.releaseClassroom({ date: adminClassroomUsageDate_(), room: targetRoom, startHour: hour, endHour: hour + 1, recordId: accepted && accepted.recordId || '', requestId: reqId() }); } catch (ignoreRollback) {}
+            try { await owner.releaseClassroom({ date: adminClassroomUsageDate_(), room: targetRoom, startHour: hour, endHour: hour + 1, recordId: accepted && accepted.recordId || '', requestId: reqId() }); } catch (ignoreRollback) {}
             throw releaseError;
         }
         await adminLoadClassroomUsage(false);
@@ -12468,30 +12504,31 @@ function adminClearClassroomUsageForm() {
 
 async function adminQuickClassroomUsage(room, hour) {
     adminInitClassroomUsagePanel();
-
     const numericHour = Number(hour);
     const roomEl = document.getElementById('adminClassroomUsageRoom');
     const startEl = document.getElementById('adminClassroomUsageStart');
     const endEl = document.getElementById('adminClassroomUsageEnd');
     const instructorEl = document.getElementById('adminClassroomUsageInstructor');
-
     if (roomEl) roomEl.value = room;
     if (startEl) startEl.value = String(numericHour);
     if (endEl) endEl.value = String(numericHour + 1);
-    if (instructorEl && !instructorEl.value) {
-        instructorEl.value = (adminInfo && (adminInfo.name || adminInfo.id)) || '';
+    if (instructorEl && !instructorEl.value) instructorEl.value = (adminInfo && (adminInfo.name || adminInfo.id)) || '';
+    try {
+        await adminEnsureClassroomRuntime_();
+        if (typeof window.ulimCommitClassroomSlot729_ !== 'function') throw new Error('강의실 저장 기능을 준비하지 못했습니다.');
+        showLoading('강의실 사용 체크 중...');
+        const result = await window.ulimCommitClassroomSlot729_(room, numericHour);
+        await adminLoadClassroomUsage(false);
+        return result;
+    } catch (e) {
+        alert((e && e.message) || '강의실 사용 처리에 실패했습니다.');
+        return null;
+    } finally {
+        hideLoading();
     }
-
-    if (typeof window.ulimCommitClassroomSlot729_ !== 'function') {
-        alert('강의실 실시간 저장 기능을 준비 중입니다. 잠시 후 다시 눌러주세요.');
-        return;
-    }
-
-    return window.ulimCommitClassroomSlot729_(room, numericHour);
 }
 
 async function adminSaveClassroomUsageFromForm(silentConfirm = false, forceOverride = false) {
-    if (!adminToken) return alert('로그인이 필요합니다.');
     adminInitClassroomUsagePanel();
 
     const date = adminClassroomUsageDate_();
@@ -12509,15 +12546,14 @@ async function adminSaveClassroomUsageFromForm(silentConfirm = false, forceOverr
     if (!silentConfirm && !confirm(`${date}\n${room}\n${adminFormatClassroomHour_(startHour)}~${adminFormatClassroomHour_(endHour)}\n\n${forceOverride ? '배정/용도를 변경' : '강의실 사용 체크'}할까요?`)) return;
 
     try {
+        await adminEnsureClassroomRuntime_();
         showLoading(forceOverride ? '강의실 배정 수정 중...' : '강의실 사용 체크 중...');
-        const owner = window.ULIM_ROOM_CLASSROOM_REALTIME_72919;
-        if (!owner || typeof owner.ensureAuthenticated !== 'function') throw new Error('강의실 Firebase 연결을 준비하지 못했습니다.');
-        const rt = await owner.ensureAuthenticated();
-        if (!rt || !rt.auth || !rt.auth.currentUser) throw new Error('교직원 로그인 상태를 확인하지 못했습니다.');
-        const requestId = 'CLASSROOM-7355054-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+        const owner = adminClassroomRuntimeOwner_();
+        if (!owner || typeof owner.commitClassroom !== 'function' || typeof owner.updateClassroom !== 'function') throw new Error('강의실 저장 기능을 준비하지 못했습니다.');
+        const requestId = 'CLASSROOM-7355058-' + Date.now() + '-' + Math.random().toString(36).slice(2);
         const response = forceOverride
-            ? await rt.updateClassroom({ date, room, startHour, endHour, assignedInstructor, className, memo, requestId })
-            : await rt.commitClassroom({ date, groups:[{ room, startHour, endHour }], assignedInstructor, className, memo, forceOverride:false, requestId });
+            ? await owner.updateClassroom({ date, room, startHour, endHour, assignedInstructor, className, memo, requestId })
+            : await owner.commitClassroom({ date, groups:[{ room, startHour, endHour }], assignedInstructor, className, memo, forceOverride:false, requestId });
         const result = response && response.data ? response.data : (response || {});
         if (Array.isArray(result.records)) {
             adminClassroomUsageRows = result.records.map(item => Object.assign({}, item));
@@ -12540,7 +12576,6 @@ async function adminSaveClassroomUsageFromForm(silentConfirm = false, forceOverr
 
 
 async function adminReleaseClassroomUsage(recordId) {
-    if (!adminToken) return alert('로그인이 필요합니다.');
     if (!recordId) return alert('해제할 기록을 찾지 못했습니다.');
     const record = (Array.isArray(adminClassroomUsageRows) ? adminClassroomUsageRows : []).find(item => String(item && item.recordId || '') === String(recordId));
     if (!record) return alert('해제할 강의실 기록을 찾지 못했습니다. 현황을 다시 불러와주세요.');
@@ -12549,15 +12584,14 @@ async function adminReleaseClassroomUsage(recordId) {
     if (!confirm(`${record.room || ''} ${startHour}:00~${endHour}:00\n\n이 한 시간 칸을 해제할까요?`)) return;
 
     try {
+        await adminEnsureClassroomRuntime_();
         showLoading('강의실 사용 해제 중...');
-        const owner = window.ULIM_ROOM_CLASSROOM_REALTIME_72919;
-        if (!owner || typeof owner.ensureAuthenticated !== 'function') throw new Error('강의실 Firebase 연결을 준비하지 못했습니다.');
-        const rt = await owner.ensureAuthenticated();
-        if (!rt || !rt.releaseClassroom) throw new Error('강의실 해제 연결을 준비하지 못했습니다.');
+        const owner = adminClassroomRuntimeOwner_();
+        if (!owner || typeof owner.releaseClassroom !== 'function') throw new Error('강의실 해제 기능을 준비하지 못했습니다.');
         const date = adminClassroomUsageDate_();
-        const response = await rt.releaseClassroom({
+        const response = await owner.releaseClassroom({
             date: date, room: record.room, startHour:startHour, endHour:endHour, recordId:record.recordId,
-            requestId:'CLASSROOM-RELEASE-7355054-' + Date.now() + '-' + Math.random().toString(36).slice(2)
+            requestId:'CLASSROOM-RELEASE-7355058-' + Date.now() + '-' + Math.random().toString(36).slice(2)
         });
         const result = response && response.data ? response.data : (response || {});
         if (Array.isArray(result.records)) {
@@ -20183,17 +20217,17 @@ window.ULIM_CLASSROOM_SHEET_CANONICAL_OPTIMISTIC_ENABLED = false;
 
 
 <!-- ULIM 7.30.0: cache-first login shell, attendance and daily evaluation reads. -->
-<script src="./web/staff-performance-7.30.1.js?v=20260731.73001"></script>
+<script src="./web/staff-performance-7.30.1.js?v=20260815.73550580"></script>
 
 <!-- ULIM 7.35.5.0.19: staff operational data; attendance UI is owned only by integrated 7.35.4.20. -->
-<script src="./web/staff-firestore-operational-7.31.23.js?v=20260813.73550490"></script>
+<script src="./web/staff-firestore-operational-7.31.23.js?v=20260815.73550580"></script>
 
 <!-- ULIM 7.33.1: stable Firebase token guard + clean console baseline. -->
-<script src="./web/staff-account-admin-7.34.3.6.js?v=20260801.734036"></script>
-<script src="./web/student-master-admin-7.35.5.0.30.js?v=20260814.73550530"></script>
-<script src="./web/audience-segmentation-7.35.5.0.34.js?v=20260811.7355038"></script>
+<script src="./web/staff-account-admin-7.34.3.6.js?v=20260815.73550580"></script>
+<script src="./web/student-master-admin-7.35.5.0.30.js?v=20260815.73550580"></script>
+<script src="./web/audience-segmentation-7.35.5.0.34.js?v=20260815.73550580"></script>
 <!-- ULIM 7.35.4.7: compact student management UI. -->
-<script src="./web/student-management-ui-7.35.4.10.js?v=20260814.73550510"></script>
+<script src="./web/student-management-ui-7.35.4.10.js?v=20260815.73550580"></script>
 <script id="ulim-general-teacher-firebase-auth-bootstrap-7-31-5">
 /* ULIM 7.35.5.0.25: obsolete 7.31.5 Firebase bootstrap disabled.
    staff-login-firebase-primary-7.32.9 is the single authentication owner. */
@@ -20211,12 +20245,12 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 
 
 <!-- ULIM 7.35.5.0.11: non-attendance Firestore runtime + restored dedicated attendance owner. -->
-<script src="./web/ulim-firestore-primary-7.35.5.0.26.js?v=20260808.7355026"></script>
-<script src="./web/attendance-admin-integrated-7.35.4.34.js?v=20260813.73550490"></script>
-<script src="./web/operational-content-admin-7.35.5.0.12.js?v=20260808.7355012"></script>
-<script src="./web/course-application-admin-7.35.5.0.32.js?v=20260809.7355032"></script>
-<script src="./web/student-login-notice-and-role-access-7.35.5.0.31.js?v=20260809.7355031"></script>
-<script src="./web/student-course-application-7.35.5.0.31.js?v=20260809.7355031"></script>
+<script src="./web/ulim-firestore-primary-7.35.5.0.26.js?v=20260815.73550580"></script>
+<script src="./web/attendance-admin-integrated-7.35.4.34.js?v=20260815.73550580"></script>
+<script src="./web/operational-content-admin-7.35.5.0.12.js?v=20260815.73550580"></script>
+<script src="./web/course-application-admin-7.35.5.0.32.js?v=20260815.73550580"></script>
+<script src="./web/student-login-notice-and-role-access-7.35.5.0.31.js?v=20260815.73550580"></script>
+<script src="./web/student-course-application-7.35.5.0.31.js?v=20260815.73550580"></script>
 <script id="ulim-stable-build-readiness-735506">
 (function (global) {
   'use strict';
@@ -20271,14 +20305,14 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 
 
 <!-- ULIM R20: vocalization Firestore-primary authority; GAS remains media/history compatibility only. -->
-<script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260815.73550550"></script>
+<script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260815.73550580"></script>
 <script id="ulim-vocal-primary-bind-7355041">
 window.__ULIM_VOCAL_PRIMARY_BUILD_7355041__='20260814-7355050b-r25.2-step6-next-upload';
 window.__ULIM_VOCAL_STEP6_NEXT_UPLOAD_BUILD_7355050B__='20260814-7355050b';
 window.__ULIM_VOCAL_DRIVE_RESPONSE_CLASS_LINK_BUILD_7355050C__='20260814-7355050c';
 window.__ULIM_VOCAL_SERVER_FINALIZE_DISCOVERY_BUILD_7355050D__='20260814-7355050d';
 window.__ULIM_VOCAL_FINALIZE_ACK_CLASS_AUTHORITY_BUILD_7355052__='20260814-7355052-r27';
-window.__ULIM_FIRESTORE_SINGLE_OWNER_BUILD_7355055__='20260815-7355057-r29.4-student-classroom-fix';
+window.__ULIM_FIRESTORE_SINGLE_OWNER_BUILD_7355055__='20260815-7355058-r29.4.2-classroom-ui-transport-fix';
 window.__ULIM_R26_BOUNDED_UPLOAD_ADMIN_RESET_BUILD_7355051__='20260814-7355051';
 window.__ULIM_PRACTICE_INTELLIGENCE_BUILD_7355042__='20260813-7355050-r25-vocal-reliability';
 try { window.fetchServerTrainingSentence_ = fetchServerTrainingSentence_; } catch(_e) {}
