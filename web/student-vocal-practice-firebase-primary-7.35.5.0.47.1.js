@@ -5,7 +5,7 @@
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_R21A_7355042__ = true;
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_7355041__ = true;
 
-  const VERSION = '2026-08-16.735.05.0.70-r29.7-practice-actor-push-deeplink-ai';
+  const VERSION = '2026-08-16.735.05.0.72-r29.7.3-completion-record-popup-ui';
   const DRIVE_FOLDER_FIRESTORE_PRIMARY_7355045 = true;
   const DRIVE_RESUMABLE_DIRECT_7355047 = false;
   const DRIVE_RESUMABLE_SERVER_PROXY_7355066 = true;
@@ -489,40 +489,23 @@
   function showResultTabs(recordId, date, analysis, consent) {
     currentResultRecordId = text(recordId);
     currentResultDate = text(date);
-    const box = document.getElementById('resultBox');
-    const analysisSection = document.getElementById('aiSection');
-    const tabs = document.getElementById('practiceResultTabs7355042');
-    const pane = document.getElementById('practiceAnalysisPane7355042');
-    const aBtn = document.getElementById('practiceAnalysisTabBtn7355042');
-    if (box) box.style.display = 'block';
-    if (analysisSection) analysisSection.style.display = 'block';
-    if (tabs) tabs.style.display = 'block';
-    const accepted = !!consent && text(consent.status) === 'accepted';
-    if (aBtn) aBtn.style.display = accepted ? '' : 'none';
-    if (pane) {
-      if (accepted && analysis) {
-        const f = analysis.features || {};
-        const pronunciationScore = f.ctcPronunciationScore != null && Number(f.ctcPronunciationScore) > 0 ? f.ctcPronunciationScore : f.pronunciationMatchScore;
-        const weak = Array.isArray(f.weakPhonemes) ? f.weakPhonemes.filter(Boolean).slice(0, 5) : [];
-        pane.innerHTML = '<div style="border:1px solid #e2e8f0;border-radius:16px;padding:4px 14px;background:#fff;">'
-          + scoreRow('발음 정확도', pronunciationScore, '점')
-          + scoreRow('한 호흡 유지', f.breathContinuityScore, '점')
-          + scoreRow('소리 유지', f.soundSustainScore, '점')
-          + scoreRow('문장 말미 유지', f.sentenceEndingSustainScore, '점')
-          + (weak.length ? '<div style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#475569;font-size:13px;"><b>다시 확인할 발음</b> ' + escapeHtml(weak.join(' · ')) + '</div>' : '')
-          + '<div style="padding:10px 0;color:#64748b;font-size:12px;">발화시간 ' + escapeHtml(Number(f.durationSec || 0).toFixed(1)) + '초 · 무음비율 ' + escapeHtml(Math.round(Number(f.silenceRatio || 0) * 100)) + '% · 휴지 ' + escapeHtml(f.pauseCount || 0) + '회</div>'
-          + '</div>';
-      } else {
-        pane.innerHTML = '';
+    /*
+     * R29.7.3: 발성훈련 화면 안에 별도 분석/강사코멘트 패널을 만들지 않습니다.
+     * 학생이 날짜를 눌렀을 때 사용하는 canonical 연습기록 팝업 하나만 사용합니다.
+     */
+    try {
+      if (typeof global.ulimOpenStudentPracticeRecord7355073 === 'function') {
+        global.ulimOpenStudentPracticeRecord7355073(currentResultDate,currentResultRecordId,'',{
+          analysisFallback:analysis || null,
+          completionNow:false,
+          refresh:false
+        });
       }
-    }
-    switchResultTab(accepted ? 'analysis' : 'teacher');
-    refreshTeacherComments(recordId,date,preferredTeacherEvaluationId7355070,preferredTeacherEvaluatorKey7355070).catch(function(){});
+    } catch (_ignore7355073) {}
   }
+
   function hideResultTabs() {
-    const tabs = document.getElementById('practiceResultTabs7355042');
     const section = document.getElementById('aiSection');
-    if (tabs) tabs.style.display = 'none';
     if (section) section.style.display = 'none';
   }
   function switchResultTab(kind) {
@@ -581,14 +564,31 @@
     }
   }
 
-  function updateLocalCompletion(date, train, uploadResult) {
+  function updateLocalCompletion(date, train, uploadResult, analysis, recordId) {
     try {
       if (typeof getSavedVocalIds === 'function') {
         const ids = getSavedVocalIds(); ids.add(train.id); localStorage.setItem('savedVocalIds', JSON.stringify(Array.from(ids)));
       }
       if (typeof getVocalRecords === 'function') {
         const records = getVocalRecords();
-        records.set(date, { id:train.id, text:String(train.text || '').substring(0,30) + '...', completed:true, aiComment:'', fileUrl:uploadResult && uploadResult.fileUrl || '' });
+        const features = analysis && analysis.features && typeof analysis.features === 'object'
+          ? Object.assign({}, analysis.features)
+          : null;
+        records.set(date, {
+          id:train.id,
+          recordId:text(recordId),
+          taskType:'vocal_training',
+          recordType:'발성훈련',
+          sentence:text(train.text),
+          text:text(train.text),
+          standardPronunciation:text(train.pron),
+          completed:true,
+          state:'processing',
+          uploadState:'processing',
+          analysisSummary:features,
+          aiComment:'',
+          fileUrl:uploadResult && uploadResult.fileUrl || ''
+        });
         localStorage.setItem('vocalRecords', JSON.stringify(Array.from(records.entries())));
       }
       if (typeof clearVocalTrainingClientCache_ === 'function') clearVocalTrainingClientCache_();
@@ -787,7 +787,13 @@
       }
       try {
         const refreshDate = new Date(String(date || kstDateKey()) + 'T12:00:00+09:00');
-        loadMonth(refreshDate.getFullYear(), refreshDate.getMonth(), true).catch(function(){});
+        loadMonth(refreshDate.getFullYear(), refreshDate.getMonth(), true).then(function(){
+          try {
+            if (typeof global.ulimRefreshStudentPracticeRecord7355073 === 'function') {
+              global.ulimRefreshStudentPracticeRecord7355073(date,recordId,null);
+            }
+          } catch (_ignorePopupRefresh7355073) {}
+        }).catch(function(){});
       } catch (_ignoreRefresh7355068) {}
     }).catch(function(){
       queueVocalCompletionRetry7355067(payload);
@@ -895,7 +901,11 @@
           if (!done || done.ok !== true) return;
           if (currentResultRecordId === text(begin.recordId)) {
             const merged = mergePronunciationSummary7355043(analysis, done);
-            showResultTabs(begin.recordId, date, merged, consent);
+            try {
+              if (typeof global.ulimRefreshStudentPracticeRecord7355073 === 'function') {
+                global.ulimRefreshStudentPracticeRecord7355073(date,begin.recordId,merged);
+              }
+            } catch (_ignorePopupRefresh7355073) {}
           }
         }).catch(function(){});
       }
@@ -964,12 +974,22 @@
     call('completePracticeIntelligence7355042', intelligencePayload)
       .catch(function(){ queueIntelligenceRetry7355042(intelligencePayload); });
 
-    updateLocalCompletion(date, currentTrainObj, pendingUpload);
+    updateLocalCompletion(date, currentTrainObj, pendingUpload, analysis, begin.recordId);
     hardHideVocalLoading7355068();
-    showResultTabs(begin.recordId, date, analysis, consent);
+    currentResultRecordId = text(begin.recordId);
+    currentResultDate = text(date);
+    try {
+      if (typeof global.ulimOpenStudentPracticeRecord7355073 === 'function') {
+        global.ulimOpenStudentPracticeRecord7355073(date,begin.recordId,'',{
+          analysisFallback:analysis || null,
+          completionNow:true,
+          refresh:false
+        });
+      }
+    } catch (_ignoreCompletionPopup7355073) {}
 
     const recStatus = document.getElementById('recStatus');
-    if (recStatus) recStatus.textContent = '업로드 완료 · 기록 반영 중';
+    if (recStatus) recStatus.textContent = '연습 완료 · 기록 반영 중';
 
     const calendar = document.getElementById('calendarDisplayArea');
     if (calendar) calendar.style.display = 'block';
@@ -1137,12 +1157,13 @@
       const loaded = await loadMonth(d.getFullYear(),d.getMonth(),true);
       const log = (loaded && Array.isArray(loaded.logs) ? loaded.logs : []).find(function(item){ return text(item && item.recordId) === link.recordId; }) || {};
       if (!text(log.recordId)) return false;
-      const summary = log && log.analysisSummary && typeof log.analysisSummary === 'object' ? log.analysisSummary : null;
-      const features = summary && summary.features && typeof summary.features === 'object' ? summary.features : summary;
-      const analysis = features ? { features:Object.assign({},features) } : null;
-      showResultTabs(link.recordId,date,analysis,{ status:features ? 'accepted' : 'declined' });
-      await refreshTeacherComments(link.recordId,date,link.evaluationId,link.evaluatorKey || link.teacherUid).catch(function(){});
-      switchResultTab('teacher');
+      const evaluatorKey = text(link.evaluatorKey || link.teacherUid);
+      if (typeof global.ulimOpenStudentPracticeRecord7355073 !== 'function') return false;
+      await global.ulimOpenStudentPracticeRecord7355073(date,link.recordId,evaluatorKey,{
+        evaluationId:text(link.evaluationId),
+        completionNow:false,
+        refresh:false
+      });
       clearPracticeFeedbackDeepLink();
       return true;
     } catch (_ignore2) { return false; }

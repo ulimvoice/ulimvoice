@@ -42,13 +42,13 @@
   <link rel="preconnect" href="https://identitytoolkit.googleapis.com" data-ulim-classroom-preconnect="7297">
   <link rel="preconnect" href="https://asia-northeast3-ulim-7b09a.cloudfunctions.net" data-ulim-classroom-preconnect="7297">
   <!-- ULIM 7.34.2: safe Firebase-first staff/student directory integration. -->
-  <script src="./web/room-classroom-realtime-7.29.19.js?v=20260816.73550700"></script>
+  <script src="./web/room-classroom-realtime-7.29.19.js?v=20260816.73550710"></script>
   <script src="./web/practice-room-firestore-primary-7.35.5.0.37.js?v=20260815.73550580"></script>
   <script src="./web/staff-login-firebase-primary-7.32.9.js?v=20260816.73550650"></script>
   <script src="./web/student-login-firebase-direct-7.35.5.0.30.js?v=20260815.73550580"></script>
   <script src="./web/student-home-bootstrap-7.35.5.0.31.js?v=20260815.73550580"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260816-7355070-r29.7-practice-actor-push-deeplink-ai">
+<meta name="ulim-build" content="20260816-7355071-r29.7.3-completion-record-popup-ui">
 <script id="ulim-one-time-cache-clean-7355030">
 (function (global) {
   'use strict';
@@ -2162,19 +2162,7 @@ body.ulim-attendance-modal-open73545{overflow:hidden}
         </div>
 
         <div class="result-box" id="resultBox">
-            <div class="result-section" id="aiSection" style="display:none;">
-                <div id="practiceResultTabs7355042" style="display:none;">
-                    <div style="display:flex;gap:8px;margin-bottom:12px;">
-                        <button id="practiceAnalysisTabBtn7355042" type="button" onclick="ulimPracticeResultTab7355042('analysis')" style="flex:1;border:0;border-radius:12px;padding:11px;font-weight:900;cursor:pointer;background:#2563eb;color:#fff;">분석결과</button>
-                        <button id="practiceTeacherTabBtn7355042" type="button" onclick="ulimPracticeResultTab7355042('teacher')" style="flex:1;border:0;border-radius:12px;padding:11px;font-weight:900;cursor:pointer;background:#e2e8f0;color:#334155;">강사코멘트</button>
-                    </div>
-                    <div id="practiceAnalysisPane7355042"></div>
-                    <div id="practiceTeacherPane7355042" style="display:none;"></div>
-                    <div id="practiceNotificationOptin7355042" style="margin-top:12px;text-align:right;">
-                      <button type="button" onclick="ulimPracticeEnableNotifications7355042()" style="border:1px solid #cbd5e1;background:#fff;border-radius:10px;padding:8px 10px;font-size:12px;font-weight:800;cursor:pointer;">🔔 피드백 알림 받기</button>
-                    </div>
-                </div>
-            </div>
+            <div class="result-section" id="aiSection" style="display:none;"></div>
 
             <div class="result-section" id="recSection" style="display:none;">
                 <span class="section-title">📂 내 녹음 확인</span>
@@ -16259,7 +16247,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
             const titleLabel = isPastMode ? '기출문제 연습 완료' : (isStandardMode ? '표준발음 연습 완료' : '발성훈련 연습 완료');
             const sentenceLabel = isPastMode ? '대본' : '문장';
             return `
-                <div class="practice-log-card student-view ${hasUnreadTeacherEvaluation ? 'has-comment' : ''}">
+                <div class="practice-log-card student-view ${hasUnreadTeacherEvaluation ? 'has-comment' : ''}" data-practice-record-id="${esc586_(safeText586_(log.recordId))}">
                     <div class="practice-log-title">✅ ${esc586_(titleLabel)} ${hasUnreadTeacherEvaluation ? ' / ★ 새 선생님 평가' : (hasTeacherEvaluation ? ' / 선생님 평가' : '')}</div>
                     <div class="practice-log-meta">${esc586_(recordType)}${log.timestamp ? ' · ' + esc586_(log.timestamp) : ''}</div>
                     <p><strong>${sentenceLabel}:</strong><br>${esc586_(isPastMode ? cleanPastSentence598_(log.sentence || '') : (log.sentence || ''))}</p>
@@ -16337,14 +16325,15 @@ ${ruleSummary}`, isFallback ? "success" : "success");
         dateEl.textContent = `${dateKey} 발성훈련 기록`;
 
         if ((isCompleted && record) || serverLogs.length) {
-            const cards = buildStudentPracticeCards586_(serverLogs, 'vocal');
+            const displayLogs = serverLogs.length ? serverLogs : (record ? [record] : []);
+            const cards = buildStudentPracticeCards586_(displayLogs, 'vocal');
             if (cards) {
                 contentEl.innerHTML = cards;
             } else {
                 contentEl.innerHTML = `
                     <p style="font-weight: bold; color: #2ecc71;">✅ 연습 완료</p>
                     <p><strong>문장 내용:</strong> "${esc586_((record && record.text) || '')}"</p>
-                    ${record && record.fileUrl ? buildUploadFileHtml586_(record) : '<p style="font-size: 13px; color: #777;">서버 연습일지 기록은 아직 동기화되지 않았습니다.</p>'}
+                    ${record && record.fileUrl ? buildUploadFileHtml586_(record) : '<p style="font-size: 13px; color:#777;">연습기록을 반영하는 중입니다.</p>'}
                 `;
             }
         } else {
@@ -16357,6 +16346,70 @@ ${ruleSummary}`, isFallback ? "success" : "success");
         box.style.display = 'flex';
     };
     try { displayDayRecord = window.displayDayRecord; } catch(e) {}
+
+    function findStudentPracticeCard7355073_(recordId) {
+        const content = document.getElementById('recordDisplayContent');
+        if (!content) return null;
+        const target = safeText586_(recordId);
+        const cards = Array.from(content.querySelectorAll('.practice-log-card.student-view'));
+        return cards.find(function(card){ return safeText586_(card.dataset && card.dataset.practiceRecordId) === target; }) || cards[0] || null;
+    }
+
+    function focusStudentTeacherEvaluation7355073_(card, evaluatorKey) {
+        if (!card || !safeText586_(evaluatorKey)) return false;
+        const target = safeText586_(evaluatorKey);
+        const evalCards = Array.from(card.querySelectorAll('.ulim-student-eval-card'));
+        const found = evalCards.find(function(el){ return safeText586_(el.dataset && el.dataset.evaluatorKey) === target; });
+        if (!found) return false;
+        found.style.outline = '3px solid #f59e0b';
+        found.style.outlineOffset = '3px';
+        found.scrollIntoView({ behavior:'smooth', block:'center' });
+        setTimeout(function(){
+            try { found.style.outline = ''; found.style.outlineOffset = ''; } catch(e) {}
+        }, 5000);
+        return true;
+    }
+
+    function addCompletionBanner7355073_() {
+        const content = document.getElementById('recordDisplayContent');
+        if (!content || content.querySelector('[data-vocal-completion-banner="7355073"]')) return;
+        const banner = document.createElement('div');
+        banner.setAttribute('data-vocal-completion-banner','7355073');
+        banner.style.cssText = 'margin:0 0 12px;padding:12px 14px;border-radius:14px;background:#ecfdf5;border:1px solid #a7f3d0;color:#166534;font-weight:900;';
+        banner.textContent = '✅ 발성훈련 연습이 완료되었습니다.';
+        content.insertBefore(banner,content.firstChild);
+    }
+
+    window.ulimOpenStudentPracticeRecord7355073 = async function(dateKey, recordId, evaluatorKey, options) {
+        options = options || {};
+        const date = safeText586_(dateKey);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+        if (options.refresh !== false) {
+            try {
+                const d = new Date(date + 'T12:00:00+09:00');
+                await loadStudentVocalPracticeLogsForMonth_(d.getFullYear(),d.getMonth(),true);
+            } catch(e) {}
+        }
+        window.displayDayRecord(date,true);
+        if (options.completionNow) addCompletionBanner7355073_();
+        const card = findStudentPracticeCard7355073_(recordId);
+        if (card && safeText586_(recordId)) {
+            card.scrollIntoView({ block:'nearest' });
+        }
+        focusStudentTeacherEvaluation7355073_(card,evaluatorKey);
+        return true;
+    };
+
+    window.ulimRefreshStudentPracticeRecord7355073 = function(dateKey, recordId, analysisFallback) {
+        const box = document.getElementById('recordDisplayBox');
+        if (!box || box.style.display === 'none') return false;
+        const currentDate = safeText586_(document.getElementById('recordDisplayDate') && document.getElementById('recordDisplayDate').textContent);
+        if (currentDate.indexOf(safeText586_(dateKey)) !== 0) return false;
+        window.displayDayRecord(dateKey,true);
+        const card = findStudentPracticeCard7355073_(recordId);
+        if (card) card.scrollIntoView({ block:'nearest' });
+        return true;
+    };
 
     let pastPracticeCalendarYear586_ = null;
     let pastPracticeCalendarMonth586_ = null;
@@ -20584,7 +20637,7 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 
 
 <!-- ULIM R20: vocalization Firestore-primary authority; GAS remains media/history compatibility only. -->
-<script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260816.73550700"></script>
+<script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260816.73550710"></script>
 <script id="ulim-vocal-primary-bind-7355041">
 window.__ULIM_VOCAL_PRIMARY_BUILD_7355041__='20260814-7355050b-r25.2-step6-next-upload';
 window.__ULIM_VOCAL_STEP6_NEXT_UPLOAD_BUILD_7355050B__='20260814-7355050b';
