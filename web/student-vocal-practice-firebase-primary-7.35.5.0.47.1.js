@@ -5,7 +5,7 @@
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_R21A_7355042__ = true;
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_7355041__ = true;
 
-  const VERSION = '2026-08-16.735.05.0.67-r29.6-r3-filelink-mirror-upload-ui-release';
+  const VERSION = '2026-08-16.735.05.0.68-r29.6-r3.2-vocal-loading-finalize-nonblocking';
   const DRIVE_FOLDER_FIRESTORE_PRIMARY_7355045 = true;
   const DRIVE_RESUMABLE_DIRECT_7355047 = false;
   const DRIVE_RESUMABLE_SERVER_PROXY_7355066 = true;
@@ -657,7 +657,7 @@
         if (typeof showLoading === 'function') {
           const copyText = copyCount > 1 ? ' · 보관 ' + copyIndex + '/' + copyCount : '';
           const percent = Math.max(1, Math.min(99, Math.round((offset / total) * 100)));
-          showLoading('녹음 파일을 Drive로 보내는 중입니다... ' + percent + '%' + copyText);
+          showVocalLoading7355068('녹음 파일을 Drive로 보내는 중입니다... ' + percent + '%' + copyText, 70000);
         }
       } catch (_ignore) {}
       const result = await uploadDriveChunkWithRetry7355066({
@@ -721,29 +721,103 @@
   }
 
 
+  let vocalLoadingWatchdog7355068 = null;
+  const VOCAL_COMPLETION_PENDING_KEY_7355068 = 'ulimVocalCompletionPending7355068';
+
+  function hardHideVocalLoading7355068() {
+    if (vocalLoadingWatchdog7355068) {
+      clearTimeout(vocalLoadingWatchdog7355068);
+      vocalLoadingWatchdog7355068 = null;
+    }
+    try { if (typeof hideLoading === 'function') hideLoading(); } catch (_ignore7355068) {}
+    try {
+      const overlay = document.getElementById('loadingOverlay');
+      if (overlay) overlay.remove();
+    } catch (_ignoreDom7355068) {}
+  }
+
+  function showVocalLoading7355068(message, timeoutMs) {
+    hardHideVocalLoading7355068();
+    try { if (typeof showLoading === 'function') showLoading(message); } catch (_ignore7355068) {}
+    vocalLoadingWatchdog7355068 = setTimeout(function(){
+      hardHideVocalLoading7355068();
+    }, Math.max(5000, Number(timeoutMs) || 70000));
+  }
+
+  function persistVocalCompletionPending7355068(payload) {
+    try {
+      localStorage.setItem(VOCAL_COMPLETION_PENDING_KEY_7355068, JSON.stringify({
+        payload: payload,
+        savedAt: Date.now()
+      }));
+    } catch (_ignore7355068) {}
+  }
+
+  function clearVocalCompletionPending7355068() {
+    try { localStorage.removeItem(VOCAL_COMPLETION_PENDING_KEY_7355068); } catch (_ignore7355068) {}
+  }
+
+  function submitVocalCompletionBackground7355068(payload, date, recordId) {
+    persistVocalCompletionPending7355068(payload);
+    Promise.resolve().then(function(){
+      return acceptVocalCompletion7355065(payload);
+    }).then(function(result){
+      clearVocalCompletionPending7355068();
+      if (result && result.deferred !== true) {
+        try {
+          const recStatus = document.getElementById('recStatus');
+          if (recStatus && currentResultRecordId === text(recordId)) recStatus.textContent = '업로드 완료';
+        } catch (_ignoreStatus7355068) {}
+      }
+      try {
+        const refreshDate = new Date(String(date || kstDateKey()) + 'T12:00:00+09:00');
+        loadMonth(refreshDate.getFullYear(), refreshDate.getMonth(), true).catch(function(){});
+      } catch (_ignoreRefresh7355068) {}
+    }).catch(function(){
+      queueVocalCompletionRetry7355067(payload);
+    });
+  }
+
+  function resumeVocalCompletionPending7355068() {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(VOCAL_COMPLETION_PENDING_KEY_7355068) || 'null'); } catch (_ignore7355068) {}
+    const payload = saved && saved.payload && typeof saved.payload === 'object' ? saved.payload : null;
+    const savedAt = Number(saved && saved.savedAt || 0);
+    if (!payload || !payload.recordId) return;
+    if (savedAt && Date.now() - savedAt > 24 * 60 * 60 * 1000) {
+      clearVocalCompletionPending7355068();
+      return;
+    }
+    submitVocalCompletionBackground7355068(payload, text(payload.date) || kstDateKey(), text(payload.recordId));
+  }
+
 
   async function completeTrainingFromPage() {
     const btnComplete = document.getElementById('btnComplete');
     if (typeof step !== 'undefined' && (step !== 6 || !currentTrainObj)) return alert('최종녹음 단계에서 녹음을 완료해야 업로드할 수 있습니다.');
     if (!lastRecordedBlob) return alert('녹음 파일이 없습니다. 최종녹음 후 다시 눌러주세요.');
+
     const startedAt = Date.now();
-    const loadingSafety7355067 = setTimeout(function(){ try { if (typeof hideLoading === 'function') hideLoading(); } catch (_ignoreSafety7355067) {} }, 12000);
     const date = text(currentTrainObj.firebasePracticeDate) || kstDateKey();
     const todayState = await checkToday({ date:date });
     if (todayState.completed) return alert('오늘은 연습을 완료했습니다.');
     if (todayState.source === 'firestore_error') return alert(todayState.error || '연습 완료 여부를 확인하지 못했습니다.');
 
     let consent;
-    try { consent = await ensureResearchConsent(); }
-    catch (error) { return alert(error && error.message ? error.message : String(error)); }
+    try {
+      consent = await ensureResearchConsent();
+    } catch (error) {
+      hardHideVocalLoading7355068();
+      return alert(error && error.message ? error.message : String(error));
+    }
 
     const mime = text(lastRecordedBlob.type || 'audio/mp4').split(';')[0] || 'audio/mp4';
     let begin;
     try {
-      if (typeof showLoading === 'function') showLoading('녹음 보관을 준비하는 중입니다...');
+      showVocalLoading7355068('녹음 보관을 준비하는 중입니다...', 70000);
       begin = await beginCompletion(currentTrainObj, lastRecordedBlob);
     } catch (error) {
-      try { if (typeof hideLoading === 'function') hideLoading(); } catch (_ignore0) {}
+      hardHideVocalLoading7355068();
       return alert(callableError(error, '업로드 준비에 실패했습니다.'));
     }
 
@@ -753,24 +827,39 @@
     }).catch(function(){});
 
     const accepted = text(consent && consent.status) === 'accepted';
-    const localAnalysisPromise = accepted ? analyzeForUpload(lastRecordedBlob, text(currentTrainObj.text)).catch(function(){ return null; }) : Promise.resolve(null);
+    const localAnalysisPromise = accepted
+      ? analyzeForUpload(lastRecordedBlob, text(currentTrainObj.text)).catch(function(){ return null; })
+      : Promise.resolve(null);
     const analysisBase64Promise = accepted && typeof blobToBase64 === 'function'
       ? blobToBase64(lastRecordedBlob).catch(function(){ return ''; })
       : Promise.resolve('');
     const serverScorePromise = accepted ? analysisBase64Promise.then(function(base64Data){
       if (!base64Data) return { ok:false, state:'encoding_failed' };
-      return requestPronunciationAnalysis7355043(begin.recordId, base64Data, mime, text(currentTrainObj.text), text(currentTrainObj.pron));
+      return requestPronunciationAnalysis7355043(
+        begin.recordId,
+        base64Data,
+        mime,
+        text(currentTrainObj.text),
+        text(currentTrainObj.pron)
+      );
     }).catch(function(){ return null; }) : Promise.resolve(null);
 
     let uploadResult;
     try {
-      if (typeof showLoading === 'function') showLoading('녹음 파일을 보관하는 중입니다...');
+      showVocalLoading7355068('녹음 파일을 보관하는 중입니다...', 70000);
       uploadResult = await uploadVocalDriveResumable7355047(begin, lastRecordedBlob);
     } catch (_uploadError) {
-      try { if (typeof hideLoading === 'function') hideLoading(); } catch (_ignore1) {}
+      hardHideVocalLoading7355068();
       const uploadMessage = text(_uploadError && _uploadError.message) || '네트워크 상태를 확인한 뒤 다시 시도해주세요.';
       return alert('녹음 파일 보관을 완료하지 못했습니다.\n\n' + uploadMessage);
     }
+
+    /*
+     * 7.35.5.0.68:
+     * Google Drive 파일 전송이 성공한 순간부터 UI를 더 이상 차단하지 않는다.
+     * Firestore 완료 접수/Drive 최종 링크 수렴은 아래 background path가 담당한다.
+     */
+    hardHideVocalLoading7355068();
 
     let analysis = await localAnalysisPromise;
     let serverScore = null;
@@ -779,9 +868,12 @@
       const remaining = Math.max(250, 4700 - elapsed);
       serverScore = await Promise.race([
         serverScorePromise,
-        new Promise(function(resolve){ setTimeout(function(){ resolve({ ok:false, state:'processing' }); }, remaining); })
+        new Promise(function(resolve){
+          setTimeout(function(){ resolve({ ok:false, state:'processing' }); }, remaining);
+        })
       ]).catch(function(){ return null; });
       analysis = mergePronunciationSummary7355043(analysis, serverScore);
+
       if (!serverScore || serverScore.ok !== true) {
         serverScorePromise.then(function(done){
           if (!done || done.ok !== true) return;
@@ -793,60 +885,83 @@
       }
     }
 
-    let acceptedRecord;
-    try {
-      if (typeof showLoading === 'function') showLoading('연습 기록을 저장하는 중입니다...');
-      acceptedRecord = await acceptVocalCompletion7355065({
-        recordId:begin.recordId,
-        date:date,
-        sentenceId:text(currentTrainObj.id),
-        sentenceSetId:text(currentTrainObj.sentenceSetId || begin.sentenceSetId),
-        cycleKey:text(currentTrainObj.cycleKey),
-        sentence:text(currentTrainObj.text),
-        originalSentence:text(currentTrainObj.text),
-        standardPronunciation:text(currentTrainObj.pron),
-        recognizedText:analysis && analysis.recognizedText || '',
-        aiSource:'', aiComment:'', analysisText:'',
-        driveUploads:uploadResult.driveUploads || [],
-        mimeType:mime,
-        fileSize:lastRecordedBlob.size || 0
-      });
-    } catch (error) {
-      try { if (typeof hideLoading === 'function') hideLoading(); } catch (_ignore2) {}
-      return alert(callableError(error, '녹음은 보관됐지만 연습 기록 접수를 완료하지 못했습니다. 다시 시도해주세요.'));
-    }
+    const completionPayload7355068 = {
+      recordId:begin.recordId,
+      date:date,
+      sentenceId:text(currentTrainObj.id),
+      sentenceSetId:text(currentTrainObj.sentenceSetId || begin.sentenceSetId),
+      cycleKey:text(currentTrainObj.cycleKey),
+      sentence:text(currentTrainObj.text),
+      originalSentence:text(currentTrainObj.text),
+      standardPronunciation:text(currentTrainObj.pron),
+      recognizedText:analysis && analysis.recognizedText || '',
+      aiSource:'',
+      aiComment:'',
+      analysisText:'',
+      driveUploads:uploadResult.driveUploads || [],
+      mimeType:mime,
+      fileSize:lastRecordedBlob.size || 0
+    };
+
+    /*
+     * 화면은 기다리지 않는다.
+     * payload를 먼저 localStorage에 보존한 뒤 백그라운드에서 finalize를 수행한다.
+     * 새로고침/페이지 종료 후에도 다음 로드에서 resumeVocalCompletionPending7355068()가 재접수한다.
+     */
+    submitVocalCompletionBackground7355068(
+      completionPayload7355068,
+      date,
+      begin.recordId
+    );
 
     const pendingUpload = {
       ok:true,
-      status:text(acceptedRecord && acceptedRecord.archiveState) || 'upload_received',
+      status:'upload_received',
       processing:true,
-      fileUrl:'', audioUrl:'', fileId:'', folderId:'', archiveCopies:[]
+      fileUrl:'',
+      audioUrl:'',
+      fileId:'',
+      folderId:'',
+      archiveCopies:[]
     };
     const intelligencePayload = {
-      recordId:begin.recordId, taskType:'vocal_training', practiceDate:date, sentenceId:text(currentTrainObj.id),
-      sentence:text(currentTrainObj.text), standardPronunciation:text(currentTrainObj.pron),
-      fileUrl:'', fileId:'', folderId:'', archiveRequestId:'', mimeType:mime, fileSize:lastRecordedBlob.size || 0,
+      recordId:begin.recordId,
+      taskType:'vocal_training',
+      practiceDate:date,
+      sentenceId:text(currentTrainObj.id),
+      sentence:text(currentTrainObj.text),
+      standardPronunciation:text(currentTrainObj.pron),
+      fileUrl:'',
+      fileId:'',
+      folderId:'',
+      archiveRequestId:'',
+      mimeType:mime,
+      fileSize:lastRecordedBlob.size || 0,
       consentStatus:text(consent && consent.status),
-      analysis:analysis ? { features:analysis.features, recognizedText:analysis.recognizedText, provider:analysis.analysisProvider, model:analysis.model } : null
+      analysis:analysis ? {
+        features:analysis.features,
+        recognizedText:analysis.recognizedText,
+        provider:analysis.analysisProvider,
+        model:analysis.model
+      } : null
     };
-    call('completePracticeIntelligence7355042', intelligencePayload).catch(function(){ queueIntelligenceRetry7355042(intelligencePayload); });
+    call('completePracticeIntelligence7355042', intelligencePayload)
+      .catch(function(){ queueIntelligenceRetry7355042(intelligencePayload); });
 
     updateLocalCompletion(date, currentTrainObj, pendingUpload);
-    try { clearTimeout(loadingSafety7355067); } catch (_ignoreTimer7355067) {}
-    try { if (typeof hideLoading === 'function') hideLoading(); } catch (_ignore3) {}
+    hardHideVocalLoading7355068();
     showResultTabs(begin.recordId, date, analysis, consent);
-    setTimeout(function(){
-      const refreshDate = new Date(date + 'T12:00:00+09:00');
-      loadMonth(refreshDate.getFullYear(), refreshDate.getMonth(), true).catch(function(){});
-    },120);
+
     const recStatus = document.getElementById('recStatus');
-    if (recStatus) recStatus.textContent = acceptedRecord && acceptedRecord.deferred ? '업로드 완료 · 기록 반영 중' : '업로드 완료';
+    if (recStatus) recStatus.textContent = '업로드 완료 · 기록 반영 중';
+
     const calendar = document.getElementById('calendarDisplayArea');
     if (calendar) calendar.style.display = 'block';
     try { if (typeof renderCalendar === 'function') renderCalendar(); } catch (_ignore4) {}
     if (btnComplete) btnComplete.style.display = 'none';
+
     ensurePushToken({ prompt:false }).catch(function(){});
-    return { ok:true, accepted:true, processing:true, recordId:begin.recordId };
+    return { ok:true, accepted:true, processing:true, deferred:true, recordId:begin.recordId };
   }
 
   function practiceKey(log) { return [text(log && log.practiceDate), text(log && (log.sentenceId || log.vocalId)), text(log && log.recordType)].join('|'); }
@@ -1100,9 +1215,22 @@
     return call('markStudentPracticeLogsViewed7355054', { recordIds:ids });
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ bootPracticeFeedbackDeepLink(0); }, 0); }, { once:true });
-  else setTimeout(function(){ bootPracticeFeedbackDeepLink(0); }, 0);
-  global.addEventListener('pageshow', function(){ setTimeout(function(){ bootPracticeFeedbackDeepLink(0); }, 0); });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(function(){
+      bootPracticeFeedbackDeepLink(0);
+      resumeVocalCompletionPending7355068();
+    }, 0);
+  }, { once:true });
+  else setTimeout(function(){
+    bootPracticeFeedbackDeepLink(0);
+    resumeVocalCompletionPending7355068();
+  }, 0);
+  global.addEventListener('pageshow', function(){
+    setTimeout(function(){
+      bootPracticeFeedbackDeepLink(0);
+      resumeVocalCompletionPending7355068();
+    }, 0);
+  });
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('message', function(event){
