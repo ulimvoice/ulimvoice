@@ -42,13 +42,13 @@
   <link rel="preconnect" href="https://identitytoolkit.googleapis.com" data-ulim-classroom-preconnect="7297">
   <link rel="preconnect" href="https://asia-northeast3-ulim-7b09a.cloudfunctions.net" data-ulim-classroom-preconnect="7297">
   <!-- ULIM 7.34.2: safe Firebase-first staff/student directory integration. -->
-  <script src="./web/room-classroom-realtime-7.29.19.js?v=20260816.73550680"></script>
+  <script src="./web/room-classroom-realtime-7.29.19.js?v=20260816.73550700"></script>
   <script src="./web/practice-room-firestore-primary-7.35.5.0.37.js?v=20260815.73550580"></script>
   <script src="./web/staff-login-firebase-primary-7.32.9.js?v=20260816.73550650"></script>
   <script src="./web/student-login-firebase-direct-7.35.5.0.30.js?v=20260815.73550580"></script>
   <script src="./web/student-home-bootstrap-7.35.5.0.31.js?v=20260815.73550580"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260816-7355068-r29.6-r3.2-vocal-loading-finalize-nonblocking">
+<meta name="ulim-build" content="20260816-7355070-r29.7-practice-actor-push-deeplink-ai">
 <script id="ulim-one-time-cache-clean-7355030">
 (function (global) {
   'use strict';
@@ -2952,6 +2952,20 @@ function applyStudentFirebaseProfile7355055_(profile) {
     return profile;
 }
 
+function autoRegisterPracticePush7355070_(promptPermission, attempt) {
+    attempt = Number(attempt || 0);
+    try {
+        const practice = window.__ULIM_PRACTICE_INTELLIGENCE_API_7355042__;
+        if (!practice || typeof practice.ensurePushToken !== 'function') {
+            if (attempt < 20) setTimeout(function(){ autoRegisterPracticePush7355070_(promptPermission,attempt+1); },150);
+            return;
+        }
+        setTimeout(function(){
+            Promise.resolve(practice.ensurePushToken({prompt:promptPermission === true})).catch(function(){});
+        }, 80);
+    } catch (_ignore7355070) {}
+}
+
 async function loginStudentFirebase7355055_(name, password) {
     const auth = window.__ULIM_STUDENT_FIREBASE_DIRECT_AUTH_7355030__;
     if (!auth || typeof auth.login !== 'function') {
@@ -2962,6 +2976,7 @@ async function loginStudentFirebase7355055_(name, password) {
     applyStudentFirebaseProfile7355055_(profile);
     if (typeof showMainContent === 'function') showMainContent(true);
     if (typeof renderStudentAccountBar_ === 'function') renderStudentAccountBar_();
+    autoRegisterPracticePush7355070_(true);
     if (profile.mustChangePassword === true && typeof changeStudentPasswordByPrompt === 'function') {
         setTimeout(function(){ changeStudentPasswordByPrompt(true, password); }, 120);
     }
@@ -3019,6 +3034,7 @@ async function checkStudentName() {
                 applyStudentFirebaseProfile7355055_(profile);
                 if (typeof showMainContent === 'function') showMainContent(true);
                 if (typeof renderStudentAccountBar_ === 'function') renderStudentAccountBar_();
+                autoRegisterPracticePush7355070_(false);
                 return true;
             }
         } catch (_ignore7355055) {}
@@ -4895,9 +4911,12 @@ async function uploadPastQuestionRecord() {
     const btn=document.getElementById('pastUploadBtn'),status=document.getElementById('pastUploadStatus');
     if(!pastLastRecordedBlob)return alert('기출문제 녹음을 완료한 뒤 업로드할 수 있습니다.');
     const meta=getPastQuestionUploadMeta_();if(!meta.lines||meta.lines==='-')return alert('먼저 기출문제를 뽑은 뒤 녹음해주세요.');
-    const auth=window.__ULIM_STUDENT_FIREBASE_DIRECT_AUTH_7355030__;
-    if(!auth||typeof auth.hasValidatedSession!=='function'||!auth.hasValidatedSession()){
-        const ok=await promptAndAuthenticate();if(!ok)return;
+    const hasStaffPracticeActor = (typeof adminHasStaffSession === 'function' && adminHasStaffSession());
+    if(!hasStaffPracticeActor){
+        const auth=window.__ULIM_STUDENT_FIREBASE_DIRECT_AUTH_7355030__;
+        if(!auth||typeof auth.hasValidatedSession!=='function'||!auth.hasValidatedSession()){
+            const ok=await promptAndAuthenticate();if(!ok)return;
+        }
     }
     const practice=window.__ULIM_PRACTICE_INTELLIGENCE_API_7355042__;
     if(!practice||typeof practice.archivePracticeBlob!=='function')return alert('기출문제 저장 기능을 준비하지 못했습니다. 페이지를 다시 열어주세요.');
@@ -15952,13 +15971,18 @@ ${ruleSummary}`, isFallback ? "success" : "success");
             const url = new URL(window.location.href);
             if (url.searchParams.get('open') !== 'admin-practice') return null;
             const date = String(url.searchParams.get('date') || '').trim();
-            return { recordId:String(url.searchParams.get('recordId') || '').trim(), date:/^\d{4}-\d{2}-\d{2}$/.test(date) ? date : '' };
+            return {
+                recordId:String(url.searchParams.get('recordId') || '').trim(),
+                date:/^\d{4}-\d{2}-\d{2}$/.test(date) ? date : '',
+                studentUid:String(url.searchParams.get('studentUid') || '').trim(),
+                taskType:String(url.searchParams.get('taskType') || '').trim()
+            };
         } catch (_ignore) { return null; }
     }
     function clearPracticeUploadDeepLink7355042_() {
         try {
             const url = new URL(window.location.href);
-            url.searchParams.delete('open'); url.searchParams.delete('recordId'); url.searchParams.delete('date');
+            ['open','recordId','date','studentUid','taskType'].forEach(function(key){ url.searchParams.delete(key); });
             history.replaceState(history.state, '', url.pathname + (url.search ? url.search : '') + url.hash);
         } catch (_ignore) {}
     }
@@ -15979,11 +16003,9 @@ ${ruleSummary}`, isFallback ? "success" : "success");
             }
             await adminLoadVocalPracticeLogs(false);
             if (link.recordId) {
-                const index = adminVocalPracticeLogs.findIndex(function(item){ return String(item && item.recordId || '') === link.recordId; });
-                if (index >= 0) {
-                    const cards = document.querySelectorAll('#adminVocalPracticeList .practice-log-card, #adminVocalPracticeList [data-record-id]');
-                    if (cards[index] && typeof cards[index].scrollIntoView === 'function') cards[index].scrollIntoView({ block:'center', behavior:'smooth' });
-                }
+                if (typeof window.ulimOpenPracticeRecordById706 !== 'function') return false;
+                const opened = window.ulimOpenPracticeRecordById706(link.recordId);
+                if (!opened) return false;
             }
             clearPracticeUploadDeepLink7355042_();
             return true;
@@ -16199,6 +16221,31 @@ ${ruleSummary}`, isFallback ? "success" : "success");
         return '<p style="color:#999;"><strong>업로드 파일:</strong> 링크 없음</p>';
     }
 
+    function buildStudentAiAnalysisHtml7355070_(log, isPastMode) {
+        if (isPastMode) return '';
+        const rawSummary = log && log.analysisSummary && typeof log.analysisSummary === 'object' ? log.analysisSummary : null;
+        const summary = rawSummary && rawSummary.features && typeof rawSummary.features === 'object' ? rawSummary.features : rawSummary;
+        const aiText = safeText586_(log && (log.aiComment || log.analysisText));
+        if (!summary && !aiText) return '';
+        if (!summary) return `<p><strong>AI 분석결과:</strong><br>${esc586_(aiText)}</p>`;
+        function showScore(label, value) {
+            if (value == null || value === '' || !Number.isFinite(Number(value))) return '';
+            return `<div style="display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid #eef2f7;"><span>${esc586_(label)}</span><b>${esc586_(Math.round(Number(value)))}점</b></div>`;
+        }
+        const pronunciation = Number(summary.ctcPronunciationScore) > 0 ? summary.ctcPronunciationScore : summary.pronunciationMatchScore;
+        const weak = Array.isArray(summary.weakPhonemes) ? summary.weakPhonemes.filter(Boolean).slice(0,5) : [];
+        const scoreHtml = [
+            showScore('발음 정확도', pronunciation),
+            showScore('한 호흡 유지', summary.breathContinuityScore),
+            showScore('소리 유지', summary.soundSustainScore),
+            showScore('문장 말미 유지', summary.sentenceEndingSustainScore)
+        ].join('');
+        const detail = (Number(summary.durationSec) > 0 || Number(summary.pauseCount) > 0 || Number(summary.silenceRatio) > 0)
+            ? `<div style="padding-top:8px;color:#64748b;font-size:12px;">발화시간 ${esc586_(Number(summary.durationSec||0).toFixed(1))}초 · 무음비율 ${esc586_(Math.round(Number(summary.silenceRatio||0)*100))}% · 휴지 ${esc586_(summary.pauseCount||0)}회</div>`
+            : '';
+        return `<div style="margin:12px 0;padding:12px;border:1px solid #dbeafe;border-radius:14px;background:#f8fbff;"><strong>AI 분석결과</strong>${scoreHtml}${weak.length ? `<div style="padding-top:8px;color:#475569;font-size:12px;"><b>다시 확인할 발음</b> ${esc586_(weak.join(' · '))}</div>` : ''}${detail}${aiText ? `<div style="margin-top:8px;line-height:1.6;white-space:pre-wrap;">${esc586_(aiText)}</div>` : ''}</div>`;
+    }
+
     function buildStudentPracticeCards586_(logs, mode) {
         const isPastMode = mode === 'past';
         return (logs || []).map(function(log){
@@ -16207,7 +16254,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
             const hasUnreadTeacherEvaluation = hasTeacherEvaluation && (typeof log.hasUnreadTeacherEvaluation === 'boolean' ? log.hasUnreadTeacherEvaluation : !safeText586_(log.studentViewed));
             const taskType = safeText586_(log.taskType || log.category);
             const isStandardMode = taskType === 'standard_pronunciation' || /표준발음|PRON_/i.test([log.recordType, log.vocalId].join(' '));
-            const aiComment = isPastMode ? '' : safeText586_(log.aiComment);
+            const aiAnalysisHtml = buildStudentAiAnalysisHtml7355070_(log,isPastMode);
             const recordType = safeText586_(log.recordType) || (isPastMode ? '기출문제' : (isStandardMode ? '표준발음' : '발성훈련'));
             const titleLabel = isPastMode ? '기출문제 연습 완료' : (isStandardMode ? '표준발음 연습 완료' : '발성훈련 연습 완료');
             const sentenceLabel = isPastMode ? '대본' : '문장';
@@ -16216,7 +16263,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
                     <div class="practice-log-title">✅ ${esc586_(titleLabel)} ${hasUnreadTeacherEvaluation ? ' / ★ 새 선생님 평가' : (hasTeacherEvaluation ? ' / 선생님 평가' : '')}</div>
                     <div class="practice-log-meta">${esc586_(recordType)}${log.timestamp ? ' · ' + esc586_(log.timestamp) : ''}</div>
                     <p><strong>${sentenceLabel}:</strong><br>${esc586_(isPastMode ? cleanPastSentence598_(log.sentence || '') : (log.sentence || ''))}</p>
-                    ${aiComment ? `<p><strong>분석결과:</strong><br>${esc586_(aiComment)}</p>` : ''}
+                    ${aiAnalysisHtml}
                     ${buildUploadFileHtml586_(log)}
                     ${(hasTeacherEvaluation && typeof window.ulimBuildStudentEvaluationCard595 === 'function') ? window.ulimBuildStudentEvaluationCard595(log) : '<p style="color:#999;">아직 선생님 평가가 없습니다.</p>'}
                 </div>
@@ -17173,7 +17220,8 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
     const sentenceLabel = isPast ? '기출 대본' : '문장';
     const dateText = practiceDate706(log) || '날짜 정보 없음';
     const classText = practiceClass706(log) || '반 정보 없음';
-    const studentName = String(log.studentName || group.name || '학생').trim();
+    const studentName = String(log.participantName || log.studentName || group.name || (String(log.ownerKind || '') === 'staff' ? '교직원' : '학생')).trim();
+    const participantLabel = String(log.ownerKind || '') === 'staff' ? '사용자명' : '학생명';
 
     const summaryData = log && log.analysisSummary && typeof log.analysisSummary === 'object' ? log.analysisSummary : null;
     const aiHtml = (!isPast && (summaryData || log.aiComment))
@@ -17204,7 +17252,7 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
       bodyEl.innerHTML = `
         <div class="ulim-practice-record-meta706">
           <div class="ulim-practice-record-meta-item706">
-            <span class="ulim-practice-record-meta-label706">학생명</span>
+            <span class="ulim-practice-record-meta-label706">${esc(participantLabel)}</span>
             <span class="ulim-practice-record-meta-value706">${esc(studentName)}</span>
           </div>
           <div class="ulim-practice-record-meta-item706">
@@ -17262,6 +17310,21 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
 
   window.ulimOpenPracticeViewer706 = function(groupKey) {
     renderPracticeViewer706(String(groupKey || ''),0,'');
+  };
+
+  window.ulimOpenPracticeRecordById706 = function(recordId) {
+    const wanted = String(recordId || '').trim();
+    if (!wanted) return false;
+    for (const group of practiceStudentGroups706) {
+      const position = group.records.findIndex(function(item){
+        return String(item && item.log && item.log.recordId || '') === wanted;
+      });
+      if (position >= 0) {
+        renderPracticeViewer706(group.key,position,wanted);
+        return true;
+      }
+    }
+    return false;
   };
 
   window.ulimMovePracticeViewer706 = function(direction) {
@@ -20521,7 +20584,7 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 
 
 <!-- ULIM R20: vocalization Firestore-primary authority; GAS remains media/history compatibility only. -->
-<script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260816.73550680"></script>
+<script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260816.73550700"></script>
 <script id="ulim-vocal-primary-bind-7355041">
 window.__ULIM_VOCAL_PRIMARY_BUILD_7355041__='20260814-7355050b-r25.2-step6-next-upload';
 window.__ULIM_VOCAL_STEP6_NEXT_UPLOAD_BUILD_7355050B__='20260814-7355050b';

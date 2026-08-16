@@ -5,7 +5,7 @@
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_R21A_7355042__ = true;
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_7355041__ = true;
 
-  const VERSION = '2026-08-16.735.05.0.68-r29.6-r3.2-vocal-loading-finalize-nonblocking';
+  const VERSION = '2026-08-16.735.05.0.70-r29.7-practice-actor-push-deeplink-ai';
   const DRIVE_FOLDER_FIRESTORE_PRIMARY_7355045 = true;
   const DRIVE_RESUMABLE_DIRECT_7355047 = false;
   const DRIVE_RESUMABLE_SERVER_PROXY_7355066 = true;
@@ -29,6 +29,8 @@
   let localSpeechWarmStarted = false;
   let localSpeechWarmReady = false;
   let consentCache = null;
+  let preferredTeacherEvaluationId7355070 = '';
+  let preferredTeacherEvaluatorKey7355070 = '';
 
   function text(value) { return String(value == null ? '' : value).trim(); }
   function num(value, fallback) { const n = Number(value); return Number.isFinite(n) ? n : (fallback || 0); }
@@ -62,7 +64,7 @@
   }
   async function runtime() {
     const room = roomApi();
-    if (!room || typeof room.preloadRuntime !== 'function') throw new Error('학생 Firebase 기능을 준비하지 못했습니다.');
+    if (!room || typeof room.preloadRuntime !== 'function') throw new Error('Firebase 연습 기능을 준비하지 못했습니다.');
     const rt = await room.preloadRuntime();
     if (!rt || !rt.auth || !rt.auth.currentUser || !rt.sdk || !rt.functions) throw new Error('로그인이 필요합니다.');
     if (typeof room.getStableIdToken === 'function') await room.getStableIdToken(rt, false, 'practice-intelligence-7355042');
@@ -121,7 +123,7 @@
   }
   async function authSnapshot() {
     const rt = await runtime();
-    return { firebaseUid: rt.auth.currentUser.uid, studentUid: rt.auth.currentUser.uid, authenticated: true };
+    return { firebaseUid:rt.auth.currentUser.uid, ownerUid:rt.auth.currentUser.uid, authenticated:true };
   }
 
 
@@ -515,7 +517,7 @@
       }
     }
     switchResultTab(accepted ? 'analysis' : 'teacher');
-    refreshTeacherComments(recordId, date).catch(function(){});
+    refreshTeacherComments(recordId,date,preferredTeacherEvaluationId7355070,preferredTeacherEvaluatorKey7355070).catch(function(){});
   }
   function hideResultTabs() {
     const tabs = document.getElementById('practiceResultTabs7355042');
@@ -533,13 +535,20 @@
     if (teacher) teacher.style.display = isTeacher ? 'block' : 'none';
     if (aBtn) { aBtn.style.background = isTeacher ? '#e2e8f0' : '#2563eb'; aBtn.style.color = isTeacher ? '#334155' : '#fff'; }
     if (tBtn) { tBtn.style.background = isTeacher ? '#2563eb' : '#e2e8f0'; tBtn.style.color = isTeacher ? '#fff' : '#334155'; }
-    if (isTeacher && currentResultRecordId) refreshTeacherComments(currentResultRecordId, currentResultDate).catch(function(){});
+    if (isTeacher && currentResultRecordId) refreshTeacherComments(currentResultRecordId,currentResultDate,preferredTeacherEvaluationId7355070,preferredTeacherEvaluatorKey7355070).catch(function(){});
   }
   global.ulimPracticeResultTab7355042 = switchResultTab;
 
-  function teacherEvaluationHtml(log) {
+  function teacherEvaluationHtml(log, preferredEvaluationId, preferredEvaluatorKey) {
     const evaluations = Array.isArray(log && log.teacherEvaluations) ? log.teacherEvaluations : [];
-    const final = evaluations.filter(function(ev){ return ev && (text(ev.comment) || text(ev.scoreJson)); });
+    const preferredId = text(preferredEvaluationId || preferredTeacherEvaluationId7355070);
+    const preferredKey = text(preferredEvaluatorKey || preferredTeacherEvaluatorKey7355070);
+    const final = evaluations.filter(function(ev){ return ev && (text(ev.comment) || text(ev.scoreJson)); }).slice();
+    final.sort(function(a,b){
+      const aPreferred = (preferredId && text(a.evaluationId) === preferredId) || (preferredKey && text(a.evaluatorKey) === preferredKey);
+      const bPreferred = (preferredId && text(b.evaluationId) === preferredId) || (preferredKey && text(b.evaluatorKey) === preferredKey);
+      return Number(bPreferred) - Number(aPreferred);
+    });
     if (!final.length) return '<div style="padding:16px;border-radius:14px;background:#f8fafc;color:#64748b;">아직 등록된 강사코멘트가 없습니다.</div>';
     const defs = [
       ['pronunciationAccuracy','발음 정확성'],['breathStability','호흡 안정성'],['soundSustain','소리 유지'],
@@ -549,20 +558,27 @@
       let scores = {};
       try { scores = typeof ev.scoreJson === 'string' ? JSON.parse(ev.scoreJson || '{}') : (ev.scores || ev.scoreJson || {}); } catch (_ignore) {}
       const rows = defs.filter(function(d){ return scores[d[0]] != null; }).map(function(d){ return scoreRow(d[1], Number(scores[d[0]]) * 20, ''); }).join('');
-      return '<div style="border:1px solid #e2e8f0;border-radius:16px;padding:14px;margin-bottom:10px;">'
+      const highlighted = (preferredId && text(ev.evaluationId) === preferredId) || (preferredKey && text(ev.evaluatorKey) === preferredKey);
+      return '<div data-evaluation-id="' + escapeHtml(text(ev.evaluationId)) + '" style="border:' + (highlighted ? '2px solid #2563eb' : '1px solid #e2e8f0') + ';border-radius:16px;padding:14px;margin-bottom:10px;background:' + (highlighted ? '#eff6ff' : '#fff') + ';">'
+        + (highlighted ? '<div style="display:inline-block;margin-bottom:8px;padding:4px 8px;border-radius:999px;background:#2563eb;color:#fff;font-size:11px;font-weight:900;">🔔 알림으로 연 평가</div>' : '')
         + '<div style="font-weight:900;margin-bottom:8px;">' + escapeHtml(ev.teacherName || '선생님') + ' 선생님</div>'
         + rows
         + (text(ev.comment) ? '<div style="margin-top:12px;padding:12px;border-radius:12px;background:#fffbeb;line-height:1.65;white-space:pre-wrap;">' + escapeHtml(ev.comment) + '</div>' : '')
         + '</div>';
     }).join('');
   }
-  async function refreshTeacherComments(recordId, date) {
+  async function refreshTeacherComments(recordId, date, preferredEvaluationId, preferredEvaluatorKey) {
     const pane = document.getElementById('practiceTeacherPane7355042');
     if (!pane) return;
     const d = new Date((date || kstDateKey()) + 'T12:00:00+09:00');
     const data = await call('listStudentPracticeLogs7355041', { year:d.getFullYear(), month:d.getMonth() + 1 });
     const log = (Array.isArray(data.logs) ? data.logs : []).find(function(item){ return text(item.recordId) === text(recordId); });
-    pane.innerHTML = teacherEvaluationHtml(log || {});
+    pane.innerHTML = teacherEvaluationHtml(log || {}, preferredEvaluationId, preferredEvaluatorKey);
+    const targetId = text(preferredEvaluationId || preferredTeacherEvaluationId7355070);
+    if (targetId) {
+      const card = pane.querySelector('[data-evaluation-id="' + CSS.escape(targetId) + '"]');
+      if (card && typeof card.scrollIntoView === 'function') setTimeout(function(){ card.scrollIntoView({block:'center',behavior:'smooth'}); }, 40);
+    }
   }
 
   function updateLocalCompletion(date, train, uploadResult) {
@@ -993,6 +1009,36 @@
     return { status:'success', ok:true, logs:logs, count:logs.length, firestoreCount:firebaseLogs.length, legacyCount:0, force:!!force, sourceAuthority:'firestore' };
   }
 
+  function openPracticePushUrl7355070(url) {
+    const target = text(url);
+    if (!target) return;
+    try {
+      const parsed = new URL(target,global.location.href);
+      if (parsed.origin !== global.location.origin) return;
+      global.location.href = parsed.href;
+    } catch (_ignore7355070) {}
+  }
+  function showForegroundPracticeNotification7355070(data) {
+    try {
+      if (!data || Notification.permission !== 'granted' || !text(data.url)) return;
+      const note = new Notification(text(data.title) || '울림 알림',{
+        body:text(data.body), icon:'/ulimvoice/appdata/logo.png', badge:'/ulimvoice/appdata/logo.png',
+        tag:text(data.kind) + ':' + text(data.recordId), data:data
+      });
+      note.onclick = function(){ try { note.close(); } catch (_ignore) {} openPracticePushUrl7355070(data.url); };
+    } catch (_ignore7355070) {}
+  }
+  function installPracticeServiceWorkerMessage7355070() {
+    if (!navigator.serviceWorker || global.__ULIM_PRACTICE_SW_MESSAGE_7355070__) return;
+    global.__ULIM_PRACTICE_SW_MESSAGE_7355070__ = true;
+    navigator.serviceWorker.addEventListener('message',function(event){
+      const message = event && event.data || {};
+      if (message.type !== 'ULIM_PUSH_DEEP_LINK') return;
+      const data = message.data || {};
+      openPracticePushUrl7355070(message.url || data.url);
+    });
+  }
+
   async function ensurePushToken(option) {
     option = option || {};
     if (!('Notification' in global) || !navigator.serviceWorker) return { ok:false, reason:'unsupported' };
@@ -1017,30 +1063,59 @@
         try {
           if (data.kind === 'practice_upload' && typeof global.adminLoadVocalPracticeLogs === 'function') global.adminLoadVocalPracticeLogs(false);
           if (data.kind === 'practice_feedback') {
-            if (currentResultRecordId && (!data.recordId || data.recordId === currentResultRecordId)) refreshTeacherComments(currentResultRecordId, currentResultDate).catch(function(){});
-            const now = new Date(); loadMonth(now.getFullYear(), now.getMonth(), true).catch(function(){});
+            if (currentResultRecordId && (!data.recordId || data.recordId === currentResultRecordId)) {
+              refreshTeacherComments(currentResultRecordId,currentResultDate,text(data.evaluationId),text(data.evaluatorKey)).catch(function(){});
+            }
+            const now = new Date(); loadMonth(now.getFullYear(),now.getMonth(),true).catch(function(){});
           }
+          showForegroundPracticeNotification7355070(data);
         } catch (_ignore2) {}
       });
     }
+    installPracticeServiceWorkerMessage7355070();
     return { ok:true };
   }
   async function promptPushToken() { return ensurePushToken({ prompt:true }); }
   global.ulimPracticeEnableNotifications7355042 = function(){ promptPushToken().then(function(r){ if(r && r.ok) alert('알림 등록이 완료되었습니다.'); else if(r && r.reason === 'denied') alert('브라우저 알림 권한이 차단되어 있습니다.'); }).catch(function(){ alert('알림 등록을 완료하지 못했습니다.'); }); };
+
+  if (!global.__ULIM_PRACTICE_STAFF_PUSH_AUTO_7355070__) {
+    global.__ULIM_PRACTICE_STAFF_PUSH_AUTO_7355070__ = true;
+    global.addEventListener('ulim-firebase-auth-ready',function(event){
+      const detail = event && event.detail || {};
+      const role = text(detail.role).toLowerCase();
+      if (['teacher','admin','superadmin'].indexOf(role) < 0) return;
+      const shouldPrompt = text(detail.reason) === 'staff-login';
+      setTimeout(function(){ ensurePushToken({ prompt:shouldPrompt }).catch(function(){}); },60);
+    });
+    installPracticeServiceWorkerMessage7355070();
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded',function(){
+        if (Notification.permission === 'granted') setTimeout(function(){ ensurePushToken({prompt:false}).catch(function(){}); },800);
+      },{once:true});
+    } else if (Notification.permission === 'granted') {
+      setTimeout(function(){ ensurePushToken({prompt:false}).catch(function(){}); },800);
+    }
+  }
 
 
   function readPracticeFeedbackDeepLink() {
     try {
       const url = new URL(global.location.href);
       if (url.searchParams.get('open') !== 'practice-feedback') return null;
-      return { recordId:text(url.searchParams.get('recordId')), date:text(url.searchParams.get('date')) };
+      return {
+        recordId:text(url.searchParams.get('recordId')),
+        date:text(url.searchParams.get('date')),
+        evaluationId:text(url.searchParams.get('evaluationId')),
+        evaluatorKey:text(url.searchParams.get('evaluatorKey')),
+        teacherUid:text(url.searchParams.get('teacherUid'))
+      };
     } catch (_ignore) { return null; }
   }
   function clearPracticeFeedbackDeepLink() {
     try {
       const url = new URL(global.location.href);
-      url.searchParams.delete('open'); url.searchParams.delete('recordId'); url.searchParams.delete('date');
-      history.replaceState(history.state, '', url.pathname + (url.search ? url.search : '') + url.hash);
+      ['open','recordId','date','evaluationId','evaluatorKey','teacherUid'].forEach(function(key){ url.searchParams.delete(key); });
+      history.replaceState(history.state,'',url.pathname + (url.search ? url.search : '') + url.hash);
     } catch (_ignore) {}
   }
   async function consumePracticeFeedbackDeepLink() {
@@ -1050,6 +1125,8 @@
     try { const rt = await runtime(); signedIn = !!(rt && rt.auth && rt.auth.currentUser); } catch (_ignore) {}
     if (!signedIn) return false;
     try {
+      preferredTeacherEvaluationId7355070 = text(link.evaluationId);
+      preferredTeacherEvaluatorKey7355070 = text(link.evaluatorKey || link.teacherUid);
       if (typeof global.activateTabById === 'function') global.activateTabById('tab3');
       else {
         const tab = document.querySelector('.tab[data-tab="tab3"]');
@@ -1057,11 +1134,14 @@
       }
       const date = /^\d{4}-\d{2}-\d{2}$/.test(link.date) ? link.date : kstDateKey();
       const d = new Date(date + 'T12:00:00+09:00');
-      const loaded = await loadMonth(d.getFullYear(), d.getMonth(), true);
+      const loaded = await loadMonth(d.getFullYear(),d.getMonth(),true);
       const log = (loaded && Array.isArray(loaded.logs) ? loaded.logs : []).find(function(item){ return text(item && item.recordId) === link.recordId; }) || {};
+      if (!text(log.recordId)) return false;
       const summary = log && log.analysisSummary && typeof log.analysisSummary === 'object' ? log.analysisSummary : null;
-      const analysis = summary ? { features:Object.assign({}, summary) } : null;
-      showResultTabs(link.recordId, date, analysis, { status:summary ? 'accepted' : 'declined' });
+      const features = summary && summary.features && typeof summary.features === 'object' ? summary.features : summary;
+      const analysis = features ? { features:Object.assign({},features) } : null;
+      showResultTabs(link.recordId,date,analysis,{ status:features ? 'accepted' : 'declined' });
+      await refreshTeacherComments(link.recordId,date,link.evaluationId,link.evaluatorKey || link.teacherUid).catch(function(){});
       switchResultTab('teacher');
       clearPracticeFeedbackDeepLink();
       return true;
