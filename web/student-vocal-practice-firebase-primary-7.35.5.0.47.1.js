@@ -5,7 +5,7 @@
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_R21A_7355042__ = true;
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_7355041__ = true;
 
-  const VERSION = '2026-08-16.735.05.0.72-r29.7.3-completion-record-popup-ui';
+  const VERSION = '2026-08-16.735.05.0.80-r29.9-role-split-firestore-only-sheet-backup';
   const DRIVE_FOLDER_FIRESTORE_PRIMARY_7355045 = true;
   const DRIVE_RESUMABLE_DIRECT_7355047 = false;
   const DRIVE_RESUMABLE_SERVER_PROXY_7355066 = true;
@@ -564,17 +564,21 @@
     }
   }
 
+  const VOCAL_PENDING_RECORD_KEY_7355072 = 'ulimVocalPendingRecord7355072';
   function updateLocalCompletion(date, train, uploadResult, analysis, recordId) {
     try {
       if (typeof getSavedVocalIds === 'function') {
-        const ids = getSavedVocalIds(); ids.add(train.id); localStorage.setItem('savedVocalIds', JSON.stringify(Array.from(ids)));
+        const ids = getSavedVocalIds();
+        ids.add(train.id);
+        localStorage.setItem('savedVocalIds', JSON.stringify(Array.from(ids)));
       }
-      if (typeof getVocalRecords === 'function') {
-        const records = getVocalRecords();
-        const features = analysis && analysis.features && typeof analysis.features === 'object'
-          ? Object.assign({}, analysis.features)
-          : null;
-        records.set(date, {
+      const features = analysis && analysis.features && typeof analysis.features === 'object'
+        ? Object.assign({}, analysis.features)
+        : null;
+      sessionStorage.setItem(VOCAL_PENDING_RECORD_KEY_7355072, JSON.stringify({
+        savedAt:Date.now(),
+        date:text(date),
+        record:{
           id:train.id,
           recordId:text(recordId),
           taskType:'vocal_training',
@@ -588,10 +592,21 @@
           analysisSummary:features,
           aiComment:'',
           fileUrl:uploadResult && uploadResult.fileUrl || ''
-        });
-        localStorage.setItem('vocalRecords', JSON.stringify(Array.from(records.entries())));
-      }
+        }
+      }));
+      try { localStorage.removeItem('vocalRecords'); } catch (_ignoreLegacy7355072) {}
       if (typeof clearVocalTrainingClientCache_ === 'function') clearVocalTrainingClientCache_();
+    } catch (_ignore) {}
+  }
+  function clearPendingVocalRecord7355072(date,recordId) {
+    try {
+      const raw = sessionStorage.getItem(VOCAL_PENDING_RECORD_KEY_7355072);
+      if (!raw) return;
+      const row = JSON.parse(raw);
+      if ((!date || text(row.date) === text(date)) &&
+          (!recordId || text(row.record && row.record.recordId) === text(recordId))) {
+        sessionStorage.removeItem(VOCAL_PENDING_RECORD_KEY_7355072);
+      }
     } catch (_ignore) {}
   }
 
@@ -788,6 +803,7 @@
       try {
         const refreshDate = new Date(String(date || kstDateKey()) + 'T12:00:00+09:00');
         loadMonth(refreshDate.getFullYear(), refreshDate.getMonth(), true).then(function(){
+          clearPendingVocalRecord7355072(date,recordId);
           try {
             if (typeof global.ulimRefreshStudentPracticeRecord7355073 === 'function') {
               global.ulimRefreshStudentPracticeRecord7355073(date,recordId,null);
@@ -1147,20 +1163,20 @@
     try {
       preferredTeacherEvaluationId7355070 = text(link.evaluationId);
       preferredTeacherEvaluatorKey7355070 = text(link.evaluatorKey || link.teacherUid);
-      if (typeof global.activateTabById === 'function') global.activateTabById('tab3');
-      else {
-        const tab = document.querySelector('.tab[data-tab="tab3"]');
-        if (tab && typeof tab.click === 'function') tab.click();
-      }
       const date = /^\d{4}-\d{2}-\d{2}$/.test(link.date) ? link.date : kstDateKey();
       const d = new Date(date + 'T12:00:00+09:00');
       const loaded = await loadMonth(d.getFullYear(),d.getMonth(),true);
       const log = (loaded && Array.isArray(loaded.logs) ? loaded.logs : []).find(function(item){ return text(item && item.recordId) === link.recordId; }) || {};
       if (!text(log.recordId)) return false;
       const evaluatorKey = text(link.evaluatorKey || link.teacherUid);
-      if (typeof global.ulimOpenStudentPracticeRecord7355073 !== 'function') return false;
-      await global.ulimOpenStudentPracticeRecord7355073(date,link.recordId,evaluatorKey,{
+      const taskType = text(log.taskType || log.category);
+      if (typeof global.activateTabById === 'function') {
+        global.activateTabById(taskType === 'past_question' ? 'tab4' : taskType === 'standard_pronunciation' ? 'tabPronunciation' : 'tab3');
+      }
+      if (typeof global.ulimOpenStudentPracticeRecord7355072 !== 'function') return false;
+      await global.ulimOpenStudentPracticeRecord7355072(date,link.recordId,evaluatorKey,{
         evaluationId:text(link.evaluationId),
+        taskType:taskType,
         completionNow:false,
         refresh:false
       });
