@@ -5,7 +5,7 @@
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_R21A_7355042__ = true;
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_7355041__ = true;
 
-  const VERSION = '2026-08-16.735.05.0.80-r29.9-role-split-firestore-only-sheet-backup';
+  const VERSION = '2026-08-17.735.05.0.81-r29.9.2-standard-past-nonblocking-preupload-ctc';
   const DRIVE_FOLDER_FIRESTORE_PRIMARY_7355045 = true;
   const DRIVE_RESUMABLE_DIRECT_7355047 = false;
   const DRIVE_RESUMABLE_SERVER_PROXY_7355066 = true;
@@ -450,15 +450,15 @@
     return { features:features, recognizedText:recognized, model:text(stt.model), analysisProvider:recognized ? 'on-device-speech+client-dsp' : 'client-dsp' };
   }
   async function requestPronunciationAnalysis7355043(recordId, base64Data, mimeType, sentence, standardPronunciation) {
-    if (!recordId || !base64Data) return null;
+    if (!base64Data) return null;
     try {
-      return await call('analyzePracticePronunciation7355043', {
+      return await callWithTimeout7355065('analyzePracticePronunciation7355043', {
         recordId:text(recordId),
         audioBase64:String(base64Data || ''),
         mimeType:text(mimeType || 'audio/mp4'),
         sentence:text(sentence),
         standardPronunciation:text(standardPronunciation)
-      });
+      }, 33000);
     } catch (_ignore) { return null; }
   }
   function mergePronunciationSummary7355043(analysis, scored) {
@@ -475,6 +475,8 @@
     analysis.features.alignmentCoverage = num(scored.alignmentCoverage, 0);
     analysis.features.gopMethod = text(scored.gopMethod);
     analysis.features.phonemeEngineVersion = text(scored.engineVersion);
+    analysis.features.expectedPhonemes = Array.isArray(scored.expectedPhonemes) ? scored.expectedPhonemes.slice(0, 60) : [];
+    analysis.features.recognizedPhonemes = Array.isArray(scored.recognizedPhonemes) ? scored.recognizedPhonemes.slice(0, 60) : [];
     analysis.analysisProvider = 'on-device-whisper+client-dsp+server-ctc-gop';
     analysis.phonemeSummary = scored;
     return analysis;
@@ -1235,6 +1237,67 @@
     return mergePronunciationSummary7355043(local, scored);
   }
 
+  const PRACTICE_ARCHIVE_FINALIZE_RETRY_PREFIX_7355081 = 'ulimPracticeArchiveFinalizeRetry7355081::';
+
+  function practiceArchiveFinalizeStorageKey7355081(recordId) {
+    return PRACTICE_ARCHIVE_FINALIZE_RETRY_PREFIX_7355081 + text(recordId);
+  }
+  function transientPracticeArchiveError7355081(error) {
+    const code = text(error && error.code).toLowerCase();
+    const message = text(error && error.message);
+    return /unavailable|deadline-exceeded|internal|unknown/.test(code) || /timeout|network|지연|temporar/i.test(message);
+  }
+  function queuePracticeArchiveFinalizeRetry7355081(payload) {
+    const recordId = text(payload && payload.recordId);
+    if (!recordId) return;
+    const key = practiceArchiveFinalizeStorageKey7355081(recordId);
+    try { localStorage.setItem(key, JSON.stringify({ payload:payload, savedAt:Date.now() })); } catch (_ignore) {}
+    let attempts = 0;
+    function retry() {
+      attempts += 1;
+      callWithTimeout7355065('finalizeStudentPracticeArchive7355054', payload, 9000).then(function(result){
+        if (result && (result.accepted === true || result.ok === true)) {
+          try { localStorage.removeItem(key); } catch (_ignore2) {}
+          return;
+        }
+        if (attempts < 6) setTimeout(retry, Math.min(15000, 1400 * attempts));
+      }).catch(function(error){
+        if (!transientPracticeArchiveError7355081(error)) {
+          try { localStorage.removeItem(key); } catch (_ignore3) {}
+          return;
+        }
+        if (attempts < 6) setTimeout(retry, Math.min(15000, 1400 * attempts));
+      });
+    }
+    setTimeout(retry, 700);
+  }
+  function practiceArchiveIntelligencePayload7355081(begin, common, blob, finalize, analysis) {
+    return {
+      recordId:text(begin && begin.recordId),
+      taskType:text(common && common.taskType),
+      practiceDate:text(common && common.date),
+      sentenceId:text(common && common.sentenceId),
+      sentence:text(common && common.sentence),
+      standardPronunciation:text(common && common.standardPronunciation),
+      fileUrl:text(finalize && (finalize.fileUrl || finalize.audioUrl)),
+      fileId:text(finalize && finalize.fileId),
+      folderId:text(finalize && finalize.folderId),
+      archiveRequestId:'',
+      mimeType:text(common && common.mimeType),
+      fileSize:Number(blob && blob.size || 0),
+      analysis:analysis ? {
+        features:analysis.features || {},
+        recognizedText:text(analysis.recognizedText),
+        provider:text(analysis.analysisProvider),
+        model:text(analysis.model)
+      } : null
+    };
+  }
+  function completePracticeIntelligenceNonBlocking7355081(payload) {
+    call('completePracticeIntelligence7355042', payload)
+      .catch(function(){ queueIntelligenceRetry7355042(payload); });
+  }
+
   async function archivePracticeBlob7355054(input) {
     input = input || {};
     const blob = input.blob;
@@ -1245,68 +1308,90 @@
     const date = text(input.practiceDate || input.date) || kstDateKey();
     const sentenceId = text(input.sentenceId || input.vocalId || input.scriptId || input.questionId);
     const common = {
-      taskType:taskType,
-      date:date,
-      practiceDate:date,
-      recordId:text(input.recordId),
-      sentenceId:sentenceId,
-      vocalId:text(input.vocalId || sentenceId),
-      scriptId:text(input.scriptId || sentenceId),
-      questionId:text(input.questionId || sentenceId),
+      taskType:taskType, date:date, practiceDate:date, recordId:text(input.recordId),
+      sentenceId:sentenceId, vocalId:text(input.vocalId || sentenceId),
+      scriptId:text(input.scriptId || sentenceId), questionId:text(input.questionId || sentenceId),
       sentence:text(input.sentence || input.originalSentence),
       originalSentence:text(input.originalSentence || input.sentence),
       standardPronunciation:text(input.standardPronunciation),
       scriptSource:text(input.scriptSource || input.source),
-      scriptFileId:text(input.scriptFileId),
-      scriptFileName:text(input.scriptFileName),
-      gender:text(input.gender),
-      analysisMode:text(input.analysisMode),
-      mimeType:mimeType,
-      fileSize:Number(blob.size || 0)
+      scriptFileId:text(input.scriptFileId), scriptFileName:text(input.scriptFileName),
+      gender:text(input.gender), analysisMode:text(input.analysisMode),
+      mimeType:mimeType, fileSize:Number(blob.size || 0)
     };
 
-    const begin = await call('beginStudentPracticeArchive7355054', common);
-    const upload = await uploadVocalDriveResumable7355047(begin, blob);
-    let analysis = input.analysis && typeof input.analysis === 'object' ? input.analysis : null;
-    if (!analysis && input.analyze === true) {
+    let begin=null, upload=null, finalize=null, finalizePayload=null;
+    const suppliedAnalysis = input.analysis && typeof input.analysis === 'object' ? input.analysis : null;
+
+    try {
+      begin = await callWithTimeout7355065('beginStudentPracticeArchive7355054', common, 18000);
+      upload = await uploadVocalDriveResumable7355047(begin, blob);
+
+      // Drive 전송 완료 이후에는 UI를 절대 blocking하지 않습니다.
+      hardHideVocalLoading7355068();
+
+      finalizePayload = Object.assign({}, common, {
+        recordId:text(begin.recordId),
+        driveUploads:upload.driveUploads || [],
+        recognizedText:text(input.recognizedText || input.localWhisperText || (suppliedAnalysis && suppliedAnalysis.recognizedText)),
+        localWhisperText:text(input.localWhisperText || input.recognizedText || (suppliedAnalysis && suppliedAnalysis.recognizedText)),
+        aiSource:text(input.aiSource || (suppliedAnalysis && (suppliedAnalysis.analysisProvider || suppliedAnalysis.model))),
+        aiComment:text(input.aiComment || input.analysisText),
+        analysisText:text(input.analysisText || input.aiComment),
+        analysis:suppliedAnalysis || {}
+      });
+
       try {
-        analysis = await analyzePracticeBlob7355054(Object.assign({}, input, { blob:blob, recordId:begin.recordId }));
-      } catch (_ignore) { analysis = null; }
+        finalize = await callWithTimeout7355065('finalizeStudentPracticeArchive7355054', finalizePayload, 9000);
+      } catch (error) {
+        if (!transientPracticeArchiveError7355081(error)) throw error;
+        queuePracticeArchiveFinalizeRetry7355081(finalizePayload);
+        finalize = {
+          ok:true, accepted:true, processing:true,
+          state:'processing_archive', archiveState:'finalize_retry_client',
+          recordId:text(begin.recordId), taskType:taskType
+        };
+      }
+
+      if (suppliedAnalysis) {
+        completePracticeIntelligenceNonBlocking7355081(
+          practiceArchiveIntelligencePayload7355081(begin, common, blob, finalize, suppliedAnalysis)
+        );
+      } else if (input.analyze === true) {
+        // 기출문제는 업로드 성공을 먼저 반환합니다.
+        // 학습용 local feature는 백그라운드에서 최대 4.5초만 기다린 뒤 Push/record 저장을 진행합니다.
+        setTimeout(function(){
+          const deferredPromise = analyzePracticeBlob7355054(Object.assign({}, input, {
+            blob:blob, recordId:text(begin && begin.recordId),
+            serverScore:input.serverScore === true
+          })).catch(function(){ return null; });
+          Promise.race([
+            deferredPromise,
+            new Promise(function(resolve){ setTimeout(function(){ resolve(null); }, 4500); })
+          ]).then(function(deferredAnalysis){
+            completePracticeIntelligenceNonBlocking7355081(
+              practiceArchiveIntelligencePayload7355081(begin, common, blob, finalize, deferredAnalysis)
+            );
+          }).catch(function(){
+            completePracticeIntelligenceNonBlocking7355081(
+              practiceArchiveIntelligencePayload7355081(begin, common, blob, finalize, null)
+            );
+          });
+        },0);
+      } else {
+        completePracticeIntelligenceNonBlocking7355081(
+          practiceArchiveIntelligencePayload7355081(begin, common, blob, finalize, null)
+        );
+      }
+
+      return Object.assign({},finalize||{},{
+        ok:true, accepted:true, recordId:text(begin&&begin.recordId), taskType:taskType,
+        processing:finalize&&typeof finalize.processing==='boolean'?finalize.processing:true,
+        uploadErrors:upload&&upload.uploadErrors||[]
+      });
+    } finally {
+      hardHideVocalLoading7355068();
     }
-
-    const finalize = await call('finalizeStudentPracticeArchive7355054', Object.assign({}, common, {
-      recordId:text(begin.recordId),
-      driveUploads:upload.driveUploads || [],
-      recognizedText:text(input.recognizedText || input.localWhisperText || (analysis && analysis.recognizedText)),
-      localWhisperText:text(input.localWhisperText || input.recognizedText || (analysis && analysis.recognizedText)),
-      aiSource:text(input.aiSource || (analysis && (analysis.analysisProvider || analysis.model))),
-      aiComment:text(input.aiComment || input.analysisText),
-      analysisText:text(input.analysisText || input.aiComment),
-      analysis:analysis || {}
-    }));
-
-    const intelligencePayload = {
-      recordId:text(begin.recordId),
-      taskType:taskType,
-      practiceDate:date,
-      sentenceId:sentenceId,
-      sentence:common.sentence,
-      standardPronunciation:common.standardPronunciation,
-      fileUrl:text(finalize.fileUrl || finalize.audioUrl),
-      fileId:text(finalize.fileId),
-      folderId:text(finalize.folderId),
-      archiveRequestId:'',
-      mimeType:mimeType,
-      fileSize:Number(blob.size || 0),
-      analysis:analysis ? {
-        features:analysis.features || {},
-        recognizedText:text(analysis.recognizedText),
-        provider:text(analysis.analysisProvider),
-        model:text(analysis.model)
-      } : null
-    };
-    call('completePracticeIntelligence7355042', intelligencePayload).catch(function(){ queueIntelligenceRetry7355042(intelligencePayload); });
-    return Object.assign({}, finalize, { uploadErrors:upload.uploadErrors || [] });
   }
 
   async function getRandomPastQuestion7355063(input) {

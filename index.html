@@ -42,13 +42,13 @@
   <link rel="preconnect" href="https://identitytoolkit.googleapis.com" data-ulim-classroom-preconnect="7297">
   <link rel="preconnect" href="https://asia-northeast3-ulim-7b09a.cloudfunctions.net" data-ulim-classroom-preconnect="7297">
   <!-- ULIM 7.34.2: safe Firebase-first staff/student directory integration. -->
-  <script src="./web/room-classroom-realtime-7.29.19.js?v=20260816.73550800"></script>
+  <script src="./web/room-classroom-realtime-7.29.19.js?v=20260817.73550810"></script>
   <script src="./web/practice-room-firestore-primary-7.35.5.0.37.js?v=20260815.73550580"></script>
   <script src="./web/staff-login-firebase-primary-7.32.9.js?v=20260816.73550650"></script>
   <script src="./web/student-login-firebase-direct-7.35.5.0.30.js?v=20260815.73550580"></script>
   <script src="./web/student-home-bootstrap-7.35.5.0.31.js?v=20260815.73550580"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260816-7355080-r29.9-role-split-firestore-only-sheet-backup">
+<meta name="ulim-build" content="20260817-7355081-r29.9.2-standard-past-upload-ctc-popup">
 <script id="ulim-one-time-cache-clean-7355030">
 (function (global) {
   'use strict';
@@ -4944,12 +4944,12 @@ async function uploadPastQuestionRecord() {
           analyze:true,
           serverScore:false
         });
-        if(status)status.textContent='기출 녹음 기록이 저장되었습니다.';if(btn){btn.textContent='업로드 완료';btn.disabled=true;}pastUploadCompleted=true;
+        if(status)status.textContent='기출문제 업로드가 완료되었습니다. 기록을 반영하는 중입니다.';if(btn){btn.textContent='업로드 완료';btn.disabled=true;}pastUploadCompleted=true;
         try{
           if(typeof window.ulimOpenStudentPracticeRecord7355072==='function'){
-            await window.ulimOpenStudentPracticeRecord7355072(new Date().toISOString().slice(0,10),String(result&&result.recordId||''),'',{
+            Promise.resolve(window.ulimOpenStudentPracticeRecord7355072(new Date().toISOString().slice(0,10),String(result&&result.recordId||''),'',{
               taskType:'past_question',completionNow:true,refresh:true
-            });
+            })).catch(function(){});
           }
         }catch(_openPast){}
         try{if(typeof window.ulimInvalidatePracticeCache609==='function')window.ulimInvalidatePracticeCache609();}catch(_e){}
@@ -17857,17 +17857,17 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
         analyze:false
       });
       lastFingerprint=fp;
-      pronUploadStatus7355072_('표준발음 녹음 기록이 저장되었습니다.','success');
+      pronUploadStatus7355072_('표준발음 업로드가 완료되었습니다. 기록을 반영하는 중입니다.','success');
       const btn=document.getElementById('pronUploadBtn7355072');
       if(btn){btn.textContent='업로드 완료';btn.disabled=true;btn.style.opacity='.7';}
       try{if(typeof window.ulimInvalidatePracticeCache609==='function')window.ulimInvalidatePracticeCache609();}catch(_e){}
       try{
         if(typeof window.ulimOpenStudentPracticeRecord7355072==='function'){
-          await window.ulimOpenStudentPracticeRecord7355072(new Date().toISOString().slice(0,10),String(result&&result.recordId||''),'',{
+          Promise.resolve(window.ulimOpenStudentPracticeRecord7355072(new Date().toISOString().slice(0,10),String(result&&result.recordId||''),'',{
             taskType:'standard_pronunciation',
             completionNow:true,
             refresh:true
-          });
+          })).catch(function(){});
         }
       }catch(_open){}
       return result;
@@ -18186,7 +18186,7 @@ async function sendViewed(recordIds){
           <div class="ulim-pron-calendar-week609"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>
           <div id="ulimPronCalendarGrid609" class="ulim-pron-calendar-grid609"></div>
           <div class="ulim-pron-calendar-guide609">O: 업로드 완료 · ★: 선생님 평가 있음</div>
-          <div id="ulimPronDayDetail609" class="ulim-pron-day-detail609"></div>
+          
         </div>
       </div>`);
     document.getElementById('ulimPronCalendarToggle609').addEventListener('click',toggleCalendar);
@@ -18223,26 +18223,23 @@ async function sendViewed(recordIds){
     try{return typeof window.ulimBuildStudentEvaluationCard595==='function'?window.ulimBuildStudentEvaluationCard595(log):'';}catch(e){return '';}
   }
   function showDay(key){
-    const box=document.getElementById('ulimPronDayDetail609');if(!box)return;
     const logs=logsByDate(key);
     document.querySelectorAll('.ulim-pron-day609.active').forEach(function(el){el.classList.remove('active');});
-    const active=document.querySelector('.ulim-pron-day609[data-date="'+key+'"]');if(active)active.classList.add('active');
-    if(!logs.length){box.innerHTML='<div class="practice-log-meta">이 날짜에는 표준발음 업로드 기록이 없습니다.</div>';return;}
-    box.innerHTML='<h4>'+esc(key)+' 표준발음 기록</h4>'+logs.map(function(log){
-      return '<div class="practice-log-card student-view '+(unread(log)?'has-comment':'')+'">'
-        +'<div class="practice-log-title">✅ 표준발음 연습 완료'+(unread(log)?' · ★ 새 평가':'')+'</div>'
-        +'<div class="practice-log-text"><b>문장</b><br>'+esc(log.sentence||'')+'</div>'
-        +(log.aiComment?'<div class="practice-log-text"><b>AI 분석결과</b><br>'+esc(log.aiComment)+'</div>':'')
-        +(log.fileUrl?'<p><a class="ulim-pron-audio-link609" href="'+esc(log.fileUrl)+'" target="_blank" rel="noopener">녹음파일 열기</a></p>':'')
-        +renderEval(log)+'</div>';
-    }).join('');
+    const active=document.querySelector('.ulim-pron-day609[data-date="'+key+'"]');
+    if(active)active.classList.add('active');
+
+    // 발성훈련과 동일한 공통 날짜 상세 팝업을 사용합니다.
+    if(typeof window.displayStandardDayRecord7355072==='function'){
+      window.displayStandardDayRecord7355072(key);
+    }
+
     const ids=logs.filter(unread).map(function(x){return x.recordId;});
-    if(ids.length&&typeof window.ulimMarkPracticeLogsViewed606==='function')window.ulimMarkPracticeLogsViewed606(ids);
-    setTimeout(function(){
-      box.querySelectorAll('.practice-log-card.has-comment').forEach(function(card){card.classList.remove('has-comment');});
-      updateButton();renderCalendar();
-    },100);
+    if(ids.length&&typeof window.ulimMarkPracticeLogsViewed606==='function'){
+      window.ulimMarkPracticeLogsViewed606(ids);
+    }
+    setTimeout(function(){updateButton();renderCalendar();},100);
   }
+
   async function renderAndLoad(force){
     renderCalendar();
     if(typeof window.loadStudentVocalPracticeLogsForMonth_==='function'){
@@ -20878,7 +20875,7 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 
 
 <!-- ULIM R20: vocalization Firestore-primary authority; GAS remains media/history compatibility only. -->
-<script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260816.73550800"></script>
+<script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260817.73550810"></script>
 <script id="ulim-vocal-primary-bind-7355041">
 window.__ULIM_VOCAL_PRIMARY_BUILD_7355041__='20260814-7355050b-r25.2-step6-next-upload';
 window.__ULIM_VOCAL_STEP6_NEXT_UPLOAD_BUILD_7355050B__='20260814-7355050b';
