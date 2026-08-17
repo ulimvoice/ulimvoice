@@ -5,7 +5,7 @@
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_R21A_7355042__ = true;
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_7355041__ = true;
 
-  const VERSION = '2026-08-17.735.05.0.81-r29.9.2-standard-past-nonblocking-preupload-ctc';
+  const VERSION = '2026-08-17.735.05.0.82-r29.9.3-standard-ctc-past-owner-fix';
   const DRIVE_FOLDER_FIRESTORE_PRIMARY_7355045 = true;
   const DRIVE_RESUMABLE_DIRECT_7355047 = false;
   const DRIVE_RESUMABLE_SERVER_PROXY_7355066 = true;
@@ -450,22 +450,29 @@
     return { features:features, recognizedText:recognized, model:text(stt.model), analysisProvider:recognized ? 'on-device-speech+client-dsp' : 'client-dsp' };
   }
   async function requestPronunciationAnalysis7355043(recordId, base64Data, mimeType, sentence, standardPronunciation) {
-    if (!base64Data) return null;
+    if (!base64Data) return { ok:false, state:'invalid', reason:'audio_base64_empty' };
     try {
       return await callWithTimeout7355065('analyzePracticePronunciation7355043', {
         recordId:text(recordId),
         audioBase64:String(base64Data || ''),
-        mimeType:text(mimeType || 'audio/mp4'),
+        mimeType:text(mimeType || 'audio/wav'),
         sentence:text(sentence),
         standardPronunciation:text(standardPronunciation)
-      }, 33000);
-    } catch (_ignore) { return null; }
+      }, 85000);
+    } catch (error) {
+      return {
+        ok:false,
+        state:'call_error',
+        reason:text(error && error.message) || text(error && error.code) || 'pronunciation_callable_failed'
+      };
+    }
   }
   function mergePronunciationSummary7355043(analysis, scored) {
     if (!analysis) analysis = { features:{}, recognizedText:'', model:'', analysisProvider:'client-dsp' };
     if (!analysis.features) analysis.features = {};
     if (!scored || scored.ok !== true) {
       analysis.features.phonemeAnalysisState = text(scored && scored.state) || 'deferred';
+      analysis.features.phonemeAnalysisReason = text(scored && scored.reason);
       return analysis;
     }
     analysis.features.phonemeAnalysisState = 'complete';
@@ -1222,17 +1229,25 @@
     let local = null;
     try { local = await analyzeForUpload(blob, sentence); } catch (_ignore) { local = null; }
     let scored = null;
-    if (input.serverScore !== false && typeof blobToBase64 === 'function') {
+    if (input.serverScore !== false) {
       try {
-        const base64 = await blobToBase64(blob);
-        scored = await requestPronunciationAnalysis7355043(
-          text(input.recordId),
-          base64,
-          text(blob.type || input.mimeType || 'audio/mp4').split(';')[0],
-          sentence,
-          text(input.standardPronunciation)
-        );
-      } catch (_ignore2) { scored = null; }
+        let base64 = '';
+        let serverMimeType = text(blob.type || input.mimeType || 'audio/mp4').split(';')[0];
+        if (input.preferWav16k === true && typeof global.pronBlobToEtriAudioBase64 === 'function') {
+          const normalized = await global.pronBlobToEtriAudioBase64(blob);
+          base64 = text(normalized && normalized.base64);
+          serverMimeType = text(normalized && normalized.mimeType) || 'audio/wav';
+        } else if (typeof blobToBase64 === 'function') {
+          base64 = await blobToBase64(blob);
+        }
+        if (base64) {
+          scored = await requestPronunciationAnalysis7355043(
+            text(input.recordId), base64, serverMimeType, sentence, text(input.standardPronunciation)
+          );
+        }
+      } catch (error) {
+        scored = { ok:false, state:'client_prepare_error', reason:text(error && error.message) };
+      }
     }
     return mergePronunciationSummary7355043(local, scored);
   }

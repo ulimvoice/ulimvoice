@@ -42,13 +42,13 @@
   <link rel="preconnect" href="https://identitytoolkit.googleapis.com" data-ulim-classroom-preconnect="7297">
   <link rel="preconnect" href="https://asia-northeast3-ulim-7b09a.cloudfunctions.net" data-ulim-classroom-preconnect="7297">
   <!-- ULIM 7.34.2: safe Firebase-first staff/student directory integration. -->
-  <script src="./web/room-classroom-realtime-7.29.19.js?v=20260817.73550810"></script>
+  <script src="./web/room-classroom-realtime-7.29.19.js?v=20260817.73550820"></script>
   <script src="./web/practice-room-firestore-primary-7.35.5.0.37.js?v=20260815.73550580"></script>
   <script src="./web/staff-login-firebase-primary-7.32.9.js?v=20260816.73550650"></script>
   <script src="./web/student-login-firebase-direct-7.35.5.0.30.js?v=20260815.73550580"></script>
   <script src="./web/student-home-bootstrap-7.35.5.0.31.js?v=20260815.73550580"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260817-7355081-r29.9.2-standard-past-upload-ctc-popup">
+<meta name="ulim-build" content="20260817-7355082-r29.9.3-standard-ctc-past-owner-fix">
 <script id="ulim-one-time-cache-clean-7355030">
 (function (global) {
   'use strict';
@@ -10831,8 +10831,7 @@ async function pronBlobToEtriAudioBase64(blob) {
         return { base64: pronArrayBufferToBase64(rawBuffer), mimeType: blob.type || "audio/webm", sampleRate: "original" };
     }
 }
-
-
+window.pronBlobToEtriAudioBase64 = pronBlobToEtriAudioBase64;
 
 async function pronStartVoiceCheck() {
     const status = document.getElementById("pronVoiceStatus");
@@ -14169,7 +14168,8 @@ async function pronRunEtriAdvancedAnalysis() {
         sentence:source,
         originalSentence:source,
         standardPronunciation:converted,
-        serverScore:true
+        serverScore:true,
+        preferWav16k:true
       });
       const features=result&&result.features||{};
       const recognized=String(result&&result.recognizedText||pronLastSttText||'');
@@ -14181,7 +14181,11 @@ async function pronRunEtriAdvancedAnalysis() {
       const expected=Array.isArray(features.expectedPhonemes)?features.expectedPhonemes.filter(Boolean).slice(0,30):[];
       const heardPhones=Array.isArray(features.recognizedPhonemes)?features.recognizedPhonemes.filter(Boolean).slice(0,30):[];
       if(!(ctc>0) && !weak.length && !(coveragePct>0)){
-        throw new Error('CTC/GOP 정밀 결과가 아직 준비되지 않았습니다.');
+        const state=String(features.phonemeAnalysisState||'').trim();
+        const reason=String(features.phonemeAnalysisReason||'').trim();
+        const detail=reason ? ('정밀분석 서버 응답: '+reason)
+                           : (state ? ('정밀분석 상태: '+state) : 'CTC/GOP 결과가 비어 있습니다.');
+        throw new Error(detail);
       }
       const lines=[
         '정밀 발음분석 완료',
@@ -16754,13 +16758,8 @@ ${ruleSummary}`, isFallback ? "success" : "success");
         box.style.display = 'flex';
     };
 
-    window.uploadPastQuestionRecord = async function(){
-  const canonical = typeof uploadPastQuestionRecord === 'function' ? uploadPastQuestionRecord : null;
-  if (!canonical || canonical === window.uploadPastQuestionRecord) throw new Error('기출문제 저장 기능을 준비하지 못했습니다.');
-  return canonical();
-};
-
-    try { uploadPastQuestionRecord = window.uploadPastQuestionRecord; } catch(e) {}
+    // Canonical single owner: the original uploadPastQuestionRecord function above.
+    window.uploadPastQuestionRecord = uploadPastQuestionRecord;
 
     function install586_() {
         ensureVocalPracticeToggleButton586_();
@@ -20875,7 +20874,7 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 
 
 <!-- ULIM R20: vocalization Firestore-primary authority; GAS remains media/history compatibility only. -->
-<script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260817.73550810"></script>
+<script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260817.73550820"></script>
 <script id="ulim-vocal-primary-bind-7355041">
 window.__ULIM_VOCAL_PRIMARY_BUILD_7355041__='20260814-7355050b-r25.2-step6-next-upload';
 window.__ULIM_VOCAL_STEP6_NEXT_UPLOAD_BUILD_7355050B__='20260814-7355050b';
