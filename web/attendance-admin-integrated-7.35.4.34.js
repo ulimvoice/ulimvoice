@@ -27,6 +27,7 @@
   global.__ULIM_ATTENDANCE_ADMIN_INTEGRATED_735413__ = true;
   global.__ULIM_ATTENDANCE_ADMIN_INTEGRATED_735410__ = true;
   global.__ULIM_ATTENDANCE_DIRECTORY_AUTH_GUARD_735414__ = true;
+  global.__ULIM_ATTENDANCE_TOOLBAR_ROSTER_POSITION_7355088__ = true;
   global.ULIM_ATTENDANCE_ADMIN_INTEGRATED_VERSION = '2026-08-13.735.04.34-roster-convergence-single-owner-7355049';
 
   var VERSION = '2026-08-13.735.04.34-roster-convergence-single-owner-7355049';
@@ -1433,6 +1434,13 @@
       toolbar.id = 'ulimAttendanceToolbar7355014';
       toolbar.innerHTML = '<div class="ulim-att-toolbar-group"><button type="button" class="admin-btn blue" id="ulimAttendanceScheduleChange7355014">수업일 변경</button></div>'
         + '<div class="ulim-att-toolbar-group"><button type="button" class="admin-btn green" id="ulimAttendanceAdd7355014">학생 추가</button><button type="button" class="admin-btn red" id="ulimAttendanceRemoveSelected7355014">선택 학생 제거</button></div>';
+    }
+    // 7.35.5.0.88: attendance action toolbar belongs immediately above the student roster.
+    // Existing button instances and handlers remain the single owner; only the DOM position changes.
+    var tableWrap7355088 = document.getElementById('adminAttendanceTableWrap');
+    if (tableWrap7355088 && tableWrap7355088.parentNode) {
+      tableWrap7355088.parentNode.insertBefore(toolbar, tableWrap7355088);
+    } else {
       var grid = card.querySelector('.admin-grid');
       if (grid) card.insertBefore(toolbar, grid); else card.prepend(toolbar);
     }
