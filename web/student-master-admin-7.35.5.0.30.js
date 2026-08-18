@@ -17,7 +17,7 @@
   // Compatibility marker for 7.35.4.10/7.35.5.0 readiness checks.
   global.__ULIM_STUDENT_MANAGEMENT_V2_735410__ = true;
 
-  const VERSION = '2026-08-14.735.05.0.53-firebase-admin-authority';
+  const VERSION = '2026-08-18.735.05.0.85-class-rename-stable-id';
   const PANEL_ID = 'adminPanelStudentManagement7352';
   const CARD_ID = 'ulimStudentManagementCard7352';
   const STATUS_ID = 'ulimStudentManagementStatus7352';
@@ -241,7 +241,7 @@
     if (!classes.length) { wrap.innerHTML = '<div style="font-size:12px;color:#64748b;">등록된 반이 없습니다.</div>'; return; }
     wrap.innerHTML = classes.map(function (item) {
       const group=text(item.audienceGroup);
-      return `<div class="ulim-class-catalog-row"><span class="ulim-class-catalog-name7355038">${escapeHtml(item.className)}</span><select class="ulim-class-audience7355038" id="ulimClassAudienceExisting7355038_${escapeHtml(item.classId)}"><option value="adult"${group==='adult'?' selected':''}>성인반</option><option value="youth"${group==='youth'?' selected':''}>청소년반</option></select><button type="button" class="admin-btn" onclick="ulimClassAudienceSave7355038('${escapeHtml(item.classId)}')">구분 저장</button><button type="button" class="admin-btn" onclick="ulimClassCatalogRetire7354('${escapeHtml(item.classId)}')">사용중지</button></div>`;
+      return `<div class="ulim-class-catalog-row"><span class="ulim-class-catalog-name7355038">${escapeHtml(item.className)}</span><select class="ulim-class-audience7355038" id="ulimClassAudienceExisting7355038_${escapeHtml(item.classId)}"><option value="adult"${group==='adult'?' selected':''}>성인반</option><option value="youth"${group==='youth'?' selected':''}>청소년반</option></select><button type="button" class="admin-btn" onclick="ulimClassCatalogRename7355085('${escapeHtml(item.classId)}')">반명 수정</button><button type="button" class="admin-btn" onclick="ulimClassAudienceSave7355038('${escapeHtml(item.classId)}')">구분 저장</button><button type="button" class="admin-btn" onclick="ulimClassCatalogRetire7354('${escapeHtml(item.classId)}')">사용중지</button></div>`;
     }).join('');
   }
   function statusLabel(value) {
@@ -728,6 +728,49 @@
     const preview=classPreviewText(); if(!confirm(preview+'\n\n이 반을 추가할까요?'))return;
     try{showLoading('반 목록에 추가하는 중...');const audienceGroup=text(document.getElementById('ulimClassAudience7355038')&&document.getElementById('ulimClassAudience7355038').value);const result=await call('saveClassCatalogAdmin7354',{instructorUid:instructorUid,baseName:baseName,hours:hours,audienceGroup:audienceGroup,requestId:requestId('class-save-7355016')});if(document.getElementById('ulimClassAudience7355038'))document.getElementById('ulimClassAudience7355038').value='';document.getElementById('ulimClassBaseName7354').value='';document.querySelectorAll('#ulimClassTimeSlots7354 input[type="checkbox"]').forEach(function(input){input.checked=false;});await reloadClasses();setStatus(text(result.message)||'반을 추가했습니다.','ok');}catch(error){setStatus(text(error&&error.message)||'반을 추가하지 못했습니다.','error');alert(text(error&&error.message)||'반을 추가하지 못했습니다.');}finally{hideLoading();}
   }
+  async function renameClassCatalog7355085(classId) {
+    if (!isSuperAdmin()) return alert('전체관리자 권한이 필요합니다.');
+    const item=classById(classId);
+    if(!item)return alert('수정할 반을 찾지 못했습니다.');
+    const baseName=text(item.baseName);
+    const matched=baseName.match(/^(월요일|화요일|수요일|목요일|금요일|토요일|일요일)\s*(.*)$/);
+    if(!matched)return alert('기존 반의 수업 요일을 확인하지 못했습니다. 이 반은 새 반으로 다시 등록해주세요.');
+    const weekday=matched[1];
+    const currentLabel=text(matched[2]);
+    const entered=prompt(
+      item.className+'\n\n새 반명을 입력해주세요.\n담당강사·요일·수업시간·학생 소속은 그대로 유지됩니다.',
+      currentLabel
+    );
+    if(entered===null)return;
+    const nextLabel=text(entered).replace(/^(월요일|화요일|수요일|목요일|금요일|토요일|일요일)\s*/,'');
+    if(!nextLabel)return alert('새 반명을 입력해주세요.');
+    if(normalize(nextLabel)===normalize(currentLabel)){
+      setStatus('변경된 반명이 없습니다.','warn');
+      return;
+    }
+    const nextBaseName=weekday+' '+nextLabel;
+    const nextClassName='['+text(item.instructorName)+'T] - '+nextBaseName+' '+text(item.startTime)+' ~ '+text(item.endTime);
+    if(!confirm(
+      item.className+'\n\n↓\n\n'+nextClassName+'\n\n반명만 수정합니다. 기존 classId와 학생 소속은 유지됩니다.'
+    ))return;
+    try{
+      showLoading('반명을 수정하는 중...');
+      const result=await call('saveClassCatalogAdmin7354',{
+        classId:classId,
+        baseName:nextBaseName,
+        requestId:requestId('class-rename-7355085')
+      });
+      await reloadClasses();
+      setStatus(text(result.message)||'반명을 수정했습니다.','ok');
+    }catch(error){
+      const message=text(error&&error.message)||'반명을 수정하지 못했습니다.';
+      setStatus(message,'error');
+      alert(message);
+    }finally{
+      hideLoading();
+    }
+  }
+
   async function saveClassAudience7355038(classId) {
     const item=classById(classId); if(!item)return; const select=document.getElementById('ulimClassAudienceExisting7355038_'+classId); const audienceGroup=text(select&&select.value);
     try{showLoading('반 구분 저장 중...');const result=await call('saveClassAudienceAdmin7355034',{classId:classId,audienceGroup:audienceGroup});item.audienceGroup=text(result.audienceGroup)||audienceGroup;renderClassManagerList7354();setStatus(text(result.message)||'반 구분을 저장했습니다.','ok');}catch(error){setStatus(text(error&&error.message)||'반 구분을 저장하지 못했습니다.','error');alert(text(error&&error.message)||'반 구분을 저장하지 못했습니다.');}finally{hideLoading();}
@@ -789,7 +832,7 @@
   }
   function install() {
     if(installed)return; installed=true; injectStyles(); injectPanel(); bindUi(); installPanelHook();
-    global.ulimStudentManagementLoad7352=load; global.ulimStudentDirectoryGet7355016=function(){return global.__ULIM_STUDENT_DIRECTORY_7355016__ || publishDirectory7355016('snapshot-read',{});}; global.ulimStudentDirectoryEnsure7355016=async function(force){if(force===true || !global.__ULIM_STUDENT_DIRECTORY_7355016__) await load(force===true); return global.__ULIM_STUDENT_DIRECTORY_7355016__ || publishDirectory7355016('snapshot-ensure',{});}; global.ulimStudentDirectoryPatch7355016=patchStudentFromExternal7355016; global.ulimStudentManagementCreate7352=createStudent; global.ulimStudentManagementSaveRow7352=saveRow; global.ulimStudentManagementSaveAll7352=saveAll; global.ulimStudentManagementRetry7352=retry; global.ulimStudentManagementReloadClasses7352=reloadClasses; global.ulimClassCatalogSave7354=saveClassCatalog7354; global.ulimClassAudienceSave7355038=saveClassAudience7355038; global.ulimClassCatalogRetire7354=retireClassCatalog7354; global.ulimStudentManagementWindow7352=configureApplicationWindow; global.ulimStudentManagementRetire7352=retire; global.ulimStudentFirebaseAuthProvisionAll7355030=provisionStudentFirebaseAuthAll7355030; global.ulimStudentFirebasePasswordReset7355030=resetStudentFirebasePassword7355030; global.ulimStudentPracticeDailyReset7355051=resetStudentPracticeDaily7355051;
+    global.ulimStudentManagementLoad7352=load; global.ulimStudentDirectoryGet7355016=function(){return global.__ULIM_STUDENT_DIRECTORY_7355016__ || publishDirectory7355016('snapshot-read',{});}; global.ulimStudentDirectoryEnsure7355016=async function(force){if(force===true || !global.__ULIM_STUDENT_DIRECTORY_7355016__) await load(force===true); return global.__ULIM_STUDENT_DIRECTORY_7355016__ || publishDirectory7355016('snapshot-ensure',{});}; global.ulimStudentDirectoryPatch7355016=patchStudentFromExternal7355016; global.ulimStudentManagementCreate7352=createStudent; global.ulimStudentManagementSaveRow7352=saveRow; global.ulimStudentManagementSaveAll7352=saveAll; global.ulimStudentManagementRetry7352=retry; global.ulimStudentManagementReloadClasses7352=reloadClasses; global.ulimClassCatalogSave7354=saveClassCatalog7354; global.ulimClassCatalogRename7355085=renameClassCatalog7355085; global.ulimClassAudienceSave7355038=saveClassAudience7355038; global.ulimClassCatalogRetire7354=retireClassCatalog7354; global.ulimStudentManagementWindow7352=configureApplicationWindow; global.ulimStudentManagementRetire7352=retire; global.ulimStudentFirebaseAuthProvisionAll7355030=provisionStudentFirebaseAuthAll7355030; global.ulimStudentFirebasePasswordReset7355030=resetStudentFirebasePassword7355030; global.ulimStudentPracticeDailyReset7355051=resetStudentPracticeDaily7355051;
     global.addEventListener('ulim-firebase-token-invalid',function(){setStatus('로그인 시간이 만료되었습니다. 다시 로그인해주세요.','error');});
   }
 
