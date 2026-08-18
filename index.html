@@ -48,7 +48,7 @@
   <script src="./web/student-login-firebase-direct-7.35.5.0.30.js?v=20260815.73550580"></script>
   <script src="./web/student-home-bootstrap-7.35.5.0.31.js?v=20260815.73550580"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260818-7355085-r29.9.6-class-rename-stable-id">
+<meta name="ulim-build" content="20260818-7355086-r29.9.7-past-internal-header-hide">
 <script id="ulim-one-time-cache-clean-7355030">
 (function (global) {
   'use strict';
@@ -16343,12 +16343,29 @@ ${ruleSummary}`, isFallback ? "success" : "success");
     function cleanPastSentence598_(value) {
         const lines = String(value == null ? '' : value).replace(/\r\n/g, '\n').split('\n');
         if (!lines.length) return '';
-        const driveTag = /^\s*\[기출문제\s*(?:[-_ ]\s*)?드라이브\]\s*/i;
-        if (driveTag.test(lines[0])) {
-            lines[0] = lines[0].replace(driveTag, '').trim();
-            lines[0] = lines[0].replace(/^[fm]\s*0*\d{1,3}(?:\.(?:docx|gdoc|txt))?\s*/i, '').trim();
-            if (!lines[0]) lines.shift();
+
+        // 기출문제 저장 원문에는 추적용 내부 헤더를 보존하되,
+        // 학생/강사 평가 UI에서는 대본 본문만 보여준다.
+        // 지원:
+        //   [기출문제] m92
+        //   [기출문제] f017.docx
+        //   [기출문제-직접작성] 직접작성 대본
+        //   [기출문제 드라이브] m92
+        const first = String(lines[0] || '');
+        const internalHeader = /^\s*\[기출문제(?:\s*(?:[-_ ]\s*)?(?:드라이브|직접작성))?\]\s*/i;
+        if (internalHeader.test(first)) {
+            let remainder = first.replace(internalHeader, '').trim();
+
+            // 랜덤 기출 파일 식별자(m1~m100/f1~f100)는 운영 메타데이터이므로 화면에서 숨김.
+            remainder = remainder
+                .replace(/^[fm]\s*0*\d{1,3}(?:\.(?:docx|gdoc|txt))?\s*/i, '')
+                .replace(/^직접작성\s*대본\s*/i, '')
+                .trim();
+
+            if (remainder) lines[0] = remainder;
+            else lines.shift();
         }
+
         return lines.join('\n').trim();
     }
     window.ulimCleanPastSentence598 = cleanPastSentence598_;
