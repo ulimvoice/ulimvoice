@@ -48,7 +48,7 @@
   <script src="./web/student-login-firebase-direct-7.35.5.0.30.js?v=20260815.73550580"></script>
   <script src="./web/student-home-bootstrap-7.35.5.0.31.js?v=20260815.73550580"></script>
 <meta charset="UTF-8">
-<meta name="ulim-build" content="20260824-73550891-r29.9.10-r1-attendance-cancel-substitute-column-shade">
+<meta name="ulim-build" content="20260825-73550902-r29.9.11-r2-admin-alimtalk-delivery-history">
 <script id="ulim-one-time-cache-clean-7355030">
 (function (global) {
   'use strict';
@@ -2391,6 +2391,7 @@ body.ulim-attendance-modal-open73545{overflow:hidden}
           <button type="button" class="admin-subtab active" id="adminStudentsSubtab" data-admin-panel="adminPanelStudents" onclick="showAdminPanel('adminPanelStudents')">학생검색</button>
           <button type="button" class="admin-subtab" id="adminAttendanceSubtab" data-admin-panel="adminPanelAttendance" onclick="showAdminPanel('adminPanelAttendance')">출석부 확인/발송</button>
           <button type="button" class="admin-subtab" data-admin-panel="adminPanelDailyEval" onclick="showAdminPanel('adminPanelDailyEval')">수업 일일평가</button>
+          <button type="button" class="admin-subtab admin-full-only" data-admin-panel="adminPanelMessageDeliveries" onclick="showAdminPanel('adminPanelMessageDeliveries')">알림톡 발송내역</button>
           <button type="button" class="admin-subtab" data-admin-panel="adminPanelVocalPractice" onclick="showAdminPanel('adminPanelVocalPractice')">발성/기출 연습일지</button>
           <button type="button" class="admin-subtab" data-admin-panel="adminPanelClassroomUsage" onclick="showAdminPanel('adminPanelClassroomUsage')">강의실 사용체크</button>
           <button type="button" class="admin-subtab admin-full-only" data-admin-panel="adminPanelRoom" onclick="showAdminPanel('adminPanelRoom')">연습실 예약 알림</button>
@@ -2469,6 +2470,24 @@ body.ulim-attendance-modal-open73545{overflow:hidden}
 
             <div id="noticeMessagePreview" class="admin-message-preview" style="display:none;"></div>
             <div id="noticeTargetTableWrap" class="admin-table-wrap" style="margin-top:12px;"></div>
+          </div>
+        </div>
+
+        <div id="adminPanelMessageDeliveries" class="admin-panel admin-full-only">
+          <div class="admin-card">
+            <h3 style="margin-top:0;">알림톡 발송내역</h3>
+            <p style="font-size:14px;color:#666;line-height:1.6;margin-top:-4px;">Firestore 발송기록과 SOLAPI 실제 전송 상태를 확인합니다. 접수 성공과 최종 전달 완료를 구분해 표시합니다.</p>
+            <div class="admin-grid">
+              <div class="admin-field"><label for="msgDeliveryStart7355090">시작일</label><input type="date" id="msgDeliveryStart7355090"></div>
+              <div class="admin-field"><label for="msgDeliveryEnd7355090">종료일</label><input type="date" id="msgDeliveryEnd7355090"></div>
+              <div class="admin-field"><label for="msgDeliveryType7355090">발송종류</label><select id="msgDeliveryType7355090"><option value="">전체</option><option value="checkin">등원</option><option value="checkout">하원</option><option value="attendance">출석</option><option value="absence">결석</option><option value="daily_evaluation">일일평가</option><option value="notice">공지</option><option value="special_new_move_student">신규/반이동</option><option value="special_makeup_student">보강</option><option value="class_cancel">휴강</option><option value="class_substitute">대강</option><option value="class_change">수업일 변경</option><option value="room_confirm">연습실 승인</option><option value="room_unavailable">연습실 사용불가</option><option value="room_change">연습실 변경</option><option value="payment">결제</option></select></div>
+              <div class="admin-field"><label for="msgDeliveryState7355090">전송상태</label><select id="msgDeliveryState7355090"><option value="">전체</option><option value="delivered">전달완료</option><option value="sending">발송중</option><option value="accepted">접수됨</option><option value="failed">발송실패</option></select></div>
+              <div class="admin-field"><label for="msgDeliverySearch7355090">학생명 / 번호 / 결과 검색</label><input type="text" id="msgDeliverySearch7355090" placeholder="학생명, 전화번호 끝4자리, 상태코드 등"></div>
+            </div>
+            <div class="admin-btn-row"><button type="button" class="admin-btn blue" id="msgDeliverySearchBtn7355090">조회</button><button type="button" class="admin-btn orange" id="msgDeliveryRefreshBtn7355090">SOLAPI 상태 갱신</button></div>
+            <div id="msgDeliverySummary7355090" class="ulim-msg-summary7355090"></div>
+            <div id="msgDeliveryStatus7355090" style="font-size:12px;color:#64748b;margin:8px 0;"></div>
+            <div id="msgDeliveryTableWrap7355090" class="admin-table-wrap"></div>
           </div>
         </div>
 
@@ -7770,6 +7789,11 @@ function showAdminPanel(panelId) {
         panelId = 'adminPanelAttendance';
     }
 
+    if (panelId === 'adminPanelMessageDeliveries' && !isFull) {
+        alert('알림톡 발송내역은 관리자 권한에서만 접근할 수 있습니다.');
+        panelId = 'adminPanelAttendance';
+    }
+
     if (panelId === 'adminPanelStudents' && !isFull) {
         panelId = 'adminPanelAttendance';
     }
@@ -7777,7 +7801,7 @@ function showAdminPanel(panelId) {
     try { localStorage.setItem('ulimAdminPanelId', panelId); } catch (ignore) {}
 
     document.querySelectorAll('.admin-subtab').forEach(btn => {
-        const isHiddenTeacherTab = !isFull && (btn.dataset.adminPanel === 'adminPanelStudents' || btn.dataset.adminPanel === 'adminPanelPayment' || btn.dataset.adminPanel === 'adminPanelRoom');
+        const isHiddenTeacherTab = !isFull && (btn.dataset.adminPanel === 'adminPanelStudents' || btn.dataset.adminPanel === 'adminPanelPayment' || btn.dataset.adminPanel === 'adminPanelRoom' || btn.dataset.adminPanel === 'adminPanelMessageDeliveries');
         if (isHiddenTeacherTab) btn.style.display = 'none';
         btn.classList.toggle('active', btn.dataset.adminPanel === panelId);
     });
@@ -7843,6 +7867,12 @@ function showAdminPanel(panelId) {
             Promise.resolve(adminLoadDailyEvalStudents(false)).catch(() => {});
         } else {
             adminRenderDailyEvalTable();
+        }
+    }
+
+    if (panelId === 'adminPanelMessageDeliveries' && isFull) {
+        if (window.ULIM_MESSAGE_DELIVERY_ADMIN_7355090 && typeof window.ULIM_MESSAGE_DELIVERY_ADMIN_7355090.enter === 'function') {
+            Promise.resolve(window.ULIM_MESSAGE_DELIVERY_ADMIN_7355090.enter()).catch(() => {});
         }
     }
 
@@ -20915,6 +20945,7 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 <!-- ULIM 7.35.5.0.11: non-attendance Firestore runtime + restored dedicated attendance owner. -->
 <script src="./web/ulim-firestore-primary-7.35.5.0.26.js?v=20260815.73550580"></script>
 <script src="./web/attendance-admin-integrated-7.35.4.34.js?v=20260824.73550891"></script>
+<script src="./web/message-delivery-admin-7.35.5.0.90.js?v=20260825.73550902"></script>
 <script src="./web/operational-content-admin-7.35.5.0.12.js?v=20260815.73550580"></script>
 <script src="./web/course-application-admin-7.35.5.0.32.js?v=20260815.73550580"></script>
 <script src="./web/student-login-notice-and-role-access-7.35.5.0.31.js?v=20260815.73550580"></script>
