@@ -28,6 +28,7 @@
   global.__ULIM_ATTENDANCE_ADMIN_INTEGRATED_735410__ = true;
   global.__ULIM_ATTENDANCE_DIRECTORY_AUTH_GUARD_735414__ = true;
   global.__ULIM_ATTENDANCE_TOOLBAR_ROSTER_POSITION_7355088__ = true;
+  global.__ULIM_ATTENDANCE_SESSION_COLUMN_SHADE_7355089__ = true;
   global.ULIM_ATTENDANCE_ADMIN_INTEGRATED_VERSION = '2026-08-13.735.04.34-roster-convergence-single-owner-7355049';
 
   var VERSION = '2026-08-13.735.04.34-roster-convergence-single-owner-7355049';
@@ -1992,6 +1993,16 @@
   }
 
 
+
+  // 7.35.5.0.89: presentation-only session column shading.
+  // Firestore state, attendance handlers, permissions, and schedule actions stay unchanged.
+  function ledgerSessionShadeStyle7355089(session) {
+    var state = text(session && session.state);
+    if (state === 'cancelled') return 'background:#e5e7eb!important;';
+    if (state === 'substitute') return 'background:#d1d5db!important;';
+    return '';
+  }
+
   function ledgerMonthBlockHtml735427(group, monthKey, sessions, kind, historicalEdit) {
     var isCurrent = kind === 'current';
     var safeSessions = Array.isArray(sessions) ? sessions : [];
@@ -2004,7 +2015,7 @@
     if (safeSessions.length) {
       header += safeSessions.map(function (session) {
         var substituteName = text(session.substituteInstructorName || session.instructorName || session.teacher); if (session.state === 'substitute' && !text(session.substituteInstructorName) && normalize(substituteName) === normalize(group.instructorName)) substituteName = ''; var badge = session.state === 'cancelled' ? '<span>휴강</span>' : session.state === 'substitute' ? '<span>대강 · ' + escapeHtml(substituteName ? substituteName + 'T' : '강사 확인필요') + '</span>' : session.state === 'moved' ? '<span>변경→' + escapeHtml(dateLabel7355033(session.targetDate)) + '</span>' : '';
-        return '<th' + (historicalEdit ? '' : ' data-ledger-header="1"') + ' data-class-id="' + escapeHtml(group.classId) + '" data-date="' + escapeHtml(session.date) + '" class="ulim-ledger-date735423"><b>' + escapeHtml(dateLabel7355033(session.date)) + '</b><small>' + escapeHtml(weekdayLabel7355033(session)) + '</small>' + badge + '</th>';
+        return '<th' + (historicalEdit ? '' : ' data-ledger-header="1"') + ' data-class-id="' + escapeHtml(group.classId) + '" data-date="' + escapeHtml(session.date) + '" class="ulim-ledger-date735423" style="' + ledgerSessionShadeStyle7355089(session) + '"><b>' + escapeHtml(dateLabel7355033(session.date)) + '</b><small>' + escapeHtml(weekdayLabel7355033(session)) + '</small>' + badge + '</th>';
       }).join('');
     } else {
       header += '<th class="ulim-ledger-date735423">-</th>';
@@ -2021,7 +2032,7 @@
       if (safeSessions.length) {
         row += safeSessions.map(function (session) {
           var cell = cells[session.date] || { eligible: false };
-          return '<td data-ledger-cell="1" data-class-id="' + escapeHtml(group.classId) + '" data-date="' + escapeHtml(session.date) + '" data-student-uid="' + escapeHtml(student.studentUid) + '">' + cellStatusHtml735423(group, student, session, cell) + '</td>';
+          return '<td style="' + ledgerSessionShadeStyle7355089(session) + '" data-ledger-cell="1" data-class-id="' + escapeHtml(group.classId) + '" data-date="' + escapeHtml(session.date) + '" data-student-uid="' + escapeHtml(student.studentUid) + '">' + cellStatusHtml735423(group, student, session, cell) + '</td>';
         }).join('');
       } else {
         row += '<td class="ulim-ledger-empty-month735427">-</td>';
