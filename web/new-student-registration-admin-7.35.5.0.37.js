@@ -2,7 +2,8 @@
   'use strict';
   if(global.__ULIM_NEW_STUDENT_REGISTRATION_ADMIN_73550937__) return;
   global.__ULIM_NEW_STUDENT_REGISTRATION_ADMIN_73550937__=true;
-  const VERSION='2026-09-02.73550937-new-student-registration-admin';
+  const VERSION='2026-09-02.73550939-new-student-registration-admin-entry-fix';
+  global.__ULIM_NEW_STUDENT_REGISTRATION_ADMIN_ENTRY_73550939__=true;
   const MODAL_ID='ulimNewStudentRegistrationAdmin73550937';
   const STYLE_ID='ulimNewStudentRegistrationAdminStyle73550937';
   const BUTTON_ID='ulimNewStudentRegistrationAdminOpen73550937';
@@ -65,7 +66,24 @@
   function captureSettings(){const s=Object.assign({},settings());if(tab==='basic'){s.active=document.getElementById('nrAdminActive73550937')?.value==='true';s.publicTitle=text(document.getElementById('nrAdminTitle73550937')?.value);s.recruitingClassIds=Array.from(document.querySelectorAll('[data-nr-class]:checked')).map(x=>text(x.dataset.nrClass)).filter(Boolean);}if(tab==='academy')s.academyPages=capturePages();if(tab==='application'){s.applicationContent=Object.assign({},s.applicationContent||{},{discoveryOptions:lines(document.getElementById('nrDiscoveryOptions73550937')?.value),paymentOptions:lines(document.getElementById('nrPaymentOptions73550937')?.value),refundPolicy:text(document.getElementById('nrRefundPolicy73550937')?.value),privacyPolicy:text(document.getElementById('nrPrivacyPolicy73550937')?.value),portraitPolicy:text(document.getElementById('nrPortraitPolicy73550937')?.value),voicePolicy:text(document.getElementById('nrVoicePolicy73550937')?.value),academyRules:text(document.getElementById('nrAcademyRules73550937')?.value)});}return s;}
   async function save(section){const next=captureSettings();showLoading('신규생 등록페이지 설정을 저장하는 중...');try{await call('saveNewStudentRegistrationSettingsAdmin73550937',{settings:next,requestId:requestId('new-registration-settings')});alert('저장했습니다. 공개 페이지에 바로 반영됩니다.');await load(true);}catch(e){alert(text(e&&e.message)||'설정을 저장하지 못했습니다.');}finally{hideLoading();}}
 
-  function installButton(){if(!isSuperAdmin())return false;if(document.getElementById(BUTTON_ID))return true;const actions=document.getElementById('ulimStudentPrimaryActions73546')||document.querySelector('#ulimStudentManagementCard7352 .ulim-toolbar-actions');if(!actions)return false;const b=document.createElement('button');b.type='button';b.id=BUTTON_ID;b.className='admin-btn green';b.textContent='신규생 등록페이지';b.onclick=open;actions.appendChild(b);return true;}
-  style();if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{installButton();},{once:true});else installButton();const observer=new MutationObserver(()=>{if(installButton())observer.disconnect();});observer.observe(document.documentElement,{childList:true,subtree:true});setTimeout(()=>observer.disconnect(),20000);
+  function installButton(){
+    const actions=document.getElementById('ulimStudentPrimaryActions73546')||document.querySelector('#ulimStudentManagementCard7352 .ulim-toolbar-actions');
+    if(!actions)return false;
+    let b=document.getElementById(BUTTON_ID);
+    if(b&&b.parentNode===actions)return true;
+    if(b)b.remove();
+    b=document.createElement('button');b.type='button';b.id=BUTTON_ID;b.className='admin-btn green';b.textContent='신규생 등록페이지';b.onclick=open;
+    const courseButton=document.getElementById('ulimCourseSettingsOpen73546');
+    if(courseButton&&courseButton.parentNode===actions)courseButton.insertAdjacentElement('afterend',b);else actions.appendChild(b);
+    return true;
+  }
+  function installEntry73550939(){try{installButton();}catch(_e){}}
+  style();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installEntry73550939,{once:true});else installEntry73550939();
+  const observer=new MutationObserver(installEntry73550939);
+  observer.observe(document.documentElement,{childList:true,subtree:true});
+  global.addEventListener('ulim-student-directory-updated',installEntry73550939);
+  global.addEventListener('ulim-student-roster-updated',installEntry73550939);
+  global.addEventListener('ulim-class-catalog-updated',installEntry73550939);
   global.ulimOpenNewStudentRegistrationAdmin73550937=open;
 })(window);
