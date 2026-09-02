@@ -1514,9 +1514,9 @@
     var month = attendanceAddMonth735430(context);
     var group = groupById735423(context && context.classId);
     var fromLedger = group && Array.isArray(group.sessions) ? group.sessions.filter(function (session) {
-      return text(session.date).slice(0, 7) === month && session.state !== 'cancelled' && session.state !== 'moved';
+      return text(session.date).slice(0, 7) === month && session.state !== 'cancelled';
     }) : [];
-    if (fromLedger.length) return fromLedger.slice().sort(function (a, b) { return text(a.date).localeCompare(text(b.date)); });
+    if (fromLedger.length) return fromLedger.map(function (session) { var copy = Object.assign({}, session); copy.slotDate73550921 = text(session.date); copy.date = ledgerSessionAttendanceDate73550921(session); copy.weekday = ledgerSessionWeekday73550921(session).replace(/요일$/, ''); return copy; }).sort(function (a, b) { return text(a.date).localeCompare(text(b.date)); });
 
     var explicitDates = unique(targetClass && targetClass.dates).filter(function (date) { return date.slice(0, 7) === month; });
     if (explicitDates.length) return explicitDates.sort().map(function (date) { return { date: date, state: 'normal' }; });
@@ -1832,7 +1832,7 @@
       +     '<div class="ulim-ledger-top-row735427">'
       +       '<div class="ulim-ledger-heading735427"><h3>전체반 출석부</h3></div>'
       +       '<div class="ulim-ledger-top-actions735427">'
-      +         '<div class="ulim-ledger-context-tools735433"><span id="ulimAllClassesContext735410">전월·현재월 동시 표시</span><button type="button" id="ulimMonthlySessionPlan735433">수업일 지정</button><button type="button" id="ulimPreviousMonthEdit735433" title="전월 출석부 편집" aria-label="전월 출석부 편집">⚙</button></div>'
+      +         '<div class="ulim-ledger-context-tools735433"><span id="ulimAllClassesContext735410">전월·현재월 동시 표시</span><button type="button" id="ulimMonthlySessionPlan735433">수업일 지정</button><button type="button" id="ulimPreviousMonthEdit735433" title="출석부 설정" aria-label="출석부 설정">⚙</button></div>'
       +         '<label class="ulim-ledger-move-mode735427"><span>드래그 처리</span><select id="ulimAllClassesMoveMode735423"><option value="class_move">반이동</option><option value="existing">일반 이동</option><option value="new">신규</option><option value="makeup">보강</option></select></label>'
       +         '<button type="button" class="admin-btn red" id="ulimAllClassesRemoveSelected735423" style="display:none">선택 학생 제거</button>'
       +         '<button type="button" class="admin-btn blue" id="ulimAllClassesReload735423">새로고침</button>'
@@ -1853,6 +1853,44 @@
     if (modal) modal.style.display = 'none';
   }
 
+
+  function ensureAttendanceSettingsModal73550920() {
+    var modal = document.getElementById('ulimAttendanceSettingsModal73550920');
+    if (modal) return modal;
+    modal = document.createElement('div'); modal.id = 'ulimAttendanceSettingsModal73550920';
+    modal.style.cssText = 'display:none;position:fixed;inset:0;z-index:100090;background:rgba(15,23,42,.48);align-items:center;justify-content:center;padding:20px';
+    modal.innerHTML = '<div style="width:min(460px,94vw);background:#fff;border-radius:16px;padding:18px;box-shadow:0 24px 60px rgba(15,23,42,.28)"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><b style="font-size:17px">출석부 설정</b><button type="button" id="ulimAttendanceSettingsClose73550920" class="admin-btn gray">닫기</button></div><div style="display:grid;gap:10px;margin-top:16px"><button type="button" id="ulimAttendanceOpenPrevious73550920" class="admin-btn">전월 출석부 편집</button><button type="button" id="ulimAttendanceManualRollover73550920" class="admin-btn blue">다음월로 출석부 갱신</button></div><div id="ulimAttendanceSettingsStatus73550920" style="margin-top:12px;font-size:12px;line-height:1.55;color:#475569"></div></div>';
+    document.body.appendChild(modal);
+    modal.addEventListener('click', function (event) {
+      var target = event.target && event.target.closest ? event.target.closest('button') : null;
+      if (!target) { if (event.target === modal) modal.style.display='none'; return; }
+      if (target.id === 'ulimAttendanceSettingsClose73550920') modal.style.display='none';
+      if (target.id === 'ulimAttendanceOpenPrevious73550920') { modal.style.display='none'; openPreviousMonthEdit735433(); }
+      if (target.id === 'ulimAttendanceManualRollover73550920') runManualMonthRollover73550920();
+    });
+    return modal;
+  }
+  function openAttendanceSettings73550920() {
+    if (!isFullAdmin()) return alert('전체관리자 권한이 필요합니다.');
+    var modal = ensureAttendanceSettingsModal73550920(); var status = document.getElementById('ulimAttendanceSettingsStatus73550920');
+    if (status) status.textContent = '현재 월 기준으로 전월 기록을 보존한 채 출석부를 다시 계산합니다.';
+    modal.style.display = 'flex';
+  }
+  async function runManualMonthRollover73550920() {
+    if (!isFullAdmin()) return alert('전체관리자 권한이 필요합니다.');
+    var button = document.getElementById('ulimAttendanceManualRollover73550920'); var status = document.getElementById('ulimAttendanceSettingsStatus73550920');
+    var expectedMonth = today().slice(0, 7);
+    try {
+      if (button) button.disabled = true; if (status) status.textContent = expectedMonth + ' 출석부를 현재 재원 명단 기준으로 다시 계산하는 중...';
+      var ledger = await loadAllClassesData735410(true, 'manual-month-rollover-73550920');
+      var normalized = normalizeAttendanceLedger73550920(ledger);
+      if (text(normalized && normalized.currentMonth) !== expectedMonth) throw new Error('서버 월 기준이 ' + expectedMonth + '로 갱신되지 않았습니다.');
+      var expectedPrev = (function(){ var p=expectedMonth.split('-').map(Number), d=new Date(Date.UTC(p[0],p[1]-2,1)); return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0'); })();
+      if (text(normalized.previousMonth) && text(normalized.previousMonth) !== expectedPrev) throw new Error('전월 기준이 올바르지 않습니다.');
+      if (status) status.textContent = expectedMonth + ' 갱신 완료 · 전월 출결/비고는 보존되고 현재월 명단은 현재 재원 기준으로 계산되었습니다.';
+    } catch (error) { if (status) status.textContent = text(error && error.message) || '출석부 갱신에 실패했습니다.'; alert(text(error && error.message) || '출석부 갱신에 실패했습니다.'); }
+    finally { if (button) button.disabled = false; }
+  }
   function bindAllClassesHeaderControls735425(modal) {
     if (!modal || modal.dataset.ulimHeaderControls735426 === '1') return;
     modal.dataset.ulimHeaderControls735426 = '1';
@@ -1878,7 +1916,7 @@
         return;
       }
       if (target.id === 'ulimPreviousMonthEdit735433') {
-        event.preventDefault(); event.stopPropagation(); openPreviousMonthEdit735433(); return;
+        event.preventDefault(); event.stopPropagation(); openAttendanceSettings73550920(); return;
       }
       if (target.id === 'ulimMonthlySessionPlan735433') {
         event.preventDefault(); event.stopPropagation(); openMonthlySessionPlan735433(); return;
@@ -1930,10 +1968,29 @@
       }, true);
     }
   }
+
+  global.__ULIM_MOVED_ATTENDANCE_CELL_73550921__ = true;
+  function ledgerSessionAttendanceDate73550921(session) {
+    var state = text(session && session.state);
+    var target = text(session && session.targetDate);
+    return state === 'moved' && /^\d{4}-\d{2}-\d{2}$/.test(target) ? target : text(session && session.date);
+  }
+  function ledgerSessionCell73550921(student, session) {
+    var cells = student && student.cells || {};
+    var actionDate = ledgerSessionAttendanceDate73550921(session);
+    return cells[actionDate] || cells[text(session && session.date)] || {};
+  }
+  function ledgerSessionWeekday73550921(session) {
+    var date = ledgerSessionAttendanceDate73550921(session);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return weekdayLabel7355033(session);
+    var parts = date.split('-').map(Number);
+    var day = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2])).getUTCDay();
+    return ['일요일','월요일','화요일','수요일','목요일','금요일','토요일'][day] || '';
+  }
   function cellStatusHtml735423(group, student, session, cell) {
-    var state = text(session.state); var eligible = cell && cell.eligible === true && state !== 'cancelled' && state !== 'moved';
+    var state = text(session.state); var eligible = cell && cell.eligible === true && state !== 'cancelled';
     if (state === 'cancelled') return '<div class="ulim-ledger-session-off735423">휴강</div>';
-    if (state === 'moved') return '<div class="ulim-ledger-session-off735423">변경</div>';
+
     if (!eligible) return '<button type="button" class="ulim-ledger-empty735423" data-ledger-add="1" title="학생 추가">＋</button>';
     var status = cleanAttendanceStatus7355014(cell.status || cell.attendanceStatus);
     var special = text(cell.specialStatus);
@@ -1945,8 +2002,7 @@
 
   function ledgerMonthNameSpecial735430(student, sessions) {
     var safeSessions = Array.isArray(sessions) ? sessions : [];
-    var cells = student && student.cells || {};
-    var eligibleCells = safeSessions.map(function (session) { return cells[session.date] || {}; }).filter(function (cell) { return cell.eligible === true; });
+    var eligibleCells = safeSessions.map(function (session) { return ledgerSessionCell73550921(student, session); }).filter(function (cell) { return cell.eligible === true; });
     for (var i = 0; i < eligibleCells.length; i += 1) {
       var cell = eligibleCells[i];
       var kind = specialKind7355033(cell.specialStatus);
@@ -1975,15 +2031,74 @@
   }
 
 
+
+  global.__ULIM_ATTENDANCE_ROLLOVER_DEDUPE_73550920__ = true;
+  function ledgerCellScore73550920(cell) {
+    cell = cell && typeof cell === 'object' ? cell : {};
+    var score = 0;
+    var status = text(cell.status || cell.attendanceStatus);
+    if (status && normalize(status) !== normalize('미체크') && status !== '-') score += 16;
+    if (text(cell.specialStatus)) score += 8;
+    if (text(cell.memo || cell.note || cell.remark)) score += 4;
+    if (text(cell.currentStatus)) score += 2;
+    if (cell.eligible === true) score += 1;
+    score += Math.min(3, Object.keys(cell).filter(function (key) { return cell[key] !== '' && cell[key] != null; }).length / 10);
+    return score;
+  }
+  function mergeLedgerCell73550920(left, right) {
+    var a = left && typeof left === 'object' ? left : {};
+    var b = right && typeof right === 'object' ? right : {};
+    var aUpdated = Number(a.updatedAtMs || a.savedAtMs || a.modifiedAtMs || 0);
+    var bUpdated = Number(b.updatedAtMs || b.savedAtMs || b.modifiedAtMs || 0);
+    var preferB = bUpdated !== aUpdated ? bUpdated > aUpdated : ledgerCellScore73550920(b) > ledgerCellScore73550920(a);
+    var primary = preferB ? b : a, secondary = preferB ? a : b;
+    var merged = Object.assign({}, secondary, primary);
+    merged.eligible = a.eligible === true || b.eligible === true;
+    ['status','attendanceStatus','specialStatus','specialDisplayScope','registrationType','currentStatus','memo','note','remark'].forEach(function (key) {
+      var p = text(primary[key]), s = text(secondary[key]);
+      if ((!p || normalize(p) === normalize('미체크') || p === '-') && s && normalize(s) !== normalize('미체크') && s !== '-') merged[key] = secondary[key];
+    });
+    return merged;
+  }
+  function mergeLedgerStudents73550920(group, rows) {
+    var classId = text(group && group.classId);
+    var map = new Map();
+    (Array.isArray(rows) ? rows : []).forEach(function (student, index) {
+      student = student && typeof student === 'object' ? student : {};
+      var uid = text(student.studentUid);
+      var key = uid ? classId + '|' + uid : classId + '|__NO_UID__|' + index;
+      if (!map.has(key)) {
+        var clone = Object.assign({}, student); clone.cells = Object.assign({}, student.cells || {}); map.set(key, clone); return;
+      }
+      var current = map.get(key);
+      if (!text(current.studentName) && text(student.studentName)) current.studentName = student.studentName;
+      if (!text(current.attendanceNo) && text(student.attendanceNo)) current.attendanceNo = student.attendanceNo;
+      var incoming = student.cells || {};
+      Object.keys(incoming).forEach(function (date) { current.cells[date] = mergeLedgerCell73550920(current.cells[date], incoming[date]); });
+    });
+    return Array.from(map.values());
+  }
+  function normalizeAttendanceLedger73550920(ledger) {
+    if (!ledger || typeof ledger !== 'object') return ledger;
+    var groupMap = new Map();
+    (Array.isArray(ledger.groups) ? ledger.groups : []).forEach(function (raw, index) {
+      var group = raw && typeof raw === 'object' ? raw : {};
+      var classId = text(group.classId); var key = classId || '__NO_CLASS__' + index;
+      if (!groupMap.has(key)) {
+        var first = Object.assign({}, group); first.students = mergeLedgerStudents73550920(first, group.students); first.sessions = (group.sessions || []).slice(); first.excludedSessions = (group.excludedSessions || []).slice(); groupMap.set(key, first); return;
+      }
+      var current = groupMap.get(key);
+      current.students = mergeLedgerStudents73550920(current, (current.students || []).concat(group.students || []));
+      var sessionMap = new Map(); (current.sessions || []).concat(group.sessions || []).forEach(function (s, si) { var d=text(s&&s.date); var sk=d||'__'+si; if(!sessionMap.has(sk)) sessionMap.set(sk,s); }); current.sessions = Array.from(sessionMap.values()).sort(function(a,b){return text(a&&a.date).localeCompare(text(b&&b.date));});
+      var excludedMap = new Map(); (current.excludedSessions || []).concat(group.excludedSessions || []).forEach(function (s, si) { var sk=text(s&&s.date)+'|'+text(s&&s.changeId); if(!excludedMap.has(sk||('__'+si))) excludedMap.set(sk||('__'+si),s); }); current.excludedSessions = Array.from(excludedMap.values());
+    });
+    return Object.assign({}, ledger, { groups: Array.from(groupMap.values()) });
+  }
   function ledgerStudentsForMonth735429(group, sessions) {
     var safeSessions = Array.isArray(sessions) ? sessions : [];
     if (!safeSessions.length) return [];
-    return (group && Array.isArray(group.students) ? group.students : []).filter(function (student) {
-      var cells = student && student.cells || {};
-      return safeSessions.some(function (session) {
-        var cell = cells[session.date] || {};
-        return cell.eligible === true;
-      });
+    return mergeLedgerStudents73550920(group, group && group.students).filter(function (student) {
+      return safeSessions.some(function (session) { return ledgerSessionCell73550921(student, session).eligible === true; });
     }).sort(function (a, b) {
       var aMakeup = ledgerStudentMakeupOnly735430(a, safeSessions) ? 1 : 0;
       var bMakeup = ledgerStudentMakeupOnly735430(b, safeSessions) ? 1 : 0;
@@ -2014,8 +2129,8 @@
     header += '<tr><th class="ulim-ledger-no735427">NO</th><th class="ulim-ledger-name735427">학생이름</th>';
     if (safeSessions.length) {
       header += safeSessions.map(function (session) {
-        var substituteName = text(session.substituteInstructorName || session.instructorName || session.teacher); if (session.state === 'substitute' && !text(session.substituteInstructorName) && normalize(substituteName) === normalize(group.instructorName)) substituteName = ''; var badge = session.state === 'cancelled' ? '<span>휴강</span>' : session.state === 'substitute' ? '<span>대강 · ' + escapeHtml(substituteName ? substituteName + 'T' : '강사 확인필요') + '</span>' : session.state === 'moved' ? '<span>변경→' + escapeHtml(dateLabel7355033(session.targetDate)) + '</span>' : '';
-        return '<th' + (historicalEdit ? '' : ' data-ledger-header="1"') + ' data-class-id="' + escapeHtml(group.classId) + '" data-date="' + escapeHtml(session.date) + '" class="ulim-ledger-date735423" style="' + ledgerSessionShadeStyle7355089(session) + '"><b>' + escapeHtml(dateLabel7355033(session.date)) + '</b><small>' + escapeHtml(weekdayLabel7355033(session)) + '</small>' + badge + '</th>';
+        var substituteName = text(session.substituteInstructorName || session.instructorName || session.teacher); if (session.state === 'substitute' && !text(session.substituteInstructorName) && normalize(substituteName) === normalize(group.instructorName)) substituteName = ''; var badge = session.state === 'cancelled' ? '<span>휴강</span>' : session.state === 'substitute' ? '<span>대강 · ' + escapeHtml(substituteName ? substituteName + 'T' : '강사 확인필요') + '</span>' : session.state === 'moved' ? '<span>수업일 변경</span>' : '';
+        return '<th' + (historicalEdit ? '' : ' data-ledger-header="1"') + ' data-class-id="' + escapeHtml(group.classId) + '" data-date="' + escapeHtml(session.date) + '" class="ulim-ledger-date735423" style="' + ledgerSessionShadeStyle7355089(session) + '"><b>' + escapeHtml(dateLabel7355033(ledgerSessionAttendanceDate73550921(session))) + '</b><small>' + escapeHtml(ledgerSessionWeekday73550921(session)) + '</small>' + badge + '</th>';
       }).join('');
     } else {
       header += '<th class="ulim-ledger-date735423">-</th>';
@@ -2025,13 +2140,13 @@
     var rows = students.map(function (student, rowIndex) {
       var cells = student.cells || {};
       var lastCurrentStatus = '';
-      safeSessions.forEach(function (session) { var cell = cells[session.date] || {}; if (text(cell.currentStatus)) lastCurrentStatus = text(cell.currentStatus); });
+      safeSessions.forEach(function (session) { var cell = ledgerSessionCell73550921(student, session); if (text(cell.currentStatus)) lastCurrentStatus = text(cell.currentStatus); });
       var nameSpecial = ledgerMonthNameSpecial735430(student, safeSessions);
       var row = '<tr data-ledger-student="' + escapeHtml(student.studentUid) + '" data-source-class="' + escapeHtml(group.classId) + '">';
       row += ledgerStudentIdentityCells735427(group, student, rowIndex, monthKey, nameSpecial, historicalEdit);
       if (safeSessions.length) {
         row += safeSessions.map(function (session) {
-          var cell = cells[session.date] || { eligible: false };
+          var cell = ledgerSessionCell73550921(student, session); if (!cell || typeof cell !== 'object') cell = { eligible: false };
           return '<td style="' + ledgerSessionShadeStyle7355089(session) + '" data-ledger-cell="1" data-class-id="' + escapeHtml(group.classId) + '" data-date="' + escapeHtml(session.date) + '" data-student-uid="' + escapeHtml(student.studentUid) + '">' + cellStatusHtml735423(group, student, session, cell) + '</td>';
         }).join('');
       } else {
@@ -2043,7 +2158,7 @@
 
     if (isFullAdmin()) {
       var addDate = safeSessions[0];
-      rows += '<tr class="ulim-ledger-add-row735423"><td></td><td><button type="button" data-ledger-add-class="1" data-class-id="' + escapeHtml(group.classId) + '" data-date="' + escapeHtml(addDate && addDate.date || '') + '" data-month="' + escapeHtml(monthKey) + '">＋ 학생 추가</button></td><td colspan="' + (Math.max(1, safeSessions.length) + 1) + '"></td></tr>';
+      rows += '<tr class="ulim-ledger-add-row735423"><td></td><td><button type="button" data-ledger-add-class="1" data-class-id="' + escapeHtml(group.classId) + '" data-date="' + escapeHtml(addDate ? ledgerSessionAttendanceDate73550921(addDate) : '') + '" data-month="' + escapeHtml(monthKey) + '">＋ 학생 추가</button></td><td colspan="' + (Math.max(1, safeSessions.length) + 1) + '"></td></tr>';
     }
     var minimumTableWidth = 52 + 154 + 140 + (Math.max(1, safeSessions.length) * 92);
     return '<div class="ulim-ledger-month-card735427' + monthClass + '" data-ledger-month="' + escapeHtml(monthKey) + '"><table class="ulim-ledger-table735423" style="min-width:' + minimumTableWidth + 'px"><thead>' + header + '</thead><tbody>' + rows + '</tbody></table></div>';
@@ -2144,7 +2259,8 @@
   async function removePreviousMonthStudent735433(group, student) {
     if (!isFullAdmin() || !group || !student || !allClassesState735410.ledger) return;
     var prevMonth = text(allClassesState735410.ledger.previousMonth);
-    var dates = (group.sessions || []).filter(function (session) { return text(session.date).slice(0, 7) === prevMonth && student.cells && student.cells[session.date] && student.cells[session.date].eligible === true; }).map(function (session) { return session.date; });
+    var dates = (group.sessions || []).filter(function (session) { return text(session.date).slice(0, 7) === prevMonth && ledgerSessionCell73550921(student, session).eligible === true; }).map(function (session) { return ledgerSessionAttendanceDate73550921(session); });
+    dates = Array.from(new Set(dates.filter(Boolean)));
     if (!dates.length) return;
     if (!confirm(student.studentName + ' 학생을 ' + monthLabel7355033(prevMonth) + ' ' + group.className + ' 기록에서 제거할까요?\n현재월 수강반은 변경되지 않습니다.')) return;
     try {
@@ -2189,19 +2305,20 @@
       if (text(node.dataset.classId) !== text(group.classId)) return;
       if (text(node.dataset.studentUid) !== text(student.studentUid)) return;
       if (text(node.dataset.date) !== text(session.date)) return;
-      var cell = student.cells && student.cells[session.date] || { eligible: false };
+      var cell = ledgerSessionCell73550921(student, session);
       node.innerHTML = cellStatusHtml735423(group, student, session, cell);
     }); });
   }
 
   async function saveLedgerCell735423(group, student, session, patch) {
-    var cell = student.cells && student.cells[session.date] || {};
+    var actionDate73550921 = ledgerSessionAttendanceDate73550921(session);
+    var cell = ledgerSessionCell73550921(student, session);
     var before = Object.assign({}, cell);
     var requestedStatus = patch && Object.prototype.hasOwnProperty.call(patch, 'status') ? text(patch.status) : text(cell.status || cell.attendanceStatus || '미체크');
-    var payload = { date: session.date, classId: group.classId, className: group.className, studentUid: student.studentUid, studentName: student.studentName, name: student.studentName, attendanceNo: student.attendanceNo, studentNo: student.attendanceNo, status: requestedStatus || '미체크', attendanceStatus: requestedStatus || '미체크', specialStatus: text(patch.specialStatus != null ? patch.specialStatus : cell.specialStatus), currentStatus: text(patch.currentStatus != null ? patch.currentStatus : cell.currentStatus), memo: text(patch.memo != null ? patch.memo : cell.memo) };
+    var payload = { date: actionDate73550921, classId: group.classId, className: group.className, studentUid: student.studentUid, studentName: student.studentName, name: student.studentName, attendanceNo: student.attendanceNo, studentNo: student.attendanceNo, status: requestedStatus || '미체크', attendanceStatus: requestedStatus || '미체크', specialStatus: text(patch.specialStatus != null ? patch.specialStatus : cell.specialStatus), currentStatus: text(patch.currentStatus != null ? patch.currentStatus : cell.currentStatus), memo: text(patch.memo != null ? patch.memo : cell.memo) };
     Object.assign(cell, payload, { eligible: true, __saving735425: true });
     if (!student.cells) student.cells = {};
-    student.cells[session.date] = cell;
+    student.cells[actionDate73550921] = cell;
     syncLedgerCellDom735427(group, student, session);
     allClassesState735410.actionInFlight = true;
     try {
@@ -2209,7 +2326,7 @@
       delete cell.__saving735425;
       syncLedgerCellDom735427(group, student, session);
     } catch (error) {
-      student.cells[session.date] = before;
+      student.cells[actionDate73550921] = before;
       syncLedgerCellDom735427(group, student, session);
       alert(text(error && error.message) || '출석 저장에 실패했습니다.');
     } finally {
@@ -2218,13 +2335,14 @@
   }
   async function saveLedgerMonthNote735430(group, student, monthKey, value, input) {
     if (!fullAdminOrTeacher7355033() || !group || !student) return;
-    var sessions = (group.sessions || []).filter(function (session) { return text(session.date).slice(0, 7) === text(monthKey) && session.state !== 'cancelled' && session.state !== 'moved'; });
+    var sessions = (group.sessions || []).filter(function (session) { return text(session.date).slice(0, 7) === text(monthKey) && session.state !== 'cancelled'; });
     var rows = [];
     sessions.forEach(function (session) {
-      var cell = student.cells && student.cells[session.date] || {};
+      var actionDate73550921 = ledgerSessionAttendanceDate73550921(session);
+      var cell = ledgerSessionCell73550921(student, session);
       if (cell.eligible !== true) return;
       rows.push({
-        date: session.date, classId: group.classId, className: group.className,
+        date: actionDate73550921, classId: group.classId, className: group.className,
         studentUid: student.studentUid, studentName: student.studentName, name: student.studentName,
         attendanceNo: student.attendanceNo, studentNo: student.attendanceNo,
         status: cleanAttendanceStatus7355014(cell.status || cell.attendanceStatus) || '미체크',
@@ -2253,8 +2371,8 @@
     modal.onclick=function(e){if(e.target===modal || (e.target&&e.target.closest('[data-ledger-detail-close="1"]')))modal.style.display='none';}; document.body.appendChild(modal); return modal;
   }
   function openLedgerDetail735423(group, student, session) {
-    var cell=student.cells&&student.cells[session.date]||{}; var modal=ensureLedgerDetailModal735423();
-    document.getElementById('ulimLedgerDetailTitle735423').textContent=session.date+' · '+student.studentName+' · 메모';
+    var actionDate73550921=ledgerSessionAttendanceDate73550921(session); var cell=ledgerSessionCell73550921(student,session); var modal=ensureLedgerDetailModal735423();
+    document.getElementById('ulimLedgerDetailTitle735423').textContent=actionDate73550921+' · '+student.studentName+' · 메모';
     document.getElementById('ulimLedgerMemo735423').value=text(cell.memo);
     document.getElementById('ulimLedgerDetailSave735423').onclick=async function(){await saveLedgerCell735423(group,student,session,{memo:document.getElementById('ulimLedgerMemo735423').value}); modal.style.display='none';}; modal.style.display='flex';
   }
@@ -2475,9 +2593,9 @@
       if (target.hasAttribute('data-ledger-add-class')) {
         var addGroup = groupById735423(target.dataset.classId);
         var requestedDate = text(target.dataset.date);
-        var addSession = addGroup && (addGroup.sessions || []).filter(function (s) { return (!requestedDate || text(s.date) === requestedDate) && s.state !== 'cancelled' && s.state !== 'moved'; })[0];
-        if (!addSession && addGroup) addSession = (addGroup.sessions || []).filter(function (s) { return s.state !== 'cancelled' && s.state !== 'moved'; })[0];
-        if (addGroup && addSession) openAttendanceAddModal735410({ date: addSession.date, month: text(target.dataset.month) || text(addSession.date).slice(0, 7), classId: addGroup.classId, className: addGroup.className, historicalOnly: historicalOnly === true });
+        var addSession = addGroup && (addGroup.sessions || []).filter(function (s) { return (!requestedDate || text(s.date) === requestedDate) && s.state !== 'cancelled'; })[0];
+        if (!addSession && addGroup) addSession = (addGroup.sessions || []).filter(function (s) { return s.state !== 'cancelled'; })[0];
+        if (addGroup && addSession) openAttendanceAddModal735410({ date: ledgerSessionAttendanceDate73550921(addSession), month: text(target.dataset.month) || text(addSession.date).slice(0, 7), classId: addGroup.classId, className: addGroup.className, historicalOnly: historicalOnly === true });
         return;
       }
 
@@ -2502,7 +2620,7 @@
       if (!session) return;
       if (target.hasAttribute('data-ledger-status')) {
         var desired = text(target.dataset.ledgerStatus);
-        var currentCell = student.cells && student.cells[session.date] || {};
+        var currentCell = ledgerSessionCell73550921(student, session);
         saveLedgerCell735423(group, student, session, { status: cleanAttendanceStatus7355014(currentCell.status) === desired ? '미체크' : desired });
         return;
       }
@@ -2511,7 +2629,7 @@
         return;
       }
       if (target.hasAttribute('data-ledger-add') && isFullAdmin()) {
-        openAttendanceAddModal735410({ date: session.date, month: text(session.date).slice(0, 7), classId: group.classId, className: group.className });
+        openAttendanceAddModal735410({ date: ledgerSessionAttendanceDate73550921(session), month: text(session.date).slice(0, 7), classId: group.classId, className: group.className });
       }
     }, true);
 
@@ -2671,7 +2789,7 @@
         if (text(ledger && ledger.source) !== 'firestore_attendance_ledger_7355033') {
           throw new Error('최신 출석부 서버가 아직 반영되지 않았습니다.');
         }
-        allClassesState735410.ledger = ledger;
+        allClassesState735410.ledger = normalizeAttendanceLedger73550920(ledger);
         allClassesState735410.lastLoadedAt = Date.now();
         allClassesState735410.refreshAvailable = false;
         if (!isFullAdmin()) { var actor735434 = currentStaffIdentity735434(); allClassesState735410.teacher = actor735434.name || '__self__'; }
