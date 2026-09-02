@@ -1854,11 +1854,12 @@
   }
 
 
+  global.__ULIM_ATTENDANCE_SETTINGS_TOP_LAYER_73550935__ = true;
   function ensureAttendanceSettingsModal73550920() {
     var modal = document.getElementById('ulimAttendanceSettingsModal73550920');
     if (modal) return modal;
     modal = document.createElement('div'); modal.id = 'ulimAttendanceSettingsModal73550920';
-    modal.style.cssText = 'display:none;position:fixed;inset:0;z-index:100090;background:rgba(15,23,42,.48);align-items:center;justify-content:center;padding:20px';
+    modal.style.cssText = 'display:none;position:fixed;inset:0;z-index:2147483647;background:rgba(15,23,42,.48);align-items:center;justify-content:center;padding:20px';
     modal.innerHTML = '<div style="width:min(460px,94vw);background:#fff;border-radius:16px;padding:18px;box-shadow:0 24px 60px rgba(15,23,42,.28)"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><b style="font-size:17px">출석부 설정</b><button type="button" id="ulimAttendanceSettingsClose73550920" class="admin-btn gray">닫기</button></div><div style="display:grid;gap:10px;margin-top:16px"><button type="button" id="ulimAttendanceOpenPrevious73550920" class="admin-btn">전월 출석부 편집</button><button type="button" id="ulimAttendanceManualRollover73550920" class="admin-btn blue">다음월로 출석부 갱신</button></div><div id="ulimAttendanceSettingsStatus73550920" style="margin-top:12px;font-size:12px;line-height:1.55;color:#475569"></div></div>';
     document.body.appendChild(modal);
     modal.addEventListener('click', function (event) {
