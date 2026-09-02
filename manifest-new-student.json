@@ -1,0 +1,23 @@
+{
+  "id": "https://ulimvoice.github.io/ulimvoice/new-student.html",
+  "name": "울림 신규 수강신청",
+  "short_name": "울림 수강신청",
+  "description": "울림 성우·스피치·연기학원 학원안내 및 신규 수강신청",
+  "start_url": "https://ulimvoice.github.io/ulimvoice/new-student.html",
+  "scope": "https://ulimvoice.github.io/ulimvoice/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#22c55e",
+  "icons": [
+    {
+      "src": "https://ulimvoice.github.io/ulimvoice/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://ulimvoice.github.io/ulimvoice/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
