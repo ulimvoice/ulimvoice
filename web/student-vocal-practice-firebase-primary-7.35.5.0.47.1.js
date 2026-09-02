@@ -48,6 +48,11 @@
     try { if (typeof studentName !== 'undefined' && studentName) return String(studentName); } catch (_ignore) {}
     try { return localStorage.getItem('studentName') || ''; } catch (_ignore2) { return ''; }
   }
+  function legacyHistoryToken73550936() {
+    try { if (typeof getStudentSessionToken_ === 'function') return String(getStudentSessionToken_() || ''); } catch (_ignore73550936a) {}
+    try { if (global.studentSessionToken) return String(global.studentSessionToken || ''); } catch (_ignore73550936b) {}
+    try { return localStorage.getItem('studentSessionToken') || sessionStorage.getItem('studentSessionToken') || ''; } catch (_ignore73550936c) { return ''; }
+  }
   function roomApi() {
     return global.ULIM_ROOM_CLASSROOM_REALTIME_72918 ||
       global.ULIM_ROOM_CLASSROOM_REALTIME_72917 ||
@@ -1025,10 +1030,28 @@
     return { ok:true, accepted:true, processing:true, deferred:true, recordId:begin.recordId };
   }
 
+  global.__ULIM_PRACTICE_LEGACY_HISTORY_READ_MERGE_73550936__ = true;
   function practiceKey(log) { return [text(log && log.practiceDate), text(log && (log.sentenceId || log.vocalId)), text(log && log.recordType)].join('|'); }
   function isVocal(log) {
     const raw = [log && log.taskType, log && log.recordType, log && log.vocalId].map(text).join(' ');
     return !/past_question|기출|PAST_|standard_pronunciation|표준발음|PRON_/i.test(raw);
+  }
+  async function fetchLegacyVocalMonth73550936(year, monthIndex) {
+    const token = legacyHistoryToken73550936();
+    const endpoint = (typeof GET_API_URL !== 'undefined' && GET_API_URL) ? GET_API_URL : text(global.GET_API_URL);
+    if (!token || !endpoint) return [];
+    try {
+      const query = new URLSearchParams();
+      query.set('action','getStudentVocalPracticeLogs');
+      query.set('studentSessionToken',token);
+      query.set('year',String(year));
+      query.set('month',String(Number(monthIndex)+1));
+      query.set('_',Date.now());
+      const response = await fetch(endpoint + '?' + query.toString(), { cache:'no-store' });
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data && data.status === 'success' && Array.isArray(data.logs) ? data.logs.filter(isVocal) : [];
+    } catch (_ignore73550936) { return []; }
   }
   function setPracticeMap(logs, year, monthIndex) {
     const map = new Map();
@@ -1048,10 +1071,26 @@
     try { firebaseData = await call('listStudentPracticeLogs7355041', { year:Number(year), month:month }); }
     catch (error) { throw new Error(callableError(error, '발성훈련 기록을 불러오지 못했습니다.')); }
     const firebaseLogs = Array.isArray(firebaseData.logs) ? firebaseData.logs : [];
-    const logs = firebaseLogs.map(function(log){ return Object.assign({}, log, { sourceAuthority:'firestore' }); });
+    const legacyLogs = await fetchLegacyVocalMonth73550936(Number(year), Number(monthIndex));
+    const merged = new Map();
+    legacyLogs.forEach(function (log) {
+      const key = practiceKey(log);
+      if (key) merged.set(key, Object.assign({}, log, { sourceAuthority:'legacy-read' }));
+    });
+    firebaseLogs.forEach(function (log) {
+      const key = practiceKey(log);
+      const legacy = merged.get(key) || {};
+      merged.set(key, Object.assign({}, legacy, log, {
+        sourceAuthority:'firestore',
+        teacherEvaluations:Array.isArray(log.teacherEvaluations) ? log.teacherEvaluations : legacy.teacherEvaluations,
+        teacherComment:text(log.teacherComment) || text(legacy.teacherComment),
+        fileUrl:text(log.fileUrl || log.audioUrl) || text(legacy.fileUrl || legacy.audioUrl || legacy.uploadUrl)
+      }));
+    });
+    const logs = Array.from(merged.values());
     setPracticeMap(logs, Number(year), Number(monthIndex));
     try { if (typeof global.ulimRefreshPracticeUnread606 === 'function') global.ulimRefreshPracticeUnread606(); } catch (_ignore) {}
-    return { status:'success', ok:true, logs:logs, count:logs.length, firestoreCount:firebaseLogs.length, legacyCount:0, force:!!force, sourceAuthority:'firestore' };
+    return { status:'success', ok:true, logs:logs, count:logs.length, firestoreCount:firebaseLogs.length, legacyCount:legacyLogs.length, force:!!force, sourceAuthority:'firestore-primary+legacy-read' };
   }
 
   function openPracticePushUrl7355070(url) {
