@@ -1,12 +1,13 @@
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js';
 
-const VERSION = '2026-09-03.73550966-new-student-recovery-active-timetable';
+const VERSION = '2026-09-03.73550967-teacher-initial-card-style-fix';
 window.__ULIM_NEW_STUDENT_REGISTRATION_PUBLIC_73550937__ = true;
 window.__ULIM_NEW_STUDENT_PUBLIC_SPECIAL_OWNER_73550963__ = true;
 window.__ULIM_NEW_STUDENT_CURRICULUM_INSTRUCTOR_TABS_73550964__ = true;
 window.__ULIM_NEW_STUDENT_ACADEMY_INTRO_TITLE_HIDE_73550965__ = true;
 window.__ULIM_NEW_STUDENT_ACTIVE_TIMETABLE_73550966__ = true;
+window.__ULIM_NEW_STUDENT_TEACHER_INITIAL_STYLE_73550967__ = true;
 window.__ULIM_NEW_STUDENT_PUBLIC_LOADING_FAILSAFE_73550951__ = true;
 
 const FIREBASE_CONFIG = Object.freeze({
@@ -206,6 +207,7 @@ function openAcademyDetail73550963(item,type){
   modal.classList.add('open');
 }
 function renderAcademySpecialBody73550963(meta){
+  ensureAcademyDetailModal73550963();
   const rest=text(meta&&meta.__rest);
   let html=rest?'<div style="white-space:pre-wrap;line-height:1.75;color:#334155;margin-bottom:12px">'+esc(rest)+'</div>':'';
   const items=Array.isArray(meta&&meta.items)?meta.items:[];
