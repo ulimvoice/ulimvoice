@@ -6,8 +6,9 @@
   global.__ULIM_STUDENT_MANAGEMENT_UI_R19R6_7355039__ = true;
   global.__ULIM_STUDENT_DETAIL_REGISTRATION_META_73550940__ = true;
   global.__ULIM_NEW_STUDENT_ADMIN_BUTTON_PRIMARY_73550946__ = true;
+  global.__ULIM_NEW_STUDENT_ADMIN_BUTTON_CLICK_BIND_73550948__ = true;
 
-  const VERSION = '2026-09-02.73550940-student-detail-registration-info';
+  const VERSION = '2026-09-03.73550948-new-student-admin-button-click-direct-bind-fix';
   const CARD_ID = 'ulimStudentManagementCard7352';
   const TABLE_ID = 'ulimStudentManagementTable7352';
   const SUMMARY_ID = 'ulimStudentManagementSummary7352';
@@ -818,6 +819,18 @@
     document.getElementById('ulimStudentAddOpen73546')?.addEventListener('click', function () { openPreparedModal('ulimStudentAddModal73546', '#ulimNewStudentClasses7352'); });
     document.getElementById('ulimClassAddOpen73546')?.addEventListener('click', function () { openPreparedModal('ulimClassAddModal73546', '#ulimClassInstructor7354'); });
     document.getElementById('ulimCourseSettingsOpen73546')?.addEventListener('click', function () { openPreparedModal('ulimCourseSettingsModal73546', '#ulimCourseWindowClasses7352'); });
+    document.getElementById('ulimNewStudentRegistrationAdminOpen73550937')?.addEventListener('click', function (event) {
+      if (event) {
+        event.preventDefault();
+        if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+      }
+      const openNewStudentAdmin73550948 = global.ulimOpenNewStudentRegistrationAdmin73550937;
+      if (typeof openNewStudentAdmin73550948 === 'function') {
+        openNewStudentAdmin73550948();
+        return;
+      }
+      alert('신규생 등록페이지 관리 기능을 준비하지 못했습니다. 페이지를 새로고침해주세요.');
+    });
     document.getElementById('ulimMessageOpen73546')?.addEventListener('click', openMessageModal);
     document.getElementById('ulimStudentSave73546')?.addEventListener('click', function () {
       if (typeof global.ulimStudentManagementSaveAll7352 === 'function') global.ulimStudentManagementSaveAll7352();
