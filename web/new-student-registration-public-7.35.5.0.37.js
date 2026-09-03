@@ -1,11 +1,12 @@
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js';
 
-const VERSION = '2026-09-03.73550965-academy-intro-duplicate-title-hide';
+const VERSION = '2026-09-03.73550966-new-student-recovery-active-timetable';
 window.__ULIM_NEW_STUDENT_REGISTRATION_PUBLIC_73550937__ = true;
 window.__ULIM_NEW_STUDENT_PUBLIC_SPECIAL_OWNER_73550963__ = true;
 window.__ULIM_NEW_STUDENT_CURRICULUM_INSTRUCTOR_TABS_73550964__ = true;
 window.__ULIM_NEW_STUDENT_ACADEMY_INTRO_TITLE_HIDE_73550965__ = true;
+window.__ULIM_NEW_STUDENT_ACTIVE_TIMETABLE_73550966__ = true;
 window.__ULIM_NEW_STUDENT_PUBLIC_LOADING_FAILSAFE_73550951__ = true;
 
 const FIREBASE_CONFIG = Object.freeze({
@@ -223,20 +224,220 @@ function renderAcademySpecialBody73550963(meta){
   return null;
 }
 
+let scheduleAudience73550966='youth';
+let scheduleDay73550966='';
+
+function scheduleNorm73550966(v){
+  return text(v).normalize('NFKC').replace(/\s+/g,'').toLowerCase();
+}
+function scheduleDayFromItem73550966(item,raw){
+  const direct=text(item&&item.dayName);
+  const directMatch=direct.match(/(월|화|수|목|금|토|일)/);
+  if(directMatch)return directMatch[1];
+  const rawMatch=text(raw).match(/(월|화|수|목|금|토|일)요일/);
+  if(rawMatch)return rawMatch[1];
+  const n=Number(item&&item.weekday);
+  if(Number.isFinite(n)){
+    const map={0:'일',1:'월',2:'화',3:'수',4:'목',5:'금',6:'토',7:'일'};
+    return map[n]||'';
+  }
+  return '';
+}
+function scheduleTimes73550966(item,raw){
+  let start=text(item&&item.startTime),end=text(item&&item.endTime);
+  if(!start||!end){
+    const m=text(raw).match(/(\d{1,2}:\d{2})\s*[~～\-–—]\s*(\d{1,2}:\d{2})/);
+    if(m){if(!start)start=m[1];if(!end)end=m[2];}
+  }
+  return {start,end};
+}
+function scheduleInstructor73550966(item,raw){
+  const direct=text(item&&item.instructorName);
+  if(direct)return direct.replace(/\s*T$/i,'');
+  const m=text(raw).match(/^\[([^\]]+?)T?\]\s*[-–—]?/);
+  return m?text(m[1]).replace(/\s*T$/i,''):'';
+}
+function scheduleClassTitle73550966(item,raw){
+  let value=text(item&&item.baseName)||text(item&&item.className)||text(item&&item.label)||text(raw);
+  value=value.replace(/^\[[^\]]+\]\s*[-–—]?\s*/,'');
+  value=value.replace(/^(월|화|수|목|금|토|일)요일\s*/,'');
+  value=value.replace(/\s*\d{1,2}:\d{2}\s*[~～\-–—]\s*\d{1,2}:\d{2}\s*$/,'');
+  value=value.replace(/\s{2,}/g,' ').trim();
+  return value||'수업';
+}
+function scheduleAudienceFromItem73550966(item,raw,title){
+  const group=scheduleNorm73550966(item&&item.audienceGroup);
+  if(/adult|성인/.test(group))return 'adult';
+  if(/youth|teen|minor|child|student|청소년|학생|아동/.test(group))return 'youth';
+  const hay=text(raw)+' '+text(title);
+  return /(청소년|초등|중등|고등|중고등|학생|아동|키즈|주니어|틴)/.test(hay)?'youth':'adult';
+}
+function scheduleMinutes73550966(value){
+  const m=text(value).match(/^(\d{1,2}):(\d{2})$/);
+  return m?Number(m[1])*60+Number(m[2]):9999;
+}
+function scheduleSourceClasses73550966(){
+  const map=new Map();
+  const add=(item)=>{
+    if(!item||item.selectable===false)return;
+    const raw=text(item.className)||text(item.label)||text(item.baseName);
+    const instructor=scheduleInstructor73550966(item,raw);
+    if(!raw)return;
+    if(/김철수/.test(instructor)||/김철수/.test(raw))return;
+    const key=text(item.classId)||scheduleNorm73550966(raw+'|'+instructor);
+    if(!key)return;
+    const prev=map.get(key)||{};
+    const next=Object.assign({},prev);
+    Object.keys(item).forEach(k=>{
+      const v=item[k];
+      if(v!==undefined&&v!==null&&v!=='')next[k]=v;
+    });
+    if(!next.className)next.className=raw;
+    map.set(key,next);
+  };
+  (Array.isArray(config&&config.classes)?config.classes:[]).forEach(add);
+  (Array.isArray(config&&config.academyPages)?config.academyPages:[]).forEach(page=>{
+    const meta=parseAcademySpecialMeta73550963(page&&page.body);
+    if(meta&&meta.type==='curriculum'&&Array.isArray(meta.items))meta.items.forEach(add);
+  });
+  return Array.from(map.values());
+}
+function scheduleRows73550966(){
+  return scheduleSourceClasses73550966().map(item=>{
+    const raw=text(item.className)||text(item.label)||text(item.baseName);
+    const times=scheduleTimes73550966(item,raw);
+    const title=scheduleClassTitle73550966(item,raw);
+    return {
+      classId:text(item.classId),
+      title,
+      instructor:scheduleInstructor73550966(item,raw)||'담당강사 안내',
+      day:scheduleDayFromItem73550966(item,raw),
+      start:times.start,
+      end:times.end,
+      audience:scheduleAudienceFromItem73550966(item,raw,title)
+    };
+  }).filter(x=>x.day&&x.start)
+    .sort((a,b)=>scheduleMinutes73550966(a.start)-scheduleMinutes73550966(b.start)||a.title.localeCompare(b.title,'ko'));
+}
+function ensureScheduleStyle73550966(){
+  if(document.getElementById('ulimScheduleStyle73550966'))return;
+  const s=document.createElement('style');
+  s.id='ulimScheduleStyle73550966';
+  s.textContent=`
+    .ulim-schedule73550966{margin-top:4px}
+    .ulim-schedule-audience73550966{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:13px}
+    .ulim-schedule-audience73550966 button{border:1px solid #cfe7df;background:#fff;color:#14705c;border-radius:14px;padding:12px 10px;font-weight:950;font-size:16px}
+    .ulim-schedule-audience73550966 button.active{background:#14705c;color:#fff;border-color:#14705c;box-shadow:0 7px 18px rgba(20,112,92,.16)}
+    .ulim-schedule-days73550966{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-bottom:15px}
+    .ulim-schedule-days73550966 button{border:1px solid #dbe7e3;background:#fff;color:#64748b;border-radius:11px;padding:9px 3px;font-weight:900}
+    .ulim-schedule-days73550966 button.active{background:#dcf7ed;color:#14705c;border-color:#75cdb5}
+    .ulim-schedule-days73550966 button:disabled{opacity:.28;cursor:default}
+    .ulim-schedule-day-title73550966{display:flex;align-items:center;gap:8px;margin:0 0 11px;font-size:15px;font-weight:950;color:#334155}
+    .ulim-schedule-day-title73550966 span{display:inline-flex;padding:4px 9px;border-radius:999px;background:#eefaf6;color:#14705c;font-size:12px}
+    .ulim-schedule-time-grid73550966{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .ulim-schedule-time-block73550966{border:1px solid #d9e9e3;border-radius:16px;background:#fbfffd;padding:11px;min-width:0}
+    .ulim-schedule-time-head73550966{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+    .ulim-schedule-time-head73550966 b{font-size:18px;color:#14705c;letter-spacing:-.02em}
+    .ulim-schedule-time-head73550966 small{color:#94a3b8;font-size:11px}
+    .ulim-schedule-parallel73550966{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+    .ulim-schedule-class73550966{min-width:0;border:1px solid #e2e8f0;background:#fff;border-radius:12px;padding:9px 10px;box-shadow:0 4px 11px rgba(15,23,42,.035)}
+    .ulim-schedule-class73550966 b{display:block;color:#0f172a;font-size:13px;line-height:1.35;overflow-wrap:anywhere}
+    .ulim-schedule-class73550966 span{display:block;color:#14705c;font-size:11px;font-weight:900;margin-top:4px}
+    .ulim-schedule-class73550966 small{display:block;color:#64748b;font-size:10px;margin-top:3px}
+    .ulim-schedule-empty73550966{border:1px dashed #cbd5e1;border-radius:14px;padding:24px 12px;text-align:center;color:#64748b;background:#f8fafc}
+    @media(min-width:700px){
+      .ulim-schedule-audience73550966 button{font-size:18px;padding:13px}
+      .ulim-schedule-days73550966 button{font-size:15px;padding:10px 3px}
+      .ulim-schedule-time-block73550966{padding:12px}
+      .ulim-schedule-class73550966 b{font-size:14px}
+      .ulim-schedule-class73550966 span{font-size:12px}
+    }
+    @media(max-width:620px){
+      .ulim-schedule-days73550966{gap:4px}
+      .ulim-schedule-days73550966 button{font-size:12px;padding:8px 1px}
+      .ulim-schedule-time-grid73550966{grid-template-columns:1fr}
+      .ulim-schedule-parallel73550966{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+    @media(max-width:360px){.ulim-schedule-parallel73550966{grid-template-columns:1fr}}
+  `;
+  document.head.appendChild(s);
+}
+function isSchedulePage73550966(page){
+  const title=scheduleNorm73550966(page&&page.title);
+  return title.includes('반시간표')||title==='시간표'||title.includes('수업시간표');
+}
+function renderClassSchedule73550966(){
+  ensureScheduleStyle73550966();
+  const days=['월','화','수','목','금','토','일'];
+  const all=scheduleRows73550966();
+  const youth=all.filter(x=>x.audience==='youth');
+  const adult=all.filter(x=>x.audience==='adult');
+  if(scheduleAudience73550966==='youth'&&!youth.length&&adult.length)scheduleAudience73550966='adult';
+  if(scheduleAudience73550966==='adult'&&!adult.length&&youth.length)scheduleAudience73550966='youth';
+  const rows=scheduleAudience73550966==='youth'?youth:adult;
+  const activeDays=new Set(rows.map(x=>x.day));
+  if(!scheduleDay73550966||!activeDays.has(scheduleDay73550966)){
+    scheduleDay73550966=days.find(d=>activeDays.has(d))||'월';
+  }
+  const dayRows=rows.filter(x=>x.day===scheduleDay73550966);
+  const groups=[];
+  dayRows.forEach(row=>{
+    let g=groups.find(x=>x.start===row.start);
+    if(!g){g={start:row.start,items:[]};groups.push(g);}
+    g.items.push(row);
+  });
+  const audienceHtml='<div class="ulim-schedule-audience73550966">'+
+    '<button type="button" data-schedule-audience73550966="youth" class="'+(scheduleAudience73550966==='youth'?'active':'')+'">청소년</button>'+
+    '<button type="button" data-schedule-audience73550966="adult" class="'+(scheduleAudience73550966==='adult'?'active':'')+'">성인반</button>'+
+    '</div>';
+  const daysHtml='<div class="ulim-schedule-days73550966">'+days.map(d=>
+    '<button type="button" data-schedule-day73550966="'+d+'" class="'+(d===scheduleDay73550966?'active':'')+'"'+(activeDays.has(d)?'':' disabled')+'>'+d+'</button>'
+  ).join('')+'</div>';
+  const bodyHtml=groups.length
+    ? '<div class="ulim-schedule-day-title73550966">'+scheduleDay73550966+'요일 <span>'+dayRows.length+'개 수업</span></div>'+
+      '<div class="ulim-schedule-time-grid73550966">'+groups.map(g=>
+        '<section class="ulim-schedule-time-block73550966">'+
+          '<div class="ulim-schedule-time-head73550966"><b>'+esc(g.start)+'</b><small>'+g.items.length+(g.items.length>1?'개 동시수업':'개 수업')+'</small></div>'+
+          '<div class="ulim-schedule-parallel73550966">'+g.items.map(x=>
+            '<div class="ulim-schedule-class73550966"><b>'+esc(x.title)+'</b><span>'+esc(x.instructor)+'</span><small>'+esc(x.start)+(x.end?' ~ '+esc(x.end):'')+'</small></div>'
+          ).join('')+'</div>'+
+        '</section>'
+      ).join('')+'</div>'
+    : '<div class="ulim-schedule-empty73550966">해당 요일에 표시할 수업이 없습니다.</div>';
+  return {html:'<div class="ulim-schedule73550966">'+audienceHtml+daysHtml+bodyHtml+'</div>'};
+}
+function bindClassSchedule73550966(host){
+  host.querySelectorAll('[data-schedule-audience73550966]').forEach(btn=>btn.addEventListener('click',()=>{
+    scheduleAudience73550966=btn.dataset.scheduleAudience73550966==='adult'?'adult':'youth';
+    scheduleDay73550966='';
+    renderAcademy();
+  }));
+  host.querySelectorAll('[data-schedule-day73550966]').forEach(btn=>btn.addEventListener('click',()=>{
+    if(btn.disabled)return;
+    scheduleDay73550966=text(btn.dataset.scheduleDay73550966);
+    renderAcademy();
+  }));
+}
+
 function renderAcademy(){
   const host=document.getElementById('academyContent73550937'); if(!host||!config) return;
   const pages=Array.isArray(config.academyPages)&&config.academyPages.length?config.academyPages:[{title:'학원소개',body:'울림 성우·스피치·연기학원에 오신 것을 환영합니다.'}];
   academyIndex=Math.max(0,Math.min(academyIndex,pages.length-1));
   const page=pages[academyIndex]||{};
-  const special=parseAcademySpecialMeta73550963(page.body);
+  const schedulePage=isSchedulePage73550966(page);
+  const special=schedulePage?null:parseAcademySpecialMeta73550963(page.body);
   const specialView=special&&['teachers','curriculum'].includes(special.type)?renderAcademySpecialBody73550963(special):null;
-  const image=!specialView?safeImageUrl(page.imageUrl):'';
+  const scheduleView=schedulePage?renderClassSchedule73550966():null;
+  const image=!specialView&&!scheduleView?safeImageUrl(page.imageUrl):'';
+  const hideTitle=academyIndex===0&&!specialView&&!scheduleView&&!!image;
+  const contentHtml=scheduleView?scheduleView.html:(specialView?specialView.html:esc(page.body||'').replace(/\n/g,'<br>'));
   host.innerHTML='<div class="academy-nav">'+pages.map((p,i)=>'<button type="button" class="academy-chip'+(i===academyIndex?' active':'')+'" data-academy-index="'+i+'">'+esc(p.title||('안내 '+(i+1)))+'</button>').join('')+'</div>'+
-    '<div class="card">'+(image?'<img class="info-image" src="'+esc(image)+'" alt="">':'')+'+(academyIndex===0&&!specialView&&!!image?'':'<h2 class="page-title">'+esc(page.title||'학원안내')+'</h2>')+'<div class="body-text">'+(specialView?specialView.html:esc(page.body||'').replace(/\n/g,'<br>'))+'</div>'+
+    '<div class="card">'+(image?'<img class="info-image" src="'+esc(image)+'" alt="">':'')+(hideTitle?'':'<h2 class="page-title">'+esc(page.title||'학원안내')+'</h2>')+'<div class="body-text">'+contentHtml+'</div>'+
     '<div class="academy-actions"><button type="button" class="prev" id="academyPrev73550937"'+(academyIndex===0?' disabled':'')+'>이전</button><button type="button" class="next" id="academyNext73550937">'+(academyIndex===pages.length-1?'수강신청 보기':'다음')+'</button></div></div>';
   host.querySelectorAll('[data-academy-index]').forEach(btn=>btn.addEventListener('click',()=>{academyIndex=Number(btn.dataset.academyIndex)||0;renderAcademy();}));
   document.getElementById('academyPrev73550937')?.addEventListener('click',()=>{academyIndex=Math.max(0,academyIndex-1);renderAcademy();});
   document.getElementById('academyNext73550937')?.addEventListener('click',()=>{if(academyIndex>=pages.length-1)setTopTab('apply');else{academyIndex++;renderAcademy();}});
+  if(scheduleView)bindClassSchedule73550966(host);
   if(specialView&&specialView.type==='teachers'){
     host.querySelectorAll('[data-teacher-special73550963]').forEach(btn=>btn.addEventListener('click',()=>openAcademyDetail73550963(specialView.items[Number(btn.dataset.teacherSpecial73550963)]||{},'teachers')));
   }
