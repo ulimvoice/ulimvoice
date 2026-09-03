@@ -1,9 +1,10 @@
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js';
 
-const VERSION = '2026-09-03.73550963-public-special-page-direct-owner-fix';
+const VERSION = '2026-09-03.73550964-curriculum-instructor-group-modal-tabs';
 window.__ULIM_NEW_STUDENT_REGISTRATION_PUBLIC_73550937__ = true;
 window.__ULIM_NEW_STUDENT_PUBLIC_SPECIAL_OWNER_73550963__ = true;
+window.__ULIM_NEW_STUDENT_CURRICULUM_INSTRUCTOR_TABS_73550964__ = true;
 window.__ULIM_NEW_STUDENT_PUBLIC_LOADING_FAILSAFE_73550951__ = true;
 
 const FIREBASE_CONFIG = Object.freeze({
@@ -120,7 +121,77 @@ function ensureAcademyDetailModal73550963(){
   modal.addEventListener('click',e=>{if(e.target.closest('[data-academy-detail-close73550963="1"]'))modal.classList.remove('open');});
   return modal;
 }
+function curriculumClassTabLabel73550964(item){
+  let label=text(item&&item.className)||text(item&&item.label)||text(item&&item.classId)||'반';
+  label=label.replace(/^\\[[^\\]]+\\]\\s*[-–—]?\\s*/,'');
+  label=label.replace(/^(월|화|수|목|금|토|일)요일\\s+/,'');
+  label=label.replace(/\\s+\\d{1,2}:\\d{2}\\s*[~～-]\\s*\\d{1,2}:\\d{2}\\s*$/,'');
+  label=label.replace(/\\s{2,}/g,' ').trim();
+  return label||text(item&&item.label)||'반';
+}
+function curriculumInstructorGroups73550964(items){
+  const map=new Map();
+  (Array.isArray(items)?items:[]).forEach(item=>{
+    if(!item)return;
+    const instructor=text(item.instructorName)||'담당강사 미지정';
+    if(!map.has(instructor))map.set(instructor,{instructorName:instructor,classes:[]});
+    map.get(instructor).classes.push(item);
+  });
+  return Array.from(map.values());
+}
+function ensureCurriculumInstructorStyle73550964(){
+  if(document.getElementById('ulimCurriculumInstructorStyle73550964'))return;
+  const style=document.createElement('style');
+  style.id='ulimCurriculumInstructorStyle73550964';
+  style.textContent=`
+    .ulim-curriculum-teacher-list73550964{display:flex;flex-wrap:wrap;gap:10px;margin-top:15px}
+    .ulim-curriculum-teacher73550964{border:1px solid #b9ddd2;background:#fff;color:#14705c;border-radius:999px;padding:13px 21px;font-size:17px;font-weight:950;box-shadow:0 5px 14px rgba(20,112,92,.06)}
+    .ulim-curriculum-teacher73550964:hover,.ulim-curriculum-teacher73550964:focus-visible{background:#eefaf6;border-color:#65c8ae;outline:none}
+    .ulim-curriculum-popup-title73550964{clear:both;margin:2px 0 14px;font-size:28px;font-weight:950;color:#0f172a}
+    .ulim-curriculum-class-tabs73550964{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;margin-bottom:12px;scrollbar-width:thin}
+    .ulim-curriculum-class-tab73550964{flex:0 0 auto;border:1px solid #cbd5e1;background:#fff;color:#475569;border-radius:999px;padding:10px 15px;font-weight:900;white-space:nowrap}
+    .ulim-curriculum-class-tab73550964.active{background:#14705c;color:#fff;border-color:#14705c}
+    .ulim-curriculum-image73550964{display:block;width:100%;max-height:68vh;object-fit:contain;object-position:center;margin:0 auto;border-radius:16px;background:#f8fafc}
+    .ulim-curriculum-empty73550964{padding:28px 16px;border:1px dashed #cbd5e1;border-radius:14px;text-align:center;color:#64748b;background:#f8fafc}
+    .ulim-curriculum-class-caption73550964{margin:12px 2px 0;color:#64748b;font-size:13px;line-height:1.55}
+    @media(max-width:540px){
+      .ulim-curriculum-teacher-list73550964{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+      .ulim-curriculum-teacher73550964{width:100%;font-size:14px;padding:12px 8px}
+      .ulim-curriculum-popup-title73550964{font-size:23px}
+      .ulim-curriculum-class-tab73550964{font-size:13px;padding:9px 12px}
+    }
+  `;
+  document.head.appendChild(style);
+}
+function renderCurriculumClass73550964(group,index){
+  const item=group&&Array.isArray(group.classes)?group.classes[index]:null;
+  const host=document.getElementById('ulimCurriculumClassBody73550964');
+  if(!host||!item)return;
+  document.querySelectorAll('[data-curriculum-class-tab73550964]').forEach(btn=>btn.classList.toggle('active',Number(btn.dataset.curriculumClassTab73550964)===index));
+  const image=safeImageUrl(item.imageUrl);
+  const label=curriculumClassTabLabel73550964(item);
+  host.innerHTML=image
+    ? '<img class="ulim-curriculum-image73550964" src="'+esc(image)+'" alt="'+esc(label)+'">'+(item.detail?'<div class="ulim-curriculum-class-caption73550964">'+esc(item.detail)+'</div>':'')
+    : '<div class="ulim-curriculum-empty73550964">등록된 커리큘럼 이미지가 없습니다.</div>';
+}
+function openCurriculumInstructor73550964(group){
+  ensureCurriculumInstructorStyle73550964();
+  const modal=ensureAcademyDetailModal73550963();
+  const classes=group&&Array.isArray(group.classes)?group.classes:[];
+  const tabs=classes.map((item,i)=>'<button type="button" class="ulim-curriculum-class-tab73550964'+(i===0?' active':'')+'" data-curriculum-class-tab73550964="'+i+'">'+esc(curriculumClassTabLabel73550964(item))+'</button>').join('');
+  document.getElementById('ulimAcademyDetailBody73550963').innerHTML=
+    '<h3 class="ulim-curriculum-popup-title73550964">'+esc(group&&group.instructorName||'담당강사')+'</h3>'+
+    '<div class="ulim-curriculum-class-tabs73550964">'+tabs+'</div>'+
+    '<div id="ulimCurriculumClassBody73550964"></div>';
+  document.querySelectorAll('[data-curriculum-class-tab73550964]').forEach(btn=>btn.addEventListener('click',()=>renderCurriculumClass73550964(group,Number(btn.dataset.curriculumClassTab73550964))));
+  modal.classList.add('open');
+  if(classes.length)renderCurriculumClass73550964(group,0);
+}
 function openAcademyDetail73550963(item,type){
+  if(type==='curriculum'&&item&&Array.isArray(item.classes)){
+    openCurriculumInstructor73550964(item);
+    return;
+  }
   const modal=ensureAcademyDetailModal73550963();
   const title=type==='teachers'?text(item.name):text(item.label||item.className||item.classId);
   const image=safeImageUrl(item.imageUrl||item.thumbnailUrl);
@@ -142,12 +213,15 @@ function renderAcademySpecialBody73550963(meta){
     return {html,items:rows,type:'teachers'};
   }
   if(meta.type==='curriculum'){
-    const rows=items.filter(x=>x&&text(x.label||x.className||x.classId));
-    html+='<div class="ulim-academy-curr-tabs73550963">'+rows.map((x,i)=>'<button type="button" class="ulim-academy-curr-tab73550963" data-curr-special73550963="'+i+'">'+esc(x.label||x.className||x.classId)+(x.instructorName?'<small>'+esc(x.instructorName)+'</small>':'')+'</button>').join('')+'</div>';
-    return {html,items:rows,type:'curriculum'};
+    ensureCurriculumInstructorStyle73550964();
+    const rows=items.filter(x=>x&&text(x.instructorName||x.label||x.className||x.classId));
+    const groups=curriculumInstructorGroups73550964(rows);
+    html+='<div class="ulim-curriculum-teacher-list73550964">'+groups.map((g,i)=>'<button type="button" class="ulim-curriculum-teacher73550964" data-curr-special73550963="'+i+'">'+esc(g.instructorName)+'</button>').join('')+'</div>';
+    return {html,items:groups,type:'curriculum'};
   }
   return null;
 }
+
 function renderAcademy(){
   const host=document.getElementById('academyContent73550937'); if(!host||!config) return;
   const pages=Array.isArray(config.academyPages)&&config.academyPages.length?config.academyPages:[{title:'학원소개',body:'울림 성우·스피치·연기학원에 오신 것을 환영합니다.'}];
