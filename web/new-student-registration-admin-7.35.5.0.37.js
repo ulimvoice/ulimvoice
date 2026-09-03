@@ -4,6 +4,7 @@
   global.__ULIM_NEW_STUDENT_REGISTRATION_ADMIN_73550937__=true;
   const VERSION='2026-09-03.73550945-drive-image-tablet-ui-anchor-fix';
   global.__ULIM_NEW_STUDENT_DRIVE_IMAGE_73550945__=true;
+  global.__ULIM_NEW_STUDENT_ADMIN_BUTTON_BIND_73550946__=true;
   global.__ULIM_NEW_STUDENT_REGISTRATION_ADMIN_ENTRY_73550939__=true;
   const MODAL_ID='ulimNewStudentRegistrationAdmin73550937';
   const STYLE_ID='ulimNewStudentRegistrationAdminStyle73550937';
@@ -82,7 +83,7 @@
     const actions=document.getElementById('ulimStudentPrimaryActions73546')||document.querySelector('#ulimStudentManagementCard7352 .ulim-toolbar-actions');
     if(!actions)return false;
     let b=document.getElementById(BUTTON_ID);
-    if(b&&b.parentNode===actions)return true;
+    if(b&&b.parentNode===actions){b.type='button';b.className='admin-btn';b.textContent='신규생 등록페이지';b.onclick=open;return true;}
     if(b)b.remove();
     b=document.createElement('button');b.type='button';b.id=BUTTON_ID;b.className='admin-btn green';b.textContent='신규생 등록페이지';b.onclick=open;
     const courseButton=document.getElementById('ulimCourseSettingsOpen73546');

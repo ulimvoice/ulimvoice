@@ -5,6 +5,7 @@
   global.__ULIM_STUDENT_MANAGEMENT_UI_735410__ = true;
   global.__ULIM_STUDENT_MANAGEMENT_UI_R19R6_7355039__ = true;
   global.__ULIM_STUDENT_DETAIL_REGISTRATION_META_73550940__ = true;
+  global.__ULIM_NEW_STUDENT_ADMIN_BUTTON_PRIMARY_73550946__ = true;
 
   const VERSION = '2026-09-02.73550940-student-detail-registration-info';
   const CARD_ID = 'ulimStudentManagementCard7352';
@@ -72,6 +73,7 @@
         <button type="button" class="admin-btn" id="ulimStudentAddOpen73546">학생추가</button>
         <button type="button" class="admin-btn" id="ulimClassAddOpen73546">반 추가</button>
         <button type="button" class="admin-btn" id="ulimCourseSettingsOpen73546">수강신청·모집반 설정</button>
+        <button type="button" class="admin-btn" id="ulimNewStudentRegistrationAdminOpen73550937">신규생 등록페이지</button>
         <button type="button" class="admin-btn orange" id="ulimMessageOpen73546">메시지 보내기</button>
       </div>
 
