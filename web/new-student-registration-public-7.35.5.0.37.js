@@ -1,8 +1,9 @@
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js';
 
-const VERSION = '2026-09-02.73550937-new-student-registration-public';
+const VERSION = '2026-09-03.73550951-new-student-loading-failsafe-crlf-fix';
 window.__ULIM_NEW_STUDENT_REGISTRATION_PUBLIC_73550937__ = true;
+window.__ULIM_NEW_STUDENT_PUBLIC_LOADING_FAILSAFE_73550951__ = true;
 
 const FIREBASE_CONFIG = Object.freeze({
   apiKey:'AIzaSyAW-sqtUQ_mJ6ZS_aV8pTOAKvHTSX-FXUM',
@@ -38,7 +39,8 @@ function requestId(prefix){ return prefix+'-'+Date.now()+'-'+Math.random().toStr
 function showLoading(message){ const el=document.getElementById('loading73550937'); const label=document.getElementById('loadingText73550937'); if(label) label.textContent=message||'처리 중...'; if(el) el.classList.add('on'); }
 function hideLoading(){ const el=document.getElementById('loading73550937'); if(el) el.classList.remove('on'); }
 function callableMessage(error, fallback){ const raw=text(error&&error.message).replace(/^FirebaseError:\s*/i,''); return raw && raw.toLowerCase() !== 'internal' ? raw : fallback; }
-async function call(name,payload){ const fn=httpsCallable(functions,name,{timeout:120000}); const result=await fn(payload||{}); return result&&result.data||{}; }
+function withTimeout73550951(promise,ms,message){ return new Promise((resolve,reject)=>{ let settled=false; const timer=setTimeout(()=>{ if(settled)return; settled=true; reject(new Error(message||'요청 시간이 초과되었습니다.')); },Math.max(1000,Number(ms)||20000)); Promise.resolve(promise).then(v=>{ if(settled)return; settled=true; clearTimeout(timer); resolve(v); },e=>{ if(settled)return; settled=true; clearTimeout(timer); reject(e); }); }); }
+async function call(name,payload){ const fn=httpsCallable(functions,name,{timeout:25000}); const result=await withTimeout73550951(fn(payload||{}),25000,'페이지 정보를 불러오는 시간이 초과되었습니다.'); return result&&result.data||{}; }
 function isMinor(){
   const raw=form.birthDate; if(!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return false;
   const birth=new Date(raw+'T12:00:00+09:00'); if(Number.isNaN(birth.getTime())) return false;
@@ -197,13 +199,14 @@ async function submitRegistration(){
 
 async function load(){
   showLoading('학원안내와 수강신청 정보를 불러오는 중...');
+  const loadingFailsafe73550951=setTimeout(hideLoading,28000);
   try{
     config=await call('getPublicNewStudentRegistration73550937',{requestId:requestId('new-student-config-73550937')});
     document.getElementById('publicTitle73550937').textContent=text(config.publicTitle)||'울림 성우·스피치·연기학원';
     renderAcademy(); renderApplication();
   }catch(error){
     const host=document.getElementById('academyContent73550937'); if(host) host.innerHTML='<div class="card"><h2 class="page-title">페이지를 불러오지 못했습니다.</h2><div class="notice">잠시 후 다시 접속해주세요.</div></div>';
-  }finally{hideLoading();}
+  }finally{clearTimeout(loadingFailsafe73550951);hideLoading();}
 }
 
 document.querySelectorAll('[data-top-tab]').forEach(btn=>btn.addEventListener('click',()=>setTopTab(btn.dataset.topTab)));
