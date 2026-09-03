@@ -2,7 +2,8 @@
   'use strict';
   if(global.__ULIM_NEW_STUDENT_REGISTRATION_ADMIN_73550937__) return;
   global.__ULIM_NEW_STUDENT_REGISTRATION_ADMIN_73550937__=true;
-  const VERSION='2026-09-03.73550949-new-student-admin-runtime-syntax-fix';
+  const VERSION='2026-09-03.73550951-new-student-loading-failsafe-crlf-fix';
+  global.__ULIM_NEW_STUDENT_LOADING_FAILSAFE_73550951__=true;
   global.__ULIM_NEW_STUDENT_ADMIN_RUNTIME_SYNTAX_FIX_73550949__=true;
   global.__ULIM_NEW_STUDENT_DRIVE_IMAGE_73550945__=true;
   global.__ULIM_NEW_STUDENT_ADMIN_BUTTON_BIND_73550946__=true;
@@ -19,8 +20,9 @@
   function info(){try{if(typeof global.adminReadStaffInfo_==='function'){const x=global.adminReadStaffInfo_();if(x)return x;}}catch(_e){} return global.adminInfo||{};}
   function isSuperAdmin(){const r=normalize(info().firebaseRole||info().role||info().adminRole||info().permission);return ['super','superadmin','fulladmin',normalize('전체관리자'),normalize('전체관리'),normalize('최고관리자'),normalize('원장')].includes(r);}
   function room(){return global.ULIM_ROOM_CLASSROOM_REALTIME_72919||global.ULIM_ROOM_CLASSROOM_REALTIME_72918||global.ULIM_ROOM_CLASSROOM_REALTIME_72917||global.ULIM_ROOM_CLASSROOM_REALTIME_72916||global.ULIM_ROOM_CLASSROOM_REALTIME_728||null;}
-  async function runtime(){const r=room();if(!r||typeof r.preloadRuntime!=='function')throw new Error('관리자 기능을 준비하지 못했습니다.');const rt=await r.preloadRuntime();if(!rt||!rt.auth||!rt.auth.currentUser||!rt.sdk||!rt.functions)throw new Error('관리자 로그인이 필요합니다.');if(typeof r.getStableIdToken==='function')await r.getStableIdToken(rt,false,'new-student-registration-admin-73550937');return rt;}
-  async function call(name,payload){const rt=await runtime();const fn=rt.sdk.httpsCallable(rt.functions,name);const res=await fn(payload||{});return res&&res.data||{};}
+  function withTimeout73550951(promise,ms,message){return new Promise((resolve,reject)=>{let settled=false;const timer=setTimeout(()=>{if(settled)return;settled=true;reject(new Error(message||'요청 시간이 초과되었습니다.'));},Math.max(1000,Number(ms)||20000));Promise.resolve(promise).then(v=>{if(settled)return;settled=true;clearTimeout(timer);resolve(v);},e=>{if(settled)return;settled=true;clearTimeout(timer);reject(e);});});}
+  async function runtime(){const r=room();if(!r||typeof r.preloadRuntime!=='function')throw new Error('관리자 기능을 준비하지 못했습니다.');const rt=await withTimeout73550951(r.preloadRuntime(),12000,'관리자 연결 시간이 초과되었습니다.');if(!rt||!rt.auth||!rt.auth.currentUser||!rt.sdk||!rt.functions)throw new Error('관리자 로그인이 필요합니다.');if(typeof r.getStableIdToken==='function')await withTimeout73550951(r.getStableIdToken(rt,false,'new-student-registration-admin-73550937'),10000,'관리자 인증 확인 시간이 초과되었습니다.');return rt;}
+  async function call(name,payload){const rt=await runtime();const fn=rt.sdk.httpsCallable(rt.functions,name);const res=await withTimeout73550951(fn(payload||{}),20000,'신규생 등록페이지 정보를 불러오는 시간이 초과되었습니다.');return res&&res.data||{};}
   function requestId(p){return p+'-'+Date.now()+'-'+Math.random().toString(36).slice(2);}
   function showLoading(m){try{if(typeof global.showLoading==='function')global.showLoading(m||'처리 중...');}catch(_e){}}
   function hideLoading(){try{if(typeof global.hideLoading==='function')global.hideLoading();}catch(_e){}}
@@ -44,7 +46,7 @@
   }
   function close(){document.getElementById(MODAL_ID)?.classList.remove('open');document.body.classList.remove('ulim-nr-admin-open73550937');}
   async function open(){if(!isSuperAdmin())return alert('전체관리자 권한이 필요합니다.');style();ensureModal().classList.add('open');document.body.classList.add('ulim-nr-admin-open73550937');await load(true);}
-  async function load(force){showLoading('신규생 등록페이지 설정을 불러오는 중...');try{data=await call('getNewStudentRegistrationAdmin73550937',{force:force===true,requestId:requestId('new-registration-admin-load')});render();}catch(e){alert(text(e&&e.message)||'신규생 등록페이지 설정을 불러오지 못했습니다.');}finally{hideLoading();}}
+  async function load(force){const body=document.getElementById('ulimNrBody73550937');if(body)body.innerHTML='<div class="ulim-nr-card73550937">신규생 등록페이지 정보를 불러오는 중...</div>';try{data=await call('getNewStudentRegistrationAdmin73550937',{force:force===true,requestId:requestId('new-registration-admin-load')});render();}catch(e){if(body)body.innerHTML='<div class="ulim-nr-card73550937"><b>불러오지 못했습니다.</b><div class="ulim-nr-note73550937" style="margin-top:8px">잠시 후 다시 시도해주세요.</div></div>';alert(text(e&&e.message)||'신규생 등록페이지 설정을 불러오지 못했습니다.');}finally{hideLoading();}}
 
   function settings(){return data&&data.settings||{};}function appContent(){return settings().applicationContent||{};}function academyPages(){return Array.isArray(settings().academyPages)?settings().academyPages:[];}
   function render(){const m=ensureModal();m.querySelectorAll('[data-nr-tab]').forEach(b=>b.classList.toggle('active',b.dataset.nrTab===tab));const body=document.getElementById('ulimNrBody73550937');if(!body)return;if(!data){body.innerHTML='<div class="ulim-nr-card73550937">불러오는 중...</div>';return;} if(tab==='basic')renderBasic(body);if(tab==='academy')renderAcademyEditor(body);if(tab==='application')renderApplicationEditor(body);if(tab==='submissions')renderSubmissions(body);}
