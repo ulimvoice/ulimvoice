@@ -1,8 +1,9 @@
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js';
 
-const VERSION = '2026-09-03.73550951-new-student-loading-failsafe-crlf-fix';
+const VERSION = '2026-09-03.73550963-public-special-page-direct-owner-fix';
 window.__ULIM_NEW_STUDENT_REGISTRATION_PUBLIC_73550937__ = true;
+window.__ULIM_NEW_STUDENT_PUBLIC_SPECIAL_OWNER_73550963__ = true;
 window.__ULIM_NEW_STUDENT_PUBLIC_LOADING_FAILSAFE_73550951__ = true;
 
 const FIREBASE_CONFIG = Object.freeze({
@@ -77,16 +78,96 @@ function setTopTab(tab){
   if(tab==='apply') renderApplication(); else renderAcademy();
 }
 
+function parseAcademySpecialMeta73550963(raw){
+  const value=text(raw);
+  const prefix='[[ULIMNS53]]',suffix='[[/ULIMNS53]]';
+  const a=value.indexOf(prefix),b=value.indexOf(suffix);
+  if(a<0||b<a)return null;
+  try{
+    const meta=JSON.parse(value.slice(a+prefix.length,b).trim());
+    meta.__rest=value.slice(b+suffix.length).trim();
+    return meta;
+  }catch(_e){return null;}
+}
+function ensureAcademyDetailModal73550963(){
+  let modal=document.getElementById('ulimAcademyDetailModal73550963');
+  if(modal)return modal;
+  const style=document.createElement('style');
+  style.id='ulimAcademySpecialStyle73550963';
+  style.textContent=`
+    .ulim-academy-teacher-grid73550963{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin-top:15px}
+    .ulim-academy-teacher-card73550963{width:100%;border:1px solid #cfe7df;border-radius:20px;background:#fff;padding:16px;display:flex;align-items:center;gap:14px;text-align:left;box-shadow:0 8px 24px rgba(20,112,92,.07)}
+    .ulim-academy-teacher-face73550963,.ulim-academy-teacher-placeholder73550963{width:86px;height:86px;flex:0 0 86px;border-radius:50%;border:1px solid #cce7de;background:#eef9f5;object-fit:cover;object-position:center}
+    .ulim-academy-teacher-placeholder73550963{display:grid;place-items:center;color:#14705c;font-size:30px}
+    .ulim-academy-teacher-name73550963{display:block;font-size:19px;font-weight:950;color:#14705c}.ulim-academy-teacher-summary73550963{display:block;margin-top:5px;color:#64748b;font-size:13px;line-height:1.5}
+    .ulim-academy-curr-tabs73550963{display:flex;flex-wrap:wrap;gap:9px;margin-top:15px}
+    .ulim-academy-curr-tab73550963{border:1px solid #b9ddd2;background:#fff;color:#14705c;border-radius:999px;padding:12px 17px;font-weight:950}
+    .ulim-academy-curr-tab73550963 small{display:block;margin-top:4px;color:#64748b;font-size:11px}
+    .ulim-academy-detail-modal73550963{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:2147483300;padding:18px}.ulim-academy-detail-modal73550963.open{display:flex}
+    .ulim-academy-detail-backdrop73550963{position:absolute;inset:0;background:rgba(15,23,42,.62)}
+    .ulim-academy-detail-panel73550963{position:relative;z-index:1;width:min(940px,96vw);max-height:92vh;overflow:auto;background:#fff;border-radius:24px;padding:26px;box-shadow:0 28px 90px rgba(0,0,0,.32)}
+    .ulim-academy-detail-close73550963{position:sticky;top:0;float:right;z-index:2;border:0;background:#eef2f7;width:42px;height:42px;border-radius:12px;font-size:23px}
+    .ulim-academy-detail-image73550963{display:block;width:100%;max-height:74vh;object-fit:contain;object-position:center;margin:4px auto 20px;border-radius:17px;background:#f8fafc}
+    .ulim-academy-detail-title73550963{clear:both;font-size:29px;font-weight:950;margin:3px 0 8px}.ulim-academy-detail-sub73550963{color:#14705c;font-weight:900;margin:0 0 15px}.ulim-academy-detail-body73550963{white-space:pre-wrap;line-height:1.85;color:#334155}
+    @media(max-width:540px){.ulim-academy-teacher-grid73550963{grid-template-columns:1fr}.ulim-academy-teacher-face73550963,.ulim-academy-teacher-placeholder73550963{width:76px;height:76px;flex-basis:76px}.ulim-academy-curr-tabs73550963{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.ulim-academy-curr-tab73550963{width:100%;padding:12px 8px;font-size:13px}.ulim-academy-detail-panel73550963{padding:17px}}
+  `;
+  document.head.appendChild(style);
+  modal=document.createElement('div');
+  modal.id='ulimAcademyDetailModal73550963';
+  modal.className='ulim-academy-detail-modal73550963';
+  modal.innerHTML='<div class="ulim-academy-detail-backdrop73550963" data-academy-detail-close73550963="1"></div><section class="ulim-academy-detail-panel73550963"><button type="button" class="ulim-academy-detail-close73550963" data-academy-detail-close73550963="1">×</button><div id="ulimAcademyDetailBody73550963"></div></section>';
+  document.body.appendChild(modal);
+  modal.addEventListener('click',e=>{if(e.target.closest('[data-academy-detail-close73550963="1"]'))modal.classList.remove('open');});
+  return modal;
+}
+function openAcademyDetail73550963(item,type){
+  const modal=ensureAcademyDetailModal73550963();
+  const title=type==='teachers'?text(item.name):text(item.label||item.className||item.classId);
+  const image=safeImageUrl(item.imageUrl||item.thumbnailUrl);
+  let html='';
+  if(image)html+='<img class="ulim-academy-detail-image73550963" src="'+esc(image)+'" alt="'+esc(title)+'">';
+  html+='<h3 class="ulim-academy-detail-title73550963">'+esc(title)+'</h3>';
+  if(item.summary)html+='<div class="ulim-academy-detail-sub73550963">'+esc(item.summary)+'</div>';
+  if(item.detail)html+='<div class="ulim-academy-detail-body73550963">'+esc(item.detail)+'</div>';
+  document.getElementById('ulimAcademyDetailBody73550963').innerHTML=html;
+  modal.classList.add('open');
+}
+function renderAcademySpecialBody73550963(meta){
+  const rest=text(meta&&meta.__rest);
+  let html=rest?'<div style="white-space:pre-wrap;line-height:1.75;color:#334155;margin-bottom:12px">'+esc(rest)+'</div>':'';
+  const items=Array.isArray(meta&&meta.items)?meta.items:[];
+  if(meta.type==='teachers'){
+    const rows=items.filter(x=>x&&text(x.name));
+    html+='<div class="ulim-academy-teacher-grid73550963">'+rows.map((x,i)=>{const face=safeImageUrl(x.thumbnailUrl||x.imageUrl);return '<button type="button" class="ulim-academy-teacher-card73550963" data-teacher-special73550963="'+i+'">'+(face?'<img class="ulim-academy-teacher-face73550963" src="'+esc(face)+'" alt="'+esc(x.name)+'">':'<span class="ulim-academy-teacher-placeholder73550963">🎙</span>')+'<span><span class="ulim-academy-teacher-name73550963">'+esc(x.name)+'</span>'+(x.summary?'<span class="ulim-academy-teacher-summary73550963">'+esc(x.summary)+'</span>':'')+'</span></button>';}).join('')+'</div>';
+    return {html,items:rows,type:'teachers'};
+  }
+  if(meta.type==='curriculum'){
+    const rows=items.filter(x=>x&&text(x.label||x.className||x.classId));
+    html+='<div class="ulim-academy-curr-tabs73550963">'+rows.map((x,i)=>'<button type="button" class="ulim-academy-curr-tab73550963" data-curr-special73550963="'+i+'">'+esc(x.label||x.className||x.classId)+(x.instructorName?'<small>'+esc(x.instructorName)+'</small>':'')+'</button>').join('')+'</div>';
+    return {html,items:rows,type:'curriculum'};
+  }
+  return null;
+}
 function renderAcademy(){
   const host=document.getElementById('academyContent73550937'); if(!host||!config) return;
   const pages=Array.isArray(config.academyPages)&&config.academyPages.length?config.academyPages:[{title:'학원소개',body:'울림 성우·스피치·연기학원에 오신 것을 환영합니다.'}];
-  academyIndex=Math.max(0,Math.min(academyIndex,pages.length-1)); const page=pages[academyIndex]||{}; const image=safeImageUrl(page.imageUrl);
+  academyIndex=Math.max(0,Math.min(academyIndex,pages.length-1));
+  const page=pages[academyIndex]||{};
+  const special=parseAcademySpecialMeta73550963(page.body);
+  const specialView=special&&['teachers','curriculum'].includes(special.type)?renderAcademySpecialBody73550963(special):null;
+  const image=!specialView?safeImageUrl(page.imageUrl):'';
   host.innerHTML='<div class="academy-nav">'+pages.map((p,i)=>'<button type="button" class="academy-chip'+(i===academyIndex?' active':'')+'" data-academy-index="'+i+'">'+esc(p.title||('안내 '+(i+1)))+'</button>').join('')+'</div>'+
-    '<div class="card">'+(image?'<img class="info-image" src="'+esc(image)+'" alt="">':'')+'<h2 class="page-title">'+esc(page.title||'학원안내')+'</h2><div class="body-text">'+esc(page.body||'').replace(/\n/g,'<br>')+'</div>'+
+    '<div class="card">'+(image?'<img class="info-image" src="'+esc(image)+'" alt="">':'')+'<h2 class="page-title">'+esc(page.title||'학원안내')+'</h2><div class="body-text">'+(specialView?specialView.html:esc(page.body||'').replace(/\n/g,'<br>'))+'</div>'+
     '<div class="academy-actions"><button type="button" class="prev" id="academyPrev73550937"'+(academyIndex===0?' disabled':'')+'>이전</button><button type="button" class="next" id="academyNext73550937">'+(academyIndex===pages.length-1?'수강신청 보기':'다음')+'</button></div></div>';
   host.querySelectorAll('[data-academy-index]').forEach(btn=>btn.addEventListener('click',()=>{academyIndex=Number(btn.dataset.academyIndex)||0;renderAcademy();}));
   document.getElementById('academyPrev73550937')?.addEventListener('click',()=>{academyIndex=Math.max(0,academyIndex-1);renderAcademy();});
   document.getElementById('academyNext73550937')?.addEventListener('click',()=>{if(academyIndex>=pages.length-1)setTopTab('apply');else{academyIndex++;renderAcademy();}});
+  if(specialView&&specialView.type==='teachers'){
+    host.querySelectorAll('[data-teacher-special73550963]').forEach(btn=>btn.addEventListener('click',()=>openAcademyDetail73550963(specialView.items[Number(btn.dataset.teacherSpecial73550963)]||{},'teachers')));
+  }
+  if(specialView&&specialView.type==='curriculum'){
+    host.querySelectorAll('[data-curr-special73550963]').forEach(btn=>btn.addEventListener('click',()=>openAcademyDetail73550963(specialView.items[Number(btn.dataset.currSpecial73550963)]||{},'curriculum')));
+  }
 }
 
 function choicesHtml(name, values, selected){
