@@ -1,10 +1,11 @@
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js';
 
-const VERSION = '2026-09-03.73550964-curriculum-instructor-group-modal-tabs';
+const VERSION = '2026-09-03.73550965-academy-intro-duplicate-title-hide';
 window.__ULIM_NEW_STUDENT_REGISTRATION_PUBLIC_73550937__ = true;
 window.__ULIM_NEW_STUDENT_PUBLIC_SPECIAL_OWNER_73550963__ = true;
 window.__ULIM_NEW_STUDENT_CURRICULUM_INSTRUCTOR_TABS_73550964__ = true;
+window.__ULIM_NEW_STUDENT_ACADEMY_INTRO_TITLE_HIDE_73550965__ = true;
 window.__ULIM_NEW_STUDENT_PUBLIC_LOADING_FAILSAFE_73550951__ = true;
 
 const FIREBASE_CONFIG = Object.freeze({
@@ -231,7 +232,7 @@ function renderAcademy(){
   const specialView=special&&['teachers','curriculum'].includes(special.type)?renderAcademySpecialBody73550963(special):null;
   const image=!specialView?safeImageUrl(page.imageUrl):'';
   host.innerHTML='<div class="academy-nav">'+pages.map((p,i)=>'<button type="button" class="academy-chip'+(i===academyIndex?' active':'')+'" data-academy-index="'+i+'">'+esc(p.title||('안내 '+(i+1)))+'</button>').join('')+'</div>'+
-    '<div class="card">'+(image?'<img class="info-image" src="'+esc(image)+'" alt="">':'')+'<h2 class="page-title">'+esc(page.title||'학원안내')+'</h2><div class="body-text">'+(specialView?specialView.html:esc(page.body||'').replace(/\n/g,'<br>'))+'</div>'+
+    '<div class="card">'+(image?'<img class="info-image" src="'+esc(image)+'" alt="">':'')+'+(academyIndex===0&&!specialView&&!!image?'':'<h2 class="page-title">'+esc(page.title||'학원안내')+'</h2>')+'<div class="body-text">'+(specialView?specialView.html:esc(page.body||'').replace(/\n/g,'<br>'))+'</div>'+
     '<div class="academy-actions"><button type="button" class="prev" id="academyPrev73550937"'+(academyIndex===0?' disabled':'')+'>이전</button><button type="button" class="next" id="academyNext73550937">'+(academyIndex===pages.length-1?'수강신청 보기':'다음')+'</button></div></div>';
   host.querySelectorAll('[data-academy-index]').forEach(btn=>btn.addEventListener('click',()=>{academyIndex=Number(btn.dataset.academyIndex)||0;renderAcademy();}));
   document.getElementById('academyPrev73550937')?.addEventListener('click',()=>{academyIndex=Math.max(0,academyIndex-1);renderAcademy();});
