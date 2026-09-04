@@ -1683,8 +1683,8 @@
     var allowDirect = mode === 'makeup' || mode === 'daily_special';
     document.getElementById('ulimAttendanceAddDirectWrap735423').style.display = allowDirect ? 'block' : 'none';
     var hints = {
-      new: '신규 처리일 이후 첫 실제 수업일에만 특이사항 신규와 노란색 학생이름을 표시합니다.',
-      class_move: '반이동 처리일 이후 새 반의 첫 실제 수업일에만 특이사항 반이동과 보라색 학생이름을 표시합니다.',
+      new: '선택한 시작 수업일부터 이후 수업일을 자동 포함하고, 첫 실제 수업일의 학생이름을 노란색으로 표시합니다.',
+      class_move: '선택한 시작 수업일부터 새 반의 이후 수업일을 자동 포함하고, 첫 실제 수업일의 학생이름을 보라색으로 표시합니다.',
       makeup: '지정한 날짜에만 보강으로 추가하며 초록색 학생이름으로 표시합니다.',
       daily_special: '체크한 날짜에만 일일특강 학생으로 추가합니다.',
       existing: '기존 학생의 현재 수강반 구성을 변경합니다. 신규·반이동 표시는 남기지 않습니다.'
@@ -1733,7 +1733,10 @@
     var selectedDates = mode === 'existing' && !historicalMode735433 ? [] : selectedAttendanceAddDates735430();
     if ((mode !== 'existing' || historicalMode735433) && !selectedDates.length) return alert('적용할 수업일을 한 개 이상 체크해주세요.');
     var studentName = student ? student.name : directName;
-    var dateSummary = mode === 'existing' && !historicalMode735433 ? '현재 수강반 정보 변경' : selectedDates.map(dateLabel7355033).join(', ');
+    var regularStartMode73550970 = !historicalMode735433 && (mode === 'new' || mode === 'class_move');
+    var dateSummary = mode === 'existing' && !historicalMode735433
+      ? '현재 수강반 정보 변경'
+      : (regularStartMode73550970 ? ('시작 수업일 ' + dateLabel7355033(selectedDates[0]) + ' · 이후 수업일 자동 포함') : selectedDates.map(dateLabel7355033).join(', '));
     if (!confirm(targetClass.className + '\n' + studentName + ' · ' + attendanceAddModeLabel735410(mode) + '\n' + dateSummary + '\n\n적용할까요?')) return;
     try {
       allClassesState735410.actionInFlight = true;
@@ -1743,45 +1746,37 @@
         var currentMonth735432 = today().slice(0, 7);
         var historicalMonth735432 = targetMonth735432 < currentMonth735432;
         if (historicalMonth735432) {
-          // Finished months are historical records. Never rewrite today's student class assignment
-          // when an administrator is repairing a previous-month 신규/반이동 row.
           for (var historicalIndex735432 = 0; historicalIndex735432 < selectedDates.length; historicalIndex735432 += 1) {
             var historicalDate735432 = selectedDates[historicalIndex735432];
             if (historicalIndex735432 === 0) {
               await call('addTemporaryAttendanceAdmin7355014', {
-                studentUid: student.studentUid,
-                studentName: student.name,
-                kind: mode,
-                date: historicalDate735432,
-                classId: targetClass.classId,
-                className: targetClass.className,
+                studentUid: student.studentUid, studentName: student.name, kind: mode, date: historicalDate735432,
+                classId: targetClass.classId, className: targetClass.className,
                 requestId: requestId('attendance-historical-special-' + mode + '-735432')
               });
             } else {
               await call('addAttendanceSessionStudentsAdmin73550', {
-                date: historicalDate735432,
-                classId: targetClass.classId,
-                studentUids: [student.studentUid],
+                date: historicalDate735432, classId: targetClass.classId, studentUids: [student.studentUid],
                 requestId: requestId('attendance-historical-include-' + mode + '-735432')
               });
             }
           }
         } else {
+          // 신규/반이동의 체크 날짜는 단일 세션 포함 목록이 아니라 수강 시작 수업일이다.
+          // 시작일 이후 같은 달의 실제 수업일은 모두 포함해 빈 날짜칸 잔재를 만들지 않는다.
           var operationDate = selectedDates[0];
           var sourceClassId735430 = mode === 'class_move' ? text(document.getElementById('ulimAttendanceAddMoveSource735430') && document.getElementById('ulimAttendanceAddMoveSource735430').value) : '';
           var movableIds735430 = mode === 'class_move' ? unique(student.selectedClassIds).filter(function (id) { return id !== targetClass.classId; }) : [];
           if (mode === 'class_move' && movableIds735430.length && !sourceClassId735430) throw new Error('이동 전 수강반을 선택해주세요.');
           await updateStudentClass735410(student, targetClass, mode, sourceClassId735430, operationDate);
-          var monthSessions = attendanceAddCandidateSessions735430(context, targetClass).map(function (session) { return text(session.date); }).filter(Boolean);
+          var monthSessions = attendanceAddCandidateSessions735430(context, targetClass).map(function (session) { return text(session.date); }).filter(Boolean).sort();
           for (var i = 0; i < monthSessions.length; i += 1) {
             var sessionDate = monthSessions[i];
-            var include = selectedDates.indexOf(sessionDate) >= 0;
+            var include = sessionDate >= operationDate;
             await call(include ? 'addAttendanceSessionStudentsAdmin73550' : 'removeAttendanceSessionStudentsAdmin73550', {
-              date: sessionDate,
-              classId: targetClass.classId,
-              studentUids: [student.studentUid],
-              normalizeRegularMembership: include && (mode === 'new' || mode === 'class_move'),
-              requestId: requestId((include ? 'attendance-month-include-' : 'attendance-month-exclude-') + mode + '-735430')
+              date: sessionDate, classId: targetClass.classId, studentUids: [student.studentUid],
+              normalizeRegularMembership: include,
+              requestId: requestId((include ? 'attendance-start-include-' : 'attendance-before-start-exclude-') + mode + '-73550970')
             });
           }
         }
@@ -1805,10 +1800,9 @@
           });
         }
       }
-      directoryCache = null;
-      directoryLoadedAt = 0;
+      directoryCache = null; directoryLoadedAt = 0;
       document.getElementById('ulimAttendanceAddModal735423').style.display = 'none';
-      await loadAllClassesData735410(true);
+      await loadAllClassesData735410(true, 'student-add-73550970');
       if (attendancePanelActive7355016()) {
         var selectedClass = text(document.getElementById('adminAttendanceClass') && document.getElementById('adminAttendanceClass').value);
         if (selectedClass && selectedClass !== '전체반') await safeLoadAttendanceSnapshot(false);
@@ -1988,16 +1982,17 @@
     var day = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2])).getUTCDay();
     return ['일요일','월요일','화요일','수요일','목요일','금요일','토요일'][day] || '';
   }
+  global.__ULIM_ATTENDANCE_DELETE_DATE_CLASSMOVE_FIX_73550970__ = true;
   function cellStatusHtml735423(group, student, session, cell) {
     var state = text(session.state); var eligible = cell && cell.eligible === true && state !== 'cancelled';
     if (state === 'cancelled') return '<div class="ulim-ledger-session-off735423">휴강</div>';
-
     if (!eligible) return '<button type="button" class="ulim-ledger-empty735423" data-ledger-add="1" title="학생 추가">＋</button>';
     var status = cleanAttendanceStatus7355014(cell.status || cell.attendanceStatus);
     var special = text(cell.specialStatus);
     var kind = specialKind7355033(special);
     var specialLabel = specialLabel7355033(special);
-    var showDateSpecial = !!specialLabel && !(text(cell.specialDisplayScope) === 'name' && (kind === 'new' || kind === 'class_move'));
+    // 신규/반이동은 날짜칸 라벨이 아니라 학생 이름 색상으로만 표시한다.
+    var showDateSpecial = !!specialLabel && kind !== 'new' && kind !== 'class_move';
     return '<div class="ulim-ledger-cell-actions735423' + (cell && cell.__saving735425 ? ' saving' : '') + '"><button type="button" data-ledger-status="출석" class="ulim-ledger-ox735423 ' + (status === '출석' ? 'on-o' : '') + '">O</button><button type="button" data-ledger-status="결석" class="ulim-ledger-ox735423 ' + (status === '결석' ? 'on-x' : '') + '">X</button><button type="button" data-ledger-detail="1" class="ulim-ledger-more735423" title="당일 메모">⋯</button></div>' + (showDateSpecial ? '<div class="ulim-ledger-special735423' + specialCss7355033(special) + '">' + escapeHtml(specialLabel) + '</div>' : '');
   }
 
@@ -2007,7 +2002,8 @@
     for (var i = 0; i < eligibleCells.length; i += 1) {
       var cell = eligibleCells[i];
       var kind = specialKind7355033(cell.specialStatus);
-      if (text(cell.specialDisplayScope) === 'name' && (kind === 'new' || kind === 'class_move')) return kind === 'new' ? '신규' : '반이동';
+      // 서버의 과거 scope 값이 date여도 신규/반이동 자체가 확인되면 이름 색상을 복원한다.
+      if (kind === 'new' || kind === 'class_move') return kind === 'new' ? '신규' : '반이동';
     }
     if (eligibleCells.length && eligibleCells.every(function (cell) { return specialKind7355033(cell.specialStatus) === 'makeup'; })) return '보강';
     return '';
@@ -2018,7 +2014,7 @@
   }
 
   function ledgerStudentIdentityCells735427(group, student, rowIndex, monthKey, nameSpecial, historicalEdit) {
-    var selectKey = group.classId + '|' + student.studentUid;
+    var selectKey = group.classId + '|' + student.studentUid + '|' + text(monthKey);
     var selected = allClassesState735410.selectedCards.has(selectKey);
     var selector = isFullAdmin() && !historicalEdit
       ? '<input type="checkbox" data-ledger-select="1" aria-label="학생 선택" ' + (selected ? 'checked' : '') + '>'
@@ -2648,8 +2644,10 @@
       event.stopPropagation();
       var row = select.closest('tr[data-ledger-student]');
       if (!row) return;
-      var key = text(row.dataset.sourceClass) + '|' + text(row.dataset.ledgerStudent);
-      if (select.checked) allClassesState735410.selectedCards.set(key, { classId: text(row.dataset.sourceClass), studentUid: text(row.dataset.ledgerStudent) });
+      var monthCard73550970 = row.closest('[data-ledger-month]');
+      var selectionMonth73550970 = text(monthCard73550970 && monthCard73550970.getAttribute('data-ledger-month'));
+      var key = text(row.dataset.sourceClass) + '|' + text(row.dataset.ledgerStudent) + '|' + selectionMonth73550970;
+      if (select.checked) allClassesState735410.selectedCards.set(key, { classId: text(row.dataset.sourceClass), studentUid: text(row.dataset.ledgerStudent), month: selectionMonth73550970 });
       else allClassesState735410.selectedCards.delete(key);
       Array.from(row.querySelectorAll('[data-ledger-select]')).forEach(function (box) { if (box !== select) box.checked = select.checked; });
       var removeButton = document.getElementById('ulimAllClassesRemoveSelected735423');
@@ -2714,52 +2712,87 @@
   }
 
   async function removeSelectedAllClassStudents735413() {
-    if(!isFullAdmin()||allClassesState735410.actionInFlight)return alert('전체관리자 권한이 필요합니다.');
-    var selected=Array.from(allClassesState735410.selectedCards.values());
-    if(!selected.length)return alert('제거할 학생을 먼저 체크해주세요.');
-    if(!confirm('선택한 '+selected.length+'명의 학생을 해당 반에서 제거할까요?'))return;
-    var directory=allClassesState735410.directory||await loadDirectory(false);
-    try{
-      allClassesState735410.actionInFlight=true;
-      if(typeof global.showLoading==='function')global.showLoading('선택 학생을 제거하는 중...');
-      for(var i=0;i<selected.length;i+=1){
-        var item=selected[i];
-        var student=(directory.students||[]).find(function(row){return text(row.studentUid)===text(item.studentUid);});
-        var group=groupById735423(item.classId);
-        if(!student||!group)continue;
-        var currentIds=unique(student.selectedClassIds);
-        var ledgerStudent=studentByLedger735423(group,item.studentUid);
-        var hasCanonicalMembership735434=currentIds.indexOf(item.classId)>=0;
-        var specialDates735434=[];
-        if(ledgerStudent&&ledgerStudent.cells){
-          for(var j=0;j<(group.sessions||[]).length;j+=1){
-            var session=group.sessions[j];var cell=ledgerStudent.cells[session.date]||{};
-            if(cell.eligible!==true)continue;
-            var special=normalize(cell.specialStatus||cell.registrationType);
-            var temporarySpecial735434=special===normalize('보강')||special===normalize('일일특강')||special==='makeup'||special==='daily_special';
-            if(temporarySpecial735434) specialDates735434.push(session.date);
-            else hasCanonicalMembership735434=true;
+    if (!isFullAdmin() || allClassesState735410.actionInFlight) return alert('전체관리자 권한이 필요합니다.');
+    var selected = Array.from(allClassesState735410.selectedCards.values());
+    if (!selected.length) return alert('제거할 학생을 먼저 체크해주세요.');
+    if (!confirm('선택한 ' + selected.length + '명의 학생을 전체출석부에서 제거할까요?\n선택한 월의 모든 실제 수업일 기록을 함께 정리합니다.')) return;
+    var directory = allClassesState735410.directory || await loadDirectory(false);
+    var currentMonth73550970 = text(allClassesState735410.ledger && allClassesState735410.ledger.currentMonth) || today().slice(0, 7);
+    try {
+      allClassesState735410.actionInFlight = true;
+      if (typeof global.showLoading === 'function') global.showLoading('선택 학생의 월 출석기록을 정리하는 중...');
+      for (var i = 0; i < selected.length; i += 1) {
+        var item = selected[i];
+        var group = groupById735423(item.classId);
+        if (!group) throw new Error('선택한 반 정보를 찾지 못했습니다. 새로고침 후 다시 시도해주세요.');
+        var ledgerStudent = studentByLedger735423(group, item.studentUid);
+        if (!ledgerStudent) throw new Error('선택한 학생의 전체출석부 기록을 찾지 못했습니다. 새로고침 후 다시 시도해주세요.');
+        var student = (directory.students || []).find(function (row) { return text(row.studentUid) === text(item.studentUid); }) || null;
+        var studentName73550970 = text((student && student.name) || ledgerStudent.studentName);
+        var month73550970 = text(item.month) || currentMonth73550970;
+        var sessions73550970 = (group.sessions || []).filter(function (session) { return text(session.date).slice(0, 7) === month73550970; });
+        var cleanupDates73550970 = [];
+        var tempDates73550970 = [];
+        for (var s = 0; s < sessions73550970.length; s += 1) {
+          var session73550970 = sessions73550970[s];
+          var cell73550970 = ledgerSessionCell73550921(ledgerStudent, session73550970);
+          if (!cell73550970 || cell73550970.eligible !== true) continue;
+          var actionDate73550970 = ledgerSessionAttendanceDate73550921(session73550970);
+          if (!actionDate73550970) continue;
+          cleanupDates73550970.push(actionDate73550970);
+          var kind73550970 = specialKind7355033(cell73550970.specialStatus || cell73550970.registrationType);
+          if (kind73550970 === 'makeup' || kind73550970 === 'daily_special') tempDates73550970.push(actionDate73550970);
+        }
+        cleanupDates73550970 = unique(cleanupDates73550970);
+        tempDates73550970 = unique(tempDates73550970);
+        var changed73550970 = false;
+
+        // 현재월 정규 수강생 삭제는 학생명단의 현재 반 소속도 기존 의미대로 함께 해제한다.
+        // 전월 행을 지울 때는 현재 수강반을 건드리지 않는다.
+        if (student && month73550970 === currentMonth73550970) {
+          var currentIds73550970 = unique(student.selectedClassIds);
+          if (currentIds73550970.indexOf(item.classId) >= 0) {
+            var nextIds73550970 = currentIds73550970.filter(function (id) { return id !== item.classId; });
+            await call('updateStudentAdmin7352', {
+              studentUid: student.studentUid, name: student.name, attendanceNo: student.attendanceNo, changeAttendanceNo: false,
+              studentPhone: student.studentPhone, parentPhone: student.parentPhone, birthDate: student.birthDate || '', initialRegisteredDate: student.initialRegisteredDate,
+              enrollmentStatus: student.enrollmentStatus, classIds: nextIds73550970, originalClassIds: currentIds73550970,
+              replaceClassAssignments: true, registrationType: 'existing', operationDate: '', memo: student.memo,
+              privacyConsent: student.privacyConsent === true, portraitConsent: student.portraitConsent === true,
+              preserveLegacyClassNames: unique(student.legacyUnmappedClassNames), requestId: requestId('ledger-remove-membership-73550970')
+            });
+            patchSharedStudentAfterClassUpdate735430(student, nextIds73550970);
+            changed73550970 = true;
           }
         }
-        if(hasCanonicalMembership735434){
-          var nextIds=currentIds.filter(function(id){return id!==item.classId;});
-          await call('updateStudentAdmin7352',{
-            studentUid:student.studentUid,name:student.name,attendanceNo:student.attendanceNo,changeAttendanceNo:false,
-            studentPhone:student.studentPhone,parentPhone:student.parentPhone,birthDate:student.birthDate||'',initialRegisteredDate:student.initialRegisteredDate,
-            enrollmentStatus:student.enrollmentStatus,classIds:nextIds,originalClassIds:currentIds,replaceClassAssignments:true,registrationType:'existing',
-            operationDate:'',memo:student.memo,privacyConsent:student.privacyConsent===true,portraitConsent:student.portraitConsent===true,
-            preserveLegacyClassNames:unique(student.legacyUnmappedClassNames),requestId:requestId('ledger-remove-class-735434')
+
+        // 보강/일일특강은 임시 attendance 문서 자체를 먼저 제거한다.
+        for (var t = 0; t < tempDates73550970.length; t += 1) {
+          await call('removeAttendanceStudentAdmin7355014', {
+            date: tempDates73550970[t], classId: group.classId, className: group.className,
+            studentUid: text(item.studentUid), studentName: studentName73550970,
+            requestId: requestId('ledger-remove-temp-73550970')
           });
-          patchSharedStudentAfterClassUpdate735430(student,nextIds);
+          changed73550970 = true;
         }
-        for(var specialIndex735434=0;specialIndex735434<specialDates735434.length;specialIndex735434+=1){
-          await call('removeAttendanceStudentAdmin7355014',{date:specialDates735434[specialIndex735434],classId:group.classId,className:group.className,studentUid:item.studentUid,studentName:student.name,requestId:requestId('ledger-remove-temp-735434')});
+
+        // 전체출석부에서 보이는 모든 eligible 날짜를 날짜별 제외 처리한다.
+        // 직접 날짜/반 화면에서 삭제할 때와 같은 callable을 월 단위로 반복하여 잔재를 없앤다.
+        if (text(item.studentUid)) {
+          for (var d = 0; d < cleanupDates73550970.length; d += 1) {
+            await call('removeAttendanceSessionStudentsAdmin73550', {
+              date: cleanupDates73550970[d], classId: group.classId, studentUids: [text(item.studentUid)],
+              requestId: requestId('ledger-remove-session-73550970')
+            });
+            changed73550970 = true;
+          }
         }
-        if(!hasCanonicalMembership735434&&!specialDates735434.length)throw new Error(student.name+' 학생의 해당 반 소속 기록을 찾지 못했습니다.');
+        if (!changed73550970) throw new Error(studentName73550970 + ' 학생의 제거 가능한 출석기록을 찾지 못했습니다.');
       }
-      allClassesState735410.selectedCards.clear();directoryCache=null;directoryLoadedAt=0;await loadAllClassesData735410(true);
-    }catch(error){alert(text(error&&error.message)||'학생 제거에 실패했습니다.');}
-    finally{allClassesState735410.actionInFlight=false;if(typeof global.hideLoading==='function')global.hideLoading();}
+      allClassesState735410.selectedCards.clear(); directoryCache = null; directoryLoadedAt = 0;
+      await loadAllClassesData735410(true, 'student-remove-73550970');
+    } catch (error) { alert(text(error && error.message) || '학생 제거에 실패했습니다.'); }
+    finally { allClassesState735410.actionInFlight = false; if (typeof global.hideLoading === 'function') global.hideLoading(); }
   }
   async function saveWholeClassAttendance7355016() { return { status:'success', immediate:true }; }
   function syncAllClassesTeacherOptions735413() { renderTeacherTabs735423(); }
