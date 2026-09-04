@@ -1505,8 +1505,42 @@
   };
 
   function attendanceAddModeLabel735410(mode) {
-    return mode === 'class_move' ? '반이동' : (mode === 'makeup' ? '보강' : (mode === 'daily_special' ? '일일특강' : (mode === 'existing' ? '기존변경' : '신규')));
+    return mode === 'class_move' ? '반이동' : (mode === 'makeup' ? '보강' : (mode === 'daily_special' ? '일일특강' : (mode === 'existing' ? '기본' : '신규')));
   }
+  function installAttendanceModeButtons73550978() {
+    var select = document.getElementById('ulimAttendanceAddMode735423');
+    if (!select || select.dataset.ulimExplicitButtons73550978 === '1') return;
+    select.dataset.ulimExplicitButtons73550978 = '1';
+    select.style.display = 'none';
+    var label = select.closest ? select.closest('label') : null;
+    if (!label) return;
+    var bar = document.createElement('div');
+    bar.className = 'ulim-att-entry-buttons73550978';
+    bar.style.cssText = 'display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:6px';
+    [['new','신규'],['class_move','반이동'],['makeup','보강'],['existing','기본'],['daily_special','일일특강']].forEach(function (entry) {
+      var button = document.createElement('button');
+      button.type = 'button'; button.dataset.attEntryMode73550978 = entry[0]; button.textContent = entry[1];
+      button.style.cssText = 'padding:10px 5px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;font-weight:900;cursor:pointer;color:#334155';
+      button.addEventListener('click', function () {
+        select.value = entry[0];
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      bar.appendChild(button);
+    });
+    label.appendChild(bar);
+    syncAttendanceModeButtons73550978();
+  }
+  function syncAttendanceModeButtons73550978() {
+    var select = document.getElementById('ulimAttendanceAddMode735423');
+    var mode = text(select && select.value) || 'new';
+    Array.from(document.querySelectorAll('[data-att-entry-mode73550978]')).forEach(function (button) {
+      var on = text(button.dataset.attEntryMode73550978) === mode;
+      button.style.background = on ? '#2563eb' : '#fff';
+      button.style.color = on ? '#fff' : '#334155';
+      button.style.borderColor = on ? '#2563eb' : '#cbd5e1';
+    });
+  }
+
   function allClassesSelectedDate735410() {
     return text(allClassesState735410.addContext && allClassesState735410.addContext.date) || today();
   }
@@ -1583,23 +1617,28 @@
     var context = allClassesState735410.addContext || {};
     var historicalExisting735433 = mode === 'existing' && attendanceAddMonth735430(context) < today().slice(0, 7);
     if (mode === 'existing' && !historicalExisting735433) {
-      wrap.style.display = 'none';
-      list.innerHTML = '';
-      all.checked = false;
-      all.indeterminate = false;
-      return;
+      wrap.style.display = 'none'; list.innerHTML = ''; all.checked = false; all.indeterminate = false; return;
     }
     wrap.style.display = 'block';
+    var singleStart73550978 = mode === 'new' || mode === 'class_move';
+    var title = wrap.querySelector('.ulim-att-add-dates-head735430 b');
+    if (title) title.textContent = singleStart73550978 ? '시작 수업일' : '적용 수업일';
+    var allLabel = all.closest ? all.closest('label') : null;
+    if (allLabel) allLabel.style.display = singleStart73550978 ? 'none' : '';
     var directory = attendanceAddDirectory735410 || allClassesState735410.directory || {};
     var targetClass = classById7355033(directory, context.classId) || classByContext735410(directory, context.className);
     var sessions = attendanceAddCandidateSessions735430(context, targetClass);
     var preferred = unique(Array.isArray(context.selectedDates) ? context.selectedDates : [context.date]);
+    var selectedStart = preferred.length ? preferred.slice().sort()[0] : '';
     list.innerHTML = sessions.length ? sessions.map(function (session) {
-      var checked = preferred.indexOf(text(session.date)) >= 0 ? ' checked' : '';
-      return '<label class="ulim-att-add-date-item735430"><input type="checkbox" data-att-add-date="1" value="' + escapeHtml(session.date) + '"' + checked + '><span><b>' + escapeHtml(dateLabel7355033(session.date)) + '</b><small>' + escapeHtml(weekdayLabel7355033(session)) + '</small></span></label>';
+      var checked = singleStart73550978 ? (selectedStart === text(session.date) ? ' checked' : '') : (preferred.indexOf(text(session.date)) >= 0 ? ' checked' : '');
+      var type = singleStart73550978 ? 'radio' : 'checkbox';
+      var name = singleStart73550978 ? ' name="ulim-att-start-date-73550978"' : '';
+      return '<label class="ulim-att-add-date-item735430"><input type="' + type + '"' + name + ' data-att-add-date="1" value="' + escapeHtml(session.date) + '"' + checked + '><span><b>' + escapeHtml(dateLabel7355033(session.date)) + '</b><small>' + escapeHtml(weekdayLabel7355033(session)) + '</small></span></label>';
     }).join('') : '<div class="ulim-att-add-date-empty735430">선택 가능한 수업일이 없습니다.</div>';
     var boxes = Array.from(list.querySelectorAll('input[data-att-add-date]'));
     var syncAll = function () {
+      if (singleStart73550978) { all.checked = false; all.indeterminate = false; return; }
       var checkedCount = boxes.filter(function (box) { return box.checked; }).length;
       all.checked = boxes.length > 0 && checkedCount === boxes.length;
       all.indeterminate = checkedCount > 0 && checkedCount < boxes.length;
@@ -1636,7 +1675,10 @@
       nextIds = unique(currentIds.filter(function (id) { return sourceClassId ? id !== sourceClassId : false; }).concat([targetClass.classId]));
       replace = true;
     }
-    else if (mode === 'existing') { nextIds = unique(currentIds.filter(function (id) { return id !== sourceClassId; }).concat([targetClass.classId])); replace = true; }
+    else if (mode === 'existing') {
+      if (sourceClassId) { nextIds = unique(currentIds.filter(function (id) { return id !== sourceClassId; }).concat([targetClass.classId])); replace = true; }
+      else { nextIds = unique(currentIds.concat([targetClass.classId])); replace = false; }
+    }
     else { nextIds = unique(currentIds.concat([targetClass.classId])); replace = false; }
     await call('updateStudentAdmin7352', {
       studentUid: student.studentUid, name: student.name, attendanceNo: student.attendanceNo, changeAttendanceNo: false,
@@ -1662,7 +1704,7 @@
     modal.style.cssText = 'display:none;position:fixed;inset:0;z-index:2147483650;align-items:center;justify-content:center;padding:18px;background:rgba(15,23,42,.62)';
     modal.innerHTML = '<section role="dialog" aria-modal="true" style="width:min(760px,96vw);max-height:92vh;background:#fff;border-radius:18px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(15,23,42,.38)">'
       + '<header style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid #e2e8f0"><div><h3 style="margin:0;font-size:19px">출석부 학생추가</h3><div id="ulimAttendanceAddContext735423" style="font-size:12px;color:#64748b;margin-top:4px"></div></div><button type="button" data-close-att-add="1" style="border:0;background:#f1f5f9;border-radius:10px;width:36px;height:36px;font-size:25px;cursor:pointer">×</button></header>'
-      + '<div style="padding:17px 18px;overflow:auto"><div style="display:grid;grid-template-columns:180px 1fr;gap:12px"><label style="font-size:12px;font-weight:900;color:#334155">등록 구분<select id="ulimAttendanceAddMode735423" style="width:100%;margin-top:5px;padding:10px;border:1px solid #cbd5e1;border-radius:10px"><option value="new">신규</option><option value="class_move">반이동</option><option value="makeup">보강</option><option value="daily_special">일일특강</option><option value="existing">기존변경</option></select></label><label style="font-size:12px;font-weight:900;color:#334155">학생 검색<input id="ulimAttendanceAddSearch735423" type="search" placeholder="학생명·출결번호·전화번호" style="width:100%;box-sizing:border-box;margin-top:5px;padding:10px;border:1px solid #cbd5e1;border-radius:10px"></label></div>'
+      + '<div style="padding:17px 18px;overflow:auto"><div style="display:grid;grid-template-columns:180px 1fr;gap:12px"><label style="font-size:12px;font-weight:900;color:#334155">등록 구분<select id="ulimAttendanceAddMode735423" style="width:100%;margin-top:5px;padding:10px;border:1px solid #cbd5e1;border-radius:10px"><option value="new">신규</option><option value="class_move">반이동</option><option value="makeup">보강</option><option value="daily_special">일일특강</option><option value="existing">기본</option></select></label><label style="font-size:12px;font-weight:900;color:#334155">학생 검색<input id="ulimAttendanceAddSearch735423" type="search" placeholder="학생명·출결번호·전화번호" style="width:100%;box-sizing:border-box;margin-top:5px;padding:10px;border:1px solid #cbd5e1;border-radius:10px"></label></div>'
       + '<label style="display:block;margin-top:12px;font-size:12px;font-weight:900;color:#334155">학생 선택<select id="ulimAttendanceAddStudent735423" size="8" style="width:100%;box-sizing:border-box;margin-top:5px;padding:8px;border:1px solid #cbd5e1;border-radius:10px"></select></label>'
       + '<label id="ulimAttendanceAddMoveSourceWrap735430" style="display:none;margin-top:12px;font-size:12px;font-weight:900;color:#334155">이동 전 수강반<select id="ulimAttendanceAddMoveSource735430" style="width:100%;box-sizing:border-box;margin-top:5px;padding:10px;border:1px solid #cbd5e1;border-radius:10px"></select></label>'
       + '<label id="ulimAttendanceAddDirectWrap735423" style="display:none;margin-top:12px;font-size:12px;font-weight:900;color:#334155">명단에 없는 학생 이름<input id="ulimAttendanceAddDirectName735423" style="width:100%;box-sizing:border-box;margin-top:5px;padding:10px;border:1px solid #cbd5e1;border-radius:10px" placeholder="보강생·일일특강생 이름"></label>'
@@ -1671,6 +1713,7 @@
       + '<footer style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid #e2e8f0;background:#f8fafc"><button type="button" class="admin-btn gray" data-close-att-add="1">취소</button><button type="button" class="admin-btn orange" id="ulimAttendanceAddSubmit735423">학생추가</button></footer></section>';
     modal.addEventListener('click', function (event) { if (event.target === modal || (event.target && event.target.closest('[data-close-att-add="1"]'))) modal.style.display = 'none'; });
     document.body.appendChild(modal);
+    installAttendanceModeButtons73550978();
     document.getElementById('ulimAttendanceAddSearch735423').addEventListener('input', renderAttendanceAddCandidates735423);
     document.getElementById('ulimAttendanceAddStudent735423').addEventListener('change', renderAttendanceAddMoveSource735430);
     document.getElementById('ulimAttendanceAddMode735423').addEventListener('change', updateAttendanceAddMode735423);
@@ -1712,6 +1755,7 @@
   }
 
   function updateAttendanceAddMode735423() {
+    syncAttendanceModeButtons73550978();
     var mode = text(document.getElementById('ulimAttendanceAddMode735423').value) || 'new';
     var allowDirect = mode === 'makeup' || mode === 'daily_special';
     document.getElementById('ulimAttendanceAddDirectWrap735423').style.display = allowDirect ? 'block' : 'none';
@@ -1720,7 +1764,7 @@
       class_move: '선택한 시작 수업일부터 새 반의 이후 수업일을 자동 포함하고, 첫 실제 수업일의 학생이름을 보라색으로 표시합니다.',
       makeup: '지정한 날짜에만 보강으로 추가하며 초록색 학생이름으로 표시합니다.',
       daily_special: '체크한 날짜에만 일일특강 학생으로 추가합니다.',
-      existing: '기존 학생의 현재 수강반 구성을 변경합니다. 신규·반이동 표시는 남기지 않습니다.'
+      existing: '기본 학생으로 현재 수강반에 바로 추가합니다. 색상표시와 신규·반이동·보강 알림톡은 만들지 않습니다.'
     };
     if (mode === 'existing' && attendanceAddMonth735430(allClassesState735410.addContext || {}) < today().slice(0, 7)) {
       hints.existing = '전월 기존 학생 복원입니다. 체크한 과거 수업일 기록에만 추가되며 현재 학생명단·현재 수강반·태블릿에는 영향을 주지 않습니다.';
@@ -1738,6 +1782,7 @@
     context.month = attendanceAddMonth735430(context);
     allClassesState735410.addContext = context;
     var modal = ensureAttendanceAddModal735410();
+    installAttendanceModeButtons73550978();
     document.getElementById('ulimAttendanceAddContext735423').textContent = monthTitle7355033(context.month) + ' · ' + context.className;
     document.getElementById('ulimAttendanceAddSearch735423').value = '';
     document.getElementById('ulimAttendanceAddDirectName735423').value = '';
@@ -1760,7 +1805,7 @@
     var studentUid = text(document.getElementById('ulimAttendanceAddStudent735423').value);
     var directName = text(document.getElementById('ulimAttendanceAddDirectName735423').value);
     var student = (directory.students || []).find(function (item) { return item.studentUid === studentUid; }) || null;
-    if (!student && mode !== 'makeup' && mode !== 'daily_special') return alert('신규·반이동·기존변경은 학생목록에서 학생을 선택해주세요.');
+    if (!student && mode !== 'makeup' && mode !== 'daily_special') return alert('신규·반이동·기본은 학생목록에서 학생을 선택해주세요.');
     if (!student && !directName) return alert('기존 학생을 선택하거나 학생명을 입력해주세요.');
     var historicalMode735433 = attendanceAddMonth735430(context) < today().slice(0, 7);
     var selectedDates = mode === 'existing' && !historicalMode735433 ? [] : selectedAttendanceAddDates735430();
@@ -1811,6 +1856,9 @@
               normalizeRegularMembership: include,
               lifecycleType: include ? mode : '',
               lifecycleStartDate: include ? operationDate : '',
+              attendanceEntryType: include && sessionDate === operationDate ? mode : '',
+              entryStartDate: include ? operationDate : '',
+              entryTypeSource: include && sessionDate === operationDate ? 'attendance_add_ui_73550978' : '',
               requestId: requestId((include ? 'attendance-start-include-' : 'attendance-before-start-exclude-') + mode + '-73550970')
             });
           }
@@ -2070,31 +2118,7 @@
       return cell && cell.eligible === true && cellMonthlyHold73550974(cell, monthKey);
     });
   }
-  function inferClassMoveFromLedger73550974(student, sessions, firstEligibleDate) {
-    var ledger = allClassesState735410 && allClassesState735410.ledger || null;
-    if (!ledger || !firstEligibleDate || firstEligibleDate.slice(0, 7) !== text(ledger.currentMonth)) return false;
-    var safeSessions = Array.isArray(sessions) ? sessions : [];
-    var firstTargetDate = '';
-    for (var i = 0; i < safeSessions.length; i += 1) {
-      if (text(safeSessions[i] && safeSessions[i].state) === 'cancelled') continue;
-      var targetDate = ledgerSessionAttendanceDate73550921(safeSessions[i]);
-      if (targetDate && (!firstTargetDate || targetDate < firstTargetDate)) firstTargetDate = targetDate;
-    }
-    if (!firstTargetDate || firstEligibleDate <= firstTargetDate) return false;
-    var uid = text(student && student.studentUid);
-    if (!uid) return false;
-    return (ledger.groups || []).some(function (group) {
-      var priorStudent = (group.students || []).find(function (row) { return text(row.studentUid) === uid; });
-      if (!priorStudent) return false;
-      return (group.sessions || []).some(function (session) {
-        var priorDate = ledgerSessionAttendanceDate73550921(session);
-        if (!priorDate || priorDate >= firstEligibleDate) return false;
-        var priorCell = ledgerSessionCell73550921(priorStudent, session);
-        return priorCell && priorCell.eligible === true;
-      });
-    });
-  }
-  async function applyStudentMonthlyHold73550974(student, active) {
+    async function applyStudentMonthlyHold73550974(student, active) {
     if (!student || !text(student.studentUid)) throw new Error('학생정보를 확인할 수 없습니다.');
     if (!allClassesState735410.ledger) await loadAllClassesData735410(true, 'monthly-hold-plan-73550974');
     var ledger = allClassesState735410.ledger;
@@ -2159,31 +2183,24 @@
   }
 
   function ledgerMonthNameSpecial735430(student, sessions) {
+    // __ULIM_ATTENDANCE_EXPLICIT_AUTHORITY_73550978__
+    // 등록구분은 학생추가 UI에서 저장한 명시값만 사용한다. 다른 반/과거 이력으로 추론하지 않는다.
     var safeSessions = Array.isArray(sessions) ? sessions : [];
     var eligibleCells = [];
-    var firstEligibleDate = '';
     for (var i = 0; i < safeSessions.length; i += 1) {
-      var session = safeSessions[i];
-      var cell = ledgerSessionCell73550921(student, session);
+      var cell = ledgerSessionCell73550921(student, safeSessions[i]);
       if (!cell || cell.eligible !== true) continue;
       eligibleCells.push(cell);
-      var sessionDate = ledgerSessionAttendanceDate73550921(session);
-      if (!firstEligibleDate || (sessionDate && sessionDate < firstEligibleDate)) firstEligibleDate = sessionDate;
-      // 73550974: 반이동/신규 처리 순간 attendance 문서에 남기는 전용 이름 마커를 최우선 사용한다.
-      var explicitNameKind = specialKind7355033(cell.nameSpecialStatus || cell.lifecycleNameSpecialStatus);
-      if (explicitNameKind === 'new' || explicitNameKind === 'class_move') return explicitNameKind === 'new' ? '신규' : '반이동';
-      var kind = specialKind7355033(cell.specialStatus);
-      if (kind === 'new' || kind === 'class_move') return kind === 'new' ? '신규' : '반이동';
-      var membershipKind = specialKind7355033(cell.membershipRegistrationType);
-      var membershipStart = text(cell.membershipStartDate);
-      if ((membershipKind === 'new' || membershipKind === 'class_move') && membershipStart && sessionDate && membershipStart.slice(0, 7) === sessionDate.slice(0, 7)) {
-        return membershipKind === 'new' ? '신규' : '반이동';
-      }
+      var explicitKind = specialKind7355033(cell.attendanceEntryType || cell.nameSpecialType || cell.nameSpecialStatus);
+      if (explicitKind === 'new') return '신규';
+      if (explicitKind === 'class_move') return '반이동';
+      // 신규/반이동은 specialStatus를 fallback으로 사용하지 않는다.
+      // specialStatus는 enrollment 계산값일 수 있으므로 UI 선택값/명시 attendance marker만 권한을 가진다.
     }
-    // 73550973 이전에 이미 처리된 반이동도 즉시 복구한다. 같은 학생이 더 이른 날짜에
-    // 다른 반에서 실제 출석 대상이었고, 이 반은 월 중간부터 시작되면 반이동으로 판단한다.
-    if (firstEligibleDate && inferClassMoveFromLedger73550974(student, safeSessions, firstEligibleDate)) return '반이동';
-    if (eligibleCells.length && eligibleCells.every(function (cell) { return specialKind7355033(cell.specialStatus) === 'makeup'; })) return '보강';
+    if (eligibleCells.length && eligibleCells.every(function (cell) {
+      var kind = specialKind7355033(cell.attendanceEntryType || cell.specialStatus);
+      return kind === 'makeup';
+    })) return '보강';
     return '';
   }
 
@@ -2229,7 +2246,7 @@
     var primary = preferB ? b : a, secondary = preferB ? a : b;
     var merged = Object.assign({}, secondary, primary);
     merged.eligible = a.eligible === true || b.eligible === true;
-    ['status','attendanceStatus','specialStatus','specialDisplayScope','registrationType','currentStatus','memo','note','remark'].forEach(function (key) {
+    ['status','attendanceStatus','specialStatus','specialDisplayScope','registrationType','attendanceEntryType','entryStartDate','entryTypeSource','nameSpecialStatus','nameSpecialType','currentStatus','memo','note','remark'].forEach(function (key) {
       var p = text(primary[key]), s = text(secondary[key]);
       if ((!p || normalize(p) === normalize('미체크') || p === '-') && s && normalize(s) !== normalize('미체크') && s !== '-') merged[key] = secondary[key];
     });
@@ -2884,7 +2901,7 @@
         await call('addTemporaryAttendanceAdmin7355014',{studentUid:student.studentUid,studentName:student.name,kind:mode,date:targetDate,classId:target.classId,className:target.className,requestId:requestId(historicalDrop735432?'ledger-drop-historical-735432':'ledger-drop-temp-735430')});
       }else{
         await updateStudentClass735410(student,target,mode,drag.sourceClassId||'',(mode==='new'||mode==='class_move')?targetDate:'');
-        if(mode==='new'||mode==='class_move') await call('addAttendanceSessionStudentsAdmin73550',{date:targetDate,classId:target.classId,studentUids:[student.studentUid],normalizeRegularMembership:true,requestId:requestId('ledger-drop-session-735434')});
+        if(mode==='new'||mode==='class_move') await call('addAttendanceSessionStudentsAdmin73550',{date:targetDate,classId:target.classId,studentUids:[student.studentUid],normalizeRegularMembership:true,attendanceEntryType:mode,entryStartDate:targetDate,entryTypeSource:'attendance_drag_ui_73550978',requestId:requestId('ledger-drop-session-735434')});
       }
       directoryCache=null;directoryLoadedAt=0;await loadAllClassesData735410(true);
     }catch(error){alert(text(error&&error.message)||'학생 이동에 실패했습니다.');}
