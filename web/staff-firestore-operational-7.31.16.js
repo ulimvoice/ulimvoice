@@ -4,33 +4,15 @@
   if (global.__ULIM_STAFF_FIRESTORE_OPERATIONAL_73116__) return;
   global.__ULIM_STAFF_FIRESTORE_OPERATIONAL_73116__ = true;
 
-  const VERSION = '2026-08-02.731.16-realtime-sync';
-  const CACHE_PREFIX = 'ulim_staff_fsop_73116e2_';
+  const VERSION = '2026-08-01.731.16-efficiency';
+  const CACHE_PREFIX = 'ulim_staff_fsop_73116_';
   const inflight = new Map();
   let runtimePromise = null;
   let revisionEnsurePromise73112 = null;
   const revisionListeners7318 = {
-    attendance: {
-      date: '', classId: '', scopeId: '', unsubscribe: null,
-      initialized: false, lastRevision: 0, reloadTimer: null,
-      blockedUntil: 0, reloadInFlight: false, pendingRevision: 0,
-      lastReloadAt: 0
-    },
-    daily: {
-      date: '', classId: '', scopeId: '', unsubscribe: null,
-      initialized: false, lastRevision: 0, reloadTimer: null,
-      blockedUntil: 0, reloadInFlight: false, pendingRevision: 0,
-      lastReloadAt: 0
-    }
+    attendance: { date: '', classId: '', scopeId: '', unsubscribe: null, initialized: false, lastRevision: 0, reloadTimer: null, blockedUntil: 0 },
+    daily: { date: '', classId: '', scopeId: '', unsubscribe: null, initialized: false, lastRevision: 0, reloadTimer: null, blockedUntil: 0 }
   };
-
-  const DAILY_PEER_CHANNEL_NAME_73116 =
-    'ulim-staff-daily-revision-73116';
-  const DAILY_PEER_STORAGE_KEY_73116 =
-    'ulim_staff_daily_revision_73116';
-  const dailyPeerClientId73116 =
-    'daily-' + Date.now() + '-' + Math.random().toString(36).slice(2);
-  let dailyPeerChannel73116 = null;
 
   function safeConsole() {
     // 운영 배포본에서는 브라우저 콘솔에 앱 내부 정보를 출력하지 않습니다.
@@ -118,27 +100,19 @@ function currentStatusEdited73115(row) {
     });
   }
   function selectedTeacherKeys7318(ctx) {
-    const current = ctx || {};
-    const item = currentClassItem(current.className || '', current.date || '');
+    const item = currentClassItem(ctx && ctx.className || '');
     return Array.from(new Set([
-      teacherIdentityKey7318(current.teacherScopeKey || ''),
-      teacherIdentityKey7318(
-        teacherNameFor(current.className || '', item, current.date || '')
-      ),
-      teacherIdentityKey7318(
-        item && (item.teacher || item.instructor || item.instructorName) || ''
-      )
+      teacherIdentityKey7318(ctx && ctx.teacherScopeKey || ''),
+      teacherIdentityKey7318(teacherNameFor(ctx && ctx.className || '', item)),
+      teacherIdentityKey7318(item && (item.teacher || item.instructor || item.instructorName) || '')
     ].filter(Boolean)));
   }
-  function rowTeacherKeys7318(row, fallbackDate) {
+  function rowTeacherKeys7318(row) {
     const r = row || {};
-    const rowDate = r.date || r.classDate || r.sessionDate || fallbackDate || '';
     return Array.from(new Set([
       teacherIdentityKey7318(r.teacherScopeKey || r.evaluatorTeacherKey || ''),
       teacherIdentityKey7318(r.instructor || r.instructorName || r.teacher || r.teacherName || ''),
-      teacherIdentityKey7318(
-        teacherNameFor(r.className || r.currentClass || '', r, rowDate)
-      )
+      teacherIdentityKey7318(teacherNameFor(r.className || r.currentClass || '', r))
     ].filter(Boolean)));
   }
   function token() {
@@ -205,9 +179,7 @@ function currentStatusEdited73115(row) {
           getClasses: rt.sdk.httpsCallable(rt.functions, 'getStaffClassListOperationalSnapshot'),
           saveAttendance: rt.sdk.httpsCallable(rt.functions, 'saveStaffAttendanceOperational'),
           getDaily: rt.sdk.httpsCallable(rt.functions, 'getStaffDailyEvaluationOperationalSnapshot'),
-          saveDaily: rt.sdk.httpsCallable(rt.functions, 'saveStaffDailyEvaluationsOperational'),
-          getSyncStatus: rt.sdk.httpsCallable(rt.functions, 'getStaffSheetSyncStatus'),
-          refreshDate: rt.sdk.httpsCallable(rt.functions, 'refreshStaffOperationalDateFromSheets')
+          saveDaily: rt.sdk.httpsCallable(rt.functions, 'saveStaffDailyEvaluationsOperational')
         };
       }
       return rt;
@@ -235,9 +207,7 @@ function currentStatusEdited73115(row) {
       getClasses: 'getClasses',
       saveAttendance: 'saveAttendance',
       getDaily: 'getDaily',
-      saveDaily: 'saveDaily',
-      getSyncStatus: 'getSyncStatus',
-      refreshDate: 'refreshDate'
+      saveDaily: 'saveDaily'
     };
     return api[map[label]] || fallback;
   }
@@ -300,40 +270,6 @@ function currentStatusEdited73115(row) {
 
   function simpleCountLabel(kind, count) {
     return kind + ' ' + Number(count || 0) + '명';
-  }
-
-  function normalizeDatasets(value) {
-    const raw = Array.isArray(value) ? value : [];
-    const out = [];
-    raw.forEach(function (item) {
-      const key = text(item);
-      if (key === 'attendance' && out.indexOf('attendance') < 0) out.push('attendance');
-      if ((key === 'dailyEvaluations' || key === 'daily') && out.indexOf('dailyEvaluations') < 0) out.push('dailyEvaluations');
-    });
-    return out.length ? out : ['attendance', 'dailyEvaluations'];
-  }
-
-  async function syncDateFromSheets(rt, date, reason, force, datasets) {
-    return invokeStaff(rt, rt.staffOperational731.refreshDate, {
-      date: text(date),
-      reason: reason || 'manual_refresh',
-      force: force === true,
-      datasets: normalizeDatasets(datasets)
-    }, 'refreshDate');
-  }
-
-  async function bootstrapDateOnce(rt, date, reason, datasets) {
-    const normalizedDatasets = normalizeDatasets(datasets || ['attendance']);
-    const datasetKey = normalizedDatasets.join('_');
-    const key = 'ulim_staff_fsop_7313_bootstrap_' + owner() + '_' + text(date) + '_' + datasetKey;
-    try { if (sessionStorage.getItem(key)) return null; } catch (ignore) {}
-    try { sessionStorage.setItem(key, '1'); } catch (ignore) {}
-    try {
-      return await syncDateFromSheets(rt, date, reason || 'empty_bootstrap', false, normalizedDatasets);
-    } catch (error) {
-      try { sessionStorage.removeItem(key); } catch (ignore) {}
-      throw error;
-    }
   }
 
   function currentClassItem(className, date) {
@@ -464,60 +400,9 @@ function currentStatusEdited73115(row) {
     };
   }
 
-  function attendanceViewContextKey73116(ctx) {
-    const current = ctx || attendanceContext();
-    return [
-      text(current.date),
-      normalize(current.className),
-      normalize(current.keyword),
-      normalize(current.statusFilter)
-    ].join('|');
-  }
-
-  function dailyViewContextKey73116(ctx) {
-    const current = ctx || dailyContext();
-    return [
-      text(current.date),
-      normalize(current.className),
-      normalize(current.keyword)
-    ].join('|');
-  }
-
   function cacheKey(kind, ctx) {
-    const viewKey = kind === 'attendance'
-      ? attendanceViewContextKey73116(ctx)
-      : dailyViewContextKey73116(ctx);
-    return CACHE_PREFIX + kind + '_' + owner() + '_' +
-      viewKey.split('|').map(function (v) {
-        return normalize(v).slice(0, 120);
-      }).join('__');
-  }
-
-  async function refreshContextClassMetadata73116(kind, ctx) {
-    let current = Object.assign({}, ctx || {});
-    const className = text(current.className);
-    if (!className || className === '전체반') return current;
-    if (text(current.classId) && text(current.teacherScopeKey)) return current;
-
-    try {
-      if (typeof global.adminLoadClassList === 'function') {
-        await global.adminLoadClassList(current.date, false);
-      } else if (typeof adminLoadClassList === 'function') {
-        await adminLoadClassList(current.date, false);
-      }
-    } catch (ignore) {}
-
-    const refreshed = kind === 'attendance'
-      ? attendanceContext()
-      : dailyContext();
-
-    if (
-      text(refreshed.date) === text(current.date) &&
-      normalize(refreshed.className) === normalize(current.className)
-    ) {
-      current = refreshed;
-    }
-    return current;
+    return CACHE_PREFIX + kind + '_' + owner() + '_' + [ctx.date, ctx.classId || '', ctx.className, ctx.keyword || '', ctx.statusFilter || '', ctx.teacherScopeKey || '']
+      .map(function (v) { return normalize(v).slice(0, 120); }).join('__');
   }
 
   function filterAttendanceForSelectedClass(records, ctx) {
@@ -530,7 +415,7 @@ function currentStatusEdited73115(row) {
       const rowName = text(row && (row.className || row.currentClass));
       if (normalize(rowName) === normalize(ctx.className)) return true;
       if (classCoreKey(rowName) !== classCoreKey(ctx.className)) return false;
-      const rowKeys = rowTeacherKeys7318(row, ctx.date);
+      const rowKeys = rowTeacherKeys7318(row);
       return selectedKeys.length > 0 && rowKeys.length > 0 && teacherKeysMatch7318(selectedKeys, rowKeys);
     });
   }
@@ -540,7 +425,15 @@ function currentStatusEdited73115(row) {
   let activeAttendanceLoadContextKey73116 = '';
 
   function attendanceEditContextKey73116(ctx) {
-    return attendanceViewContextKey73116(ctx);
+    const current = ctx || attendanceContext();
+    return [
+      text(current.date),
+      text(current.classId),
+      normalize(current.className),
+      normalize(current.keyword),
+      normalize(current.statusFilter),
+      text(current.teacherScopeKey)
+    ].join('|');
   }
 
   function attendanceRows73116() {
@@ -630,8 +523,8 @@ function currentStatusEdited73115(row) {
     captureAttendanceRow73116(tr);
   }
 
-  function preserveAttendanceEdits73116(records, ctx) {
-    const contextKey = attendanceEditContextKey73116(ctx);
+  function preserveAttendanceEdits73116(records) {
+    const contextKey = attendanceEditContextKey73116();
     const source = Array.isArray(records) ? records : [];
     const seen = new Set();
 
@@ -707,265 +600,104 @@ function currentStatusEdited73115(row) {
     );
   }
 
-  let lastAttendanceRenderedContextKey73116 = '';
-
-  function renderAttendance(records, message, ctx) {
-    const renderContext = ctx || attendanceContext();
-    const preparedRecords = preserveAttendanceEdits73116(records, renderContext);
+  function renderAttendance(records, message) {
+    const preparedRecords = preserveAttendanceEdits73116(records);
     try {
       adminAttendanceRecords = preparedRecords.map(clone);
       global.adminAttendanceRecords = adminAttendanceRecords;
     } catch (ignore) {}
-    lastAttendanceRenderedContextKey73116 =
-      attendanceViewContextKey73116(renderContext);
-    try {
-      if (typeof adminRenderAttendanceTable === 'function') {
-        adminRenderAttendanceTable();
-      }
-    } catch (ignore) {}
-    const count = preparedRecords.length;
-    setAttendanceSummary(
-      message || ('Firestore 출석부 ' + count + '건'),
-      simpleCountLabel('학생', count)
-    );
+    try { if (typeof adminRenderAttendanceTable === 'function') adminRenderAttendanceTable(); } catch (ignore) {}
+    const count = (records && records.length) || 0;
+    setAttendanceSummary(message || ('Firestore 출석부 ' + count + '건'), simpleCountLabel('학생', count));
   }
 
-  global.adminLoadAttendanceSnapshot = async function (showAlert, forceSheetSync) {
+  global.adminLoadAttendanceSnapshot = async function (showAlert, forceRefresh) {
     if (!token()) return false;
     showAlert = showAlert !== false;
-    forceSheetSync = forceSheetSync === true;
+    forceRefresh = forceRefresh === true;
+    const ctx = attendanceContext();
+    const loadContextKey73116 = attendanceEditContextKey73116(ctx);
 
-    let ctx = attendanceContext();
-    const initialViewKey73116 = attendanceViewContextKey73116(ctx);
-    ctx = await refreshContextClassMetadata73116('attendance', ctx);
-
-    /*
-     * 반 목록 메타데이터를 기다리는 사이 사용자가 날짜나 반을 바꿨다면
-     * 이전 화면 요청은 시작하지 않습니다.
-     */
-    if (attendanceViewContextKey73116() !== initialViewKey73116) return false;
-
-    const loadContextKey73116 = attendanceViewContextKey73116(ctx);
-    const key = cacheKey('attendance', ctx);
-    const requestKey =
-      'attendance|' + key + '|' + (forceSheetSync ? 'sheet' : 'firestore');
-
-    if (inflight.has(requestKey)) return inflight.get(requestKey);
-
-    activeAttendanceLoadContextKey73116 = loadContextKey73116;
-    const loadSeq73116 = ++activeAttendanceLoadSeq73116;
+    if (activeAttendanceLoadContextKey73116 !== loadContextKey73116) {
+      activeAttendanceLoadContextKey73116 = loadContextKey73116;
+      activeAttendanceLoadSeq73116 += 1;
+    }
+    const loadSeq73116 = activeAttendanceLoadSeq73116;
     const canRenderAttendanceLoad73116 = function () {
-      return (
-        loadSeq73116 === activeAttendanceLoadSeq73116 &&
-        attendanceViewContextKey73116() === loadContextKey73116
-      );
+      return loadSeq73116 === activeAttendanceLoadSeq73116 &&
+        attendanceEditContextKey73116() === loadContextKey73116;
     };
 
-    bindRevisionListener7318('attendance', ctx.date, '', true);
-
-    const cached = readCache(key);
-    const silentRealtime73116 = showAlert === false && forceSheetSync === false;
-    const alreadyRendered73116 =
-      lastAttendanceRenderedContextKey73116 === loadContextKey73116 &&
-      attendanceRows73116().length > 0;
-
-    if (
-      Array.isArray(cached) &&
-      canRenderAttendanceLoad73116() &&
-      (!silentRealtime73116 || !alreadyRendered73116)
-    ) {
-      renderAttendance(
-        cached,
-        forceSheetSync
-          ? '최근 출석부를 표시했습니다. Google Sheets 원본을 확인 중입니다...'
-          : '최근 Firestore 출석부를 먼저 표시했습니다.',
-        ctx
-      );
+    bindRevisionListener7318('attendance', ctx.date);
+    const key = cacheKey('attendance', ctx);
+    const cached = forceRefresh ? null : readCache(key);
+    if (Array.isArray(cached) && canRenderAttendanceLoad73116()) {
+      renderAttendance(cached, '최근 Firestore 출석부를 먼저 표시했습니다.');
     }
 
+    const requestKey = 'attendance|' + key + '|' + (forceRefresh ? 'refresh' : 'normal');
+    if (inflight.has(requestKey)) return inflight.get(requestKey);
+
     const promise = (async function () {
-      let sheetSyncError = null;
       try {
         const rt = await runtime();
-        let sheetSyncResult = null;
 
-        if (forceSheetSync) {
-          if (canRenderAttendanceLoad73116()) {
-            setAttendanceSummary('Google Sheets 원본 → Firestore 동기화 중...');
-          }
+        if (forceRefresh && rt.staffOperational731.getClasses) {
           try {
-            sheetSyncResult = await syncDateFromSheets(
-              rt,
-              ctx.date,
-              'attendance_button_refresh',
-              true,
-              ['attendance']
-            );
-            if (rt.staffOperational731.getClasses) {
-              const classData = await invokeStaff(
-                rt,
-                rt.staffOperational731.getClasses,
-                { date: ctx.date },
-                'getClasses'
-              );
-              if (Array.isArray(classData.classes) && classData.classes.length) {
-                applyClassListFast(ctx.date, classData.classes, true);
-              }
-            }
-          } catch (error) {
-            sheetSyncError = error;
-            safeConsole('warn', '[ULIM 7.31.3 attendance sheet refresh]', error);
+            const classData = await invokeStaff(rt, rt.staffOperational731.getClasses, { date: ctx.date }, 'getClasses');
+            if (Array.isArray(classData.classes)) applyClassListFast(ctx.date, classData.classes, true);
+          } catch (classError) {
+            safeConsole('warn', '[ULIM 7.31.17 Firestore class refresh]', classError);
           }
         }
 
-        let data = await invokeStaff(
-          rt,
-          rt.staffOperational731.getAttendance,
-          ctx,
-          'getAttendance'
-        );
+        let data = await invokeStaff(rt, rt.staffOperational731.getAttendance, ctx, 'getAttendance');
         let records = Array.isArray(data.records) ? data.records : [];
 
-        if (
-          !records.length &&
-          data.queryOptimized !== true &&
-          (ctx.className || ctx.classId)
-        ) {
+        if (!records.length && data.queryOptimized !== true && (ctx.className || ctx.classId)) {
           try {
-            const broadData = await invokeStaff(
-              rt,
-              rt.staffOperational731.getAttendance,
-              {
-                date: ctx.date,
-                className: '전체반',
-                classId: '',
-                teacherScopeKey: ctx.teacherScopeKey || '',
-                keyword: ctx.keyword || '',
-                statusFilter: ctx.statusFilter || ''
-              },
-              'getAttendance'
-            );
-            const broadRecords = Array.isArray(broadData.records)
-              ? broadData.records
-              : [];
-            const matched = filterAttendanceForSelectedClass(
-              broadRecords,
-              ctx
-            );
+            const broadData = await invokeStaff(rt, rt.staffOperational731.getAttendance, {
+              date: ctx.date,
+              className: '전체반',
+              classId: '',
+              teacherScopeKey: ctx.teacherScopeKey || '',
+              keyword: ctx.keyword || '',
+              statusFilter: ctx.statusFilter || ''
+            }, 'getAttendance');
+            const broadRecords = Array.isArray(broadData.records) ? broadData.records : [];
+            const matched = filterAttendanceForSelectedClass(broadRecords, ctx);
             if (matched.length) {
               records = matched;
               data = Object.assign({}, broadData, {
                 records: matched,
                 count: matched.length,
-                message:
-                  'Firestore 출석부 ' +
-                  matched.length +
-                  '건 · classId/반명 자동매칭'
+                message: 'Firestore 출석부 ' + matched.length + '건 · classId/반명 자동매칭'
               });
             }
           } catch (broadError) {
-            safeConsole(
-              'warn',
-              '[ULIM 7.31.6 attendance broad fallback]',
-              broadError
-            );
-          }
-        }
-
-        if (!records.length && !forceSheetSync) {
-          if (canRenderAttendanceLoad73116() && !silentRealtime73116) {
-            setAttendanceSummary('오늘 출석부 최초 자동적재 중...');
-          }
-          const refreshed = await bootstrapDateOnce(
-            rt,
-            ctx.date,
-            'attendance_empty_bootstrap',
-            ['attendance']
-          );
-          if (refreshed) {
-            data = await invokeStaff(
-              rt,
-              rt.staffOperational731.getAttendance,
-              ctx,
-              'getAttendance'
-            );
-            records = Array.isArray(data.records) ? data.records : [];
+            safeConsole('warn', '[ULIM 7.31.17 attendance broad fallback]', broadError);
           }
         }
 
         writeCache(key, records);
-
-        const syncClassCount = sheetSyncResult
-          ? Number(sheetSyncResult.classCount || 0)
-          : 0;
-        const message = sheetSyncError
-          ? (
-              '시트 동기화 실패 · 기존 Firestore 출석부 ' +
-              records.length +
-              '건 표시'
-            )
-          : (
-              forceSheetSync
-                ? (
-                    '시트 원본 동기화 완료 · 반 ' +
-                    syncClassCount +
-                    '개 · 선택 반 출석부 ' +
-                    records.length +
-                    '건'
-                  )
-                : (
-                    data.message ||
-                    ('Firestore 출석부 ' + records.length + '건')
-                  )
-            );
-
         if (canRenderAttendanceLoad73116()) {
-          renderAttendance(records, message, ctx);
+          renderAttendance(records, data.message || ('Firestore 출석부 ' + records.length + '건'));
         }
-
-        if (sheetSyncError && showAlert) {
-          alert(
-            isFullAdmin()
-              ? (
-                  'Google Sheets 원본 동기화에 실패했습니다. 기존 Firestore 자료를 표시합니다.\n' +
-                  (sheetSyncError.message || String(sheetSyncError))
-                )
-              : '최신 출석부 확인에 실패했습니다. 현재 표시된 출석부를 계속 사용합니다.'
-          );
-        } else if (showAlert && !records.length) {
-          alert(
-            forceSheetSync
-              ? 'Google Sheets 원본 동기화는 완료됐지만 선택한 반의 출석 학생을 찾지 못했습니다. 반 목록을 다시 선택한 뒤 확인해주세요.'
-              : '조건에 맞는 출석부 데이터가 없습니다. 날짜/반명/학생명을 확인해주세요.'
-          );
+        if (showAlert && !records.length) {
+          alert('조건에 맞는 출석부 데이터가 없습니다. 날짜/반명/학생명을 확인해주세요.');
         }
         return true;
       } catch (error) {
-        safeConsole(
-          'warn',
-          '[ULIM 7.31.3 attendance Firestore read]',
-          error
-        );
-        if (!cached && canRenderAttendanceLoad73116()) {
-          setAttendanceSummary(
-            '출석부 조회 실패 · 네트워크 연결을 확인해주세요.',
-            '출석부를 불러오지 못했습니다.'
-          );
-          if (showAlert) {
-            alert(
-              friendlyError(
-                error,
-                '출석부를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.'
-              )
-            );
-          }
+        safeConsole('warn', '[ULIM 7.31.17 attendance Firestore read]', error);
+        if (!cached) {
+          setAttendanceSummary('출석부 조회 실패 · 네트워크 연결을 확인해주세요.', '출석부를 불러오지 못했습니다.');
+          if (showAlert) alert(friendlyError(error, '출석부를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.'));
         }
         return false;
       } finally {
         inflight.delete(requestKey);
       }
     })();
-
     inflight.set(requestKey, promise);
     return promise;
   };
@@ -981,20 +713,11 @@ function attendanceMinimal(row) {
     classDate: r.classDate || r.date || r.sessionDate || ctx.date,
     className: r.className || r.currentClass || ctx.className,
     currentClass: r.currentClass || r.className || ctx.className,
-    classId: r.classId || ctx.classId || '',
-    teacherScopeKey:
-      r.teacherScopeKey ||
-      ctx.teacherScopeKey ||
-      teacherScope(r.className || ctx.className, r, r.date || ctx.date),
+    classId: r.classId || '',
+    teacherScopeKey: r.teacherScopeKey || teacherScope(r.className || ctx.className, r),
     teacherUid: r.teacherUid || '',
-    instructor:
-      r.instructor ||
-      r.instructorName ||
-      teacherNameFor(r.className || ctx.className, r, r.date || ctx.date),
-    instructorName:
-      r.instructorName ||
-      r.instructor ||
-      teacherNameFor(r.className || ctx.className, r, r.date || ctx.date),
+    instructor: r.instructor || r.instructorName || teacherNameFor(r.className || ctx.className, r),
+    instructorName: r.instructorName || r.instructor || teacherNameFor(r.className || ctx.className, r),
     studentUid: r.studentUid || '',
     studentIdentityKey: r.studentIdentityKey || '',
     studentNo: r.studentNo || r.attendanceNo || '',
@@ -1044,26 +767,6 @@ function attendanceMinimal(row) {
     });
   }
 
-  async function pollSync(requestIdValue, kind, summaryEl) {
-    const delays = [2500, 6000, 12000, 25000];
-    for (let i = 0; i < delays.length; i++) {
-      await new Promise(function (resolve) { setTimeout(resolve, delays[i]); });
-      try {
-        const rt = await runtime();
-        const status = await invokeStaff(rt, rt.staffOperational731.getSyncStatus, { requestId: requestIdValue }, 'getSyncStatus');
-        if (status.state === 'complete' || status.state === 'partial' || status.state === 'failed') {
-          if (summaryEl && isFullAdmin()) {
-            summaryEl.textContent = status.state === 'complete'
-              ? kind + ' Firestore 및 Google Sheets 백그라운드 저장 완료'
-              : (status.message || (kind + ' Google Sheets 백그라운드 상태: ' + status.state));
-          }
-          return status;
-        }
-      } catch (error) { safeConsole('warn', '[ULIM 7.31 sync status]', error); }
-    }
-    return null;
-  }
-
   async function saveAttendanceFirestore(records, silent) {
     if (!records || !records.length) return false;
     const compact = records.map(attendanceMinimal);
@@ -1078,15 +781,12 @@ function attendanceMinimal(row) {
         adminName: info().name || ''
       }, 'saveAttendance');
       clearSavedAttendanceEdits73116(compact, attendanceContext());
-      setAttendanceState(compact, '저장됨 · 시트전송중', false);
+      setAttendanceState(compact, '저장됨', false);
       const summary = document.getElementById('adminAttendanceSummary');
-      setAttendanceSummary(data.message || ('출석 ' + compact.length + '건 Firestore 저장 완료 · 시트 백그라운드 전송 중'), '저장 완료');
+      setAttendanceSummary(data.message || ('출석 ' + compact.length + '건 Firestore 저장 완료'), '저장 완료');
       const ctx = attendanceContext();
       writeCache(cacheKey('attendance', ctx), typeof adminAttendanceRecords !== 'undefined' ? adminAttendanceRecords : compact);
-      pollSync(rid, '출석', summary).catch(function () {});
-      if (!silent) alert(isFullAdmin()
-        ? (data.message || '출석이 Firestore에 저장되었고 Google Sheets로 백그라운드 전송됩니다.')
-        : '출석부가 저장되었습니다.');
+      if (!silent) alert(data.message || '출석부가 저장되었습니다.');
       try {
         const keys = new Set(compact.map(function (row) {
           return [row.date, row.className, row.studentIdentityKey || row.studentNo || row.studentName].map(normalize).join('|');
@@ -1131,15 +831,16 @@ function attendanceMinimal(row) {
   function studentMatchKey(row) {
     const r = row || {};
 
-    if (text(r.studentIdentityKey || r.identityKey)) {
-      return 'KEY|' + text(r.studentIdentityKey || r.identityKey);
+    // 출석 명단과 저장 평가에 공통으로 존재하는 식별키를 최우선 사용합니다.
+    if (text(r.studentIdentityKey)) {
+      return 'KEY|' + text(r.studentIdentityKey);
     }
 
-    if (text(r.studentUid || r.studentUID || r.uidV2 || r.uid)) {
-      return 'UID|' + text(r.studentUid || r.studentUID || r.uidV2 || r.uid);
+    if (text(r.studentUid)) {
+      return 'UID|' + text(r.studentUid);
     }
 
-    const phone = text(r.studentPhone || r.phone).replace(/\D/g, '');
+    const phone = text(r.studentPhone).replace(/\D/g, '');
     if (phone.length >= 8) {
       return 'PHONE|' + phone;
     }
@@ -1151,227 +852,98 @@ function attendanceMinimal(row) {
     return 'NAME|' +
       normalize(r.studentName || r.name) +
       '|' +
-      classCoreKey(r.className || r.currentClass);
+      classCoreKey(r.className);
   }
-
-  function dailyMatchKeys73116(row) {
-    const r = row || {};
-    const keys = [];
-    const add = function (value) {
-      const key = text(value);
-      if (key && keys.indexOf(key) < 0) keys.push(key);
-    };
-
-    [
-      r.studentIdentityKey,
-      r.identityKey,
-      r.studentUid,
-      r.studentUID,
-      r.uidV2,
-      r.uid
-    ].forEach(function (value) {
-      const stable = text(value);
-      if (!stable) return;
-      add('KEY|' + stable);
-      add('UID|' + stable);
-    });
-
-    const phone = text(r.studentPhone || r.phone).replace(/\D/g, '');
-    if (phone.length >= 8) add('PHONE|' + phone);
-
-    const no = normalize(r.studentNo || r.attendanceNo);
-    const classKey = classCoreKey(r.className || r.currentClass);
-    const nameKey = normalize(r.studentName || r.name);
-
-    if (no && classKey && nameKey) add('NOCLASSNAME|' + no + '|' + classKey + '|' + nameKey);
-    if (no && nameKey) add('NONAME|' + no + '|' + nameKey);
-    if (classKey && nameKey) add('CLASSNAME|' + classKey + '|' + nameKey);
-    if (nameKey) add('NAME|' + nameKey);
-
-    return keys;
-  }
-
-  function dailySavedTime73116(row) {
-    const r = row || {};
-    return Date.parse(
-      r.savedAt ||
-      r.updatedAt ||
-      r.createdAt ||
-      ''
-    ) || Number(r.savedRow || r.rowNumber || 0) || 0;
-  }
-
-  function preferDailySaved73116(previous, candidate) {
-    if (!previous) return candidate;
-    if (!candidate) return previous;
-    return dailySavedTime73116(candidate) >= dailySavedTime73116(previous)
-      ? candidate
-      : previous;
-  }
-
   function dailyRosterRow(row, ctx) {
     const r = row || {};
-    const rowDate = r.date || r.sessionDate || r.classDate || ctx.date;
-    const rowClass = r.className || r.currentClass || ctx.className;
     return {
-      date: rowDate,
-      className: rowClass,
-      classId: r.classId || ctx.classId || '',
+      date: r.date || r.sessionDate || ctx.date,
+      className: r.className || ctx.className,
+      classId: r.classId || '',
       teacherScopeKey: r.teacherScopeKey || ctx.teacherScopeKey,
       teacherUid: r.teacherUid || '',
-      instructor:
-        r.instructor ||
-        r.instructorName ||
-        teacherNameFor(rowClass, r, rowDate),
-      studentUid: r.studentUid || r.studentUID || '',
-      studentIdentityKey: r.studentIdentityKey || r.identityKey || '',
+      instructor: r.instructor || teacherNameFor(r.className || ctx.className, r),
+      studentUid: r.studentUid || '',
+      studentIdentityKey: r.studentIdentityKey || '',
       studentName: r.studentName || r.name || '',
       name: r.name || r.studentName || '',
       studentNo: r.studentNo || r.attendanceNo || '',
-      attendanceNo: r.attendanceNo || r.studentNo || '',
-      studentPhone: r.studentPhone || r.phone || '',
+      studentPhone: r.studentPhone || '',
       parentPhone: r.parentPhone || '',
       attendanceStatus: r.attendanceStatus || r.status || '',
       specialStatus: r.specialStatus || r.specialType || r.enrollmentStatus || r.studentStatus || '',
       memo: r.memo || '',
-      videoLink:
-        r.videoLink ||
-        (typeof adminGetVideoLinkForClassName_ === 'function'
-          ? adminGetVideoLinkForClassName_(rowClass)
-          : ''),
-      lessonContent: '',
-      lessonAttitude: '',
-      teacherComment: '',
-      evaluation: ''
+      videoLink: r.videoLink || (typeof adminGetVideoLinkForClassName_ === 'function' ? adminGetVideoLinkForClassName_(r.className || ctx.className) : ''),
+      lessonContent: '', lessonAttitude: '', teacherComment: '', evaluation: ''
     };
   }
 
   function mergeDailyStrict(roster, savedRows, ctx) {
-    const rosterRows = Array.isArray(roster) ? roster : [];
-    const savedList = Array.isArray(savedRows) ? savedRows : [];
     const savedMap = new Map();
-    const savedByName = new Map();
 
-    savedList.forEach(function (saved) {
-      dailyMatchKeys73116(saved).forEach(function (key) {
-        if (key.indexOf('NAME|') === 0) return;
-        savedMap.set(
-          key,
-          preferDailySaved73116(savedMap.get(key), saved)
-        );
-      });
+    // 동일 학생의 저장 평가가 여러 건이면 가장 최근 자료만 사용합니다.
+    (savedRows || []).forEach(function (saved) {
+      const key = studentMatchKey(saved);
+      if (!key) return;
 
-      const nameKey = normalize(saved && (saved.studentName || saved.name));
-      if (nameKey) {
-        const list = savedByName.get(nameKey) || [];
-        list.push(saved);
-        savedByName.set(nameKey, list);
+      const previous = savedMap.get(key);
+
+      const savedTime = Date.parse(
+        saved.savedAt ||
+        saved.updatedAt ||
+        saved.createdAt ||
+        ''
+      ) || 0;
+
+      const previousTime = previous
+        ? (Date.parse(
+            previous.savedAt ||
+            previous.updatedAt ||
+            previous.createdAt ||
+            ''
+          ) || 0)
+        : -1;
+
+      if (!previous || savedTime >= previousTime) {
+        savedMap.set(key, saved);
       }
     });
 
-    /*
-     * 이름 단독 매칭은 같은 이름 학생이 현재 명단에 한 명이고,
-     * 저장 자료의 전화번호·학생번호·반명이 서로 충돌하지 않을 때만 허용합니다.
-     */
-    const rosterNameCount = new Map();
-    rosterRows.forEach(function (row) {
-      const nameKey = normalize(row && (row.studentName || row.name));
-      if (nameKey) rosterNameCount.set(nameKey, Number(rosterNameCount.get(nameKey) || 0) + 1);
-    });
-
-    const uniqueSavedByName = new Map();
-    savedByName.forEach(function (list, nameKey) {
-      const phones = new Set();
-      const numbers = new Set();
-      const classes = new Set();
-      let latest = null;
-
-      list.forEach(function (saved) {
-        const phone = text(saved && (saved.studentPhone || saved.phone)).replace(/\D/g, '');
-        const no = normalize(saved && (saved.studentNo || saved.attendanceNo));
-        const classKey = classCoreKey(saved && (saved.className || saved.currentClass));
-        if (phone.length >= 8) phones.add(phone);
-        if (no) numbers.add(no);
-        if (classKey) classes.add(classKey);
-        latest = preferDailySaved73116(latest, saved);
-      });
-
-      if (
-        Number(rosterNameCount.get(nameKey) || 0) === 1 &&
-        phones.size <= 1 &&
-        numbers.size <= 1 &&
-        classes.size <= 1
-      ) {
-        uniqueSavedByName.set(nameKey, latest);
-      }
-    });
-
-    if (!rosterRows.length) {
-      return savedList.map(function (saved) {
-        return Object.assign(
-          {},
-          dailyRosterRow(saved, ctx),
-          saved,
-          {
-            date: ctx.date,
-            className: saved.className || ctx.className,
-            classId: saved.classId || ctx.classId || '',
-            teacherScopeKey: saved.teacherScopeKey || ctx.teacherScopeKey || ''
-          }
-        );
-      });
-    }
-
-    return rosterRows.map(function (source) {
+    // 화면에는 현재 출석 명단에 존재하는 학생만 표시합니다.
+    return (roster || []).map(function (source) {
       const base = dailyRosterRow(source, ctx);
-      let saved = null;
-
-      const keys = dailyMatchKeys73116(base);
-      for (let i = 0; i < keys.length; i += 1) {
-        const key = keys[i];
-        if (key.indexOf('NAME|') === 0) continue;
-        if (savedMap.has(key)) {
-          saved = savedMap.get(key);
-          break;
-        }
-      }
-
-      if (!saved) {
-        const nameKey = normalize(base.studentName || base.name);
-        saved = uniqueSavedByName.get(nameKey) || null;
-      }
+      const saved = savedMap.get(studentMatchKey(base));
 
       if (!saved) return base;
 
       return Object.assign({}, base, saved, {
         date: ctx.date,
-        className: base.className || saved.className || ctx.className,
-        classId: base.classId || saved.classId || ctx.classId || '',
-        teacherScopeKey:
-          ctx.teacherScopeKey ||
-          base.teacherScopeKey ||
-          saved.teacherScopeKey ||
-          '',
-        studentUid: base.studentUid || saved.studentUid || saved.studentUID || '',
+        className: base.className,
+        classId: base.classId || saved.classId || '',
+        teacherScopeKey: ctx.teacherScopeKey,
+        studentUid: base.studentUid || saved.studentUid || '',
         studentIdentityKey:
           base.studentIdentityKey ||
           saved.studentIdentityKey ||
-          saved.identityKey ||
           '',
         instructor:
           base.instructor ||
           saved.instructor ||
-          saved.instructorName ||
-          teacherNameFor(ctx.className, saved, ctx.date)
+          teacherNameFor(ctx.className, saved)
       });
     });
   }
-
   const dailyLocalEdits73116 = new Map();
   let activeDailyLoadSeq73116 = 0;
 
   function dailyEditContextKey73116(ctx) {
-    return dailyViewContextKey73116(ctx);
+    const current = ctx || dailyContext();
+    return [
+      text(current.date),
+      normalize(current.className),
+      normalize(current.keyword),
+      text(current.teacherScopeKey)
+    ].join('|');
   }
 
   function dailyEditMapKey73116(contextKey, row) {
@@ -1434,8 +1006,8 @@ function attendanceMinimal(row) {
     }
   }
 
-  function preserveDailyEdits73116(rows, ctx) {
-    const contextKey = dailyEditContextKey73116(ctx);
+  function preserveDailyEdits73116(rows) {
+    const contextKey = dailyEditContextKey73116();
     const source = Array.isArray(rows) ? rows : [];
     const seen = new Set();
 
@@ -1497,318 +1069,72 @@ function attendanceMinimal(row) {
     );
   }
 
-  let lastDailyRenderedContextKey73116 = '';
-
-  function renderDaily(rows, message, ctx) {
-    const renderContext = ctx || dailyContext();
-    const preparedRows = preserveDailyEdits73116(rows, renderContext);
-    try {
-      adminDailyEvalRows = preparedRows.map(clone);
-      global.adminDailyEvalRows = adminDailyEvalRows;
-    } catch (ignore) {}
-    lastDailyRenderedContextKey73116 =
-      dailyViewContextKey73116(renderContext);
+  function renderDaily(rows, message) {
+    const preparedRows = preserveDailyEdits73116(rows);
+    try { adminDailyEvalRows = preparedRows.map(clone); global.adminDailyEvalRows = adminDailyEvalRows; } catch (ignore) {}
     try {
       const displayMessage = isFullAdmin()
-        ? (
-            message ||
-            ('Firestore 일일평가 ' + preparedRows.length + '건')
-          )
-        : simpleCountLabel('학생', preparedRows.length);
-      if (typeof adminRenderDailyEvalRows === 'function') {
-        adminRenderDailyEvalRows(displayMessage);
-      } else if (typeof adminRenderDailyEvalTable === 'function') {
-        adminRenderDailyEvalTable();
-      }
+        ? (message || ('Firestore 일일평가 ' + rows.length + '건'))
+        : simpleCountLabel('학생', rows.length);
+      if (typeof adminRenderDailyEvalRows === 'function') adminRenderDailyEvalRows(displayMessage);
+      else if (typeof adminRenderDailyEvalTable === 'function') adminRenderDailyEvalTable();
     } catch (ignore) {}
   }
 
-  global.adminLoadDailyEvalStudents = async function (forceSheetSync, options) {
-    forceSheetSync = forceSheetSync === true;
-    options = options && typeof options === 'object' ? options : {};
-    const bypassCache73116 =
-      options.bypassCache === true ||
-      options.source === 'revision' ||
-      options.source === 'save-confirm' ||
-      options.source === 'peer';
+  global.adminLoadDailyEvalStudents = async function (forceRefresh) {
+    forceRefresh = forceRefresh === true;
     if (!token()) return alert('로그인이 필요합니다.');
-
-    let ctx = dailyContext();
-    const initialViewKey73116 = dailyViewContextKey73116(ctx);
-    ctx = await refreshContextClassMetadata73116('daily', ctx);
-
-    if (dailyViewContextKey73116() !== initialViewKey73116) return false;
-
-    if (!ctx.className && !ctx.keyword) {
-      return alert(
-        '반명 또는 학생명을 입력하거나 반 목록에서 선택해주세요.'
-      );
-    }
-    if (
-      ctx.className &&
-      ctx.className !== '전체반' &&
-      !ctx.teacherScopeKey
-    ) {
-      return alert(
-        '선택한 반의 담당강사를 확인하지 못했습니다. 반 목록에서 다시 선택해주세요.'
-      );
-    }
-
-    const loadContextKey73116 = dailyViewContextKey73116(ctx);
+    const ctx = dailyContext();
     const loadSeq73116 = ++activeDailyLoadSeq73116;
+    const loadContextKey73116 = dailyEditContextKey73116(ctx);
     const canRenderDailyLoad73116 = function () {
-      return (
-        loadSeq73116 === activeDailyLoadSeq73116 &&
-        dailyViewContextKey73116() === loadContextKey73116
-      );
+      return loadSeq73116 === activeDailyLoadSeq73116 &&
+        dailyEditContextKey73116() === loadContextKey73116;
     };
 
-    await bindRevisionListener7318('daily', ctx.date, '', true);
-
-    const key = cacheKey('daily', ctx);
-    const cached = bypassCache73116 ? null : readCache(key);
-    const silentRealtime73116 = forceSheetSync === false;
-    const alreadyRendered73116 =
-      lastDailyRenderedContextKey73116 === loadContextKey73116 &&
-      dailyRows73116().length > 0;
-
-    if (
-      cached &&
-      Array.isArray(cached.rows) &&
-      canRenderDailyLoad73116() &&
-      (!silentRealtime73116 || !alreadyRendered73116)
-    ) {
-      renderDaily(
-        cached.rows,
-        forceSheetSync
-          ? '최근 학생 명단을 즉시 표시했습니다. 시트 원본을 백그라운드에서 확인합니다...'
-          : '최근 Firestore 일일평가를 먼저 표시했습니다.',
-        ctx
-      );
+    bindRevisionListener7318('daily', ctx.date);
+    if (!ctx.className && !ctx.keyword) return alert('반명 또는 학생명을 입력하거나 반 목록에서 선택해주세요.');
+    if (ctx.className && ctx.className !== '전체반' && !ctx.teacherScopeKey) {
+      return alert('선택한 반의 담당강사를 확인하지 못했습니다. 반 목록에서 다시 선택해주세요.');
     }
 
-    let attendanceSyncError = null;
-    let dailySyncError = null;
+    const key = cacheKey('daily', ctx);
+    const cached = forceRefresh ? null : readCache(key);
+    if (cached && Array.isArray(cached.rows) && canRenderDailyLoad73116()) {
+      renderDaily(cached.rows, '최근 Firestore 일일평가를 먼저 표시했습니다.');
+    }
 
     async function readAndRender(rt, message) {
-      const data = await invokeStaff(
-        rt,
-        rt.staffOperational731.getDaily,
-        ctx,
-        'getDaily'
-      );
+      const data = await invokeStaff(rt, rt.staffOperational731.getDaily, ctx, 'getDaily');
       const roster = Array.isArray(data.roster) ? data.roster : [];
       const savedRows = Array.isArray(data.rows) ? data.rows : [];
       const rows = mergeDailyStrict(roster, savedRows, ctx);
       writeCache(key, { rows: rows });
       if (canRenderDailyLoad73116()) {
-        renderDaily(
-          rows,
-          message ||
-            data.message ||
-            ('Firestore 학생 ' + rows.length + '명'),
-          ctx
-        );
+        renderDaily(rows, message || data.message || ('Firestore 학생 ' + rows.length + '명'));
       }
-      return {
-        data: data,
-        roster: roster,
-        savedRows: savedRows,
-        rows: rows
-      };
+      return { data: data, roster: roster, savedRows: savedRows, rows: rows };
     }
 
     try {
       const rt = await runtime();
-
-      if (forceSheetSync) {
-        if (
-          canRenderDailyLoad73116() &&
-          cached &&
-          Array.isArray(cached.rows) &&
-          !alreadyRendered73116
-        ) {
-          renderDaily(
-            cached.rows,
-            '출석부 명단을 먼저 동기화하는 중...',
-            ctx
-          );
-        } else {
-          const statusEl =
-            document.getElementById('adminDailyDraftStatus');
-          if (statusEl && canRenderDailyLoad73116()) {
-            statusEl.textContent =
-              '출석부 명단과 저장 평가 원본을 동기화하는 중...';
-          }
-        }
-
-        const attendanceSyncPromise = syncDateFromSheets(
-          rt,
-          ctx.date,
-          'daily_roster_attendance_refresh',
-          true,
-          ['attendance']
-        ).catch(function (error) {
-          attendanceSyncError = error;
-          safeConsole(
-            'warn',
-            '[ULIM 7.31.3 daily attendance sheet refresh]',
-            error
-          );
-          return null;
-        });
-
-        const dailySyncPromise = syncDateFromSheets(
-          rt,
-          ctx.date,
-          'daily_evaluation_sheet_refresh',
-          true,
-          ['dailyEvaluations']
-        ).catch(function (error) {
-          dailySyncError = error;
-          safeConsole(
-            'warn',
-            '[ULIM 7.31.3 daily evaluation sheet refresh]',
-            error
-          );
-          return null;
-        });
-
-        await attendanceSyncPromise;
-        const early = await readAndRender(
-          rt,
-          attendanceSyncError
-            ? '출석 시트 동기화 실패 · 기존 Firestore 학생 명단 표시'
-            : '현재 반 학생 명단 표시 완료 · 작성 평가 확인 중...'
-        );
-
-        await dailySyncPromise;
-        const finalResult = dailySyncError
-          ? early
-          : await readAndRender(
-              rt,
-              '시트 원본 동기화 완료 · 학생 및 담당강사 평가 반영'
-            );
-
-        if (
-          (attendanceSyncError || dailySyncError) &&
-          !finalResult.rows.length
-        ) {
-          const messages = [];
-          if (attendanceSyncError) {
-            messages.push(
-              '출석부: ' +
-                (attendanceSyncError.message ||
-                  String(attendanceSyncError))
-            );
-          }
-          if (dailySyncError) {
-            messages.push(
-              '일일평가: ' +
-                (dailySyncError.message ||
-                  String(dailySyncError))
-            );
-          }
-          alert(
-            isFullAdmin()
-              ? (
-                  'Google Sheets 원본 동기화 일부가 실패했습니다.\n' +
-                  messages.join('\n')
-                )
-              : '최신 학생 명단 또는 평가 확인에 실패했습니다. 잠시 후 다시 시도해주세요.'
-          );
-        }
-        return true;
-      }
-
-      let result = await readAndRender(rt);
-
-      if (!result.roster.length) {
-        const statusEl =
-          document.getElementById('adminDailyDraftStatus');
-        if (statusEl && canRenderDailyLoad73116()) {
-          statusEl.textContent =
-            '현재 날짜의 학생 명단을 최초 자동적재하는 중...';
-        }
+      if (forceRefresh && rt.staffOperational731.getClasses) {
         try {
-          await bootstrapDateOnce(
-            rt,
-            ctx.date,
-            'daily_attendance_empty_bootstrap',
-            ['attendance']
-          );
-          result = await readAndRender(
-            rt,
-            '현재 반 학생 명단 자동적재 완료'
-          );
-        } catch (error) {
-          attendanceSyncError = error;
-          safeConsole(
-            'warn',
-            '[ULIM 7.31.3 daily attendance bootstrap]',
-            error
-          );
+          const classData = await invokeStaff(rt, rt.staffOperational731.getClasses, { date: ctx.date }, 'getClasses');
+          if (Array.isArray(classData.classes)) applyClassListFast(ctx.date, classData.classes, true);
+        } catch (classError) {
+          safeConsole('warn', '[ULIM 7.31.17 daily class refresh]', classError);
         }
       }
-
-      if (!result.savedRows.length) {
-        bootstrapDateOnce(
-          rt,
-          ctx.date,
-          'daily_evaluation_empty_bootstrap',
-          ['dailyEvaluations']
-        )
-          .then(async function (refreshed) {
-            if (!refreshed || !canRenderDailyLoad73116()) return;
-            try {
-              await readAndRender(
-                rt,
-                '담당강사 일일평가 최신자료 반영 완료'
-              );
-            } catch (error) {
-              safeConsole(
-                'warn',
-                '[ULIM 7.31.3 daily background refresh]',
-                error
-              );
-            }
-          })
-          .catch(function (error) {
-            safeConsole(
-              'warn',
-              '[ULIM 7.31.3 daily evaluation bootstrap]',
-              error
-            );
-          });
-      }
-
-      if (
-        attendanceSyncError &&
-        !result.rows.length &&
-        !cached &&
-        canRenderDailyLoad73116()
-      ) {
-        alert(
-          friendlyError(
-            attendanceSyncError,
-            '학생 명단을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.'
-          )
-        );
+      const result = await readAndRender(rt);
+      if (!result.rows.length && !cached) {
+        alert('조건에 맞는 학생 또는 일일평가 데이터가 없습니다.');
       }
       return true;
     } catch (error) {
-      safeConsole(
-        'warn',
-        '[ULIM 7.31.3 daily Firestore read]',
-        error
-      );
-      if (!cached && canRenderDailyLoad73116()) {
-        alert(
-          friendlyError(
-            error,
-            '일일평가를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.'
-          )
-        );
+      safeConsole('warn', '[ULIM 7.31.17 daily Firestore read]', error);
+      if (!cached) {
+        alert(friendlyError(error, '학생 명단 또는 일일평가를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.'));
       }
       return false;
     }
@@ -1820,17 +1146,10 @@ function attendanceMinimal(row) {
     return {
       date: r.date || ctx.date,
       className: r.className || ctx.className,
-      classId: r.classId || ctx.classId || '',
+      classId: r.classId || '',
       teacherScopeKey: r.teacherScopeKey || ctx.teacherScopeKey,
       teacherUid: r.teacherUid || '',
-      instructor:
-        r.instructor ||
-        r.instructorName ||
-        teacherNameFor(
-          r.className || ctx.className,
-          r,
-          r.date || ctx.date
-        ),
+      instructor: r.instructor || teacherNameFor(r.className || ctx.className, r),
       studentUid: r.studentUid || '',
       studentIdentityKey: r.studentIdentityKey || '',
       studentName: r.studentName || r.name || '',
@@ -1857,13 +1176,12 @@ function attendanceMinimal(row) {
     const recipientTypes = typeof adminGetRecipientTypes === 'function' ? adminGetRecipientTypes('daily') : [];
     if (!rows.length) return alert('저장할 일일평가 내용이 없습니다.');
     if (sendSms && !recipientTypes.length) return alert('수신 대상을 선택해주세요.');
-    let ctx = dailyContext();
-    ctx = await refreshContextClassMetadata73116('daily', ctx);
+    const ctx = dailyContext();
     if (!ctx.teacherScopeKey) return alert('담당강사 범위를 확인하지 못했습니다. 반 목록에서 다시 선택해주세요.');
     const sendChannel = typeof adminGetSendChannel === 'function' ? adminGetSendChannel('daily') : 'alimtalk';
     const channelLabel = typeof adminGetSendChannelLabel === 'function' ? adminGetSendChannelLabel(sendChannel) : sendChannel;
     const saveConfirmText = isFullAdmin()
-      ? ('일일평가를 Firestore에 저장하고 Google Sheets 반영 후 [' + recipientTypes.join(', ') + ']에게 ' + channelLabel + '으로 발송할까요?')
+      ? ('일일평가를 Firestore에 저장하고  [' + recipientTypes.join(', ') + ']에게 ' + channelLabel + '으로 발송할까요?')
       : ('일일평가를 저장한 뒤 [' + recipientTypes.join(', ') + ']에게 ' + channelLabel + '으로 발송할까요?');
     if (sendSms && !confirm(saveConfirmText)) return false;
     const compact = rows.map(function (row) { return compactDaily(row, ctx); });
@@ -1890,36 +1208,14 @@ function attendanceMinimal(row) {
         });
         global.adminDailyEvalRows = adminDailyEvalRows;
       } catch (ignore) {}
-      renderDaily(
-        adminDailyEvalRows || compact,
-        'Firestore 저장 완료 · Google Sheets 백그라운드 전송 중',
-        ctx
-      );
+      renderDaily(adminDailyEvalRows || compact, '저장 완료');
       writeCache(cacheKey('daily', ctx), { rows: adminDailyEvalRows || compact });
-      notifyDailyRevisionPeers73116(ctx, rid);
-      setTimeout(function () {
-        if (
-          dailyViewContextKey73116() === dailyViewContextKey73116(ctx) &&
-          typeof global.adminLoadDailyEvalStudents === 'function'
-        ) {
-          Promise.resolve(
-            global.adminLoadDailyEvalStudents(false, {
-              source: 'save-confirm',
-              bypassCache: true,
-              requestId: rid
-            })
-          ).catch(function () {});
-        }
-      }, 120);
       if (statusEl) statusEl.textContent = isFullAdmin()
-        ? (data.message || 'Firestore 저장 완료 · 시트 백그라운드 전송 중')
+        ? (data.message || 'Firestore 저장 완료')
         : '저장 완료';
-      pollSync(rid, '일일평가', statusEl).catch(function () {});
-      alert(isFullAdmin()
-        ? (sendSms
-          ? '일일평가가 Firestore에 저장되었습니다. Google Sheets 반영 후 발송도 백그라운드에서 처리됩니다.'
-          : '일일평가가 Firestore에 저장되었습니다. Google Sheets는 백그라운드에서 반영됩니다.')
-        : (sendSms ? '일일평가가 저장되었고 발송이 진행됩니다.' : '일일평가가 저장되었습니다.'));
+      alert(sendSms
+        ? '일일평가가 저장되었고 발송이 진행됩니다.'
+        : '일일평가가 저장되었습니다.');
       try {
         const draftKey = typeof global.ulimGetDailyEvalLocalDraftKey704_ === 'function' ? global.ulimGetDailyEvalLocalDraftKey704_() : '';
         if (draftKey) localStorage.removeItem(draftKey);
@@ -1933,7 +1229,7 @@ function attendanceMinimal(row) {
   };
   try { adminSaveDailyEvaluations = global.adminSaveDailyEvaluations; } catch (ignore) {}
 
-  // 7.04의 1분 후 시트 직접 자동저장은 중단합니다. 명시적 평가저장만 Firestore job을 만듭니다.
+  // 이전 자동저장 훅은 로컬 임시저장만 담당합니다. 명시적 평가저장만 Firestore에 반영합니다.
   global.ulimScheduleDailyEvalSheetSync704_ = function () {
     const statusEl = document.getElementById('adminDailyDraftStatus');
     if (statusEl) statusEl.textContent = isFullAdmin()
@@ -2093,22 +1389,6 @@ function attendanceMinimal(row) {
 
     return filtered;
   }
-  async function legacyClassListForDate(date, force) {
-    if (typeof adminApi !== 'function') return [];
-    try {
-      const data = await adminApi('adminGetClassList', {
-        adminToken: token(),
-        date: date,
-        force: force ? '1' : '',
-        exactDateVersion: '704'
-      });
-      return Array.isArray(data && data.classes) ? data.classes : [];
-    } catch (error) {
-      safeConsole('warn', '[ULIM 7.31.3 legacy class list]', error);
-      return [];
-    }
-  }
-
   global.adminLoadClassList = async function (dateOverride, force) {
     if (!token()) return [];
     const date = text(dateOverride)
@@ -2118,89 +1398,32 @@ function attendanceMinimal(row) {
     force = force === true;
     activeClassListRequestDate73116 = date;
 
-    let immediate = readPersistentClassList(date);
-    if (!immediate || !immediate.length) {
+    let immediate = force ? [] : readPersistentClassList(date);
+    if ((!immediate || !immediate.length) && !force) {
       try {
         const sessionKey = typeof getAdminClassListCacheKey === 'function' ? getAdminClassListCacheKey(date) : '';
-        immediate = sessionKey && typeof readAdminClassListCache === 'function' ? readAdminClassListCache(sessionKey) : null;
+        immediate = sessionKey && typeof readAdminClassListCache === 'function'
+          ? readAdminClassListCache(sessionKey)
+          : null;
       } catch (ignore) {}
     }
-    if (!immediate || !immediate.length) {
-      try {
-        const expectedKey = typeof getAdminClassListCacheKey === 'function'
-          ? getAdminClassListCacheKey(date)
-          : '';
-        const currentKey = typeof adminClassListLoadedKey !== 'undefined'
-          ? text(adminClassListLoadedKey)
-          : '';
+    if (Array.isArray(immediate) && immediate.length) applyClassListFast(date, immediate, true);
 
-        immediate = expectedKey &&
-          currentKey === expectedKey &&
-          Array.isArray(adminClassList) &&
-          adminClassList.length
-            ? adminClassList
-            : null;
-      } catch (ignore) {}
-    }
-    if (!immediate || !immediate.length) immediate = fixedClassItemsForDate(date);
-    if (immediate && immediate.length) applyClassListFast(date, immediate, false);
-
-    const requestKey = 'classlist|' + owner() + '|' + date + '|' + (force ? 'force' : 'normal');
+    const requestKey = 'classes|' + date + '|' + (force ? 'refresh' : 'normal');
     if (inflight.has(requestKey)) return inflight.get(requestKey);
 
     const promise = (async function () {
       const rt = await runtime();
-
-      async function readFirestoreClasses() {
-        if (rt.staffOperational731.getClasses) {
-          const classData = await invokeStaff(rt, rt.staffOperational731.getClasses, { date: date }, 'getClasses');
-          const classes = Array.isArray(classData.classes) ? classData.classes : [];
-          if (classes.length) return classes;
-        }
-        const data = await invokeStaff(rt, rt.staffOperational731.getAttendance, {
-          date: date,
-          className: '전체반',
-          keyword: '',
-          statusFilter: ''
-        }, 'getAttendance');
-        const records = Array.isArray(data.records) ? data.records : [];
-        return classItemsFromRecords(records);
-      }
-
-      let firestoreClasses = [];
       try {
-        firestoreClasses = await readFirestoreClasses();
-        if (firestoreClasses.length) applyClassListFast(date, firestoreClasses, true);
-      } catch (error) {
-        safeConsole('warn', '[ULIM 7.31.3 Firestore class list]', error);
-      }
-
-      const legacyPromise = legacyClassListForDate(date, false).then(function (classes) {
-        if (classes.length) applyClassListFast(date, classes, true);
+        const classData = await invokeStaff(rt, rt.staffOperational731.getClasses, { date: date }, 'getClasses');
+        const classes = Array.isArray(classData.classes) ? classData.classes : [];
+        applyClassListFast(date, classes, true);
         return classes;
-      });
-
-      if (force || !firestoreClasses.length) {
-        try {
-          await syncDateFromSheets(
-            rt,
-            date,
-            force ? 'class_list_force_refresh' : 'class_list_empty_bootstrap',
-            force,
-            ['attendance']
-          );
-          firestoreClasses = await readFirestoreClasses();
-          if (firestoreClasses.length) applyClassListFast(date, firestoreClasses, true);
-        } catch (error) {
-          safeConsole('warn', '[ULIM 7.31.3 class list sheet sync]', error);
-        }
+      } catch (error) {
+        safeConsole('warn', '[ULIM 7.31.17 Firestore class list]', error);
+        if (!immediate || !immediate.length) applyClassListFast(date, [], true);
+        return Array.isArray(immediate) ? immediate : [];
       }
-
-      const legacyClasses = await legacyPromise;
-      if (!firestoreClasses.length && !legacyClasses.length && force) {
-        applyClassListFast(date, [], true);
-      }
-      return firestoreClasses.length ? firestoreClasses : legacyClasses;
     })().finally(function () {
       inflight.delete(requestKey);
     });
@@ -2210,138 +1433,30 @@ function attendanceMinimal(row) {
   };
   try { adminLoadClassList = global.adminLoadClassList; } catch (ignore) {}
 
+  // Deprecated compatibility alias retained for older callers.
+  // It performs Firestore refresh only and never calls GAS/Sheets.
   global.ulimRefreshStaffOperationalDateFromSheets731 = async function (date, reason, force, datasets) {
     const target = text(date || attendanceContext().date || localDateText());
-    const rt = await runtime();
-    return syncDateFromSheets(rt, target, reason || 'manual_refresh', force !== false, datasets);
+    await global.adminLoadClassList(target, true);
+    await global.adminLoadAttendanceSnapshot(false, true);
+    return { status: 'success', state: 'complete', dataAuthority: 'firestore', date: target };
   };
 
   let autoBootstrapStarted = false;
-  let legacyWarmupSent = false;
   async function autoBootstrapTodayIfNeeded() {
     if (autoBootstrapStarted || !token()) return false;
     autoBootstrapStarted = true;
     try {
       const rt = await runtime();
       const date = localDateText();
-      const data = await invokeStaff(rt, rt.staffOperational731.getAttendance, {
-        date: date,
-        className: '',
-        keyword: '',
-        statusFilter: ''
-      }, 'getAttendance');
-      const records = Array.isArray(data.records) ? data.records : [];
-      if (!records.length) await bootstrapDateOnce(rt, date, 'login_empty_bootstrap', ['attendance']);
+      const classData = await invokeStaff(rt, rt.staffOperational731.getClasses, { date: date }, 'getClasses');
+      if (Array.isArray(classData.classes)) applyClassListFast(date, classData.classes, true);
       return true;
     } catch (error) {
       autoBootstrapStarted = false;
-      safeConsole('warn', '[ULIM 7.31.3 login auto bootstrap]', error);
+      safeConsole('warn', '[ULIM 7.31.17 Firestore bootstrap]', error);
       return false;
     }
-  }
-
-  function notifyDailyRevisionPeers73116(ctx, requestIdValue) {
-    const current = ctx || dailyContext();
-    const payload = {
-      type: 'daily-save',
-      clientId: dailyPeerClientId73116,
-      date: text(current.date),
-      className: text(current.className),
-      requestId: text(requestIdValue),
-      emittedAtMs: Date.now()
-    };
-
-    try {
-      if (!dailyPeerChannel73116 && typeof BroadcastChannel === 'function') {
-        dailyPeerChannel73116 = new BroadcastChannel(
-          DAILY_PEER_CHANNEL_NAME_73116
-        );
-        dailyPeerChannel73116.onmessage = function (event) {
-          handleDailyPeerRevision73116(event && event.data);
-        };
-      }
-      if (dailyPeerChannel73116) {
-        dailyPeerChannel73116.postMessage(payload);
-      }
-    } catch (ignore) {}
-
-    try {
-      localStorage.setItem(
-        DAILY_PEER_STORAGE_KEY_73116,
-        JSON.stringify(payload)
-      );
-      localStorage.removeItem(DAILY_PEER_STORAGE_KEY_73116);
-    } catch (ignore) {}
-  }
-
-  function handleDailyPeerRevision73116(payload) {
-    const data = payload && typeof payload === 'object' ? payload : {};
-    if (
-      data.type !== 'daily-save' ||
-      text(data.clientId) === dailyPeerClientId73116
-    ) {
-      return;
-    }
-
-    const ctx = dailyContext();
-    if (
-      text(data.date) !== text(ctx.date) ||
-      !revisionPanelActive73116('daily') ||
-      !revisionSelectionReady73116('daily')
-    ) {
-      return;
-    }
-
-    const incomingClass = normalize(data.className);
-    const selectedClass = normalize(ctx.className);
-    if (
-      incomingClass &&
-      selectedClass &&
-      selectedClass !== normalize('전체반') &&
-      incomingClass !== selectedClass &&
-      classCoreKey(data.className) !== classCoreKey(ctx.className)
-    ) {
-      return;
-    }
-
-    const state = revisionListeners7318.daily;
-    if (!state) return;
-    const syntheticRevision =
-      Number(state.lastRevision || 0) + 1;
-    scheduleRevisionReload7318(
-      'daily',
-      text(ctx.date),
-      '',
-      syntheticRevision
-    );
-  }
-
-  function installDailyPeerRevision73116() {
-    try {
-      if (!dailyPeerChannel73116 && typeof BroadcastChannel === 'function') {
-        dailyPeerChannel73116 = new BroadcastChannel(
-          DAILY_PEER_CHANNEL_NAME_73116
-        );
-        dailyPeerChannel73116.onmessage = function (event) {
-          handleDailyPeerRevision73116(event && event.data);
-        };
-      }
-    } catch (ignore) {}
-
-    if (global.__ULIM_DAILY_PEER_STORAGE_73116__) return;
-    global.__ULIM_DAILY_PEER_STORAGE_73116__ = true;
-    global.addEventListener('storage', function (event) {
-      if (
-        !event ||
-        event.key !== DAILY_PEER_STORAGE_KEY_73116 ||
-        !event.newValue
-      ) {
-        return;
-      }
-      try {
-        handleDailyPeerRevision73116(JSON.parse(event.newValue));
-      } catch (ignore) {}
-    });
   }
 
   async function firebaseStaffClaimsReady73111(rt) {
@@ -2361,151 +1476,61 @@ function attendanceMinimal(row) {
   }
 
   function revisionContext73116(kind) {
-    const ctx = kind === 'attendance'
-      ? attendanceContext()
-      : dailyContext();
+    const ctx = kind === 'attendance' ? attendanceContext() : dailyContext();
     return {
       date: text(ctx && ctx.date) || localDateText(),
-      classId: ''
+      classId: text(ctx && ctx.classId)
     };
   }
 
-  function revisionScopeId73116(date) {
-    return text(date) || localDateText();
-  }
-
-  function revisionPanelActive73116(kind) {
-    const panelId = kind === 'attendance'
-      ? 'adminPanelAttendance'
-      : 'adminPanelDailyEval';
-    const panel = document.getElementById(panelId);
-    return !!(
-      panel &&
-      panel.classList &&
-      panel.classList.contains('active')
-    );
-  }
-
-  function revisionSelectionReady73116(kind) {
-    const inputId = kind === 'attendance'
-      ? 'adminAttendanceClass'
-      : 'adminDailyEvalClass';
-    const input = document.getElementById(inputId);
-    return !!(input && text(input.value));
+  function revisionScopeId73116(date, classId) {
+    return classId ? date + '__' + String(classId) : date;
   }
 
   function scheduleRevisionReload7318(kind, date, classId, revision) {
     const state = revisionListeners7318[kind];
-    const targetDate = text(date);
-    if (!state || state.date !== targetDate) return;
-
-    state.pendingRevision = Math.max(
-      Number(state.pendingRevision || 0),
-      Number(revision || 0)
-    );
-
-    if (
-      state.reloadTimer ||
-      state.reloadInFlight ||
-      !revisionPanelActive73116(kind) ||
-      !revisionSelectionReady73116(kind)
-    ) {
-      return;
-    }
-
-    const elapsed = Date.now() - Number(state.lastReloadAt || 0);
-    const delay = Math.max(250, 900 - elapsed);
-
+    if (!state || state.date !== date || text(state.classId) !== text(classId)) return;
+    if (state.reloadTimer) clearTimeout(state.reloadTimer);
     state.reloadTimer = setTimeout(function () {
       state.reloadTimer = null;
-
       const current = revisionContext73116(kind);
-      if (
-        current.date !== targetDate ||
-        !revisionPanelActive73116(kind) ||
-        !revisionSelectionReady73116(kind)
-      ) {
-        return;
+      if (current.date !== date || (classId && current.classId !== classId)) return;
+      if (kind === 'attendance') {
+        const select = document.getElementById('adminAttendanceClass');
+        if (select && text(select.value) && typeof global.adminLoadAttendanceSnapshot === 'function') {
+          global.adminLoadAttendanceSnapshot(false, false).catch(function (error) {
+            safeConsole('warn', '[ULIM 7.31.16 attendance realtime reload]', error);
+          });
+        }
+      } else {
+        const select = document.getElementById('adminDailyEvalClass');
+        if (select && text(select.value) && typeof global.adminLoadDailyEvalStudents === 'function') {
+          global.adminLoadDailyEvalStudents(false).catch(function (error) {
+            safeConsole('warn', '[ULIM 7.31.16 daily realtime reload]', error);
+          });
+        }
       }
-
-      if (state.reloadInFlight) return;
-
-      const handledRevision = Number(state.pendingRevision || 0);
-      state.pendingRevision = 0;
-      state.reloadInFlight = true;
-      state.lastReloadAt = Date.now();
-
-      const task = kind === 'attendance'
-        ? (
-            typeof global.adminLoadAttendanceSnapshot === 'function'
-              ? global.adminLoadAttendanceSnapshot(false, false)
-              : false
-          )
-        : (
-            typeof global.adminLoadDailyEvalStudents === 'function'
-              ? global.adminLoadDailyEvalStudents(false, {
-                  source: 'revision',
-                  bypassCache: true,
-                  revision: handledRevision
-                })
-              : false
-          );
-
-      Promise.resolve(task)
-        .catch(function (error) {
-          safeConsole(
-            'warn',
-            '[ULIM 7.31.16 ' + kind + ' realtime reload]',
-            error
-          );
-        })
-        .finally(function () {
-          state.reloadInFlight = false;
-          if (Number(state.pendingRevision || 0) > handledRevision) {
-            scheduleRevisionReload7318(
-              kind,
-              targetDate,
-              '',
-              state.pendingRevision
-            );
-          }
-        });
-    }, delay);
+    }, 180);
   }
 
-  async function bindRevisionListener7318(
-    kind,
-    date,
-    classId,
-    forceDateScope
-  ) {
+  async function bindRevisionListener7318(kind, date, classId, forceDateScope) {
     const targetDate = text(date) || localDateText();
-    const targetClassId = '';
-    const scopeId = revisionScopeId73116(targetDate);
+    const targetClassId = forceDateScope ? '' : text(classId);
+    const scopeId = revisionScopeId73116(targetDate, targetClassId);
     const state = revisionListeners7318[kind];
     if (!state) return;
-
     if (Date.now() < Number(state.blockedUntil || 0)) return;
-    if (
-      state.scopeId === scopeId &&
-      typeof state.unsubscribe === 'function'
-    ) {
-      return;
-    }
-
+    if (state.scopeId === scopeId && typeof state.unsubscribe === 'function') return;
     if (typeof state.unsubscribe === 'function') {
       try { state.unsubscribe(); } catch (ignore) {}
     }
     if (state.reloadTimer) clearTimeout(state.reloadTimer);
-
     state.date = targetDate;
     state.classId = targetClassId;
     state.scopeId = scopeId;
     state.unsubscribe = null;
     state.initialized = false;
     state.lastRevision = 0;
-    state.pendingRevision = 0;
-    state.reloadInFlight = false;
 
     try {
       const rt = await runtime();
@@ -2513,100 +1538,53 @@ function attendanceMinimal(row) {
         state.blockedUntil = Date.now() + 1200;
         return;
       }
-
-      const ref = rt.sdk.doc(
-        rt.db,
-        'staffOperationalRevisions',
-        scopeId
-      );
-
-      state.unsubscribe = rt.sdk.onSnapshot(
-        ref,
-        function (snapshot) {
-          const data =
-            snapshot && snapshot.exists()
-              ? snapshot.data() || {}
-              : {};
-          const field = kind === 'attendance'
-            ? 'attendanceRevision'
-            : 'dailyRevision';
-          const revision = Number(data[field] || 0);
-
-          if (!state.initialized) {
-            state.initialized = true;
-            state.lastRevision = revision;
-            return;
-          }
-          if (revision <= state.lastRevision) return;
-
+      const collectionName = targetClassId ? 'staffOperationalClassRevisions' : 'staffOperationalRevisions';
+      const ref = rt.sdk.doc(rt.db, collectionName, scopeId);
+      state.unsubscribe = rt.sdk.onSnapshot(ref, function (snapshot) {
+        const data = snapshot && snapshot.exists() ? snapshot.data() || {} : {};
+        const field = kind === 'attendance' ? 'attendanceRevision' : 'dailyRevision';
+        const revision = Number(data[field] || 0);
+        if (!state.initialized) {
+          state.initialized = true;
           state.lastRevision = revision;
-          scheduleRevisionReload7318(
-            kind,
-            targetDate,
-            '',
-            revision
-          );
-        },
-        function (error) {
-          state.unsubscribe = null;
-          const code = text(error && error.code).toLowerCase();
-          if (code.indexOf('permission-denied') >= 0) {
-            state.blockedUntil = Date.now() + 3000;
-            return;
-          }
-          safeConsole(
-            'warn',
-            '[ULIM 7.31.16 ' + kind + ' revision listener]',
-            error
-          );
+          return;
         }
-      );
+        if (revision <= state.lastRevision) return;
+        state.lastRevision = revision;
+        scheduleRevisionReload7318(kind, targetDate, targetClassId, revision);
+      }, function (error) {
+        state.unsubscribe = null;
+        const code = text(error && error.code).toLowerCase();
+        if (code.indexOf('permission-denied') >= 0 && targetClassId) {
+          state.blockedUntil = 0;
+          bindRevisionListener7318(kind, targetDate, '', true).catch(function () {});
+          return;
+        }
+        if (code.indexOf('permission-denied') >= 0) {
+          state.blockedUntil = Date.now() + 3000;
+          return;
+        }
+        safeConsole('warn', '[ULIM 7.31.16 ' + kind + ' revision listener]', error);
+      });
     } catch (error) {
       state.blockedUntil = Date.now() + 1500;
-      safeConsole(
-        'warn',
-        '[ULIM 7.31.16 revision bind]',
-        kind,
-        error
-      );
+      safeConsole('warn', '[ULIM 7.31.16 revision bind]', kind, error);
     }
   }
 
   function ensureRevisionListeners7318() {
-    if (revisionEnsurePromise73112) {
-      return revisionEnsurePromise73112;
-    }
-
+    if (revisionEnsurePromise73112) return revisionEnsurePromise73112;
     revisionEnsurePromise73112 = (async function () {
       const rt = await runtime().catch(function () { return null; });
-      if (!rt || !(await firebaseStaffClaimsReady73111(rt))) {
-        return false;
-      }
-
-      const attendanceRevision =
-        revisionContext73116('attendance');
-      const dailyRevision =
-        revisionContext73116('daily');
-
+      if (!rt || !(await firebaseStaffClaimsReady73111(rt))) return false;
+      const attendanceRevision = revisionContext73116('attendance');
+      const dailyRevision = revisionContext73116('daily');
       await Promise.all([
-        bindRevisionListener7318(
-          'attendance',
-          attendanceRevision.date,
-          '',
-          true
-        ),
-        bindRevisionListener7318(
-          'daily',
-          dailyRevision.date,
-          '',
-          true
-        )
+        bindRevisionListener7318('attendance', attendanceRevision.date, attendanceRevision.classId, false),
+        bindRevisionListener7318('daily', dailyRevision.date, dailyRevision.classId, false)
       ]);
       return true;
-    })().finally(function () {
-      revisionEnsurePromise73112 = null;
-    });
-
+    })().finally(function () { revisionEnsurePromise73112 = null; });
     return revisionEnsurePromise73112;
   }
 
@@ -2626,74 +1604,23 @@ function attendanceMinimal(row) {
       state.lastRevision = 0;
       state.reloadTimer = null;
       state.blockedUntil = 0;
-      state.reloadInFlight = false;
-      state.pendingRevision = 0;
-      state.lastReloadAt = 0;
     });
   }
 
   function installRevisionDateHandlers7318() {
-    ['adminAttendanceDate', 'adminDailyEvalDate'].forEach(function (id) {
+    ['adminAttendanceDate', 'adminDailyEvalDate', 'adminAttendanceClass', 'adminDailyEvalClass'].forEach(function (id) {
       const el = document.getElementById(id);
       if (!el || el.dataset.ulimRevisionListener7318 === '1') return;
       el.dataset.ulimRevisionListener7318 = '1';
-      el.addEventListener('change', function () {
-        setTimeout(ensureRevisionListeners7318, 0);
-      });
+      el.addEventListener('change', function () { setTimeout(ensureRevisionListeners7318, 0); });
     });
-
-    if (document.body.dataset.ulimRevisionPanelHandlers73116 !== '1') {
-      document.body.dataset.ulimRevisionPanelHandlers73116 = '1';
-      document.addEventListener('click', function (event) {
-        const button = event.target && event.target.closest
-          ? event.target.closest('.admin-subtab[data-admin-panel]')
-          : null;
-        if (!button) return;
-
-        setTimeout(function () {
-          Promise.resolve(ensureRevisionListeners7318()).catch(function () {});
-          const panelId = text(button.dataset.adminPanel);
-          const kind = panelId === 'adminPanelAttendance'
-            ? 'attendance'
-            : (
-                panelId === 'adminPanelDailyEval'
-                  ? 'daily'
-                  : ''
-              );
-          if (!kind) return;
-
-          const state = revisionListeners7318[kind];
-          if (
-            state &&
-            Number(state.pendingRevision || 0) > 0
-          ) {
-            scheduleRevisionReload7318(
-              kind,
-              state.date,
-              '',
-              state.pendingRevision
-            );
-          }
-        }, 80);
-      }, true);
-    }
   }
 
   function prewarm() {
-    installDailyPeerRevision73116();
     installRevisionDateHandlers7318();
 
-    // 로그인 전에는 GAS 런타임만 깨우며 보호 데이터/리스너는 시작하지 않습니다.
-    if (!token()) {
-      if (!legacyWarmupSent) {
-        legacyWarmupSent = true;
-        try {
-          const url = typeof GET_API_URL !== 'undefined' ? String(GET_API_URL || '') : '';
-          if (url) fetch(url + (url.indexOf('?') >= 0 ? '&' : '?') + 'action=ulimWarmup731&_=' + Date.now(), { mode: 'no-cors', cache: 'no-store' }).catch(function () {});
-        } catch (ignore) {}
-      }
-      return;
-    }
+    // 로그인 전에는 보호 데이터/리스너를 시작하지 않습니다.
+    if (!token()) return;
 
     /*
      * token이 생겼다는 이유만으로 class list/revision listener를 먼저 열지 않습니다.
@@ -2723,78 +1650,26 @@ function attendanceMinimal(row) {
   global.addEventListener('ulim-firebase-auth-ready', function (event) {
     const uid = text(event && event.detail && event.detail.uid);
     const now = Date.now();
-    const sameUid = !!uid && uid === lastAuthReadyUid73105;
-    const uidChanged = !!uid && !!lastAuthReadyUid73105 && !sameUid;
-
-    if (sameUid && now - lastAuthReadyAt73105 < 30000) return;
-
-    const shouldResetListeners = !lastAuthReadyUid73105 || uidChanged;
-    lastAuthReadyUid73105 = uid || lastAuthReadyUid73105;
+    if (uid && uid === lastAuthReadyUid73105 && now - lastAuthReadyAt73105 < 1500) return;
+    lastAuthReadyUid73105 = uid;
     lastAuthReadyAt73105 = now;
     runtimePromise = null;
 
     setTimeout(function () {
-      if (shouldResetListeners) resetRevisionListeners7318();
+      resetRevisionListeners7318();
       installRevisionDateHandlers7318();
       Promise.resolve(ensureRevisionListeners7318()).catch(function () {});
+      try {
+        if (typeof adminLoadClassList === 'function') adminLoadClassList('', false);
+      } catch (error) { safeConsole('warn', '[ULIM 7.31.5 auth-ready class reload]', error); }
 
       try {
-        const attendancePanel =
-          document.getElementById('adminPanelAttendance');
-        const dailyPanel =
-          document.getElementById('adminPanelDailyEval');
-        const activeDate = dailyPanel &&
-          dailyPanel.classList.contains('active')
-            ? text(
-                document.getElementById('adminDailyEvalDate') &&
-                document.getElementById('adminDailyEvalDate').value
-              )
-            : text(
-                document.getElementById('adminAttendanceDate') &&
-                document.getElementById('adminAttendanceDate').value
-              );
-
-        if (typeof adminLoadClassList === 'function') {
-          adminLoadClassList(activeDate, false);
+        const attendancePanel = document.getElementById('adminPanelAttendance');
+        const classSelect = document.getElementById('adminAttendanceClass');
+        if (attendancePanel && attendancePanel.classList.contains('active') && classSelect && text(classSelect.value)) {
+          if (typeof adminLoadAttendanceSnapshot === 'function') adminLoadAttendanceSnapshot(false, false);
         }
-
-        if (
-          attendancePanel &&
-          attendancePanel.classList.contains('active')
-        ) {
-          const classSelect =
-            document.getElementById('adminAttendanceClass');
-          if (
-            classSelect &&
-            text(classSelect.value) &&
-            typeof adminLoadAttendanceSnapshot === 'function'
-          ) {
-            adminLoadAttendanceSnapshot(false, false);
-          }
-        } else if (
-          dailyPanel &&
-          dailyPanel.classList.contains('active')
-        ) {
-          const dailyClass =
-            document.getElementById('adminDailyEvalClass');
-          if (
-            dailyClass &&
-            text(dailyClass.value) &&
-            typeof adminLoadDailyEvalStudents === 'function'
-          ) {
-            adminLoadDailyEvalStudents(false, {
-              source: 'auth-ready',
-              bypassCache: true
-            });
-          }
-        }
-      } catch (error) {
-        safeConsole(
-          'warn',
-          '[ULIM 7.31.16 auth-ready active panel refresh]',
-          error
-        );
-      }
+      } catch (error) { safeConsole('warn', '[ULIM 7.31.5 auth-ready attendance reload]', error); }
     }, 60);
   });
 
