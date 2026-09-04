@@ -1613,7 +1613,9 @@
       initialRegisteredDate: student.initialRegisteredDate, enrollmentStatus: student.enrollmentStatus,
       classIds: nextIds, originalClassIds: currentIds,
       replaceClassAssignments: replace, registrationType: mode,
-      operationDate: (mode === 'class_move' || mode === 'new' || mode === 'existing') ? text(operationDate || allClassesSelectedDate735410()) : '', memo: student.memo,
+      operationDate: (mode === 'class_move' || mode === 'new' || mode === 'existing') ? text(operationDate || allClassesSelectedDate735410()) : '',
+      lifecycleTargetClassId: (mode === 'class_move' || mode === 'new') ? text(targetClass.classId) : '',
+      sourceClassId: mode === 'class_move' ? text(sourceClassId) : '', memo: student.memo,
       privacyConsent: student.privacyConsent === true, portraitConsent: student.portraitConsent === true,
       preserveLegacyClassNames: unique(student.legacyUnmappedClassNames), requestId: requestId('attendance-class-update-735430')
     });
@@ -1997,13 +1999,25 @@
   }
 
   function ledgerMonthNameSpecial735430(student, sessions) {
+    // __ULIM_CLASS_MOVE_NAME_METADATA_73550973__
     var safeSessions = Array.isArray(sessions) ? sessions : [];
-    var eligibleCells = safeSessions.map(function (session) { return ledgerSessionCell73550921(student, session); }).filter(function (cell) { return cell.eligible === true; });
-    for (var i = 0; i < eligibleCells.length; i += 1) {
-      var cell = eligibleCells[i];
+    var eligibleCells = [];
+    for (var i = 0; i < safeSessions.length; i += 1) {
+      var session = safeSessions[i];
+      var cell = ledgerSessionCell73550921(student, session);
+      if (!cell || cell.eligible !== true) continue;
+      eligibleCells.push(cell);
       var kind = specialKind7355033(cell.specialStatus);
-      // 서버의 과거 scope 값이 date여도 신규/반이동 자체가 확인되면 이름 색상을 복원한다.
       if (kind === 'new' || kind === 'class_move') return kind === 'new' ? '신규' : '반이동';
+      // 73550973: 전체출석부 이름색은 attendance 저장값이 아니라
+      // studentEnrollments의 해당 반 lifecycle metadata도 직접 확인한다.
+      // retained 다중수강반은 startDate가 과거이므로 반이동 오표시되지 않는다.
+      var membershipKind = specialKind7355033(cell.membershipRegistrationType);
+      var membershipStart = text(cell.membershipStartDate);
+      var sessionDate = ledgerSessionAttendanceDate73550921(session);
+      if ((membershipKind === 'new' || membershipKind === 'class_move') && membershipStart && sessionDate && membershipStart.slice(0, 7) === sessionDate.slice(0, 7)) {
+        return membershipKind === 'new' ? '신규' : '반이동';
+      }
     }
     if (eligibleCells.length && eligibleCells.every(function (cell) { return specialKind7355033(cell.specialStatus) === 'makeup'; })) return '보강';
     return '';
