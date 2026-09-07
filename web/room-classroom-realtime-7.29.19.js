@@ -3,7 +3,7 @@
   if (global.__ULIM_ROOM_CLASSROOM_REALTIME_72919__) return;
   global.__ULIM_ROOM_CLASSROOM_REALTIME_72919__ = true;
 
-  const VERSION = '2026-08-14.729.19-firebase-auth-firestore-only';
+  const VERSION = '2026-08-16.729.22-student-classroom-poll-guard';
   const FIREBASE_CONFIG = Object.freeze({
     apiKey: 'AIzaSyAW-sqtUQ_mJ6ZS_aV8pTOAKvHTSX-FXUM',
     authDomain: 'ulim-7b09a.firebaseapp.com',
@@ -14,7 +14,7 @@
   });
   const FUNCTIONS_REGION = 'asia-northeast3';
   const APP_NAME = 'ulim-firebase-primary-72919';
-  const state = { runtimePromise:null, runtime:null, classroomDate:'', classroomUnsub:null, roomMonth:'', roomUnsub:null, lastError:'' };
+  const state = { runtimePromise:null, runtime:null, classroomDate:'', classroomUnsub:null, classroomPoll:null, roomMonth:'', roomUnsub:null, lastError:'' };
 
   function text(v){ return String(v == null ? '' : v).trim(); }
   function preferredPersistence(sdk){
@@ -44,10 +44,11 @@
       await sdk.setPersistence(auth, preferredPersistence(sdk));
       const functions=sdk.getFunctions(app,FUNCTIONS_REGION);
       const db=sdk.getFirestore(app);
-      const commitClassroom=sdk.httpsCallable(functions,'commitClassroomUsageFirestoreFirst');
-      const releaseClassroom=sdk.httpsCallable(functions,'releaseClassroomUsageFirestoreFirst');
-      const updateClassroom=sdk.httpsCallable(functions,'updateClassroomUsageSlotFirestoreFirst');
-      state.runtime={sdk,app,auth,functions,db,commitClassroom,releaseClassroom,updateClassroom};
+      const commitClassroom=sdk.httpsCallable(functions,'commitClassroomUsageFirestorePrimary7355057');
+      const releaseClassroom=sdk.httpsCallable(functions,'releaseClassroomUsageFirestorePrimary7355057');
+      const updateClassroom=sdk.httpsCallable(functions,'updateClassroomUsageSlotFirestorePrimary7355057');
+      const getClassroomDay=sdk.httpsCallable(functions,'getClassroomUsageDayFirestorePrimary7355058');
+      state.runtime={sdk,app,auth,functions,db,commitClassroom,releaseClassroom,updateClassroom,getClassroomDay};
       return state.runtime;
     })().finally(function(){state.runtimePromise=null;});
     return state.runtimePromise;
@@ -73,9 +74,48 @@
   async function forceReauthenticate(){ return ensureAuthenticated(); }
   async function getStableIdToken(rt,force){ rt=rt||await ensureAuthenticated(); if(!rt||!rt.auth.currentUser)throw new Error('Firebase 로그인이 필요합니다.'); return rt.sdk.getIdToken(rt.auth.currentUser,force===true); }
   async function getStableIdTokenResult(rt,force){ rt=rt||await ensureAuthenticated(); if(!rt||!rt.auth.currentUser)throw new Error('Firebase 로그인이 필요합니다.'); return rt.sdk.getIdTokenResult(rt.auth.currentUser,force===true); }
+  function normalizedRole72922(value){return text(value).replace(/\s+/g,'').toLowerCase();}
+  function isStaffRole72922(value){const role=normalizedRole72922(value);return ['teacher','admin','superadmin','강사','관리자','전체관리자'].indexOf(role)>=0;}
+  async function isStaffSession72922(rt){
+    rt=rt||await ensureAuthenticated();
+    if(!rt||!rt.auth||!rt.auth.currentUser)return false;
+    try{const token=await rt.sdk.getIdTokenResult(rt.auth.currentUser,false);const claims=token&&token.claims||{};return isStaffRole72922(claims.role||claims.adminRole||claims.staffRole);}
+    catch(_e){return false;}
+  }
+  function stopClassroomSubscription72922(){
+    try{if(state.classroomUnsub)state.classroomUnsub();}catch(_e){}
+    try{if(state.classroomPoll)clearInterval(state.classroomPoll);}catch(_e2){}
+    state.classroomUnsub=null;state.classroomPoll=null;state.classroomDate='';
+  }
   function resetStableTokenGuard(){ return true; }
   function callable(rt,name){ return rt.sdk.httpsCallable(rt.functions,name); }
   function data(v){return v&&v.data?v.data:v||{};}
+  function hourValue(v){const m=String(v==null?'':v).match(/(\d{1,2})/);return m?Number(m[1]):NaN;}
+  function normalizeClassroomRows(rows,date){
+    return (Array.isArray(rows)?rows:[]).map(function(raw,index){
+      const x=raw&&typeof raw==='object'?raw:{};
+      const room=text(x.room||x.classroom||x.roomName);
+      const startHour=Number.isInteger(Number(x.startHour))?Number(x.startHour):hourValue(x.startTime||x.start);
+      const endHour=Number.isInteger(Number(x.endHour))?Number(x.endHour):hourValue(x.endTime||x.end);
+      const instructor=text(x.instructor||x.adminName||x.teacherName||x.staffName);
+      const className=text(x.className||x.purpose||x.classTitle);
+      const rawStatus=text(x.status||x.state),statusKey=rawStatus.replace(/\s/g,'').toLowerCase();
+      const status=!rawStatus||['active','used','사용','사용중'].indexOf(statusKey)>=0?'사용중':rawStatus;
+      const fallbackId='LEGACY-'+text(date)+'-'+room.replace(/\s/g,'')+'-'+String(startHour)+'-'+String(endHour)+'-'+String(index);
+      return Object.assign({},x,{recordId:text(x.recordId)||fallbackId,date:text(x.date)||text(date),room:room,startHour:startHour,endHour:endHour,instructor:instructor,adminName:text(x.adminName)||instructor,className:className,purpose:text(x.purpose)||className,status:status});
+    }).filter(function(x){return x.room&&Number.isInteger(x.startHour)&&Number.isInteger(x.endHour)&&x.endHour>x.startHour;});
+  }
+  async function readClassroomRecords(date){
+    date=text(date||dateKey());
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw new Error('사용일을 확인해주세요.');
+    const rt=await ensureAuthenticated();
+    if(!rt||!rt.auth||!rt.auth.currentUser||!(await isStaffSession72922(rt)))throw new Error('교직원 로그인이 필요합니다.');
+    if(typeof rt.getClassroomDay!=='function')throw new Error('강의실 조회 기능을 준비하지 못했습니다.');
+    const payload=data(await rt.getClassroomDay({date:date,requestId:'CLASSROOM-READ-7355058-'+Date.now()}));
+    const rows=normalizeClassroomRows(payload.records,date);
+    try{global.adminClassroomUsageRows=rows.map(function(x){return Object.assign({},x);});global.adminClassroomUsageLoadedDate=date;}catch(_e){}
+    return rows;
+  }
 
   function dateKey(){
     try{if(typeof global.adminClassroomUsageDate_==='function')return text(global.adminClassroomUsageDate_());}catch(_e){}
@@ -88,13 +128,25 @@
   async function subscribeClassroom(date){
     date=text(date||dateKey()); if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return null;
     const rt=await ensureAuthenticated(); if(!rt)return null;
+    if(!(await isStaffSession72922(rt))){stopClassroomSubscription72922();return null;}
     if(state.classroomDate===date&&state.classroomUnsub)return true;
     try{if(state.classroomUnsub)state.classroomUnsub();}catch(_e){}
+    try{if(state.classroomPoll)clearInterval(state.classroomPoll);}catch(_e){}
+    state.classroomPoll=null;
     state.classroomDate=date;
     state.classroomUnsub=rt.sdk.onSnapshot(rt.sdk.doc(rt.db,'realtimeClassroomDays',date),function(snap){
-      const payload=snap.exists()?(snap.data()||{}):{}; const rows=Array.isArray(payload.records)?payload.records:[];
+      try{if(state.classroomPoll)clearInterval(state.classroomPoll);}catch(_e){}
+      state.classroomPoll=null;
+      const payload=snap.exists()?(snap.data()||{}):{}; const rows=normalizeClassroomRows(payload.records,date);
       try{global.adminClassroomUsageRows=rows.map(x=>Object.assign({},x));global.adminClassroomUsageLoadedDate=date;if(typeof global.adminRenderClassroomUsageTable==='function')global.adminRenderClassroomUsageTable();}catch(_e){}
-    },function(err){state.lastError=text(err&&err.message);});
+    },function(err){
+      state.lastError=text(err&&err.message);
+      if(state.classroomDate!==date||state.classroomPoll)return;
+      state.classroomPoll=setInterval(function(){
+        if(state.classroomDate!==date||document.hidden)return;
+        readClassroomRecords(date).then(function(){try{if(typeof global.adminRenderClassroomUsageTable==='function')global.adminRenderClassroomUsageTable();}catch(_e){}}).catch(function(){});
+      },10000);
+    });
     return true;
   }
   async function subscribeRoomMonth(month){
@@ -137,18 +189,16 @@
     await subscribeClassroom(date);return result;
   }
   global.ulimCommitClassroomSlot729_=commitSingleClassroomSlot;
-  async function loadClassroom(date){ await subscribeClassroom(date||dateKey()); return {status:'success',records:Array.isArray(global.adminClassroomUsageRows)?global.adminClassroomUsageRows:[]}; }
-  function installWrappers(){
-    global.adminSaveClassroomUsage=saveClassroom;
-    global.adminLoadClassroomUsage=function(force){return loadClassroom(dateKey(),force);};
-    try{adminSaveClassroomUsage=global.adminSaveClassroomUsage;adminLoadClassroomUsage=global.adminLoadClassroomUsage;}catch(_e){}
-  }
+  async function loadClassroom(date){ const target=text(date||dateKey()); const records=await readClassroomRecords(target); subscribeClassroom(target).catch(function(){}); return {status:'success',records:records}; }
   async function start(){
-    installWrappers(); const rt=await ensureAuthenticated(); if(!rt)return null;
-    const d=dateKey();if(d)subscribeClassroom(d);subscribeRoomMonth(monthKey()); return rt;
+    const rt=await ensureAuthenticated(); if(!rt)return null;
+    if(await isStaffSession72922(rt)){const d=dateKey();if(d)subscribeClassroom(d).catch(function(){});}
+    else stopClassroomSubscription72922();
+    subscribeRoomMonth(monthKey()).catch(function(){});
+    return rt;
   }
 
-  const api=Object.freeze({version:VERSION,start,preloadRuntime,ensureAuthenticated,waitUntilAuthenticated,forceReauthenticate,getStableIdToken,getStableIdTokenResult,resetStableTokenGuard,subscribeClassroom,subscribeRoomMonth,status:function(){return {version:VERSION,ready:!!(state.runtime&&state.runtime.auth.currentUser),lastError:state.lastError};}});
+  const api=Object.freeze({version:VERSION,start,preloadRuntime,ensureAuthenticated,waitUntilAuthenticated,forceReauthenticate,getStableIdToken,getStableIdTokenResult,resetStableTokenGuard,subscribeClassroom,subscribeRoomMonth,readClassroomRecords,loadClassroom,commitClassroom:function(payload){return preloadRuntime().then(function(rt){return rt.commitClassroom(payload);});},releaseClassroom:function(payload){return preloadRuntime().then(function(rt){return rt.releaseClassroom(payload);});},updateClassroom:function(payload){return preloadRuntime().then(function(rt){return rt.updateClassroom(payload);});},status:function(){return {version:VERSION,ready:!!(state.runtime&&state.runtime.auth.currentUser),lastError:state.lastError};}});
   global.ULIM_ROOM_CLASSROOM_REALTIME_72919=api;
   global.ULIM_ROOM_CLASSROOM_REALTIME_72918=api;
   global.ULIM_ROOM_CLASSROOM_REALTIME_72917=api;
