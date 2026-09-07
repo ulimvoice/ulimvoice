@@ -948,65 +948,32 @@ function classScheduleOperation7355033(change: PlainObject): string {
   if (raw === 'substitute' || raw === normalize('대강')) return 'substitute';
   return 'move';
 }
-// Independent session dimensions; explicit empty fields also represent a cleared override.
-function normalizeScheduleChange73551012(change: PlainObject, item: ClassRow): PlainObject {
-  const originalDate = text(change.originalDate, 20);
-  const operation = classScheduleOperation7355033(change);
-  const independent = Number(change.scheduleOverrideVersion) === 73551012;
-  const legacyTarget = text(change.targetDate, 20);
-  const dateOverrideTargetDate = independent ? text(change.dateOverrideTargetDate, 20)
-    : (legacyTarget && legacyTarget !== originalDate && operation !== 'exclude' ? legacyTarget : '');
-  const legacySubstitute = operation === 'substitute' || (operation === 'move' && !!text(change.instructorUid, 160) && text(change.instructorUid, 160) !== item.instructorUid);
-  const substituteInstructorUid = independent ? text(change.substituteInstructorUid, 160) : legacySubstitute ? text(change.instructorUid, 160) : '';
-  const substituteInstructorName = independent ? text(change.substituteInstructorName, 120) : legacySubstitute ? text(change.instructorName, 120) : '';
-  const timeOverrideStartTime = independent ? safeTime(change.timeOverrideStartTime) : safeTime(change.startTime);
-  const timeOverrideEndTime = independent ? safeTime(change.timeOverrideEndTime) : safeTime(change.endTime);
-  const isCancelled = independent ? change.cancelled === true : operation === 'cancel';
-  const isExcluded = independent ? change.excluded === true : operation === 'exclude';
-  const effectiveDate = dateOverrideTargetDate || originalDate;
-  return { ...change, scheduleOverrideVersion: 73551012, originalDate, dateOverrideTargetDate,
-    substituteInstructorUid, substituteInstructorName, timeOverrideStartTime, timeOverrideEndTime,
-    cancelled: isCancelled, excluded: isExcluded, isCancelled, isExcluded,
-    isMoved: !!dateOverrideTargetDate && effectiveDate !== originalDate,
-    isSubstitute: !!(substituteInstructorUid || substituteInstructorName), effectiveDate, targetDate: effectiveDate,
-    instructorUid: substituteInstructorUid || item.instructorUid,
-    instructorName: substituteInstructorName || item.instructorName,
-    startTime: timeOverrideStartTime || item.startTime, endTime: timeOverrideEndTime || item.endTime };
-}
-function sessionMetadata73551012(item: ClassRow, date: string, changes: PlainObject[]): PlainObject {
-  const relevant = changes.filter(change => change.active !== false && text(change.classId, 180) === item.classId);
-  const original = relevant.find(change => text(change.originalDate, 20) === date);
-  const incoming = relevant.find(change => text(change.originalDate, 20) !== date && normalizeScheduleChange73551012(change, item).effectiveDate === date);
-  const change = original || incoming;
-  const state = normalizeScheduleChange73551012(change || { originalDate: date }, item);
-  return { date, originalDate: state.originalDate, effectiveDate: state.effectiveDate, targetDate: state.targetDate,
-    dateOverrideTargetDate: state.dateOverrideTargetDate, isMoved: state.isMoved, isSubstitute: state.isSubstitute,
-    isCancelled: state.isCancelled, isExcluded: state.isExcluded,
-    substituteInstructorUid: state.substituteInstructorUid, substituteInstructorName: state.substituteInstructorName,
-    instructorUid: state.instructorUid, instructorName: state.instructorName, startTime: state.startTime, endTime: state.endTime,
-    changeId: text(change?.changeId, 180), reason: text(change?.reason, 1000), weekday: weekdayForDate(text(state.effectiveDate, 20)),
-    state: state.isExcluded ? 'excluded' : state.isCancelled ? 'cancelled' : state.isMoved ? (original ? 'moved' : 'moved_in') : state.isSubstitute ? 'substitute' : 'active',
-    operation: change ? classScheduleOperation7355033(change) : 'normal' };
-}
 function effectiveClassesForDate(catalog: ClassRow[], date: string, changes: PlainObject[]): { classes: ClassRow[]; movedAway: Map<string, PlainObject> } {
   const movedAway = new Map<string, PlainObject>();
-  const classes: ClassRow[] = [];
-  for (const item of catalog) {
-    const relevant = changes.filter(change => change.active !== false && text(change.classId, 180) === item.classId)
-      .map(change => normalizeScheduleChange73551012(change, item));
-    const original = relevant.find(change => change.originalDate === date);
-    const incoming = relevant.find(change => change.effectiveDate === date && !change.isCancelled && !change.isExcluded);
-    if (original && (original.effectiveDate !== date || original.isCancelled || original.isExcluded)) movedAway.set(item.classId, original);
-    const cancelledIncoming = relevant.find(change => change.effectiveDate === date && (change.isCancelled || change.isExcluded));
-    if (!original && cancelledIncoming && !classScheduledOnDate(item, date)) movedAway.set(item.classId, cancelledIncoming);
-    if (!incoming && (movedAway.has(item.classId) || !classScheduledOnDate(item, date))) continue;
-    // An incoming occurrence can coexist with a moved-away original occurrence on the same day.
-    movedAway.delete(item.classId);
-    if (!incoming) { classes.push(item); continue; }
-    classes.push({ ...item, instructorUid: text(incoming.instructorUid, 160), instructorName: text(incoming.instructorName, 120),
-      startTime: text(incoming.startTime, 10), endTime: text(incoming.endTime, 10), weekday: weekdayForDate(date),
-      raw: { ...item.raw, scheduleChange: incoming } });
-  }
+  changes.forEach(change => {
+    const classId = text(change.classId, 180);
+    const operation = classScheduleOperation7355033(change);
+    if (text(change.originalDate, 20) !== date) return;
+    if (operation === 'cancel' || operation === 'exclude') { movedAway.set(classId, change); return; }
+    if (operation === 'move' && text(change.targetDate, 20) && text(change.targetDate, 20) !== date) movedAway.set(classId, change);
+  });
+  const classes = catalog.filter(item => {
+    if (movedAway.has(item.classId)) return false;
+    if (classScheduledOnDate(item, date)) return true;
+    return changes.some(change => text(change.classId, 180) === item.classId && text(change.targetDate, 20) === date && !['cancel','exclude'].includes(classScheduleOperation7355033(change)));
+  }).map(item => {
+    const change = changes.find(row => text(row.classId, 180) === item.classId && text(row.targetDate, 20) === date && !['cancel','exclude'].includes(classScheduleOperation7355033(row)));
+    if (!change) return item;
+    return {
+      ...item,
+      instructorUid: text(change.instructorUid, 160) || item.instructorUid,
+      instructorName: text(change.instructorName, 120) || item.instructorName,
+      startTime: safeTime(change.startTime) || item.startTime,
+      endTime: safeTime(change.endTime) || item.endTime,
+      weekday: weekdayForDate(date),
+      raw: { ...item.raw, scheduleChange: change }
+    };
+  });
   return { classes, movedAway };
 }
 export async function buildClassListForDate7355014(caller: StaffCaller | null, dateInput: string): Promise<ClassRow[]> {
@@ -1017,7 +984,7 @@ export async function buildClassListForDate7355014(caller: StaffCaller | null, d
   return classes.sort((a, b) => timeSortValue7355033(a.startTime) - timeSortValue7355033(b.startTime) || a.className.localeCompare(b.className, "ko") || a.classId.localeCompare(b.classId));
 }
 
-export async function buildAttendanceRosterInternal7355014(caller: StaffCaller | null, input: PlainObject, notificationChange73551012?: PlainObject): Promise<RosterBuild & { diagnostics: PlainObject }> {
+export async function buildAttendanceRosterInternal7355014(caller: StaffCaller | null, input: PlainObject): Promise<RosterBuild & { diagnostics: PlainObject }> {
   const date = safeDate(input.date);
   if (date <= safeDate("")) await applyDueCourseApplications7355028();
   const requestedAll = normalize(input.className) === normalize("전체반") || input.allClasses === true;
@@ -1030,9 +997,7 @@ export async function buildAttendanceRosterInternal7355014(caller: StaffCaller |
     db().collection("attendanceSessionOverrides").where("date", "==", date).limit(MAX_OVERRIDES).get(),
     loadScheduleChanges(date)
   ]);
-  const resolvedChanges73551012 = notificationChange73551012
-    ? changes.filter(change => change.changeId !== notificationChange73551012.changeId).concat(notificationChange73551012) : changes;
-  const effective = effectiveClassesForDate(catalog, date, resolvedChanges73551012);
+  const effective = effectiveClassesForDate(catalog, date, changes);
   const resolved = resolveClass(catalog, input);
   let selectedClasses: ClassRow[];
   let movedAway: PlainObject | null = null;
@@ -1529,10 +1494,8 @@ function normalizeAttendanceClassGroups73550920(groups: PlainObject[]): PlainObj
 
 
 function attendanceLedgerActionDate73550921(session: PlainObject): string {
-  const effectiveDate = text(session.effectiveDate ?? session.dateOverrideTargetDate, 20);
-  if (/^\d{4}-\d{2}-\d{2}$/.test(effectiveDate)) return effectiveDate;
-  const targetDate = text(session.targetDate, 20);
-  return (session.isMoved === true || session.state === 'moved') && /^\d{4}-\d{2}-\d{2}$/.test(targetDate) ? targetDate : text(session.date, 20);
+  const state = text(session.state, 30), targetDate = text(session.targetDate, 20), slotDate = text(session.date, 20);
+  return state === 'moved' && /^\d{4}-\d{2}-\d{2}$/.test(targetDate) ? targetDate : slotDate;
 }
 
 async function buildAttendanceLedger7355033(caller: StaffCaller, input: PlainObject): Promise<PlainObject> {
@@ -1690,25 +1653,51 @@ async function buildAttendanceLedger7355033(caller: StaffCaller, input: PlainObj
     if (historicalOnlyClass73550978) item.dates.filter(date => date >= previousStart && date < currentStart).forEach(date => sessionDates.add(date));
     else allDates.forEach(date => { if (classScheduledOnDate(item, date)) sessionDates.add(date); });
     changes.filter(change => text(change.classId, 180) === item.classId).forEach(change => {
-      const resolvedChange = normalizeScheduleChange73551012(change, item);
-      const targetDate = text(resolvedChange.effectiveDate, 20);
-      const originalDate = text(resolvedChange.originalDate, 20);
-      if (resolvedChange.isExcluded) {
+      const targetDate = text(change.targetDate, 20);
+      const originalDate = text(change.originalDate, 20);
+      const operation = classScheduleOperation7355033(change);
+      if (operation === 'exclude') {
         if (originalDate >= previousStart && originalDate <= endDate) sessionDates.delete(originalDate);
         return;
       }
-      if (targetDate >= previousStart && targetDate <= endDate) sessionDates.add(targetDate);
+      if (targetDate >= previousStart && targetDate <= endDate && operation !== 'cancel') sessionDates.add(targetDate);
       if (originalDate >= previousStart && originalDate <= endDate) sessionDates.add(originalDate);
     });
     const sortedDates = Array.from(sessionDates).filter(date => !historicalOnlyClass73550978 || date < currentStart).sort();
     if (!sortedDates.length) continue;
-    const sessionMetaAll73550921: PlainObject[] = sortedDates.map(date => sessionMetadata73551012(item, date, changes));
+    const sessionMetaAll73550921: PlainObject[] = sortedDates.map(date => {
+      const classChanges = changes.filter(change => text(change.classId, 180) === item.classId);
+      const originalChange = classChanges.find(change => text(change.originalDate, 20) === date);
+      const substituteChange = originalChange && classScheduleOperation7355033(originalChange) === 'substitute' ? originalChange : undefined;
+      const targetChange = classChanges.find(change => text(change.targetDate, 20) === date && text(change.originalDate, 20) !== date && !['cancel','exclude'].includes(classScheduleOperation7355033(change)));
+      const originalOperation = originalChange ? classScheduleOperation7355033(originalChange) : 'normal';
+      const targetOperation = targetChange ? classScheduleOperation7355033(targetChange) : 'normal';
+      const operation = substituteChange ? 'substitute' : (originalChange ? originalOperation : targetOperation);
+      let state = 'active';
+      if (originalChange && originalOperation === 'cancel') state = 'cancelled';
+      else if (originalChange && originalOperation === 'move' && text(originalChange.targetDate, 20) !== date) state = 'moved';
+      else if (substituteChange) state = 'substitute';
+      else if (targetChange && targetOperation === 'move') state = 'moved_in';
+      const effectiveChange = substituteChange || targetChange;
+      const substituteInstructorUid = substituteChange ? text(substituteChange.instructorUid, 160) : '';
+      const substituteInstructorName = substituteChange ? text(substituteChange.instructorName, 120) : '';
+      return {
+        date, weekday: weekdayForDate(date), state, operation,
+        originalDate: text(targetChange?.originalDate ?? originalChange?.originalDate, 20),
+        changeId: text((substituteChange || originalChange || targetChange)?.changeId, 180),
+        targetDate: text(originalChange?.targetDate, 20),
+        reason: text((substituteChange || originalChange || targetChange)?.reason, 1000),
+        substituteInstructorUid, substituteInstructorName,
+        instructorUid: substituteInstructorUid || text(effectiveChange?.instructorUid, 160) || item.instructorUid,
+        instructorName: substituteInstructorName || text(effectiveChange?.instructorName, 120) || item.instructorName,
+        startTime: safeTime(effectiveChange?.startTime) || item.startTime,
+        endTime: safeTime(effectiveChange?.endTime) || item.endTime
+      };
+    });
     const sessionMeta = sessionMetaAll73550921.filter(session => {
-      if (session.isExcluded) return false;
+      if (text(session.state, 30) !== 'moved_in') return true;
       const sourceDate = text(session.originalDate, 20);
-      if (session.date !== sourceDate && sortedDates.includes(sourceDate)) return false;
-      const effectiveDate = attendanceLedgerActionDate73550921(session);
-      return effectiveDate >= previousStart && effectiveDate <= endDate;
+      return !sourceDate || sourceDate < previousStart || sourceDate > endDate;
     });
     const studentModels = new Map<string, PlainObject>();
     for (const session of sessionMeta) {
@@ -1871,19 +1860,13 @@ export const saveAttendanceRowsAdmin73550 = onCall({ ...CALLABLE_OPTIONS, timeou
   const batch = db().batch();
   const saved: PlainObject[] = [];
   const catalog = await loadClassCatalog();
-  const classesByDate = new Map<string, ClassRow[]>();
+  const catalogById = new Map(catalog.map(item => [item.classId, item]));
   for (const row of rows) {
     const date = requireDate(row.date ?? row.sessionDate, "수업일");
     const classId = text(row.classId, 180);
     const studentUid = text(row.studentUid, 160);
     if (!classId || !studentUid) throw new HttpsError("invalid-argument", "반 또는 학생 식별값이 없습니다.");
-    if (!classesByDate.has(date)) {
-      const changes = await loadScheduleChanges(date);
-      const resolved = effectiveClassesForDate(catalog, date, changes);
-      // Preserve historical/manual attendance support, but never resurrect a moved/cancelled occurrence.
-      classesByDate.set(date, catalog.filter(cls => !resolved.movedAway.has(cls.classId)).map(cls => resolved.classes.find(effective => effective.classId === cls.classId) || cls));
-    }
-    const item = classesByDate.get(date)?.find(cls => cls.classId === classId);
+    const item = catalogById.get(classId);
     if (!item || !classVisibleToCaller(item, caller)) throw new HttpsError("permission-denied", "이 수업의 출석을 수정할 권한이 없습니다.");
     const recordId = canonicalAttendanceRecordId73550993(date, classId, studentUid);
     const ref = db().collection("attendance").doc(recordId);
@@ -2657,18 +2640,17 @@ export const changeClassSessionAdmin73550 = onCall(MESSAGE_OPTIONS, async reques
   const caller = await requireStaff(request);
   const input = object(request.data);
   const operationRaw = normalize(input.operation ?? input.changeType ?? 'move');
-  const clearOperation = ['clearmove', 'clearsubstitute', 'clearcancel'].includes(operationRaw) ? operationRaw : '';
-  let operation = clearOperation || (operationRaw === 'exclude' || operationRaw === normalize('수업일제외') ? 'exclude'
+  const operation = operationRaw === 'exclude' || operationRaw === normalize('수업일제외') ? 'exclude'
     : (operationRaw === 'cancel' || operationRaw === normalize('휴강') ? 'cancel'
-      : (operationRaw === 'substitute' || operationRaw === normalize('대강') ? 'substitute' : 'move')));
+      : (operationRaw === 'substitute' || operationRaw === normalize('대강') ? 'substitute' : 'move'));
   if (operation !== 'move' && !FULL_ADMIN_ROLES.has(caller.role)) throw new HttpsError('permission-denied', '휴강·대강·수업일 제외 처리는 전체관리자 권한이 필요합니다.');
   const originalDateInput = text(input.originalDate ?? input.date, 20);
   const defaultTarget = operation === 'move' ? text(input.targetDate ?? input.newDate, 20) : originalDateInput;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(originalDateInput) || !/^\d{4}-\d{2}-\d{2}$/.test(defaultTarget)) {
     throw new HttpsError('invalid-argument', '기존 수업일과 변경 수업일을 정확히 선택해주세요.');
   }
-  const originalDate = requireDate(originalDateInput, '기존 수업일');
-  let targetDate = requireDate(defaultTarget, '변경 수업일');
+  const originalDate = originalDateInput;
+  const targetDate = defaultTarget;
   const classId = text(input.classId, 180);
   const catalog = await loadClassCatalog(originalDate);
   const item = catalog.find(cls => cls.classId === classId) ?? resolveClass(catalog, input);
@@ -2680,85 +2662,46 @@ export const changeClassSessionAdmin73550 = onCall(MESSAGE_OPTIONS, async reques
   let instructorUid = text(input.instructorUid, 160) || item.instructorUid;
   let instructorName = text(input.instructorName, 120) || item.instructorName;
   if (caller.role === 'teacher') { instructorUid = item.instructorUid; instructorName = item.instructorName || caller.displayName; }
-  if (operation === 'substitute' && (!instructorUid || instructorUid === item.instructorUid)) {
+  if (operation === 'substitute' && (!instructorUid || teacherNameKey(instructorName) === teacherNameKey(item.instructorName))) {
     throw new HttpsError('invalid-argument', '대강을 진행할 다른 강사를 선택해주세요.');
   }
-  let startTime = safeTime(input.startTime) || item.startTime;
-  let endTime = safeTime(input.endTime) || item.endTime;
-  let reasonText = text(input.reason, 1000) || (operation === 'exclude' ? '4주 수업일 조정' : operation === 'cancel' ? '학원 일정 조정' : operation === 'substitute' ? '담당강사 일정 조정' : '학원 일정 조정');
-  const requestIdValue = text(input.requestId, 200) || hashId('CSREQ', caller.firebaseUid, originalDate, item.classId, operation, randomUUID());
+  const startTime = safeTime(input.startTime) || item.startTime;
+  const endTime = safeTime(input.endTime) || item.endTime;
+  if (!startTime || !endTime) throw new HttpsError('invalid-argument', '수업 시작·종료 시간을 입력해주세요.');
+  const startMinutes = Number(startTime.slice(0, 2)) * 60 + Number(startTime.slice(3, 5));
+  const endMinutes = Number(endTime.slice(0, 2)) * 60 + Number(endTime.slice(3, 5));
+  if (endMinutes <= startMinutes) throw new HttpsError('invalid-argument', '수업 종료시간은 시작시간보다 늦어야 합니다.');
+  const reasonText = text(input.reason, 1000) || (operation === 'exclude' ? '4주 수업일 조정' : operation === 'cancel' ? '학원 일정 조정' : operation === 'substitute' ? '담당강사 일정 조정' : '학원 일정 조정');
+  const stateSignature = hashId('CSOPSTATE', originalDate, item.classId, operation, targetDate, instructorUid, startTime, endTime, reasonText);
+  const requestIdValue = text(input.requestId, 200) || hashId('CSREQ', caller.firebaseUid, stateSignature, Date.now());
   const changeId = hashId('CSCH', originalDate, item.classId);
   const ref = db().collection('classScheduleChanges').doc(changeId);
-  const receiptRef = db().collection('staffOperationalWriteRequests').doc(hashId('CSCHREQ', changeId, caller.firebaseUid, requestIdValue));
-  const notificationRequestedByUser = !clearOperation && operation !== 'exclude' && input.sendNotification !== false;
-  let sendNotification = notificationRequestedByUser && audienceNotificationAllowed;
-  const composed = await db().runTransaction(async transaction => {
-    const existing = await transaction.get(ref);
-    const receipt = await transaction.get(receiptRef);
-    const current = existing.data() ?? {};
-    if (receipt.exists || text(current.lastRequestId, 200) === requestIdValue) {
-      return { duplicate: true, state: object(receipt.data()?.state ?? current), currentRequest: text(current.lastRequestId, 200) === requestIdValue };
-    }
-    const next = normalizeScheduleChange73551012({ ...(current.active === false ? {} : current), originalDate }, item);
-    if (operation === 'move') {
-      next.dateOverrideTargetDate = targetDate === originalDate ? '' : targetDate;
-      next.timeOverrideStartTime = safeTime(input.startTime) || next.timeOverrideStartTime || item.startTime;
-      next.timeOverrideEndTime = safeTime(input.endTime) || next.timeOverrideEndTime || item.endTime;
-    } else if (operation === 'substitute') {
-      next.substituteInstructorUid = instructorUid;
-      next.substituteInstructorName = instructorName;
-    } else if (operation === 'clearmove') next.dateOverrideTargetDate = '';
-    else if (operation === 'clearsubstitute') { next.substituteInstructorUid = ''; next.substituteInstructorName = ''; }
-    else if (operation === 'cancel') next.cancelled = true;
-    else if (operation === 'clearcancel') next.cancelled = false;
-    else if (operation === 'exclude') next.excluded = true;
-    const state = normalizeScheduleChange73551012(next, item);
-    if (!state.startTime || !state.endTime || text(state.startTime, 10) >= text(state.endTime, 10)) {
-      throw new HttpsError('invalid-argument', '수업 시작·종료 시간을 확인해주세요.');
-    }
-    const signature = hashId('CSOPSTATE', originalDate, item.classId, state.dateOverrideTargetDate,
-      state.substituteInstructorUid, state.substituteInstructorName, state.timeOverrideStartTime, state.timeOverrideEndTime, state.cancelled, state.excluded);
-    if (text(current.stateSignature, 200) === signature) {
-      transaction.set(receiptRef, { changeId, requestId: requestIdValue, state: current, createdAt: FieldValue.serverTimestamp() });
-      return { duplicate: true, state: current, currentRequest: false };
-    }
-    const persisted = { ...state, changeId, classId: item.classId, className: item.className, operation,
-      sessionStatus: state.isExcluded ? 'excluded' : state.isCancelled ? 'cancelled' : state.isMoved ? 'moved' : state.isSubstitute ? 'substitute' : 'active',
-      originalWeekday: weekdayForDate(originalDate), targetWeekday: weekdayForDate(text(state.effectiveDate, 20)),
-      originalStartTime: item.startTime, originalEndTime: item.endTime,
-      reason: reasonText, stateSignature: signature, active: true, source: 'attendance_schedule_operation_7355033',
-      notificationTargets: unique(Array.isArray(input.targets) ? input.targets : ['student', 'parent'], 20),
-      notificationRequested: sendNotification, notificationState: sendNotification ? 'pending' : 'not_requested',
-      notificationSuppressedReason: notificationRequestedByUser && !audienceNotificationAllowed ? 'audience_disabled' : '',
-      audienceGroup: classAudienceGroup, lastRequestId: requestIdValue, sheetBackupState: 'pending_0600',
-      updatedByFirebaseUid: caller.firebaseUid, updatedByRole: caller.role, updatedAtMs: Date.now(), updatedAt: FieldValue.serverTimestamp(),
-      createdAtMs: Number(current.createdAtMs || Date.now()), createdAt: current.createdAt || FieldValue.serverTimestamp(),
-      version: FIRESTORE_PRIMARY_OPERATIONS_73550_VERSION };
-    transaction.set(ref, persisted, { merge: true });
-    transaction.set(receiptRef, { changeId, requestId: requestIdValue, state: persisted, createdAt: FieldValue.serverTimestamp() });
-    return { duplicate: false, state: persisted, currentRequest: true };
-  });
-  const committed: PlainObject = composed.state;
-  targetDate = text(committed.effectiveDate ?? committed.targetDate, 20) || originalDate;
-  instructorUid = text(committed.instructorUid, 160);
-  instructorName = text(committed.instructorName, 120);
-  startTime = text(committed.startTime, 10); endTime = text(committed.endTime, 10);
-  const stateSignature = text(committed.stateSignature, 200);
-  const resumeNotification = composed.duplicate && composed.currentRequest && committed.notificationRequested === true && ['pending', 'failed'].includes(text(committed.notificationState, 30));
-  if (composed.duplicate && !resumeNotification) return { status: 'success', duplicate: true, changeId, classId: item.classId, originalDate, targetDate, operation,
-    notification: { requested: committed.notificationRequested === true, duplicate: true, ok: ['complete', 'not_requested'].includes(text(committed.notificationState, 30)), state: committed.notificationState }, version: FIRESTORE_PRIMARY_OPERATIONS_73550_VERSION };
-  if (resumeNotification) { operation = text(committed.operation, 40); reasonText = text(committed.reason, 1000); sendNotification = true; }
-  // Cancelled occurrences are absent from the resolver; recipients are read using the same composed state without cancellation.
-  const recipientChange = { ...committed, cancelled: false, excluded: false };
-  const updateNotification = async (fields: PlainObject) => db().runTransaction(async transaction => {
-    const latest = await transaction.get(ref);
-    if (latest.data()?.lastRequestId === requestIdValue) transaction.set(ref, fields, { merge: true });
-    transaction.set(receiptRef, { state: { ...committed, ...fields } }, { merge: true });
-  });
-  if (!composed.duplicate) {
-    await touchAttendanceRevision('class_schedule_operation_7355033', { classId: item.classId, originalDate, targetDate, operation, requestId: requestIdValue });
-    await refreshTodayTabletSnapshot('class_schedule_operation_7355033');
+  const existing = await ref.get();
+  const current = existing.data() ?? {};
+  if ((text(current.lastRequestId, 200) === requestIdValue || text(current.stateSignature, 200) === stateSignature) && ['complete','not_requested'].includes(text(current.notificationState, 30))) {
+    return { status: 'success', duplicate: true, changeId, classId: item.classId, originalDate, targetDate: text(current.targetDate, 20) || targetDate, operation, notification: { requested: operation !== 'exclude', ok: true, duplicate: true, deliveryId: text(current.notificationDeliveryId, 200) }, message: '이미 처리된 동일 변경입니다.', version: FIRESTORE_PRIMARY_OPERATIONS_73550_VERSION };
   }
+  // 휴강은 저장 뒤 명단에서 빠지므로 발송 대상은 변경 전 canonical roster에서 확정합니다.
+  const beforeRoster = await buildAttendanceRosterInternal7355014(caller, { date: originalDate, classId: item.classId, className: item.className });
+  const beforeStudentUids = unique(beforeRoster.rows.map(row => row.studentUid), 160);
+  const notificationRequestedByUser = operation !== 'exclude' && input.sendNotification !== false;
+  const sendNotification = notificationRequestedByUser && audienceNotificationAllowed;
+  await ref.set({
+    changeId, classId: item.classId, className: item.className, originalDate, targetDate,
+    operation, sessionStatus: operation === 'exclude' ? 'excluded' : (operation === 'cancel' ? 'cancelled' : (operation === 'substitute' ? 'substitute' : 'moved')),
+    originalWeekday: weekdayForDate(originalDate), targetWeekday: weekdayForDate(targetDate),
+    originalStartTime: item.startTime, originalEndTime: item.endTime,
+    startTime, endTime, instructorUid, instructorName,
+    reason: reasonText, stateSignature, active: true, source: 'attendance_schedule_operation_7355033',
+    notificationRequested: sendNotification, notificationState: sendNotification ? 'pending' : 'not_requested',
+    notificationSuppressedReason: notificationRequestedByUser && !audienceNotificationAllowed ? 'audience_disabled' : FieldValue.delete(),
+    audienceGroup: classAudienceGroup,
+    lastRequestId: requestIdValue, sheetBackupState: 'pending_0600', updatedByFirebaseUid: caller.firebaseUid, updatedByRole: caller.role,
+    updatedAtMs: Date.now(), updatedAt: FieldValue.serverTimestamp(), createdAtMs: Number(current.createdAtMs || Date.now()), createdAt: current.createdAt || FieldValue.serverTimestamp(),
+    version: FIRESTORE_PRIMARY_OPERATIONS_73550_VERSION
+  }, { merge: true });
+  await touchAttendanceRevision('class_schedule_operation_7355033', { classId: item.classId, originalDate, targetDate, operation, requestId: requestIdValue });
+  await refreshTodayTabletSnapshot('class_schedule_operation_7355033');
   let notification: PlainObject = notificationRequestedByUser && !audienceNotificationAllowed
     ? { requested: false, skipped: true, reason: 'AUDIENCE_NOTIFICATIONS_DISABLED', audienceGroup: classAudienceGroup }
     : { requested: false };
@@ -2768,12 +2711,14 @@ export const changeClassSessionAdmin73550 = onCall(MESSAGE_OPTIONS, async reques
     if (!claimed) {
       const job = (await db().collection('operationalMessageJobs').doc(jobId).get()).data() ?? {};
       notification = { requested: true, ok: text(job.state, 30) === 'complete', duplicate: true, deliveryId: text(job.deliveryId, 200), error: text(job.error, 1200) };
-      if (['complete', 'delivery_unknown', 'permanent_failed'].includes(text(job.state, 30))) await updateNotification({ notificationState: job.state, notificationDeliveryId: text(job.deliveryId, 200) });
     } else {
       try {
-        const built = await buildAttendanceRosterInternal7355014(caller, { date: targetDate, classId: item.classId, className: item.className }, recipientChange);
-        const studentUids = unique(built.rows.map(row => row.studentUid), 160);
-        const targets = unique(Array.isArray(committed.notificationTargets) ? committed.notificationTargets : ['student', 'parent'], 20).map(target => target === '학부모' ? 'parent' : target === '학생' ? 'student' : target);
+        let studentUids = beforeStudentUids;
+        if (operation === 'move') {
+          const built = await buildAttendanceRosterInternal7355014(caller, { date: targetDate, classId: item.classId, className: item.className });
+          studentUids = unique(built.rows.map(row => row.studentUid), 160);
+        }
+        const targets = unique(Array.isArray(input.targets) ? input.targets : ['student', 'parent'], 20).map(target => target === '학부모' ? 'parent' : target === '학생' ? 'student' : target);
         const recipients = await loadRecipients(studentUids, targets);
         const originalWeekday = weekdayForDate(originalDate) + '요일';
         const targetWeekday = weekdayForDate(targetDate) + '요일';
@@ -2783,28 +2728,28 @@ export const changeClassSessionAdmin73550 = onCall(MESSAGE_OPTIONS, async reques
         let result: PlainObject;
         if (operation === 'cancel') {
           result = await sendSolapiMessages('class_cancel', recipients, {
-            className: item.className, date: targetDate, weekday: targetWeekday, time: targetTime, instructorName, reason,
-            '수업명': item.className, '수업일': targetDate, '요일': targetWeekday, '수업시간': targetTime,
+            className: item.className, date: originalDate, weekday: originalWeekday, time: originalTime, reason,
+            '수업명': item.className, '수업일': originalDate, '요일': originalWeekday, '수업시간': originalTime,
             '휴강사유': reason, '변경사유': reason
-          }, caller, jobId);
+          }, caller);
         } else if (operation === 'substitute') {
           result = await sendSolapiMessages('class_substitute', recipients, {
             className: item.className,
-            date: targetDate,
-            weekday: targetWeekday,
+            date: originalDate,
+            weekday: originalWeekday,
             time: targetTime,
             originalInstructorName: item.instructorName,
             targetInstructorName: instructorName,
             instructorName,
             reason,
             '수업명': item.className,
-            '수업일': targetDate,
-            '요일': targetWeekday,
+            '수업일': originalDate,
+            '요일': originalWeekday,
             '수업시간': targetTime,
             '기존담당강사': item.instructorName,
             '변경담당강사': instructorName,
             '변경사유': reason
-          }, caller, jobId);
+          }, caller);
         } else {
           result = await sendSolapiMessages('class_change', recipients, {
             className: item.className, originalDate, targetDate, originalTime, targetTime,
@@ -2814,17 +2759,16 @@ export const changeClassSessionAdmin73550 = onCall(MESSAGE_OPTIONS, async reques
             '기존수업일': originalDate, '기존요일': originalWeekday, '기존수업시간': originalTime, '기존담당강사': item.instructorName,
             '변경수업일': targetDate, '변경요일': targetWeekday, '변경수업시간': targetTime, '변경담당강사': instructorName,
             '변경사유': reason
-          }, caller, jobId);
+          }, caller);
         }
         notification = { requested: true, ok: true, ...result };
         await completeSpecialMessageJob735505(jobId, { state: 'complete', deliveryId: result.deliveryId, completedAtMs: Date.now(), completedAt: FieldValue.serverTimestamp() });
-        await updateNotification({ notificationState: 'complete', notificationDeliveryId: result.deliveryId, notificationCompletedAtMs: Date.now(), notificationCompletedAt: FieldValue.serverTimestamp() });
+        await ref.set({ notificationState: 'complete', notificationDeliveryId: result.deliveryId, notificationCompletedAtMs: Date.now(), notificationCompletedAt: FieldValue.serverTimestamp() }, { merge: true });
       } catch (error) {
         const message = text(error instanceof Error ? error.message : error, 1200);
         notification = { requested: true, ok: false, error: message };
-        const failedState = (error as { ulimNoAutoRetry?: boolean })?.ulimNoAutoRetry ? 'delivery_unknown' : 'failed';
-        await completeSpecialMessageJob735505(jobId, { state: failedState, error: message });
-        await updateNotification({ notificationState: failedState, notificationError: message, notificationUpdatedAtMs: Date.now(), notificationUpdatedAt: FieldValue.serverTimestamp() });
+        await completeSpecialMessageJob735505(jobId, { state: 'failed', error: message });
+        await ref.set({ notificationState: 'failed', notificationError: message, notificationUpdatedAtMs: Date.now(), notificationUpdatedAt: FieldValue.serverTimestamp() }, { merge: true });
       }
     }
   }
