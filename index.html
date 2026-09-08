@@ -139,6 +139,18 @@ footer b { color: #fff; font-weight: 700; }
 .mini-char-card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; font-size: 13px; border:1px solid #eee; }
 .mini-char-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; background:#ddd; }
 .mini-char-info { padding: 10px; }
+.character-filter-panel73551015{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:14px 0;padding:12px;border:1px solid #dbeafe;border-radius:14px;background:#f8fbff;text-align:left}
+.character-filter-panel73551015 label,.character-admin-uploader73551015 label{display:block;font-size:11px;font-weight:900;color:#475569;margin-bottom:5px}
+.character-filter-panel73551015 select,.character-admin-uploader73551015 input,.character-admin-uploader73551015 select{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:9px;padding:9px;background:#fff}
+.character-catalog-status73551015{margin-top:10px;font-size:12px;color:#64748b;font-weight:800}
+.character-admin-uploader73551015{margin-top:16px;padding:14px;border:1px solid #cbd5e1;border-radius:14px;background:#f8fafc;text-align:left}
+.character-admin-grid73551015{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.character-admin-grid73551015 .wide{grid-column:span 2}
+.character-admin-actions73551015{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}.character-admin-actions73551015 button,.char-admin-item73551015 button{border:0;border-radius:9px;padding:9px 11px;background:#2563eb;color:#fff;font-weight:900;cursor:pointer}
+.character-admin-note73551015{margin-top:8px;font-size:11px;color:#64748b}.char-admin-catalog73551015{display:grid;gap:6px;margin-top:10px}
+.char-admin-item73551015{display:grid;grid-template-columns:48px 1fr auto;align-items:center;gap:10px;padding:8px 10px;border:1px solid #e2e8f0;border-radius:10px;background:#fff}.char-admin-item73551015>img{width:48px;height:48px;border-radius:8px;object-fit:cover}.char-admin-item73551015.inactive{opacity:.55}.char-admin-item73551015 small{display:block;color:#64748b}
+.character-saved-card73551015{border:2px solid #16a34a}.past-character-preview73551015{margin-bottom:14px}.past-character-card73551015{display:grid;grid-template-columns:110px 1fr;gap:14px;align-items:center;padding:12px;border:1px solid #dbeafe;border-radius:16px;background:linear-gradient(135deg,#eff6ff,#f0fdf4);text-align:left}.past-character-card73551015 img{width:110px;height:110px;border-radius:13px;object-fit:cover}.past-character-card73551015 span,.past-character-card73551015 small{display:block;color:#64748b;font-size:11px;font-weight:800}.past-character-card73551015 b{display:block;margin:5px 0;font-size:18px;color:#14532d}.past-character-empty73551015{padding:10px;border:1px dashed #cbd5e1;border-radius:12px;background:#f8fafc;color:#64748b;font-size:12px;font-weight:800}
+.ulim-practice-character-card73551015{display:grid;grid-template-columns:150px 1fr;gap:14px;align-items:center;margin-bottom:14px;padding:12px;border:1px solid #dbeafe;border-radius:16px;background:#fff}.ulim-practice-character-card73551015 img{width:150px;height:150px;object-fit:cover;border-radius:14px}.ulim-practice-character-card73551015 small{display:block;color:#64748b;margin-top:5px}
+@media(max-width:700px){.character-filter-panel73551015{grid-template-columns:1fr}.character-admin-grid73551015{grid-template-columns:1fr 1fr}.character-admin-grid73551015 .wide{grid-column:1/-1}.past-character-card73551015{grid-template-columns:86px 1fr}.past-character-card73551015 img{width:86px;height:86px}.ulim-practice-character-card73551015{grid-template-columns:105px 1fr}.ulim-practice-character-card73551015 img{width:105px;height:105px}}
 .train-origin-text {
     font-size: 20px; font-weight: 700; color: #333; text-align: center;
     margin-bottom: 25px; word-break: keep-all; line-height: 1.5;
@@ -2166,11 +2178,30 @@ body.ulim-attendance-modal-open73545{overflow:hidden}
                 <div id="charDescDisplay" class="char-desc">버튼을 눌러 캐릭터를 소환하세요.</div>
             </div>
         </div>
+                <div class="character-filter-panel73551015">
+            <div><label>성별</label><select id="charGenderFilter73551015"><option value="">전체</option><option value="male">남성</option><option value="female">여성</option></select></div>
+            <div><label>나이</label><select id="charAgeFilter73551015"><option value="">전체</option><option value="child">아동</option><option value="teen">10대</option><option value="20s">20대</option><option value="30s">30대</option><option value="40s">40대</option><option value="50plus">50대 이상</option></select></div>
+            <div><label>특징</label><select id="charFeatureFilter73551015"><option value="">특징 전체</option></select></div>
+        </div>
         <div class="btn-row">
-            <button class="btn-male" onclick="rollCharacter('male')">👱‍♂️ 남자 뽑기</button>
-            <button class="btn-female" onclick="rollCharacter('female')">👩 여자 뽑기</button>
-            <button class="btn-save" onclick="saveCharacter()">⭐ 저장하기</button>
+            <button class="btn-gen" onclick="rollCharacter()">🎲 조건 랜덤 뽑기</button>
+            <button class="btn-save" onclick="saveCharacter()">⭐ 캐릭터 저장</button>
             <button class="btn-share" onclick="shareCharacterAsImage()">🖼️ 이미지/공유</button>
+        </div>
+        <div id="charCatalogStatus73551015" class="character-catalog-status73551015">Storage 캐릭터 불러오는 중...</div>
+        <div id="characterAdminUploader73551015" class="character-admin-uploader73551015" style="display:none;">
+          <h3>캐릭터 이미지 관리</h3>
+          <div class="character-admin-grid73551015">
+            <div><label>이미지</label><input id="charUploadFiles73551015" type="file" accept="image/*" multiple></div>
+            <div><label>성별</label><select id="charUploadGender73551015"><option value="male">남성</option><option value="female">여성</option><option value="all">무관</option></select></div>
+            <div><label>나이</label><select id="charUploadAge73551015"><option value="all">무관</option><option value="child">아동</option><option value="teen">10대</option><option value="20s">20대</option><option value="30s">30대</option><option value="40s">40대</option><option value="50plus">50대 이상</option></select></div>
+            <div><label>이름</label><input id="charUploadName73551015" placeholder="예: 냉정한 20대 검사"></div>
+            <div class="wide"><label>특징</label><input id="charUploadFeatures73551015" placeholder="예: 냉정, 악역, 카리스마"></div>
+            <div class="wide"><label>설명</label><input id="charUploadDescription73551015" placeholder="선택사항"></div>
+          </div>
+          <div class="character-admin-actions73551015"><button type="button" id="charAdminUploadBtn73551015">Firebase Storage 업로드</button><button type="button" id="charLegacyImportBtn73551015">기존 20장 Storage로 가져오기</button></div>
+          <div id="charAdminUploadStatus73551015" class="character-admin-note73551015"></div>
+          <div id="charAdminCatalog73551015" class="char-admin-catalog73551015"></div>
         </div>
       </div>
       <div id="charSaveGrid" class="char-save-grid"></div>
@@ -2261,6 +2292,7 @@ body.ulim-attendance-modal-open73545{overflow:hidden}
 <div class="tab-content" id="tab4">
     <div class="section">
       <div class="past-display-card">
+        <div id="pastCharacterPreview73551015" class="past-character-preview73551015"></div>
         <div id="pastRoleDisplay" class="past-role">버튼을 눌러 대본을 뽑아주세요</div>
         <div id="pastLinesDisplay" class="past-lines">-</div>
       </div>
@@ -3358,59 +3390,16 @@ function shareSceneAsImage() {
 
 
 let currentChar = null;
-function rollCharacter(gender) {
-    const list = gender === 'male' ? [{name:"남성캐릭터", job:"직업", desc:"설명", id:1}] : [{name:"여성캐릭터", job:"직업", desc:"설명", id:1}];
-    const char = pick(list);
-    currentChar = char; // 캐릭터 정보 저장
-
-    const imgEl = document.getElementById("charImgDisplay");
-    const placeholderEl = document.querySelector(".char-placeholder");
-
-    const folder = gender === 'male' ? 'male' : 'female';
-    const newSrc = `appdata/character/${folder}/${Math.floor(Math.random()*10)+1}.jpg`;
-
-    imgEl.onload = function(){
-        placeholderEl.style.display = 'none';
-        this.style.display = 'block';
-    };
-    imgEl.onerror = function(){
-        this.style.display = 'none';
-        placeholderEl.style.display = 'block';
-    };
-
-    imgEl.src = newSrc; // 새로운 이미지 경로 설정
-
-    document.getElementById("charNameDisplay").textContent = "랜덤 캐릭터";
-    document.getElementById("charJobDisplay").textContent = "랜덤 직업";
-    document.getElementById("charDescDisplay").textContent = "새로운 캐릭터가 소환되었습니다.";
+async function rollCharacter(gender) {
+    const api=window.__ULIM_CHARACTER_API_73551015__;
+    if(!api||typeof api.rollFromUi!=='function')return alert('캐릭터 Storage 기능을 준비하지 못했습니다.');
+    return api.rollFromUi(gender);
 }
 
-function saveCharacter(){
-    const charName = document.getElementById("charNameDisplay").textContent;
-    const charImgSrc = document.getElementById("charImgDisplay").src;
-    const isImageVisible = document.getElementById("charImgDisplay").style.display !== 'none';
-
-    if (charName === "캐릭터 이름") {
-        return alert("먼저 '남자 뽑기' 또는 '여자 뽑기'를 진행해주세요!");
-    }
-
-    const div = document.createElement("div"); div.className="mini-char-card";
-
-    let imageHtml;
-    if (isImageVisible && charImgSrc && charImgSrc.includes('appdata/character')) {
-        imageHtml = `<img src="${charImgSrc}" class="mini-char-img" alt="${charName}">`;
-    } else {
-        imageHtml = `<div class="mini-char-img" style="display:flex; justify-content:center; align-items:center; color:#fff; font-size:10px;">이미지 없음</div>`;
-    }
-
-    div.innerHTML = `
-        ${imageHtml}
-        <div class="mini-char-info">
-            ${charName}
-        </div>
-    `;
-
-    document.getElementById("charSaveGrid").prepend(div);
+async function saveCharacter() {
+    const api=window.__ULIM_CHARACTER_API_73551015__;
+    if(!api||typeof api.saveCurrentFromUi!=='function')return alert('캐릭터 Storage 기능을 준비하지 못했습니다.');
+    return api.saveCurrentFromUi();
 }
 
 function shareCharacterAsImage() {
@@ -5017,6 +5006,10 @@ async function uploadPastQuestionRecord() {
           analyze:true,
           serverScore:false
         });
+        try {
+          const characterApi73551015=window.__ULIM_CHARACTER_API_73551015__;
+          if(result&&result.recordId&&characterApi73551015&&typeof characterApi73551015.linkCurrentSelectionToPracticeRecord==='function')await characterApi73551015.linkCurrentSelectionToPracticeRecord(String(result.recordId||''));
+        } catch (_characterLink73551015) {}
         if(status)status.textContent='기출문제 업로드가 완료되었습니다. 기록을 반영하는 중입니다.';if(btn){btn.textContent='업로드 완료';btn.disabled=true;}pastUploadCompleted=true;
         try{
           if(typeof window.ulimOpenStudentPracticeRecord7355072==='function'){
@@ -16358,6 +16351,10 @@ ${ruleSummary}`, isFallback ? "success" : "success");
             }
             if (showOverlay) hideLoading();
             adminVocalPracticeLogs = dedupeVocalLogs_([...(Array.isArray(firebaseData.logs)?firebaseData.logs:[]), ...(Array.isArray(legacyData.logs)?legacyData.logs:[])]);
+            try {
+                const characterApi73551015=window.__ULIM_CHARACTER_API_73551015__;
+                if(characterApi73551015&&typeof characterApi73551015.hydratePracticeRecords==='function')adminVocalPracticeLogs=await characterApi73551015.hydratePracticeRecords(adminVocalPracticeLogs);
+            } catch (_characterHydrate73551015) {}
             mergeVocalCalendarActivity73551014_(adminVocalPracticeLogs, false);
             adminRenderVocalPracticeLogs();
             renderVocalPracticeCalendar_();
@@ -17833,6 +17830,9 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
     const sentenceLabel = isPast ? '기출 대본' : '문장';
     const dateText = practiceDate706(log) || '날짜 정보 없음';
     const classText = practiceClass706(log) || '반 정보 없음';
+    const character73551015 = log && log.character73551015 && typeof log.character73551015 === 'object' ? log.character73551015 : null;
+    const characterImage73551015 = String(character73551015 && character73551015.imageUrl || '').trim();
+    const characterHtml73551015 = character73551015 ? `<div class="ulim-practice-character-card73551015">${characterImage73551015 ? '<img src="'+esc(characterImage73551015)+'" alt="'+esc(character73551015.name || '캐릭터')+'">' : ''}<div><span class="practice-log-meta">기출문제 선택 캐릭터</span><b>${esc(character73551015.name || '캐릭터')}</b><small>${esc([character73551015.gender === 'male' ? '남성' : (character73551015.gender === 'female' ? '여성' : '성별 무관'), character73551015.ageGroup || ''].concat(character73551015.tags || []).filter(Boolean).join(' · '))}</small></div></div>` : '';
     const studentName = String(log.participantName || log.studentName || group.name || (String(log.ownerKind || '') === 'staff' ? '교직원' : '학생')).trim();
     const participantLabel = String(log.ownerKind || '') === 'staff' ? '사용자명' : '학생명';
 
@@ -17863,6 +17863,7 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
 
     if (bodyEl) {
       bodyEl.innerHTML = `
+        ${characterHtml73551015}
         <div class="ulim-practice-record-meta706">
           <div class="ulim-practice-record-meta-item706">
             <span class="ulim-practice-record-meta-label706">${esc(participantLabel)}</span>
@@ -21236,6 +21237,7 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 
 <!-- ULIM R20: vocalization Firestore-primary authority; GAS remains media/history compatibility only. -->
 <script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260905.73551001"></script>
+<script src="./web/character-storage-primary-7.35.5.0.15.js?v=20260908.73551015-character-storage-past-1"></script>
 <script id="ulim-vocal-primary-bind-7355041">
 window.__ULIM_VOCAL_PRIMARY_BUILD_7355041__='20260814-7355050b-r25.2-step6-next-upload';
 window.__ULIM_VOCAL_STEP6_NEXT_UPLOAD_BUILD_7355050B__='20260814-7355050b';
