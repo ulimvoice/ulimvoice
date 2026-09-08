@@ -7,7 +7,7 @@
   const LOGOUT_KEY='ULIM_STAFF_EXPLICIT_LOGOUT_7322';
   const DOMAIN='auth.ulimvoice.app';
   const ROLES=['teacher','admin','superAdmin'];
-  let loginPromise=null,restorePromise=null,lastLoginId='';
+  let loginPromise=null,restoreInstalled=false,lastLoginId='';
   function text(v){return String(v==null?'':v).trim();}
   function norm(v){return text(v).normalize('NFKC').toLowerCase();}
   function owner(){return global.ULIM_ROOM_CLASSROOM_REALTIME_72919||global.ULIM_ROOM_CLASSROOM_REALTIME_72918||global.ULIM_ROOM_CLASSROOM_REALTIME_72917||null;}
@@ -85,34 +85,14 @@
     try{const rt=await runtime();if(rt.auth.currentUser)await rt.sdk.signOut(rt.auth);}catch(_e){}
     showLogin();return true;
   }
-  function restore(){
-    if(restorePromise)return restorePromise;
-    restorePromise=(async function(){
-      const rt=await runtime();
-      return new Promise(function(resolve){
-        rt.sdk.onAuthStateChanged(rt.auth,async function(user){
-          let profile=null;
-          try{
-            if(!user)return;
-            if(localStorage.getItem(LOGOUT_KEY)==='Y'||sessionStorage.getItem(LOGOUT_KEY)==='Y')return;
-            const tr=await rt.sdk.getIdTokenResult(user,false),role=text(tr&&tr.claims&&tr.claims.role);
-            if(!ROLES.includes(role))return;
-            profile=await readProfile(rt,'');lastLoginId=profile.id||'';
-            saveProfile(profile);showShell();
-            global.dispatchEvent(new CustomEvent('ulim-firebase-auth-ready',{detail:{uid:profile.firebaseAuthUid,role:profile.firebaseRole,version:VERSION,reason:'staff-restore'}}));
-          }catch(_e){}finally{resolve(profile);}
-        });
-      });
-    })();
-    return restorePromise;
-  }
-  async function waitForRestore(timeoutMs){
-    let timer;
-    try{
-      return await Promise.race([restore(),new Promise(function(_,reject){timer=setTimeout(function(){reject(new Error('교직원 인증 복원을 기다리는 시간이 초과되었습니다.'));},timeoutMs||12000);})]);
-    }finally{clearTimeout(timer);}
+  async function restore(){
+    if(restoreInstalled)return;restoreInstalled=true;const rt=await runtime();
+    rt.sdk.onAuthStateChanged(rt.auth,async function(user){
+      if(!user)return;try{if(localStorage.getItem(LOGOUT_KEY)==='Y'||sessionStorage.getItem(LOGOUT_KEY)==='Y')return;}catch(_e){}
+      try{const tr=await rt.sdk.getIdTokenResult(user,false),role=text(tr&&tr.claims&&tr.claims.role);if(!ROLES.includes(role))return;const p=await readProfile(rt,'');lastLoginId=p.id||'';saveProfile(p);showShell();try{global.dispatchEvent(new CustomEvent('ulim-firebase-auth-ready',{detail:{uid:p.firebaseAuthUid,role:p.firebaseRole,version:VERSION,reason:'staff-restore'}}));}catch(_e){} }catch(_e){}
+    });
   }
   function install(){global.adminLogin=login;global.changeAdminPasswordByPrompt=changePassword;global.adminLogout=logout;try{adminLogin=login;changeAdminPasswordByPrompt=changePassword;adminLogout=logout;}catch(_e){}restore().catch(function(){});}
-  global.__ULIM_STAFF_LOGIN_FIREBASE_PRIMARY_7329_API__=Object.freeze({version:VERSION,login,logout,restore,waitForRestore,changePassword,deriveLoginEmail});
+  global.__ULIM_STAFF_LOGIN_FIREBASE_PRIMARY_7329_API__=Object.freeze({version:VERSION,login,logout,restore,changePassword,deriveLoginEmail});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 })(typeof window!=='undefined'?window:globalThis);
