@@ -1367,15 +1367,21 @@
       var directory = await loadDirectory(false);
       var classItem = classByContext735410(directory, context.className);
       if (!classItem) throw new Error('선택한 반 정보를 학생명단의 현재 반 목록에서 찾지 못했습니다.');
+      var effectiveSnapshot = await call('getAttendanceRosterAdmin73550', { date: context.date, classId: classItem.classId });
+      if (!effectiveSnapshot || !effectiveSnapshot.selectedClass || effectiveSnapshot.selectedClass.classId !== classItem.classId) throw new Error('현재 회차 정보를 확인하지 못했습니다.');
+      classItem = effectiveSnapshot.selectedClass;
+      var originalSessionDate = text(classItem.raw && classItem.raw.scheduleChange && classItem.raw.scheduleChange.originalDate) || context.date;
       var modal = ensureScheduleChangeModal7355014();
       document.getElementById('ulimAttendanceScheduleContext7355014').textContent = context.className;
-      document.getElementById('ulimScheduleOriginal7355014').value = context.date;
+      document.getElementById('ulimScheduleOriginal7355014').value = originalSessionDate;
       document.getElementById('ulimScheduleTarget7355014').value = context.date;
       document.getElementById('ulimScheduleStart7355014').value = text(classItem.startTime);
       document.getElementById('ulimScheduleEnd7355014').value = text(classItem.endTime);
       document.getElementById('ulimScheduleReason7355014').value = '';
       document.getElementById('ulimScheduleNotify7355014').checked = false;
       var teacherSelect = document.getElementById('ulimScheduleTeacher7355014');
+      teacherSelect.disabled = true;
+      teacherSelect.title = '강사 변경은 전체출석부의 대강 메뉴에서 처리합니다.';
       var teachers = Array.isArray(directory.teachers) ? directory.teachers.slice() : [];
       if (!teachers.some(function (teacher) { return teacher.instructorUid === classItem.instructorUid; }) && classItem.instructorUid) {
         teachers.push({ instructorUid: classItem.instructorUid, instructorName: classItem.instructorName });
@@ -1391,7 +1397,7 @@
       document.getElementById('ulimScheduleSave7355014').onclick = async function () {
         var selectedOption = teacherSelect.selectedOptions && teacherSelect.selectedOptions[0];
         var payload = {
-          originalDate: context.date,
+          originalDate: originalSessionDate,
           targetDate: text(target.value),
           classId: classItem.classId,
           className: classItem.className,
@@ -1513,7 +1519,7 @@
     var month = attendanceAddMonth735430(context);
     var group = groupById735423(context && context.classId);
     var fromLedger = group && Array.isArray(group.sessions) ? group.sessions.filter(function (session) {
-      return text(session.date).slice(0, 7) === month && session.state !== 'cancelled';
+      return ledgerSessionAttendanceDate73550921(session).slice(0, 7) === month && session.state !== 'cancelled';
     }) : [];
     if (fromLedger.length) return fromLedger.map(function (session) { var copy = Object.assign({}, session); copy.slotDate73550921 = text(session.date); copy.date = ledgerSessionAttendanceDate73550921(session); copy.weekday = ledgerSessionWeekday73550921(session).replace(/요일$/, ''); return copy; }).sort(function (a, b) { return text(a.date).localeCompare(text(b.date)); });
 
@@ -1970,9 +1976,11 @@
 
   global.__ULIM_MOVED_ATTENDANCE_CELL_73550921__ = true;
   function ledgerSessionAttendanceDate73550921(session) {
+    var effective = text(session && (session.effectiveDate || session.dateOverrideTargetDate));
+    if (/^\d{4}-\d{2}-\d{2}$/.test(effective)) return effective;
     var state = text(session && session.state);
     var target = text(session && session.targetDate);
-    return state === 'moved' && /^\d{4}-\d{2}-\d{2}$/.test(target) ? target : text(session && session.date);
+    return (state === 'moved' || session && session.isMoved) && /^\d{4}-\d{2}-\d{2}$/.test(target) ? target : text(session && session.date);
   }
   function ledgerSessionCell73550921(student, session) {
     var cells = student && student.cells || {};
@@ -2117,7 +2125,10 @@
     header += '<tr><th class="ulim-ledger-no735427">NO</th><th class="ulim-ledger-name735427">학생이름</th>';
     if (safeSessions.length) {
       header += safeSessions.map(function (session) {
-        var substituteName = text(session.substituteInstructorName || session.instructorName || session.teacher); if (session.state === 'substitute' && !text(session.substituteInstructorName) && normalize(substituteName) === normalize(group.instructorName)) substituteName = ''; var badge = session.state === 'cancelled' ? '<span>휴강</span>' : session.state === 'substitute' ? '<span>대강 · ' + escapeHtml(substituteName ? substituteName + 'T' : '강사 확인필요') + '</span>' : session.state === 'moved' ? '<span>수업일 변경</span>' : '';
+        var substituteName = text(session.substituteInstructorName || session.instructorName);
+        var badge = (session.isCancelled || session.state === 'cancelled') ? '<span>휴강</span>' : '';
+        if (session.isMoved || session.state === 'moved' || session.state === 'moved_in') badge += '<span>수업일 변경</span>';
+        if (session.isSubstitute || session.state === 'substitute') badge += '<span>대강 · ' + escapeHtml(substituteName ? substituteName + 'T' : '강사 확인필요') + '</span>';
         return '<th' + (historicalEdit ? '' : ' data-ledger-header="1"') + ' data-class-id="' + escapeHtml(group.classId) + '" data-date="' + escapeHtml(session.date) + '" class="ulim-ledger-date735423"><b>' + escapeHtml(dateLabel7355033(ledgerSessionAttendanceDate73550921(session))) + '</b><small>' + escapeHtml(ledgerSessionWeekday73550921(session)) + '</small>' + badge + '</th>';
       }).join('');
     } else {
@@ -2190,8 +2201,8 @@
     var prevMonth = text(ledger.previousMonth);
     var currentMonth = text(ledger.currentMonth);
     board.innerHTML = groups.map(function (group) {
-      var prevSessions = (group.sessions || []).filter(function (session) { return text(session.date).slice(0, 7) === prevMonth; });
-      var currentSessions = (group.sessions || []).filter(function (session) { return text(session.date).slice(0, 7) === currentMonth; });
+      var prevSessions = (group.sessions || []).filter(function (session) { return ledgerSessionAttendanceDate73550921(session).slice(0, 7) === prevMonth; });
+      var currentSessions = (group.sessions || []).filter(function (session) { return ledgerSessionAttendanceDate73550921(session).slice(0, 7) === currentMonth; });
       var currentRosterCount735429 = ledgerStudentsForMonth735429(group, currentSessions).length;
       return '<section class="ulim-ledger-class735423" data-ledger-class="' + escapeHtml(group.classId) + '">'
         + '<div class="ulim-ledger-class-title735423"><div><b>' + escapeHtml(group.className) + '</b><span>' + escapeHtml(group.instructorName + 'T · ' + group.startTime + '~' + group.endTime) + '</span></div><span>' + currentRosterCount735429 + '명</span></div>'
@@ -2231,7 +2242,7 @@
     document.getElementById('ulimPreviousMonthEditTitle735433').textContent = monthLabel7355033(prevMonth) + ' 전월 출석부 편집';
     var groups = (ledger.groups || []).slice().sort(wholeClassGroupCompare735432);
     board.innerHTML = groups.map(function (group) {
-      var sessions = (group.sessions || []).filter(function (session) { return text(session.date).slice(0, 7) === prevMonth; });
+      var sessions = (group.sessions || []).filter(function (session) { return ledgerSessionAttendanceDate73550921(session).slice(0, 7) === prevMonth; });
       if (!sessions.length) return '';
       return '<section class="ulim-ledger-class735423" data-ledger-class="' + escapeHtml(group.classId) + '"><div class="ulim-ledger-class-title735423"><div><b>' + escapeHtml(group.className) + '</b><span>' + escapeHtml(group.instructorName + 'T · ' + group.startTime + '~' + group.endTime) + '</span></div></div><div class="ulim-ledger-scroll735423">' + ledgerMonthBlockHtml735427(group, prevMonth, sessions, 'prev', true) + '</div></section>';
     }).join('') || '<div class="ulim-ledger-empty-state735427">전월 수업 기록이 없습니다.</div>';
@@ -2247,7 +2258,7 @@
   async function removePreviousMonthStudent735433(group, student) {
     if (!isFullAdmin() || !group || !student || !allClassesState735410.ledger) return;
     var prevMonth = text(allClassesState735410.ledger.previousMonth);
-    var dates = (group.sessions || []).filter(function (session) { return text(session.date).slice(0, 7) === prevMonth && ledgerSessionCell73550921(student, session).eligible === true; }).map(function (session) { return ledgerSessionAttendanceDate73550921(session); });
+    var dates = (group.sessions || []).filter(function (session) { return ledgerSessionAttendanceDate73550921(session).slice(0, 7) === prevMonth && ledgerSessionCell73550921(student, session).eligible === true; }).map(function (session) { return ledgerSessionAttendanceDate73550921(session); });
     dates = Array.from(new Set(dates.filter(Boolean)));
     if (!dates.length) return;
     if (!confirm(student.studentName + ' 학생을 ' + monthLabel7355033(prevMonth) + ' ' + group.className + ' 기록에서 제거할까요?\n현재월 수강반은 변경되지 않습니다.')) return;
@@ -2323,7 +2334,7 @@
   }
   async function saveLedgerMonthNote735430(group, student, monthKey, value, input) {
     if (!fullAdminOrTeacher7355033() || !group || !student) return;
-    var sessions = (group.sessions || []).filter(function (session) { return text(session.date).slice(0, 7) === text(monthKey) && session.state !== 'cancelled'; });
+    var sessions = (group.sessions || []).filter(function (session) { return ledgerSessionAttendanceDate73550921(session).slice(0, 7) === text(monthKey) && session.state !== 'cancelled'; });
     var rows = [];
     sessions.forEach(function (session) {
       var actionDate73550921 = ledgerSessionAttendanceDate73550921(session);
@@ -2454,7 +2465,7 @@
     if (action === 'substitute') {
       fields.innerHTML = '<label class="ulim-ledger-field735427"><span>대강 강사 검색</span><input type="search" id="ulimLedgerSubTeacherSearch735427" placeholder="강사명을 입력하세요"></label>'
         + '<label class="ulim-ledger-field735427"><span>대강 강사 선택</span><select id="ulimLedgerSubTeacher735427"></select></label>'
-        + '<div class="ulim-ledger-inline-info735427">' + escapeHtml(session.date || '') + ' · ' + escapeHtml((session.startTime || group.startTime || '') + '~' + (session.endTime || group.endTime || '')) + '</div>'
+        + '<div class="ulim-ledger-inline-info735427">' + escapeHtml(ledgerSessionAttendanceDate73550921(session)) + ' · ' + escapeHtml((session.startTime || group.startTime || '') + '~' + (session.endTime || group.endTime || '')) + '</div>'
         + '<label class="ulim-ledger-field735427"><span>대강 사유</span><textarea id="ulimLedgerScheduleReason735427" rows="2" placeholder="선택 입력"></textarea></label>'
         + '<label class="ulim-ledger-notify735427"><input type="checkbox" id="ulimLedgerScheduleNotify735427" checked><span>학생·학부모에게 알림톡 발송</span></label>';
       var search = document.getElementById('ulimLedgerSubTeacherSearch735427');
@@ -2471,7 +2482,7 @@
     }
     if (action === 'move') {
       fields.innerHTML = '<div class="ulim-ledger-date-time-grid735427">'
-        + '<label class="ulim-ledger-field735427"><span>변경 날짜</span><input type="date" id="ulimLedgerMoveDate735427" value="' + escapeHtml(session.date || today()) + '"></label>'
+        + '<label class="ulim-ledger-field735427"><span>변경 날짜</span><input type="date" id="ulimLedgerMoveDate735427" value="' + escapeHtml(ledgerSessionAttendanceDate73550921(session) || today()) + '"></label>'
         + '<label class="ulim-ledger-field735427"><span>시작 시간</span><input type="time" id="ulimLedgerMoveStart735427" value="' + escapeHtml(session.startTime || group.startTime || '') + '"></label>'
         + '<label class="ulim-ledger-field735427"><span>종료 시간</span><input type="time" id="ulimLedgerMoveEnd735427" value="' + escapeHtml(session.endTime || group.endTime || '') + '"></label>'
         + '</div>'
@@ -2486,7 +2497,7 @@
     allClassesState735410.scheduleContext = { group: group, session: session };
     allClassesState735410.scheduleAction = '';
     var modal = ensureLedgerScheduleModal735427();
-    document.getElementById('ulimLedgerScheduleContext735427').textContent = session.date + ' · ' + group.className;
+    document.getElementById('ulimLedgerScheduleContext735427').textContent = ledgerSessionAttendanceDate73550921(session) + ' · ' + group.className;
     document.getElementById('ulimLedgerScheduleFields735427').innerHTML = '<div class="ulim-ledger-action-guide735427">처리할 항목을 버튼으로 선택하세요.</div>';
     document.getElementById('ulimLedgerScheduleSubmit735427').disabled = true;
     Array.from(modal.querySelectorAll('[data-ledger-schedule-action]')).forEach(function (button) { button.classList.remove('active'); });
@@ -2506,7 +2517,7 @@
     var session = state.session;
     var operation = text(allClassesState735410.scheduleAction);
     if (!group || !session || !operation) return;
-    var targetDate = session.date;
+    var targetDate = ledgerSessionAttendanceDate73550921(session);
     var startTime = session.startTime || group.startTime;
     var endTime = session.endTime || group.endTime;
     var instructorUid = session.instructorUid || group.instructorUid;
@@ -2536,7 +2547,7 @@
       if (typeof global.showLoading === 'function') global.showLoading(label + ' 처리 중...');
       var result = await call('changeClassSessionAdmin73550', {
         operation: operation,
-        originalDate: session.date,
+        originalDate: text(session.originalDate) || session.date,
         targetDate: targetDate,
         classId: group.classId,
         className: group.className,
@@ -2617,7 +2628,7 @@
         return;
       }
       if (target.hasAttribute('data-ledger-add') && isFullAdmin()) {
-        openAttendanceAddModal735410({ date: ledgerSessionAttendanceDate73550921(session), month: text(session.date).slice(0, 7), classId: group.classId, className: group.className });
+        openAttendanceAddModal735410({ date: ledgerSessionAttendanceDate73550921(session), month: ledgerSessionAttendanceDate73550921(session).slice(0, 7), classId: group.classId, className: group.className });
       }
     }, true);
 
