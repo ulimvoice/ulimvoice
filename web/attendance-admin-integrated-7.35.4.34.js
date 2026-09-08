@@ -869,8 +869,11 @@
   }
 
   function weekdayFromClass735410(item) {
-    var explicit = Number(item && item.weekday);
-    if (Number.isInteger(explicit) && explicit >= 0 && explicit <= 6) return explicit;
+    var explicitRaw = text(item && item.weekday);
+    if (explicitRaw !== '') {
+      var explicit = Number(explicitRaw);
+      if (Number.isInteger(explicit) && explicit >= 0 && explicit <= 6) return explicit;
+    }
     var source = text(item && (item.weekdayLabel || item.className || item.baseName));
     var labels = ['일요일','월요일','화요일','수요일','목요일','금요일','토요일'];
     for (var index = 0; index < labels.length; index += 1) if (source.indexOf(labels[index]) >= 0) return index;
