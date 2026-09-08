@@ -24,7 +24,7 @@
   <!-- ULIM 7.34.2: safe Firebase-first staff/student directory integration. -->
   <script src="./web/room-classroom-realtime-7.29.19.js?v=20260814.72919"></script>
   <script src="./web/practice-room-firestore-primary-7.35.5.0.37.js?v=20260811.7355037"></script>
-  <script src="./web/staff-login-firebase-primary-7.32.9.js?v=20260814.73209"></script>
+  <script src="./web/staff-login-firebase-primary-7.32.9.js?v=73551012-entrypoint-hotfix-1"></script>
   <script src="./web/student-login-firebase-direct-7.35.5.0.30.js?v=20260809.7355030r7"></script>
   <script src="./web/student-home-bootstrap-7.35.5.0.31.js?v=20260809.7355031"></script>
 <meta charset="UTF-8">
@@ -2928,6 +2928,16 @@ async function promptAndAuthenticate() {
     }
 }
 
+function loadStudentVocalPracticeLogsForMonth_(year, month, force = false) {
+    const api = window.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_API_7355041__;
+    if (!api || typeof api.loadMonth !== 'function') return Promise.resolve({ ok:false, status:'firebase_not_ready', logs:[] });
+    return api.loadMonth(Number(year), Number(month), !!force).then(function(data){
+        try { if (typeof renderCalendar === 'function') renderCalendar(Number(year), Number(month)); } catch (_ignore7355055) {}
+        return data;
+    }).catch(function(){ return { ok:false, status:'load_failed', logs:[] }; });
+}
+window.loadStudentVocalPracticeLogsForMonth_ = loadStudentVocalPracticeLogsForMonth_;
+
 function updateFilenameConstants() {
     const filenameBase = `${instructorName}_${studentName}_${phoneLast4}`;
 
@@ -4758,20 +4768,7 @@ async function uploadPastQuestionRecord() {
     }catch(error){if(status)status.textContent='저장에 실패했습니다. 다시 시도해주세요.';if(btn){btn.disabled=false;btn.textContent='업로드';}alert(error&&error.message?error.message:'기출 녹음 저장에 실패했습니다.');return null;}
 }
 
-window.onload = async function() {
-    await checkStudentName();  // 인증 먼저 완료
 
-    document.querySelectorAll('.tab').forEach(t => {
-        t.onclick = () => {
-            document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
-            t.classList.add('active');
-            document.getElementById(t.dataset.tab).classList.add('active');
-        };
-    });
-
-    renderCalendar();
-};
 
 
 const ULIM_APP_VERSION = "2026.07.06.706.08";
@@ -5288,24 +5285,29 @@ function showMainContent(isAuthenticated) {
 }
 
 
-window.onload = async function() {
-    preloadNoticesFromSheet();
-    adminModeActive = false;
-    document.body.classList.remove('admin-mode');
-    setAdminTabVisibility();
-
-    const lastMode = localStorage.getItem('ulimLastMode') || '';
-    if (adminToken && lastMode === 'admin') {
-        openAdminPage();
+let ulimPageBootPromise73551012 = null;
+window.onload = function() {
+    if (ulimPageBootPromise73551012) return ulimPageBootPromise73551012;
+    ulimPageBootPromise73551012 = (async function() {
+        preloadNoticesFromSheet();
+        const staff = window.__ULIM_STAFF_LOGIN_FIREBASE_PRIMARY_7329_API__;
+        // The staff owner must finish applying its initial Firebase profile first.
+        if (staff) await staff.waitForRestore(12000);
+        if (adminHasStaffSession()) {
+            openAdminPage();
+        } else {
+            adminModeActive = false;
+            document.body.classList.remove('admin-mode');
+            await checkStudentName();
+        }
+        setAdminTabVisibility();
         if (typeof renderCalendar === 'function') renderCalendar();
-        return;
-    }
-
-    await checkStudentName();
-    setAdminTabVisibility();
-    if (typeof renderCalendar === 'function') {
-        renderCalendar();
-    }
+    })().catch(function(error) {
+        console.error('[ULIM page boot]', error);
+        showStudentLoginPanel();
+        return false;
+    });
+    return ulimPageBootPromise73551012;
 };
 
 
@@ -16105,8 +16107,33 @@ ${ruleSummary}`, isFallback ? "success" : "success");
  window.__ULIM_AUTH_GATE_FIREBASE_ONLY_7355054__=true;
  function applyStudent(p){if(!p)return false;try{studentName=p.name||'';studentNo=p.attendanceNo||'';instructorName=Array.isArray(p.instructorNames)?(p.instructorNames[0]||''):'';phoneLast4='';studentSessionToken=p.studentUid?'FIREBASE:'+p.studentUid:'';}catch(_e){}try{localStorage.setItem('studentName',p.name||'');localStorage.setItem('studentNo',p.attendanceNo||'');localStorage.setItem('instructorName',Array.isArray(p.instructorNames)?(p.instructorNames[0]||''):'');localStorage.setItem('ulimLastMode','student');localStorage.removeItem('studentSessionToken');localStorage.removeItem('phoneLast4');}catch(_e){}try{if(typeof showMainContent==='function')showMainContent(true);if(typeof renderStudentAccountBar_==='function')renderStudentAccountBar_();}catch(_e){}return true;}
  window.studentSecureLogout=async function(){try{const a=window.__ULIM_STUDENT_FIREBASE_DIRECT_AUTH_7355030__;if(a&&typeof a.signOut==='function')await a.signOut();}catch(_e){}try{studentName='';studentNo='';instructorName='';studentSessionToken='';localStorage.removeItem('studentName');localStorage.removeItem('studentNo');localStorage.removeItem('instructorName');localStorage.removeItem('studentSessionToken');localStorage.removeItem('ulimLastMode');}catch(_e){}try{if(typeof showStudentLoginPanel==='function')showStudentLoginPanel();}catch(_e){}return true;};
- async function restore(){const a=window.__ULIM_STUDENT_FIREBASE_DIRECT_AUTH_7355030__;if(!a||typeof a.restore!=='function')return;const p=await a.restore();if(p)applyStudent(p);}
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){restore().catch(function(){});},{once:true});else restore().catch(function(){});
+ let studentBootPromise = null;
+ window.checkStudentName = function() {
+   if (studentBootPromise) return studentBootPromise;
+   studentBootPromise = (async function() {
+     if (String(studentName || localStorage.getItem('studentName') || '').trim() === '게스트') {
+       studentName = '게스트'; studentNo = 'GUEST'; instructorName = '기본';
+       phoneLast4 = ''; studentSessionToken = '';
+       updateFilenameConstants();
+       showMainContent(false);
+       return true;
+     }
+     const auth = window.__ULIM_STUDENT_FIREBASE_DIRECT_AUTH_7355030__;
+     try {
+       const profile = auth ? await auth.restore() : null;
+       if (profile && auth.hasValidatedSession() && profile.role === 'student' && profile.firebaseAuthUid && profile.studentUid) {
+         applyStudent(profile);
+         updateFilenameConstants();
+         return true;
+       }
+     } catch (error) {
+       // A failed restore cannot leave a cached student identity in the UI.
+     }
+     await window.studentSecureLogout();
+     return false;
+   })();
+   return studentBootPromise;
+ };
 })();
 </script>
 <style id="ulim-ai-learning-eval-style-595">
