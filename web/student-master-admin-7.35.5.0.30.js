@@ -35,6 +35,7 @@
   let teachers = [];
   let editingClassId73550920 = '';
   global.__ULIM_CLASS_EDIT_73550920__ = true;
+  global.__ULIM_NEW_STUDENT_ROSTER_META_73550937__ = true;
   let loadingPromise = null;
   const rowKeyMap = new Map();
   const dirtyKeys = new Set();
@@ -423,7 +424,12 @@
       studentPhone: text(student.studentPhone), parentPhone: text(student.parentPhone), attendanceNo: text(student.attendanceNo),
       enrollmentStatus: text(student.enrollmentStatus) || 'active', registrationCancelled: student.registrationCancelled === true,
       initialRegisteredDate: text(student.initialRegisteredDate), privacyConsent: student.privacyConsent === true,
-      portraitConsent: student.portraitConsent === true, mustChangePassword: student.mustChangePassword !== false,
+      portraitConsent: student.portraitConsent === true,
+      discoverySource: text(student.discoverySource), discoveryEtc: text(student.discoveryEtc), paymentMethod: text(student.paymentMethod),
+      refundPolicyAccepted: student.refundPolicyAccepted === true, rulesAccepted: student.rulesAccepted === true,
+      voiceSamplingConsent: student.voiceSamplingConsent === true, voiceSocialUploadConsent: student.voiceSocialUploadConsent === true, voiceExternalSampleConsent: student.voiceExternalSampleConsent === true,
+      registrationApplicationId: text(student.registrationApplicationId), registrationSource: text(student.registrationSource),
+      mustChangePassword: student.mustChangePassword !== false,
       memo: text(student.memo), selectedClassIds: selectedClassIds7355052,
       classNames: classNames7355052,
       legacyUnmappedClassNames: unique(student.legacyUnmappedClassNames), instructorNames: instructorNames7355052,
@@ -495,6 +501,15 @@
     const override=text(student && student.audienceGroupOverride);
     return '<select id="'+key+'_audience" data-row-key="'+key+'"'+(disabled?' disabled':'')+'><option value=""'+(!override?' selected':'')+'>자동</option><option value="adult"'+(override==='adult'?' selected':'')+'>성인</option><option value="youth"'+(override==='youth'?' selected':'')+'>청소년</option></select><div class="ulim-audience-meta7355038">현재 '+audienceLabel7355038(text(student&&student.audienceGroup))+' · '+audienceSourceLabel7355038(student)+'</div>';
   }
+  function registrationMetaHtml73550937(student) {
+    if (!student || text(student.registrationSource) !== 'public_new_student_page') return '';
+    function yn(value) { return value === true ? '동의' : '거부'; }
+    return '<div class="ulim-registration-meta73550937" style="margin-top:5px;font-size:10px;line-height:1.45;color:#64748b;">'
+      + '<b style="color:#166534;">온라인 신규등록</b> · 결제 ' + escapeHtml(text(student.paymentMethod) || '-')
+      + '<br>초상권 ' + yn(student.portraitConsent) + ' · 음성샘플 ' + yn(student.voiceSamplingConsent)
+      + ' · SNS ' + yn(student.voiceSocialUploadConsent) + ' · 외부샘플 ' + yn(student.voiceExternalSampleConsent) + '</div>';
+  }
+
   function render() {
     const wrap = document.getElementById(TABLE_ID); if (!wrap) return; rowKeyMap.clear();
     if (!filtered.length) { wrap.innerHTML = '<div style="padding:18px;color:#64748b;">조건에 맞는 학생이 없습니다.</div>'; updateSummary(); return; }
@@ -512,7 +527,7 @@
         <td><select id="${key}_operation" data-row-key="${key}"${cancelled ? ' disabled' : ''}><option value="existing">일반 수정</option><option value="new">신규 추가</option><option value="class_move">반이동</option></select><div id="${key}_operation_note" class="ulim-operation-note">수강반을 수정하면 출석부·태블릿에 즉시 반영됩니다.</div></td>
         <td><input id="${key}_operation_date" type="date" data-row-key="${key}"${cancelled ? ' disabled' : ''}></td>
         <td><select id="${key}_classes" data-row-key="${key}" multiple size="4"${cancelled ? ' disabled' : ''}>${classOptionsHtml(student.selectedClassIds)}</select><div id="${key}_tags" class="ulim-tags">${tagsHtml(student.selectedClassIds, student.legacyUnmappedClassNames)}</div></td>
-        <td><input id="${key}_instructors" value="${escapeHtml(teacherNames)}" readonly></td><td><input id="${key}_memo" data-row-key="${key}" value="${escapeHtml(student.memo)}"></td>
+        <td><input id="${key}_instructors" value="${escapeHtml(teacherNames)}" readonly></td><td><input id="${key}_memo" data-row-key="${key}" value="${escapeHtml(student.memo)}"><div>${registrationMetaHtml73550937(student)}</div></td>
         <td>${studentSyncHtml(student)}</td><td><div class="ulim-row-actions"><button type="button" class="admin-btn blue" onclick="ulimStudentManagementSaveRow7352('${key}')">저장</button>${student.retryable ? `<button type="button" class="admin-btn" onclick="ulimStudentManagementRetry7352('${key}')">로그인 재시도</button>` : ''}<button type="button" class="admin-btn" onclick="ulimStudentFirebasePasswordReset7355030('${key}')">비밀번호 초기화</button><button type="button" class="admin-btn" onclick="ulimStudentManagementRetire7352('${key}','withdraw')">퇴원</button><button type="button" class="admin-btn red" onclick="ulimStudentManagementRetire7352('${key}','cancel')">등록취소</button></div></td>
       </tr>`;
     }).join('');

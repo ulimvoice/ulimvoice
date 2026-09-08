@@ -2,7 +2,7 @@
   "id": "/ulimvoice/tablet.html",
   "name": "울림연기학원 등하원 체크",
   "short_name": "울림출결",
-  "start_url": "./tablet.html?v=20260808.7355019",
+  "start_url": "./tablet.html?v=20260815.7355062",
   "scope": "./",
   "display": "standalone",
   "background_color": "#ffffff",
