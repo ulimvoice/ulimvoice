@@ -1337,120 +1337,35 @@ function attendanceMinimal(row) {
   function mergeDailyStrict(roster, savedRows, ctx) {
     const rosterRows = Array.isArray(roster) ? roster : [];
     const savedList = Array.isArray(savedRows) ? savedRows : [];
-    const savedMap = new Map();
-    const savedByName = new Map();
-
-    savedList.forEach(function (saved) {
-      dailyMatchKeys73116(saved).forEach(function (key) {
-        if (key.indexOf('NAME|') === 0) return;
-        savedMap.set(
-          key,
-          preferDailySaved73116(savedMap.get(key), saved)
-        );
-      });
-
-      const nameKey = normalize(saved && (saved.studentName || saved.name));
-      if (nameKey) {
-        const list = savedByName.get(nameKey) || [];
-        list.push(saved);
-        savedByName.set(nameKey, list);
-      }
+    if (!rosterRows.length) return savedList.map(function (saved) {
+      return Object.assign({}, dailyRosterRow(saved, ctx), saved);
     });
-
-    /*
-     * 이름 단독 매칭은 같은 이름 학생이 현재 명단에 한 명이고,
-     * 저장 자료의 전화번호·학생번호·반명이 서로 충돌하지 않을 때만 허용합니다.
-     */
-    const rosterNameCount = new Map();
-    rosterRows.forEach(function (row) {
-      const nameKey = normalize(row && (row.studentName || row.name));
-      if (nameKey) rosterNameCount.set(nameKey, Number(rosterNameCount.get(nameKey) || 0) + 1);
-    });
-
-    const uniqueSavedByName = new Map();
-    savedByName.forEach(function (list, nameKey) {
-      const phones = new Set();
-      const numbers = new Set();
-      const classes = new Set();
-      let latest = null;
-
-      list.forEach(function (saved) {
-        const phone = text(saved && (saved.studentPhone || saved.phone)).replace(/\D/g, '');
-        const no = normalize(saved && (saved.studentNo || saved.attendanceNo));
-        const classKey = classCoreKey(saved && (saved.className || saved.currentClass));
-        if (phone.length >= 8) phones.add(phone);
-        if (no) numbers.add(no);
-        if (classKey) classes.add(classKey);
-        latest = preferDailySaved73116(latest, saved);
-      });
-
-      if (
-        Number(rosterNameCount.get(nameKey) || 0) === 1 &&
-        phones.size <= 1 &&
-        numbers.size <= 1 &&
-        classes.size <= 1
-      ) {
-        uniqueSavedByName.set(nameKey, latest);
-      }
-    });
-
-    if (!rosterRows.length) {
-      return savedList.map(function (saved) {
-        return Object.assign(
-          {},
-          dailyRosterRow(saved, ctx),
-          saved,
-          {
-            date: ctx.date,
-            className: saved.className || ctx.className,
-            classId: saved.classId || ctx.classId || '',
-            teacherScopeKey: saved.teacherScopeKey || ctx.teacherScopeKey || ''
-          }
-        );
-      });
-    }
-
     return rosterRows.map(function (source) {
       const base = dailyRosterRow(source, ctx);
-      let saved = null;
-
-      const keys = dailyMatchKeys73116(base);
-      for (let i = 0; i < keys.length; i += 1) {
-        const key = keys[i];
-        if (key.indexOf('NAME|') === 0) continue;
-        if (savedMap.has(key)) {
-          saved = savedMap.get(key);
-          break;
-        }
-      }
-
-      if (!saved) {
-        const nameKey = normalize(base.studentName || base.name);
-        saved = uniqueSavedByName.get(nameKey) || null;
-      }
-
+      const uid = text(base.studentUid);
+      const candidates = savedList.filter(function (saved) {
+        return uid && text(saved.studentUid || saved.studentUID) === uid &&
+          text(saved.classId) === text(base.classId) &&
+          text(saved.date || saved.sessionDate) === text(base.date) &&
+          text(saved.teacherScopeKey || saved.evaluatorTeacherKey) === text(base.teacherScopeKey);
+      });
+      // Never choose the latest evaluation across different evaluators or use a student's name as identity.
+      const evaluators = new Set(candidates.map(function (saved) { return text(saved.evaluatorTeacherUid || saved.teacherUid); }));
+      if (evaluators.size > 1) throw new Error('같은 회차에 서로 다른 강사의 평가가 있습니다. 평가 작성자 범위를 확인해주세요.');
+      const saved = candidates.reduce(function (previous, row) { return preferDailySaved73116(previous, row); }, null);
       if (!saved) return base;
-
       return Object.assign({}, base, saved, {
-        date: ctx.date,
-        className: base.className || saved.className || ctx.className,
-        classId: base.classId || saved.classId || ctx.classId || '',
-        teacherScopeKey:
-          ctx.teacherScopeKey ||
-          base.teacherScopeKey ||
-          saved.teacherScopeKey ||
-          '',
-        studentUid: base.studentUid || saved.studentUid || saved.studentUID || '',
-        studentIdentityKey:
-          base.studentIdentityKey ||
-          saved.studentIdentityKey ||
-          saved.identityKey ||
-          '',
-        instructor:
-          base.instructor ||
-          saved.instructor ||
-          saved.instructorName ||
-          teacherNameFor(ctx.className, saved, ctx.date)
+        date: base.date,
+        className: base.className,
+        classId: base.classId,
+        teacherScopeKey: base.teacherScopeKey,
+        studentUid: base.studentUid,
+        studentIdentityKey: base.studentIdentityKey || saved.studentIdentityKey || '',
+        evaluatorTeacherUid: saved.evaluatorTeacherUid || saved.teacherUid || '',
+        teacherUid: base.teacherUid,
+        instructor: base.instructor,
+        instructorName: base.instructor,
+        attendanceStatus: base.attendanceStatus
       });
     });
   }
