@@ -1,0 +1,272 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function role() {
+      return signedIn() ? request.auth.token.role : null;
+    }
+
+    function isRole(name) {
+      return signedIn() && role() == name;
+    }
+
+    function isTabletKiosk() {
+      return signedIn()
+        && request.auth.token.tabletKiosk == true
+        && request.auth.token.role == 'tablet';
+    }
+
+    function activeAuthenticatedUser() {
+      return signedIn()
+        && (
+          request.auth.token.authVersion is number
+          || (
+            request.auth.token.authVersion is string
+            && request.auth.token.authVersion.size() > 0
+          )
+        )
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.active == true
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.authVersion == request.auth.token.authVersion
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role()
+        && (
+          (role() == 'student'
+            && request.auth.token.studentUid is string
+            && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.studentUid == request.auth.token.studentUid
+            && !('teacherUid' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data))
+          || (role() == 'teacher'
+            && request.auth.token.teacherUid is string
+            && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teacherUid == request.auth.token.teacherUid
+            && !('studentUid' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data))
+          || ((role() == 'admin' || role() == 'superAdmin')
+            && !('studentUid' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data)
+            && !('teacherUid' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data))
+        );
+    }
+
+    function isSuperAdmin() {
+      return activeAuthenticatedUser() && role() == 'superAdmin';
+    }
+
+    function uidMatches(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function studentUid() {
+      return signedIn() ? request.auth.token.studentUid : null;
+    }
+
+    function teacherUid() {
+      return signedIn() ? request.auth.token.teacherUid : null;
+    }
+
+    function isSelfStudent(targetStudentUid) {
+      return activeAuthenticatedUser()
+        && isRole('student')
+        && targetStudentUid is string
+        && studentUid() == targetStudentUid;
+    }
+
+    function activeTeacherAssignment(classId) {
+      return activeAuthenticatedUser()
+        && isRole('teacher')
+        && teacherUid() is string
+        && classId is string
+        && exists(/databases/$(database)/documents/teacherAssignments/$(teacherUid())/classes/$(classId))
+        && get(/databases/$(database)/documents/teacherAssignments/$(teacherUid())/classes/$(classId)).data.active == true;
+    }
+
+    function activeAdminAssignment(classId) {
+      return activeAuthenticatedUser()
+        && isRole('admin')
+        && classId is string
+        && exists(/databases/$(database)/documents/adminAssignments/$(request.auth.uid)/classes/$(classId))
+        && get(/databases/$(database)/documents/adminAssignments/$(request.auth.uid)/classes/$(classId)).data.active == true;
+    }
+
+    function canReadClassScoped(data) {
+      return isSuperAdmin()
+        || activeTeacherAssignment(data.classId)
+        || activeAdminAssignment(data.classId);
+    }
+
+    function canReadStudentScoped(data) {
+      return isSelfStudent(data.studentUid) || canReadClassScoped(data);
+    }
+
+    function canReadOwnReservation(data) {
+      return activeAuthenticatedUser()
+        && isRole('student')
+        && data.studentUid is string
+        && data.studentUid == studentUid();
+    }
+
+    // GAS-to-Firebase identity source documents are server-only. Even superAdmin clients cannot read them.
+    match /legacyAccounts/{firebaseUid} {
+      allow read, write: if false;
+    }
+
+    match /users/{firebaseUid} {
+      allow read: if (uidMatches(firebaseUid) && activeAuthenticatedUser())
+        || isSuperAdmin();
+      allow write: if false;
+    }
+
+    match /students/{targetStudentUid} {
+      allow read: if isSelfStudent(targetStudentUid) || isSuperAdmin();
+      allow write: if false;
+    }
+
+    match /studentPrivateContacts/{targetStudentUid} {
+      allow read: if isSuperAdmin() || activeAdminAssignment(resource.data.classId);
+      allow write: if false;
+    }
+
+    match /teachers/{targetTeacherUid} {
+      allow read: if (activeAuthenticatedUser() && isRole('teacher') && teacherUid() == targetTeacherUid)
+        || isSuperAdmin();
+      allow write: if false;
+    }
+
+    match /classes/{classId} {
+      allow read: if isSuperAdmin() || activeTeacherAssignment(classId) || activeAdminAssignment(classId);
+      allow write: if false;
+    }
+
+    match /classSessions/{sessionId} {
+      allow read: if canReadClassScoped(resource.data);
+      allow write: if false;
+    }
+
+    match /teacherAssignments/{targetTeacherUid}/classes/{classId} {
+      allow read: if isSuperAdmin()
+        || (activeAuthenticatedUser() && isRole('teacher') && teacherUid() == targetTeacherUid);
+      allow write: if false;
+    }
+
+    match /adminAssignments/{adminUid}/classes/{classId} {
+      allow read: if isSuperAdmin()
+        || (activeAuthenticatedUser() && isRole('admin') && request.auth.uid == adminUid);
+      allow write: if false;
+    }
+
+    match /classMembers/{memberId} {
+      allow get, list: if isSuperAdmin()
+        || (resource.data.active == true
+          && (isSelfStudent(resource.data.studentUid)
+            || activeTeacherAssignment(resource.data.classId)
+            || activeAdminAssignment(resource.data.classId)));
+      allow write: if false;
+    }
+
+    // 7.31.8: 출석·일일평가 변경 알림 전용 문서입니다.
+    // 실제 출석/평가 원문은 Callable이 권한을 검사해 반환하고,
+    // 클라이언트는 날짜별 revision만 구독합니다.
+    match /staffOperationalRevisions/{dateId} {
+      allow get, list: if activeAuthenticatedUser()
+        && (isRole('teacher') || isRole('admin') || isRole('superAdmin'));
+      allow write: if false;
+    }
+
+    // 7.34.3.13: 선택한 반의 변경만 구독하여 다른 반 화면의 불필요한 재조회를 막습니다.
+    match /staffOperationalClassRevisions/{scopeId} {
+      allow get, list: if activeAuthenticatedUser()
+        && (isRole('teacher') || isRole('admin') || isRole('superAdmin'));
+      allow write: if false;
+    }
+
+    // 7.34.3.12 태블릿은 개인정보가 제거된 오늘자 스냅샷만 읽습니다.
+    // 출석 쓰기는 Callable Function만 수행하며 클라이언트 직접 쓰기는 금지합니다.
+    match /tabletDailySnapshots/{dateId} {
+      allow get: if (isTabletKiosk() && dateId == request.auth.token.tabletDate)
+        || (activeAuthenticatedUser()
+          && (isRole('teacher') || isRole('admin') || isRole('superAdmin')));
+      allow list, write: if false;
+    }
+
+    match /tabletAttendanceEvents/{eventId} {
+      allow read, write: if false;
+    }
+
+    match /attendance/{recordId} {
+      allow get, list: if resource.data.active == true
+        && canReadStudentScoped(resource.data);
+      allow write: if false;
+    }
+
+    match /dailyEvaluations/{recordId} {
+      allow get, list: if canReadStudentScoped(resource.data);
+      allow write: if false;
+    }
+
+    match /practiceLogs/{recordId} {
+      allow get, list: if canReadStudentScoped(resource.data);
+      allow write: if false;
+    }
+
+    match /teacherEvaluations/{recordId} {
+      allow get, list: if canReadStudentScoped(resource.data);
+      allow write: if false;
+    }
+
+    match /roomAvailability/{slotId} {
+      allow read: if activeAuthenticatedUser();
+      allow write: if false;
+    }
+
+    match /roomReservations/{reservationId} {
+      allow get, list: if canReadOwnReservation(resource.data) || canReadClassScoped(resource.data);
+      allow write: if false;
+    }
+
+    match /classroomAvailability/{slotId} {
+      allow read: if activeAuthenticatedUser();
+      allow write: if false;
+    }
+
+    match /classroomUsage/{recordId} {
+      allow get, list: if canReadClassScoped(resource.data);
+      allow write: if false;
+    }
+
+    // 7.21 room/classroom realtime mirror. GAS + Sheet remain authoritative.
+    match /realtimeClassroomDays/{dateKey} {
+      allow read: if activeAuthenticatedUser()
+        && (role() == 'teacher' || role() == 'admin' || role() == 'superAdmin');
+      allow write: if false;
+    }
+
+    // 7.29.6 short-lived app-side slot claims. Server functions are the only writers.
+    match /classroomSlotClaims/{slotKey} {
+      allow read: if activeAuthenticatedUser()
+        && (role() == 'teacher' || role() == 'admin' || role() == 'superAdmin');
+      allow write: if false;
+    }
+
+    match /realtimeRoomMonths/{monthKey} {
+      allow read: if activeAuthenticatedUser();
+      allow write: if false;
+    }
+
+    match /mirrorState/{dataset} {
+      allow read: if isSuperAdmin();
+      allow write: if false;
+    }
+
+    match /legacyAuthProofs/{jtiHash} {
+      allow read, write: if false;
+    }
+
+    match /syncOperations/{requestId} {
+      allow read, write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
