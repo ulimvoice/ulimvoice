@@ -1935,11 +1935,62 @@ body.admin-mode .admin-only-tab { display:block !important; }
     border-color:#3498db;
 }
 .vocal-calendar-day {
+    min-height:44px;
     background:#fff;
     color:#111827;
     cursor:pointer;
     border:1px solid #e5e7eb;
+    flex-direction:column;
+    gap:2px;
+    padding:3px 2px;
+    box-sizing:border-box;
 }
+.vocal-calendar-day-number73551014 {
+    line-height:1;
+    font-weight:850;
+}
+.vocal-calendar-activity73551014 {
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:2px;
+    min-height:12px;
+    white-space:nowrap;
+}
+.vocal-calendar-activity73551014 span {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:22px;
+    height:12px;
+    padding:0 3px;
+    border-radius:999px;
+    font-size:8px;
+    line-height:1;
+    font-weight:950;
+}
+.vocal-calendar-activity73551014 .pending {
+    background:#ffedd5;
+    color:#c2410c;
+}
+.vocal-calendar-activity73551014 .evaluated {
+    background:#dcfce7;
+    color:#166534;
+}
+.vocal-calendar-day.active .vocal-calendar-activity73551014 span {
+    background:#fff;
+}
+.vocal-calendar-legend73551014 {
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px 12px;
+    margin-top:7px;
+    font-size:10px;
+    font-weight:850;
+    color:#64748b;
+}
+.vocal-calendar-legend73551014 .pending { color:#c2410c; }
+.vocal-calendar-legend73551014 .evaluated { color:#166534; }
 .vocal-calendar-day:hover {
     border-color:#2ecc71;
     background:#f0fdf4;
@@ -1969,7 +2020,9 @@ body.admin-mode .admin-only-tab { display:block !important; }
 }
 @media (max-width:700px) {
     .vocal-calendar-grid { grid-template-columns:42px repeat(7, minmax(28px, 1fr)); gap:3px; }
-    .vocal-calendar-dow, .vocal-calendar-week, .vocal-calendar-day { min-height:31px; font-size:12px; border-radius:8px; }
+    .vocal-calendar-dow, .vocal-calendar-week { min-height:31px; font-size:12px; border-radius:8px; }
+    .vocal-calendar-day { min-height:40px; font-size:12px; border-radius:8px; }
+    .vocal-calendar-activity73551014 span { min-width:18px; padding:0 2px; font-size:7px; }
     .vocal-calendar-nav, .vocal-calendar-title { padding:8px 9px; font-size:13px; }
 }</style>
 
@@ -15858,10 +15911,15 @@ ${ruleSummary}`, isFallback ? "success" : "success");
 
 (function(){
     const VOCAL_RANGE_DEFAULT_SCOPE = 'day';
+    window.__ULIM_ADMIN_PRACTICE_DAILY_ACTIVITY_73551014__ = true;
     let vocalCalendarViewYear = null;
     let vocalCalendarViewMonth = null; // 0-based
     let vocalRangeState = null;
     let vocalKeywordDebounceTimer = null;
+    let vocalCalendarActivityLogs73551014_ = [];
+    let vocalCalendarActivityCacheKey73551014_ = '';
+    let vocalCalendarActivityLoadedAt73551014_ = 0;
+    let vocalCalendarActivityRequest73551014_ = 0;
 
     function pad2_(n) { return String(n).padStart(2, '0'); }
 
@@ -15910,6 +15968,108 @@ ${ruleSummary}`, isFallback ? "success" : "success");
             out.push(log);
         });
         return out;
+    }
+
+
+    function practiceDate73551014_(log) {
+        log = log || {};
+        const direct = String(log.practiceDate || log.uploadDate || log.date || '').trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(direct)) return direct;
+        const timestamp = String(log.timestamp || log.createdAt || log.uploadedAt || '').trim();
+        const match = timestamp.match(/(20\d{2})\D+(\d{1,2})\D+(\d{1,2})/);
+        return match
+            ? [match[1], String(Number(match[2])).padStart(2,'0'), String(Number(match[3])).padStart(2,'0')].join('-')
+            : '';
+    }
+
+    function practiceHasFinal73551014_(log) {
+        log = log || {};
+        const evaluations = Array.isArray(log.teacherEvaluations) ? log.teacherEvaluations : [];
+        if (evaluations.some(function(ev) {
+            return !!String(ev && (ev.scoreJson || ev.comment) || '').trim();
+        })) return true;
+        return !!String(
+            log.finalScoreJson ||
+            log.finalTeacherComment ||
+            log.teacherScoreJson ||
+            log.teacherComment ||
+            ''
+        ).trim();
+    }
+
+    function practiceActivityRecordKey73551014_(log) {
+        const id = String(log && (log.recordId || log.fileId) || '').trim();
+        if (id) return id;
+        return [
+            practiceDate73551014_(log),
+            String(log && log.studentUid || '').trim(),
+            String(log && log.studentName || '').trim(),
+            String(log && log.sentence || '').trim(),
+            String(log && log.fileUrl || '').trim()
+        ].join('|');
+    }
+
+    function mergeVocalCalendarActivity73551014_(logs, replaceAll) {
+        if (replaceAll) {
+            vocalCalendarActivityLogs73551014_ = dedupeVocalLogs_(logs || []);
+            return;
+        }
+        const map = new Map();
+        vocalCalendarActivityLogs73551014_.forEach(function(log) {
+            map.set(practiceActivityRecordKey73551014_(log), log);
+        });
+        (logs || []).forEach(function(log) {
+            map.set(practiceActivityRecordKey73551014_(log), log);
+        });
+        vocalCalendarActivityLogs73551014_ = Array.from(map.values());
+    }
+
+    function vocalCalendarActivityForDate73551014_(dateKey) {
+        const logs = vocalCalendarActivityLogs73551014_.filter(function(log) {
+            return practiceDate73551014_(log) === dateKey;
+        });
+        let pending = 0;
+        let evaluated = 0;
+        logs.forEach(function(log) {
+            if (practiceHasFinal73551014_(log)) evaluated++;
+            else pending++;
+        });
+        return { total:logs.length, pending:pending, evaluated:evaluated };
+    }
+
+    function vocalCalendarActivityKey73551014_(fromKey, instructor, keyword) {
+        return [fromKey, String(instructor || '').trim(), String(keyword || '').trim()].join('|');
+    }
+
+    async function refreshVocalCalendarActivity73551014_(force) {
+        ensureDefaultVocalRange_();
+        const fromKey = monthFirstKey_(vocalCalendarViewYear, vocalCalendarViewMonth);
+        const toKey = nextMonthFirstKey_(vocalCalendarViewYear, vocalCalendarViewMonth);
+        const instructor = document.getElementById('adminVocalPracticeInstructor')?.value || '';
+        const keyword = document.getElementById('adminVocalPracticeKeyword')?.value || '';
+        const cacheKey = vocalCalendarActivityKey73551014_(fromKey, instructor, keyword);
+        if (!force && cacheKey === vocalCalendarActivityCacheKey73551014_ && Date.now() - vocalCalendarActivityLoadedAt73551014_ < 30000) return;
+
+        const requestNo = ++vocalCalendarActivityRequest73551014_;
+        const range = { scope:'month', date:fromKey, dateFrom:fromKey, dateTo:toKey };
+        const practiceApi = window.__ULIM_PRACTICE_INTELLIGENCE_API_7355042__;
+        let logs = [];
+
+        if (practiceApi && typeof practiceApi.listStaffPracticeRecords === 'function') {
+            const data = await practiceApi.listStaffPracticeRecords(range, instructor, keyword);
+            logs = Array.isArray(data && data.logs) ? data.logs : [];
+        } else if (adminToken) {
+            const data = await loadVocalPracticeLogsWithFallback_(range, instructor, keyword);
+            logs = Array.isArray(data && data.logs) ? data.logs : [];
+        } else {
+            return;
+        }
+
+        if (requestNo !== vocalCalendarActivityRequest73551014_) return;
+        mergeVocalCalendarActivity73551014_(logs, true);
+        vocalCalendarActivityCacheKey73551014_ = cacheKey;
+        vocalCalendarActivityLoadedAt73551014_ = Date.now();
+        renderVocalPracticeCalendar_();
     }
 
     async function loadVocalPracticeLogsWithFallback_(range, instructor, keyword) {
@@ -16112,11 +16272,18 @@ ${ruleSummary}`, isFallback ? "success" : "success");
                     dayActive ? 'active' : '',
                     weekRangeActive && !dayActive ? 'week-active' : ''
                 ].filter(Boolean).join(' ');
-                html += `<div class="${classes}" data-vocal-day="${key}" title="${key} 하루 조회">${day.getDate()}</div>`;
+                const activity73551014 = vocalCalendarActivityForDate73551014_(key);
+                const activityHtml73551014 = activity73551014.total
+                    ? `<span class="vocal-calendar-activity73551014">${activity73551014.pending ? '<span class="pending">새 ' + activity73551014.pending + '</span>' : ''}${activity73551014.evaluated ? '<span class="evaluated">✓ ' + activity73551014.evaluated + '</span>' : ''}</span>`
+                    : '';
+                const activityTitle73551014 = activity73551014.total
+                    ? ` · 업로드 ${activity73551014.total}건${activity73551014.pending ? ' · 새 연습 ' + activity73551014.pending + '건' : ''}${activity73551014.evaluated ? ' · 평가완료 ' + activity73551014.evaluated + '건' : ''}`
+                    : '';
+                html += `<div class="${classes}" data-vocal-day="${key}" title="${key} 하루 조회${activityTitle73551014}"><span class="vocal-calendar-day-number73551014">${day.getDate()}</span>${activityHtml73551014}</div>`;
             }
         }
 
-        html += `</div><div class="vocal-calendar-range-label" id="adminVocalPracticeRangeLabel">조회 범위: ${ulimAdminEsc_(vocalRangeState.label || '')}</div>`;
+        html += `</div><div class="vocal-calendar-range-label" id="adminVocalPracticeRangeLabel">조회 범위: ${ulimAdminEsc_(vocalRangeState.label || '')}</div><div class="vocal-calendar-legend73551014"><span class="pending">새 연습 = 아직 평가하지 않은 업로드</span><span class="evaluated">✓ = 평가완료 업로드</span></div>`;
         box.innerHTML = html;
 
         box.querySelector('[data-vocal-cal-prev]')?.addEventListener('click', function(){
@@ -16154,6 +16321,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
                 setVocalRange_('day', fromKey, toKey, formatRangeLabel_('day', fromKey, toKey, vocalCalendarViewYear, vocalCalendarViewMonth), true);
             });
         });
+        refreshVocalCalendarActivity73551014_(false).catch(function(){});
     }
 
     window.adminInitVocalPracticePanel_ = function() {
@@ -16190,7 +16358,20 @@ ${ruleSummary}`, isFallback ? "success" : "success");
             }
             if (showOverlay) hideLoading();
             adminVocalPracticeLogs = dedupeVocalLogs_([...(Array.isArray(firebaseData.logs)?firebaseData.logs:[]), ...(Array.isArray(legacyData.logs)?legacyData.logs:[])]);
+            mergeVocalCalendarActivity73551014_(adminVocalPracticeLogs, false);
             adminRenderVocalPracticeLogs();
+            renderVocalPracticeCalendar_();
+            const visibleMonthFrom73551014 = monthFirstKey_(vocalCalendarViewYear, vocalCalendarViewMonth);
+            const visibleMonthTo73551014 = nextMonthFirstKey_(vocalCalendarViewYear, vocalCalendarViewMonth);
+            const selectedIsVisibleMonth73551014 = range.scope === 'month' && range.dateFrom === visibleMonthFrom73551014 && range.dateTo === visibleMonthTo73551014;
+            if (selectedIsVisibleMonth73551014) {
+                mergeVocalCalendarActivity73551014_(adminVocalPracticeLogs, true);
+                vocalCalendarActivityCacheKey73551014_ = vocalCalendarActivityKey73551014_(visibleMonthFrom73551014, instructor, keyword);
+                vocalCalendarActivityLoadedAt73551014_ = Date.now();
+                renderVocalPracticeCalendar_();
+            } else {
+                refreshVocalCalendarActivity73551014_(true).catch(function(){});
+            }
             const summary = document.getElementById('adminVocalPracticeSummary');
             if (summary) {
                 const studentKeys706 = new Set(adminVocalPracticeLogs.map(function(log){const name=String(log&&log.studentName||'').trim();const identity=String(log&&(log.studentIdentityKey||log.studentUid||log.studentNo||log.phoneLast4)||'').trim();return identity?identity+'|'+name:'NAME|'+name;}));
@@ -17039,9 +17220,42 @@ ${ruleSummary}`, isFallback ? "success" : "success");
     outline:none;
     transform:translateY(-1px);
 }
-.ulim-practice-student-btn706.has-evaluation {
-    border-color:#facc15;
-    background:#fffbeb;
+.ulim-practice-student-btn706.has-evaluation,
+.ulim-practice-student-btn706.all-evaluated {
+    border-color:#86efac;
+    background:#f0fdf4;
+}
+.ulim-practice-student-btn706.has-pending {
+    border-color:#fb923c;
+    background:#fff7ed;
+    box-shadow:0 3px 10px rgba(234,88,12,.10);
+}
+.ulim-practice-student-name73551014 {
+    display:block;
+    font-weight:950;
+}
+.ulim-practice-student-state73551014 {
+    display:inline-flex;
+    margin-top:6px;
+    padding:3px 7px;
+    border-radius:999px;
+    font-size:10px;
+    font-weight:950;
+}
+.ulim-practice-student-state73551014.pending {
+    background:#ffedd5;
+    color:#c2410c;
+}
+.ulim-practice-student-state73551014.evaluated {
+    background:#dcfce7;
+    color:#166534;
+}
+.ulim-practice-student-meta73551014 {
+    display:block;
+    margin-top:5px;
+    color:#64748b;
+    font-size:10px;
+    font-weight:800;
 }
 .ulim-practice-modal-overlay706 {
     position:fixed;
@@ -17513,13 +17727,24 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
           key:key,
           name:String(log.studentName || '이름 없음').trim() || '이름 없음',
           records:[],
-          hasEvaluation:false
+          hasEvaluation:false,
+          pendingCount:0,
+          evaluatedCount:0,
+          latestDate:''
         });
       }
 
       const group = map.get(key);
       group.records.push({log:log,index:index});
-      if (practiceHasFinal706(log)) group.hasEvaluation = true;
+      const hasFinal = practiceHasFinal706(log);
+      if (hasFinal) {
+        group.hasEvaluation = true;
+        group.evaluatedCount += 1;
+      } else {
+        group.pendingCount += 1;
+      }
+      const recordDate = practiceDate706(log);
+      if (recordDate && (!group.latestDate || recordDate > group.latestDate)) group.latestDate = recordDate;
     });
 
     const groups = Array.from(map.values());
@@ -17795,10 +18020,13 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
     list.innerHTML=`
       <div class="ulim-practice-student-grid706">
         ${practiceStudentGroups706.map(function(group){
+          const stateClass = group.pendingCount > 0 ? 'has-pending' : (group.hasEvaluation ? 'all-evaluated' : '');
+          const stateText = group.pendingCount > 0 ? '새 연습 ' + group.pendingCount + '건' : (group.hasEvaluation ? '평가완료' : '연습기록');
+          const stateDetail = (group.latestDate ? group.latestDate.slice(5).replace('-', '/') + ' · ' : '') + '업로드 ' + group.records.length + '건';
           return `<button type="button"
-                          class="ulim-practice-student-btn706 ${group.hasEvaluation?'has-evaluation':''}"
+                          class="ulim-practice-student-btn706 ${stateClass}"
                           data-practice-student-key706="${esc(group.key)}"
-                          onclick="ulimOpenPracticeViewer706(this.dataset.practiceStudentKey706)">${esc(group.name)}</button>`;
+                          onclick="ulimOpenPracticeViewer706(this.dataset.practiceStudentKey706)"><span class="ulim-practice-student-name73551014">${esc(group.name)}</span><span class="ulim-practice-student-state73551014 ${group.pendingCount > 0 ? 'pending' : 'evaluated'}">${esc(stateText)}</span><span class="ulim-practice-student-meta73551014">${esc(stateDetail)}</span></button>`;
         }).join('')}
       </div>
     `;
