@@ -3,7 +3,7 @@
 
   if (global.__ULIM_STUDENT_FIREBASE_DIRECT_AUTH_7355030__) return;
 
-  const VERSION = '2026-08-09.7355030-student-firebase-direct-auth';
+  const VERSION = '2026-08-15.7355030-r8-alias-canonical-status-fix';
   const AUTO_LOGIN_KEY = 'ulimStudentAutoLogin';
   const EXPLICIT_LOGOUT_KEY = 'ULIM_EXPLICIT_LOGOUT_IN_PROGRESS';
   const AUTH_RESTORE_TIMEOUT_MS = 3500;
@@ -167,6 +167,7 @@
     return code.indexOf('auth/invalid-credential') >= 0 ||
       code.indexOf('auth/wrong-password') >= 0 ||
       code.indexOf('auth/user-not-found') >= 0 ||
+      code.indexOf('auth/user-disabled') >= 0 ||
       code.indexOf('auth/invalid-login-credentials') >= 0;
   }
 
