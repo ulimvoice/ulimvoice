@@ -1,0 +1,85 @@
+import { createHash } from "node:crypto";
+import { App, getApp, getApps, initializeApp } from "firebase-admin/app";
+import { DocumentReference, DocumentSnapshot, Firestore, getFirestore } from "firebase-admin/firestore";
+import { HttpsError, onCall } from "firebase-functions/v2/https";
+
+export const UID_V2_REBASE_FANOUT_PHASE4C5R_VERSION = "2026-07-27.716.45-phase4c5r-isolated-fanout-execution-full-verification";
+const REGION = "asia-northeast3";
+const REQUEST_ID = "phase4c1r-20260727-ae7ef666-46a4-4ba2-b9a0-32c3326cfaca";
+const CONTRACT_DIGEST = "e3613acc1c03d352df591371aeba2a2ec1cd5a1a40d7c1a1de88ca57aa8d02c5";
+const EXPECTED_PHASE4C4R_CONTRACT_DIGEST = "51a7cd5c0b48e808c8b542a675d6c19c3313f5daa19a2201986332825d65ad4d";
+const EXPECTED_PAYLOAD_DIGEST = "748710b323521e64895d52548cbe1a0680bb02837579dd4079da9cff56f66288";
+const EXPECTED_FANOUT_DESIGN_DIGEST = "bc11d7b0c94cc2a600d1b4202419f5cef14eadbfc172c2b59bbfc4f61d3eb65e";
+const EXPECTED_COUNTS = {"students":156,"principals":12,"studentAliases":85,"principalAliases":13,"assignmentMappings":14,"attendanceMappings":1,"firebaseAuthTransitions":1,"exclusions":1} as const;
+const EXPECTED_RECORD_WRITES = 283;
+const EXPECTED_METADATA_WRITES = 1;
+const EXPECTED_TOTAL_WRITES = 284;
+const META_ID = "phase4c5r";
+type R = Record<string, unknown>;
+type F = { collectionName:string; documentId:string; type:string; recordDigest:string; data:unknown };
+
+function app():App { const x=getApps().find(a=>a.name==="[DEFAULT]"); return x?getApp():initializeApp(); }
+function txt(v:unknown):string { return typeof v==="string"?v.trim():""; }
+function obj(v:unknown,n:string):R { if(!v||typeof v!=="object"||Array.isArray(v)) throw new HttpsError("failed-precondition",`${n} must be an object.`); return v as R; }
+function ary(v:unknown,n:string):unknown[] { if(!Array.isArray(v)) throw new HttpsError("failed-precondition",`${n} must be an array.`); return v; }
+function canon(v:unknown):unknown { if(Array.isArray(v)) return v.map(canon); if(v&&typeof v==="object"){const o:R={}; for(const k of Object.keys(v as R).sort()) o[k]=canon((v as R)[k]); return o;} return v; }
+function digest(v:unknown):string { return createHash("sha256").update(typeof v==="string"?v:JSON.stringify(canon(v)),"utf8").digest("hex"); }
+function same(a:unknown,b:unknown):boolean { return JSON.stringify(canon(a))===JSON.stringify(canon(b)); }
+function all(v:R):boolean { return Object.values(v).every(x=>x===true); }
+function requireSuper(auth:{uid:string;token:R}|undefined):string { if(!auth) throw new HttpsError("unauthenticated","Firebase authentication is required."); const roles=Array.isArray(auth.token.roles)?auth.token.roles.map(txt):[]; const ok=txt(auth.token.role)==="superAdmin"||txt(auth.token.ulimRole)==="superAdmin"||txt(auth.token.accountRole)==="superAdmin"||roles.includes("superAdmin"); if(!ok) throw new HttpsError("permission-denied","superAdmin claim is required."); return auth.uid; }
+function sid(type:string,key:string):string { return digest(`${type}:${key}`).slice(0,40); }
+function payloadCore(x:R){return {version:x.version,phase:x.phase,mode:x.mode,requestId:x.requestId,approvedByFirebaseUid:x.approvedByFirebaseUid,contractDigest:x.contractDigest,phase4c3rManifestDigest:x.phase4c3rManifestDigest,phase4c3rApprovalDigest:x.phase4c3rApprovalDigest,stagedPlanDigest:x.stagedPlanDigest,allocationPlanDigest:x.allocationPlanDigest,eligibilityDigest:x.eligibilityDigest,rebaseManifestDigest:x.rebaseManifestDigest,payloadDigest:x.payloadDigest,payloadBytes:x.payloadBytes,counts:x.counts,payload:x.payload,status:x.status,safety:x.safety};}
+function designCore(x:R){return {version:x.version,phase:x.phase,mode:x.mode,requestId:x.requestId,approvedByFirebaseUid:x.approvedByFirebaseUid,contractDigest:x.contractDigest,phase4c3rManifestDigest:x.phase4c3rManifestDigest,payloadDigest:x.payloadDigest,payloadStoredDigest:x.payloadStoredDigest,counts:x.counts,collectionLayout:x.collectionLayout,expectedFanoutRecordWrites:x.expectedFanoutRecordWrites,expectedFanoutMetadataWrites:x.expectedFanoutMetadataWrites,expectedFutureFanoutTotalWrites:x.expectedFutureFanoutTotalWrites,fanoutExecutionIncluded:x.fanoutExecutionIncluded,status:x.status,safety:x.safety};}
+function metaCore(x:R){return {version:x.version,phase:x.phase,mode:x.mode,requestId:x.requestId,approvedByFirebaseUid:x.approvedByFirebaseUid,contractDigest:x.contractDigest,phase4c4rContractDigest:x.phase4c4rContractDigest,payloadDigest:x.payloadDigest,payloadStoredDigest:x.payloadStoredDigest,fanoutDesignDigest:x.fanoutDesignDigest,recordSetDigest:x.recordSetDigest,counts:x.counts,collectionCounts:x.collectionCounts,recordWrites:x.recordWrites,metadataWrites:x.metadataWrites,totalWrites:x.totalWrites,status:x.status,safety:x.safety};}
+
+function build(payload:R){
+  const out:F[]=[]; const add=(c:string,id:string,t:string,data:unknown)=>{const d=canon(data);out.push({collectionName:c,documentId:id,type:t,recordDigest:digest(d),data:d});};
+  for(const x of ary(payload.students,"students")){const q=obj(x,"student"),u=txt(q.newUid);if(!/^STU2_[0-9A-HJKMNP-TV-Z]{26}$/.test(u))throw new HttpsError("failed-precondition","Invalid student UID.");add("rebaseFanoutStudents",u,"student",q);}
+  for(const x of ary(payload.principals,"principals")){const q=obj(x,"principal"),u=txt(q.newUid);if(!/^PRN2_[0-9A-HJKMNP-TV-Z]{26}$/.test(u))throw new HttpsError("failed-precondition","Invalid Principal UID.");add("rebaseFanoutPrincipals",u,"principal",q);}
+  for(const x of ary(payload.studentAliases,"studentAliases")){const q=obj(x,"studentAlias");add("rebaseFanoutStudentAliases",sid("studentAlias",txt(q.oldUid)),"studentAlias",q);}
+  for(const x of ary(payload.principalAliases,"principalAliases")){const q=obj(x,"principalAlias");add("rebaseFanoutPrincipalAliases",sid("principalAlias",txt(q.oldUid)),"principalAlias",q);}
+  for(const x of ary(payload.assignmentMappings,"assignmentMappings")){const q=obj(x,"assignmentMapping");add("rebaseFanoutAssignmentMappings",sid("assignmentMapping",txt(q.oldPath)),"assignmentMapping",q);}
+  for(const x of ary(payload.attendanceMappings,"attendanceMappings")){const q=obj(x,"attendanceMapping");add("rebaseFanoutAttendanceMappings",sid("attendanceMapping",txt(q.oldPath)),"attendanceMapping",q);}
+  for(const x of ary(payload.firebaseAuthTransitions,"authTransitions")){const q=obj(x,"authTransition");add("rebaseFanoutAuthTransitions",sid("authTransition",txt(q.oldFirebaseUid)),"firebaseAuthTransition",q);}
+  add("rebaseFanoutExclusions","phase4c5r","exclusions",obj(payload.exclusions,"exclusions"));
+  const paths=out.map(x=>`${x.collectionName}/${x.documentId}`); if(new Set(paths).size!==out.length) throw new HttpsError("failed-precondition","Duplicate isolated fan-out path.");
+  const cc:R={}; for(const x of out)cc[x.collectionName]=Number(cc[x.collectionName]||0)+1;
+  const rs=digest(out.map(x=>({collectionName:x.collectionName,documentId:x.documentId,recordDigest:x.recordDigest})).sort((a,b)=>`${a.collectionName}/${a.documentId}`.localeCompare(`${b.collectionName}/${b.documentId}`)));
+  return {records:out,collectionCounts:canon(cc) as R,recordSetDigest:rs};
+}
+
+async function getAll(db:Firestore,refs:DocumentReference[]){const out:DocumentSnapshot[]=[];for(let i=0;i<refs.length;i+=100)out.push(...await db.getAll(...refs.slice(i,i+100)));return out;}
+function body(x:F):R{return {version:UID_V2_REBASE_FANOUT_PHASE4C5R_VERSION,phase:"Phase 4C-5R",requestId:REQUEST_ID,type:x.type,isolated:true,active:false,sourcePayloadDigest:EXPECTED_PAYLOAD_DIGEST,sourceFanoutDesignDigest:EXPECTED_FANOUT_DESIGN_DIGEST,recordDigest:x.recordDigest,data:x.data};}
+function verify(records:F[],snaps:DocumentSnapshot[]){const m=new Map(snaps.map(s=>[s.ref.path,s]));let n=0;const failed:string[]=[];for(const x of records){const path=`uidV2StagingRuns/${REQUEST_ID}/${x.collectionName}/${x.documentId}`,s=m.get(path),d=s?.data()||{};const ok=!!s?.exists&&txt(d.requestId)===REQUEST_ID&&d.isolated===true&&d.active===false&&txt(d.sourcePayloadDigest)===EXPECTED_PAYLOAD_DIGEST&&txt(d.sourceFanoutDesignDigest)===EXPECTED_FANOUT_DESIGN_DIGEST&&txt(d.recordDigest)===x.recordDigest&&digest(d.data)===x.recordDigest;if(ok)n++;else failed.push(path);}return {verifiedCount:n,failedPaths:failed};}
+function validate(pdoc:R,ddoc:R,caller:string){
+  const ps=digest(payloadCore(pdoc)),ds=digest(designCore(ddoc));
+  const checks:R={payloadContract:txt(pdoc.contractDigest)===EXPECTED_PHASE4C4R_CONTRACT_DIGEST,designContract:txt(ddoc.contractDigest)===EXPECTED_PHASE4C4R_CONTRACT_DIGEST,payloadDigest:txt(pdoc.payloadDigest)===EXPECTED_PAYLOAD_DIGEST,designBinding:txt(ddoc.payloadDigest)===EXPECTED_PAYLOAD_DIGEST,payloadStored:txt(pdoc.storedDigest)===ps,designStored:txt(ddoc.fanoutDesignDigest)===ds,expectedDesign:ds===EXPECTED_FANOUT_DESIGN_DIGEST,sameCaller:txt(pdoc.approvedByFirebaseUid)===caller&&txt(ddoc.approvedByFirebaseUid)===caller,counts:same(ddoc.counts,EXPECTED_COUNTS),recordWrites:Number(ddoc.expectedFanoutRecordWrites||0)===EXPECTED_RECORD_WRITES,metadataWrites:Number(ddoc.expectedFanoutMetadataWrites||0)===EXPECTED_METADATA_WRITES,totalWrites:Number(ddoc.expectedFutureFanoutTotalWrites||0)===EXPECTED_TOTAL_WRITES,noExecution:ddoc.fanoutExecutionIncluded===false&&obj(ddoc.safety,"design.safety").fanoutExecutionIncluded===false,noCutover:obj(ddoc.safety,"design.safety").actualUidCutoverAllowed===false};
+  if(!all(checks)){const f=Object.entries(checks).filter(([,v])=>v!==true).map(([k])=>k);throw new HttpsError("failed-precondition",`Phase 4C-5R source validation failed: ${f.join(", ")}`,{failedChecks:f});}
+  const payload=obj(pdoc.payload,"stored payload"),b=build(payload); const c=b.collectionCounts;
+  const rc:R={total:b.records.length===283,students:Number(c.rebaseFanoutStudents||0)===156,principals:Number(c.rebaseFanoutPrincipals||0)===12,studentAliases:Number(c.rebaseFanoutStudentAliases||0)===85,principalAliases:Number(c.rebaseFanoutPrincipalAliases||0)===13,assignments:Number(c.rebaseFanoutAssignmentMappings||0)===14,attendance:Number(c.rebaseFanoutAttendanceMappings||0)===1,auth:Number(c.rebaseFanoutAuthTransitions||0)===1,exclusions:Number(c.rebaseFanoutExclusions||0)===1};
+  if(!all(rc)){const f=Object.entries(rc).filter(([,v])=>v!==true).map(([k])=>k);throw new HttpsError("failed-precondition",`Phase 4C-5R count validation failed: ${f.join(", ")}`,{failedChecks:f});}
+  return {...b,payloadStoredDigest:ps};
+}
+function result(data:R,dup:boolean,w:number,v:number){return {ok:true,version:UID_V2_REBASE_FANOUT_PHASE4C5R_VERSION,mode:"rebase156_isolated_fanout_execution_full_verification",requestId:REQUEST_ID,duplicate:dup,writeOperations:w,status:txt(data.status),contractDigest:txt(data.contractDigest),payloadDigest:txt(data.payloadDigest),fanoutDesignDigest:txt(data.fanoutDesignDigest),recordSetDigest:txt(data.recordSetDigest),metadataDigest:txt(data.metadataDigest),counts:data.counts,collectionCounts:data.collectionCounts,recordWrites:Number(data.recordWrites||0),metadataWrites:Number(data.metadataWrites||0),totalWrites:Number(data.totalWrites||0),recordsVerified:v,fullVerificationPassed:v===EXPECTED_RECORD_WRITES,safety:{isolatedFanoutWrites:w,sourceSheetWrites:0,activeUidRegistryWrites:0,attendanceWrites:0,assignmentWrites:0,firebaseAuthWrites:0,isolatedOnly:true,actualUidCutoverAllowed:false},nextGate:{phase:"Phase 4C-6R isolated rollback snapshot and restore plan",allowed:v===EXPECTED_RECORD_WRITES,actualUidCutoverAllowed:false}};}
+
+export const executeUidV2RebaseFanoutPhase4c5r=onCall({region:REGION,timeoutSeconds:540,memory:"1GiB",enforceAppCheck:false},async request=>{
+  const caller=requireSuper(request.auth as {uid:string;token:R}|undefined),input=(request.data&&typeof request.data==="object"?request.data:{}) as R;
+  if(txt(input.requestId)!==REQUEST_ID||txt(input.contractDigest)!==CONTRACT_DIGEST||input.confirmIsolatedFanoutExecution!==true||Number(input.confirmExpectedWriteCount||0)!==EXPECTED_TOTAL_WRITES||input.confirmNoOperationalWrites!==true)throw new HttpsError("failed-precondition","Phase 4C-5R execution gate failed.");
+  const db=getFirestore(app()),run=db.collection("uidV2StagingRuns").doc(REQUEST_ID),pr=run.collection("rebasePayloads").doc("phase4c4r"),dr=run.collection("rebaseFanoutDesigns").doc("phase4c4r"),mr=run.collection("rebaseFanoutMetadata").doc(META_ID);
+  const [ps,ds]=await Promise.all([pr.get(),dr.get()]);if(!ps.exists||!ds.exists)throw new HttpsError("not-found","Phase 4C-4R payload or design is missing.");
+  const val=validate(ps.data()||{},ds.data()||{},caller),refs=val.records.map(x=>run.collection(x.collectionName).doc(x.documentId)),before=await getAll(db,[mr,...refs]),mb=before[0],rb=before.slice(1),existing=rb.filter(x=>x.exists).length;
+  const core:R={version:UID_V2_REBASE_FANOUT_PHASE4C5R_VERSION,phase:"Phase 4C-5R",mode:"rebase156_isolated_fanout_execution_full_verification",requestId:REQUEST_ID,approvedByFirebaseUid:caller,contractDigest:CONTRACT_DIGEST,phase4c4rContractDigest:EXPECTED_PHASE4C4R_CONTRACT_DIGEST,payloadDigest:EXPECTED_PAYLOAD_DIGEST,payloadStoredDigest:val.payloadStoredDigest,fanoutDesignDigest:EXPECTED_FANOUT_DESIGN_DIGEST,recordSetDigest:val.recordSetDigest,counts:EXPECTED_COUNTS,collectionCounts:val.collectionCounts,recordWrites:EXPECTED_RECORD_WRITES,metadataWrites:EXPECTED_METADATA_WRITES,totalWrites:EXPECTED_TOTAL_WRITES,status:"rebase_isolated_fanout_verified",safety:{sourceSheetWrites:0,activeUidRegistryWrites:0,attendanceWrites:0,assignmentWrites:0,firebaseAuthWrites:0,isolatedOnly:true,actualUidCutoverAllowed:false}},md=digest(core);
+  if(mb.exists){const m=mb.data()||{},ok=txt(m.metadataDigest)===digest(metaCore(m))&&digest(metaCore(m))===md&&txt(m.recordSetDigest)===val.recordSetDigest&&txt(m.status)==="rebase_isolated_fanout_verified";if(!ok)throw new HttpsError("already-exists","Conflicting Phase 4C-5R metadata exists.");const q=verify(val.records,rb);if(q.failedPaths.length)throw new HttpsError("data-loss","Existing fan-out verification failed.",{failedCount:q.failedPaths.length,failedPaths:q.failedPaths.slice(0,20)});return result(m,true,0,q.verifiedCount);}
+  if(existing>0)throw new HttpsError("data-loss","Partial isolated fan-out exists without metadata.",{existingRecordCount:existing});
+  const batch=db.batch();val.records.forEach((x,k)=>batch.set(refs[k],body(x)));batch.set(mr,{...core,metadataDigest:md,createdAtIso:new Date().toISOString()});await batch.commit();
+  const after=await getAll(db,[mr,...refs]),ma=after[0];if(!ma.exists)throw new HttpsError("data-loss","Metadata not stored.");const m=ma.data()||{};if(txt(m.metadataDigest)!==digest(metaCore(m))||digest(metaCore(m))!==md)throw new HttpsError("data-loss","Metadata digest verification failed.");const q=verify(val.records,after.slice(1));if(q.failedPaths.length)throw new HttpsError("data-loss","Post-write verification failed.",{failedCount:q.failedPaths.length,failedPaths:q.failedPaths.slice(0,20)});return result(m,false,EXPECTED_TOTAL_WRITES,q.verifiedCount);
+});
+
+export const inspectUidV2RebaseFanoutPhase4c5r=onCall({region:REGION,timeoutSeconds:540,memory:"1GiB",enforceAppCheck:false},async request=>{
+  const caller=requireSuper(request.auth as {uid:string;token:R}|undefined),input=(request.data&&typeof request.data==="object"?request.data:{}) as R;
+  if(txt(input.requestId)!==REQUEST_ID||txt(input.contractDigest)!==CONTRACT_DIGEST)throw new HttpsError("failed-precondition","Phase 4C-5R inspect gate failed.");
+  const db=getFirestore(app()),run=db.collection("uidV2StagingRuns").doc(REQUEST_ID);const [ps,ds,ms]=await Promise.all([run.collection("rebasePayloads").doc("phase4c4r").get(),run.collection("rebaseFanoutDesigns").doc("phase4c4r").get(),run.collection("rebaseFanoutMetadata").doc(META_ID).get()]);if(!ps.exists||!ds.exists||!ms.exists)throw new HttpsError("not-found","Phase 4C-5R source or metadata is missing.");
+  const val=validate(ps.data()||{},ds.data()||{},caller),refs=val.records.map(x=>run.collection(x.collectionName).doc(x.documentId)),snaps=await getAll(db,refs),q=verify(val.records,snaps),m=ms.data()||{};const checks:R={metadataDigest:txt(m.metadataDigest)===digest(metaCore(m)),contract:txt(m.contractDigest)===CONTRACT_DIGEST,payload:txt(m.payloadDigest)===EXPECTED_PAYLOAD_DIGEST,design:txt(m.fanoutDesignDigest)===EXPECTED_FANOUT_DESIGN_DIGEST,recordSet:txt(m.recordSetDigest)===val.recordSetDigest,writes:Number(m.recordWrites||0)===283&&Number(m.metadataWrites||0)===1&&Number(m.totalWrites||0)===284,status:txt(m.status)==="rebase_isolated_fanout_verified",records:q.verifiedCount===283&&q.failedPaths.length===0,noCutover:obj(m.safety,"metadata.safety").actualUidCutoverAllowed===false};
+  if(!all(checks)){const f=Object.entries(checks).filter(([,v])=>v!==true).map(([k])=>k);throw new HttpsError("data-loss",`Phase 4C-5R full verification failed: ${f.join(", ")}`,{failedChecks:f,failedRecordCount:q.failedPaths.length,failedPaths:q.failedPaths.slice(0,20)});}
+  return {...result(m,true,0,q.verifiedCount),verified:true,digestMatches:true,documentsVerified:q.verifiedCount+1};
+});

@@ -4,11 +4,8 @@
   if (global.__ULIM_STUDENT_MANAGEMENT_UI_735410__) return;
   global.__ULIM_STUDENT_MANAGEMENT_UI_735410__ = true;
   global.__ULIM_STUDENT_MANAGEMENT_UI_R19R6_7355039__ = true;
-  global.__ULIM_STUDENT_DETAIL_REGISTRATION_META_73550940__ = true;
-  global.__ULIM_NEW_STUDENT_ADMIN_BUTTON_PRIMARY_73550946__ = true;
-  global.__ULIM_NEW_STUDENT_ADMIN_BUTTON_CLICK_BIND_73550948__ = true;
 
-  const VERSION = '2026-09-03.73550948-new-student-admin-button-click-direct-bind-fix';
+  const VERSION = '2026-08-14.735.04.10-r26-admin-reset-controls';
   const CARD_ID = 'ulimStudentManagementCard7352';
   const TABLE_ID = 'ulimStudentManagementTable7352';
   const SUMMARY_ID = 'ulimStudentManagementSummary7352';
@@ -74,7 +71,6 @@
         <button type="button" class="admin-btn" id="ulimStudentAddOpen73546">학생추가</button>
         <button type="button" class="admin-btn" id="ulimClassAddOpen73546">반 추가</button>
         <button type="button" class="admin-btn" id="ulimCourseSettingsOpen73546">수강신청·모집반 설정</button>
-        <button type="button" class="admin-btn" id="ulimNewStudentRegistrationAdminOpen73550937">신규생 등록페이지</button>
         <button type="button" class="admin-btn orange" id="ulimMessageOpen73546">메시지 보내기</button>
       </div>
 
@@ -565,41 +561,6 @@
     setTimeout(transformTable, 0);
   }
 
-  function registrationDetailHtml73550940(student) {
-    student = student && typeof student === 'object' ? student : {};
-    const source = text(student.registrationSource);
-    const hasRegistration = source === 'public_new_student_page' || text(student.registrationApplicationId) || text(student.discoverySource) || text(student.paymentMethod);
-    if (!hasRegistration) return '';
-    const discovery = [text(student.discoverySource), text(student.discoveryEtc)].filter(Boolean).join(' / ') || '-';
-    const stateBadge = function (value, yesText, noText) {
-      const ok = value === true;
-      return '<span style="display:inline-flex;align-items:center;justify-content:center;min-width:54px;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:900;background:' + (ok ? '#dcfce7' : '#fee2e2') + ';color:' + (ok ? '#166534' : '#991b1b') + '">' + escapeHtml(ok ? yesText : noText) + '</span>';
-    };
-    const infoItem = function (label, value) {
-      return '<div style="padding:10px 11px;border:1px solid #e2e8f0;border-radius:10px;background:#fff"><div style="font-size:11px;font-weight:900;color:#64748b;margin-bottom:4px">' + escapeHtml(label) + '</div><div style="font-size:14px;font-weight:800;color:#0f172a;word-break:break-word">' + escapeHtml(value || '-') + '</div></div>';
-    };
-    const consentItem = function (label, value, yesText, noText) {
-      return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border:1px solid #e2e8f0;border-radius:9px;background:#fff"><span style="font-size:12px;font-weight:800;color:#334155">' + escapeHtml(label) + '</span>' + stateBadge(value, yesText || '동의', noText || '거부') + '</div>';
-    };
-    return '<div class="ulim-sm-detail-wide73546" style="margin-top:2px;padding:14px;border:1px solid #bbf7d0;border-radius:14px;background:#f0fdf4">'
-      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px"><b style="font-size:14px;color:#14532d">수강신청 입력정보</b><span style="font-size:10px;font-weight:900;color:#166534;background:#dcfce7;border-radius:999px;padding:4px 8px">읽기 전용</span></div>'
-      + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px">'
-      + infoItem('등록경로', source === 'public_new_student_page' ? '온라인 신규등록' : source)
-      + infoItem('유입경로', discovery)
-      + infoItem('결제방법', text(student.paymentMethod) || '-')
-      + '</div>'
-      + '<div style="font-size:12px;font-weight:900;color:#14532d;margin:12px 0 7px">동의사항</div>'
-      + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:7px">'
-      + consentItem('환불규정 안내', student.refundPolicyAccepted, '확인', '미확인')
-      + consentItem('개인정보 수집·이용', student.privacyConsent, '동의', '거부')
-      + consentItem('초상권', student.portraitConsent, '동의', '거부')
-      + consentItem('음성 샘플링·교육자료', student.voiceSamplingConsent, '동의', '거부')
-      + consentItem('유튜브·인스타 업로드', student.voiceSocialUploadConsent, '동의', '거부')
-      + consentItem('외부업체 샘플 전달', student.voiceExternalSampleConsent, '동의', '거부')
-      + consentItem('학원 이용 주의사항', student.rulesAccepted, '확인', '미확인')
-      + '</div></div>';
-  }
-
   function openDetailModal(key) {
     const row = document.querySelector('#' + TABLE_ID + ' tr[data-row-key="' + CSS.escape(key) + '"]');
     if (!row) return alert('학생정보를 다시 불러와주세요.');
@@ -610,9 +571,6 @@
     const parent = getRowInput(row, '_parent');
     const start = getRowInput(row, '_start');
     const memo = getRowInput(row, '_memo');
-    const studentUid73550940 = text(row.getAttribute('data-student-uid'));
-    const directory73550940 = global.__ULIM_STUDENT_DIRECTORY_7355016__ || {};
-    const student73550940 = (Array.isArray(directory73550940.students) ? directory73550940.students : []).find(function (student) { return text(student && student.studentUid) === studentUid73550940; }) || {};
     const body = document.getElementById('ulimStudentDetailModalBody73546');
     if (!body) return;
     body.innerHTML = `
@@ -623,7 +581,6 @@
         <div><label>학부모 전화번호</label><input id="ulimDetailParent73546" inputmode="tel" value="${escapeHtml(parent && parent.value)}"></div>
         <div><label>등록일</label><input id="ulimDetailStart73546" type="date" value="${escapeHtml(start && start.value)}"></div>
         <div class="ulim-sm-detail-wide73546"><label>관리자 메모 · 학생 개인 특이사항</label><textarea id="ulimDetailMemo73546" placeholder="학생 개인의 특이사항이나 관리자 확인 내용을 입력하세요.">${escapeHtml(memo && memo.value)}</textarea></div>
-        ${registrationDetailHtml73550940(student73550940)}
         <div class="ulim-sm-account-reset7355051">
           <div class="ulim-sm-account-reset-title7355051">계정 · 오늘 사용제한 초기화</div>
           <div class="ulim-sm-account-reset-help7355051">초기화해도 기존 연습기록과 장기 진도는 삭제되지 않습니다.</div>
@@ -819,18 +776,6 @@
     document.getElementById('ulimStudentAddOpen73546')?.addEventListener('click', function () { openPreparedModal('ulimStudentAddModal73546', '#ulimNewStudentClasses7352'); });
     document.getElementById('ulimClassAddOpen73546')?.addEventListener('click', function () { openPreparedModal('ulimClassAddModal73546', '#ulimClassInstructor7354'); });
     document.getElementById('ulimCourseSettingsOpen73546')?.addEventListener('click', function () { openPreparedModal('ulimCourseSettingsModal73546', '#ulimCourseWindowClasses7352'); });
-    document.getElementById('ulimNewStudentRegistrationAdminOpen73550937')?.addEventListener('click', function (event) {
-      if (event) {
-        event.preventDefault();
-        if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
-      }
-      const openNewStudentAdmin73550948 = global.ulimOpenNewStudentRegistrationAdmin73550937;
-      if (typeof openNewStudentAdmin73550948 === 'function') {
-        openNewStudentAdmin73550948();
-        return;
-      }
-      alert('신규생 등록페이지 관리 기능을 준비하지 못했습니다. 페이지를 새로고침해주세요.');
-    });
     document.getElementById('ulimMessageOpen73546')?.addEventListener('click', openMessageModal);
     document.getElementById('ulimStudentSave73546')?.addEventListener('click', function () {
       if (typeof global.ulimStudentManagementSaveAll7352 === 'function') global.ulimStudentManagementSaveAll7352();
