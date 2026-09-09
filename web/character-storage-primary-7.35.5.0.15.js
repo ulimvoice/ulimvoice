@@ -3,7 +3,7 @@
 if(global.__ULIM_CHARACTER_STORAGE_PRIMARY_73551015__)return;
 global.__ULIM_CHARACTER_STORAGE_PRIMARY_73551015__=true;
 
-const VERSION='2026-09-09.73551015-character-upload-manager';
+const VERSION='2026-09-09.73551015-character-admin-visibility';
 const CALLABLE='characterCatalog73551015';
 const TTL=30000;
 let catalogCache=[],catalogLoadedAt=0,selectionCache=null,selectionLoadedAt=0,adminCatalog73551015=[];
@@ -15,8 +15,15 @@ function rid(p){return p+'-'+Date.now()+'-'+Math.random().toString(36).slice(2);
 function room(){return global.ULIM_ROOM_CLASSROOM_REALTIME_72919||global.ULIM_ROOM_CLASSROOM_REALTIME_72918||global.ULIM_ROOM_CLASSROOM_REALTIME_72917||global.ULIM_ROOM_CLASSROOM_REALTIME_72916||global.ULIM_ROOM_CLASSROOM_REALTIME_729||null;}
 async function runtime(){const r=room();if(!r||typeof r.preloadRuntime!=='function')throw new Error('캐릭터 Firebase 기능을 준비하지 못했습니다.');const rt=await r.preloadRuntime();if(!rt||!rt.auth||!rt.auth.currentUser||!rt.sdk||!rt.functions)throw new Error('로그인이 필요합니다.');return rt;}
 async function call(action,payload){const rt=await runtime();const fn=rt.sdk.httpsCallable(rt.functions,CALLABLE);const resp=await fn(Object.assign({action,requestId:rid('CHAR73551015')},payload||{}));return resp&&resp.data||{};}
-function adminInfo(){try{return global.adminInfo&&typeof global.adminInfo==='object'?global.adminInfo:(JSON.parse(localStorage.getItem('adminInfo')||'{}')||{});}catch(_e){return {};}}
-function fullAdmin(){const i=adminInfo(),r=norm(i.firebaseRole||i.role||i.permission);return ['admin','superadmin',norm('전체관리자'),norm('전체관리'),norm('원장')].includes(r);}
+function studentSessionActive73551015(){const api=global.__ULIM_STUDENT_FIREBASE_DIRECT_AUTH_7355030__;try{return !!(api&&typeof api.hasValidatedSession==='function'&&api.hasValidatedSession());}catch(_e){return false;}}
+function adminInfo(){return global.adminInfo&&typeof global.adminInfo==='object'?global.adminInfo:{};}
+function fullAdmin(){
+  if(studentSessionActive73551015())return false;
+  if(global.__ULIM_STAFF_FIREBASE_SESSION_READY_7329__!==true)return false;
+  const i=adminInfo(),r=norm(i.firebaseRole);
+  return r==='admin'||r==='superadmin';
+}
+function hideAdminUi73551015(){const u=document.getElementById('characterAdminUploader73551015');if(u)u.style.display='none';try{closeManager73551015();}catch(_e){}}
 function genderLabel(v){return v==='male'?'남성':(v==='female'?'여성':'성별 무관');}
 function ageLabel(v){return ({child:'아동',teen:'10대','20s':'20대','30s':'30대','40s':'40대','50plus':'50대 이상',all:'나이 무관'})[v]||'나이 무관';}
 
@@ -115,7 +122,7 @@ function renderPast(s){
 }
 async function refreshCatalogUi(force){
   let items=[];try{items=await listCatalog(force===true,false);}catch(e){const s=document.getElementById('charCatalogStatus73551015');if(s)s.textContent=text(e&&e.message)||'캐릭터 목록을 불러오지 못했습니다.';return [];}
-  const st=document.getElementById('charCatalogStatus73551015');if(st)st.textContent='Storage 캐릭터 '+items.length+'개';
+  const st=document.getElementById('charCatalogStatus73551015');if(st)st.textContent=(fullAdmin()?'Storage 캐릭터 ':'캐릭터 ')+items.length+'개';
   const f=document.getElementById('charFeatureFilter73551015');if(f){const old=f.value,tags=Array.from(new Set(items.flatMap(i=>Array.isArray(i.tags)?i.tags.map(text):[]).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'ko'));f.innerHTML='<option value="">특징 전체</option>'+tags.map(t=>'<option value="'+esc(t)+'">'+esc(t)+'</option>').join('');if(tags.includes(old))f.value=old;}
   if(fullAdmin())await renderAdminCatalog(items);return items;
 }
@@ -386,11 +393,13 @@ async function adminUpload(){
   finally{if(btn)btn.disabled=false;}
 }
 async function importLegacy(){if(!fullAdmin())return alert('전체관리자만 가져올 수 있습니다.');if(!confirm('기존 캐릭터 이미지 20장을 Firebase Storage로 가져올까요?'))return;const st=document.getElementById('charAdminUploadStatus73551015');let ok=0,fail=0;for(const gender of ['male','female'])for(let i=1;i<=10;i++){try{if(st)st.textContent='기존 이미지 가져오기 '+(ok+fail+1)+'/20';const r=await fetch('appdata/character/'+gender+'/'+i+'.jpg',{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);const blob=await r.blob(),file=new File([blob],(gender==='male'?'남성':'여성')+' 캐릭터 '+i+'.jpg',{type:blob.type||'image/jpeg'});await uploadFiles([file],{name:(gender==='male'?'남성':'여성')+' 캐릭터 '+i,gender,ageGroup:'all',tags:['기존'],description:'기존 캐릭터 이미지'});ok++;}catch(_e){fail++;}}if(st)st.textContent='가져오기 완료 · 성공 '+ok+' / 실패 '+fail;await refreshCatalogUi(true);}
-function installAdmin(){const u=document.getElementById('characterAdminUploader73551015');if(!u)return;u.style.display=fullAdmin()?'block':'none';if(!fullAdmin()||u.dataset.bound73551015==='1')return;u.dataset.bound73551015='1';const st=document.getElementById('charAdminUploadStatus73551015');if(st&&!text(st.textContent))st.textContent='여러 장 선택 시 파일명 자동분류: 001_F_10s_열혈.png';document.getElementById('charAdminUploadBtn73551015')?.addEventListener('click',adminUpload);document.getElementById('charLegacyImportBtn73551015')?.addEventListener('click',importLegacy);}
+function installAdmin(){const u=document.getElementById('characterAdminUploader73551015');if(!u)return;const allowed=fullAdmin();u.style.display=allowed?'block':'none';if(!allowed){try{closeManager73551015();}catch(_e){}return;}if(u.dataset.bound73551015==='1')return;u.dataset.bound73551015='1';const st=document.getElementById('charAdminUploadStatus73551015');if(st&&!text(st.textContent))st.textContent='여러 장 선택 시 파일명 자동분류: 001_F_10s_열혈.png';document.getElementById('charAdminUploadBtn73551015')?.addEventListener('click',adminUpload);document.getElementById('charLegacyImportBtn73551015')?.addEventListener('click',importLegacy);}
 async function install(){installAdmin();refreshCatalogUi(false).catch(()=>{});try{const s=await getSelection(false);renderSaved(s);renderPast(s);}catch(_e){renderPast(null);}}
 
 global.__ULIM_CHARACTER_API_73551015__={version:VERSION,storageMode:'firebase-storage',listCatalog,getSelection,saveSelection,linkCurrentSelectionToPracticeRecord,hydratePracticeRecords,refreshCatalogUi,rollFromUi,saveCurrentFromUi,uploadFiles,compressImage,parseBatchFilename73551015,validateBatchFiles73551015,uploadBatchByFilename73551015,openManager73551015,install};
 global.addEventListener('ulim-firebase-auth-ready',()=>setTimeout(install,120));
+global.addEventListener('ulim-student-home-bootstrap-ready',()=>setTimeout(install,0));
+global.addEventListener('ulim-staff-logout-start',()=>setTimeout(hideAdminUi73551015,0));
 global.addEventListener('pageshow',()=>setTimeout(install,180));
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else setTimeout(install,0);
 setTimeout(install,1200);
