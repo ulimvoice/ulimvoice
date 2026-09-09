@@ -3,7 +3,7 @@
 if(global.__ULIM_CHARACTER_STORAGE_PRIMARY_73551015__)return;
 global.__ULIM_CHARACTER_STORAGE_PRIMARY_73551015__=true;
 
-const VERSION='2026-09-08.73551015-character-storage-firestore';
+const VERSION='2026-09-09.73551015-character-storage-batch-filename';
 const CALLABLE='characterCatalog73551015';
 const TTL=30000;
 let catalogCache=[],catalogLoadedAt=0,selectionCache=null,selectionLoadedAt=0;
@@ -128,12 +128,68 @@ async function renderAdminCatalog(items){
 async function rollFromUi(genderOverride){try{const items=await refreshCatalogUi(false),f=filterItems(items,genderOverride);if(!f.length)return alert('선택한 조건에 맞는 캐릭터가 없습니다.');const item=f[Math.floor(Math.random()*f.length)];global.currentChar=Object.assign({},item);try{currentChar=global.currentChar;}catch(_e){}renderCurrent(item);return item;}catch(e){alert(text(e&&e.message)||'캐릭터를 불러오지 못했습니다.');return null;}}
 async function saveCurrentFromUi(){let i=global.currentChar||null;try{if(!i&&typeof currentChar!=='undefined')i=currentChar;}catch(_e){}if(!i||!text(i.id))return alert('먼저 캐릭터를 뽑아주세요.');try{await saveSelection(i.id);alert('이 캐릭터를 저장했습니다. 기출문제 대본 상단에도 표시됩니다.');return true;}catch(e){alert(text(e&&e.message)||'캐릭터 저장에 실패했습니다.');return false;}}
 function uploadMeta(){const raw=text(document.getElementById('charUploadFeatures73551015')?.value);return {name:text(document.getElementById('charUploadName73551015')?.value),gender:text(document.getElementById('charUploadGender73551015')?.value)||'all',ageGroup:text(document.getElementById('charUploadAge73551015')?.value)||'all',tags:raw.split(/[,，\n]+/).map(text).filter(Boolean).slice(0,12),description:text(document.getElementById('charUploadDescription73551015')?.value)};}
-async function adminUpload(){if(!fullAdmin())return alert('전체관리자만 등록할 수 있습니다.');const inp=document.getElementById('charUploadFiles73551015'),st=document.getElementById('charAdminUploadStatus73551015');try{const files=inp&&inp.files?inp.files:[];if(!files.length)return alert('이미지를 선택해주세요.');await uploadFiles(files,uploadMeta(),(i,n,name)=>{if(st)st.textContent=(i+1)+'/'+n+' · '+name+' Storage 업로드 준비 중...';});if(st)st.textContent='Firebase Storage 업로드 완료';if(inp)inp.value='';}catch(e){if(st)st.textContent=text(e&&e.message)||'업로드 실패';alert(text(e&&e.message)||'캐릭터 업로드에 실패했습니다.');}}
+function batchGender73551015(v){const k=norm(v);const m={m:'male',male:'male','남':'male','남성':'male',f:'female',female:'female','여':'female','여성':'female',all:'all','무관':'all'};return m[k]||'';}
+function batchAge73551015(v){const k=norm(v);const m={child:'child','아동':'child',teen:'teen','10s':'teen','10대':'teen','20s':'20s','20대':'20s','30s':'30s','30대':'30s','40s':'40s','40대':'40s','50plus':'50plus','50+':'50plus','50대이상':'50plus','50대+':'50plus',all:'all','무관':'all'};return m[k]||'';}
+function parseBatchFilename73551015(file){
+  const filename=text(file&&file.name),stem=filename.replace(/\.[^.]+$/,''),parts=stem.split('__');
+  if(parts.length<5)return {ok:false,file,error:'파일명 형식은 번호__성별__나이__특징__이름 이어야 합니다.'};
+  const seq=text(parts.shift()),genderRaw=text(parts.shift()),ageRaw=text(parts.shift()),tagRaw=text(parts.shift()),name=text(parts.join('__'));
+  const gender=batchGender73551015(genderRaw),ageGroup=batchAge73551015(ageRaw),tags=tagRaw.split(/[+＋,，]+/).map(text).filter(Boolean).slice(0,12);
+  if(!/^\d{1,4}$/.test(seq))return {ok:false,file,error:'번호는 1~4자리 숫자여야 합니다.'};
+  if(!gender)return {ok:false,file,error:'성별 '+genderRaw+' 값이 올바르지 않습니다. (M/F/ALL)'};
+  if(!ageGroup)return {ok:false,file,error:'나이 '+ageRaw+' 값이 올바르지 않습니다. (child/teen/20s/30s/40s/50plus/ALL)'};
+  if(!tags.length)return {ok:false,file,error:'특징이 비어 있습니다.'};
+  if(!name)return {ok:false,file,error:'캐릭터 이름이 비어 있습니다.'};
+  if(!file||!/^image\//i.test(text(file.type)))return {ok:false,file,error:'이미지 파일이 아닙니다.'};
+  if(Number(file.size||0)>20*1024*1024)return {ok:false,file,error:'원본 이미지가 20MB를 초과합니다.'};
+  return {ok:true,file,seq,meta:{name,gender,ageGroup,tags,description:text(document.getElementById('charUploadDescription73551015')?.value)}};
+}
+function validateBatchFiles73551015(files){const parsed=Array.from(files||[]).map(parseBatchFilename73551015),errors=parsed.filter(x=>!x.ok);return {parsed,errors};}
+async function uploadBatchByFilename73551015(parsed,progress){
+  const ok=[],failed=[];
+  for(let i=0;i<parsed.length;i++){
+    const row=parsed[i];
+    try{
+      if(progress)progress(i,parsed.length,row.file.name,'processing');
+      const c=await compressImage(row.file);
+      const d=await call('saveImage',Object.assign({},c,row.meta));
+      ok.push({file:row.file.name,item:d.item||d});
+      if(progress)progress(i,parsed.length,row.file.name,'done');
+    }catch(e){failed.push({file:row.file.name,error:text(e&&e.message)||'업로드 실패'});if(progress)progress(i,parsed.length,row.file.name,'failed');}
+  }
+  catalogLoadedAt=0;await refreshCatalogUi(true);return {ok,failed};
+}
+async function adminUpload(){
+  if(!fullAdmin())return alert('전체관리자만 등록할 수 있습니다.');
+  const inp=document.getElementById('charUploadFiles73551015'),st=document.getElementById('charAdminUploadStatus73551015'),btn=document.getElementById('charAdminUploadBtn73551015');
+  const files=inp&&inp.files?Array.from(inp.files):[];if(!files.length)return alert('이미지를 선택해주세요.');
+  if(btn)btn.disabled=true;
+  try{
+    const filenameBatch=files.length>1||files.some(f=>text(f.name).includes('__'));
+    if(filenameBatch){
+      const check=validateBatchFiles73551015(files);
+      if(check.errors.length){
+        const details=check.errors.slice(0,12).map(x=>x.file.name+' → '+x.error).join('\n');
+        if(st)st.textContent='일괄 업로드 중단 · 파일명 오류 '+check.errors.length+'개';
+        alert('업로드를 시작하지 않았습니다. 파일명 오류 '+check.errors.length+'개를 먼저 수정해주세요.\n\n'+details+(check.errors.length>12?'\n외 '+(check.errors.length-12)+'개':'')+'\n\n규칙: 001__M__20s__냉정+카리스마__검사.jpg');
+        return;
+      }
+      const result=await uploadBatchByFilename73551015(check.parsed,(i,n,name,state)=>{if(st)st.textContent=(i+1)+'/'+n+' · '+name+(state==='failed'?' · 실패':state==='done'?' · 완료':' · 압축/Storage 저장 중...');});
+      if(inp)inp.value='';
+      if(result.failed.length){const names=result.failed.slice(0,20).map(x=>x.file+' → '+x.error).join(' / ');if(st)st.textContent='일괄 업로드 완료 · 성공 '+result.ok.length+' / 실패 '+result.failed.length+' · '+names;alert('일괄 업로드가 끝났습니다.\n성공 '+result.ok.length+' / 실패 '+result.failed.length+'\n\n실패: '+names);}
+      else{if(st)st.textContent='파일명 자동분류 일괄 업로드 완료 · 성공 '+result.ok.length+' / 실패 0';}
+      return;
+    }
+    await uploadFiles(files,uploadMeta(),(i,n,name)=>{if(st)st.textContent=(i+1)+'/'+n+' · '+name+' Storage 업로드 준비 중...';});
+    if(st)st.textContent='Firebase Storage 업로드 완료';if(inp)inp.value='';
+  }catch(e){if(st)st.textContent=text(e&&e.message)||'업로드 실패';alert(text(e&&e.message)||'캐릭터 업로드에 실패했습니다.');}
+  finally{if(btn)btn.disabled=false;}
+}
 async function importLegacy(){if(!fullAdmin())return alert('전체관리자만 가져올 수 있습니다.');if(!confirm('기존 캐릭터 이미지 20장을 Firebase Storage로 가져올까요?'))return;const st=document.getElementById('charAdminUploadStatus73551015');let ok=0,fail=0;for(const gender of ['male','female'])for(let i=1;i<=10;i++){try{if(st)st.textContent='기존 이미지 가져오기 '+(ok+fail+1)+'/20';const r=await fetch('appdata/character/'+gender+'/'+i+'.jpg',{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);const blob=await r.blob(),file=new File([blob],(gender==='male'?'남성':'여성')+' 캐릭터 '+i+'.jpg',{type:blob.type||'image/jpeg'});await uploadFiles([file],{name:(gender==='male'?'남성':'여성')+' 캐릭터 '+i,gender,ageGroup:'all',tags:['기존'],description:'기존 캐릭터 이미지'});ok++;}catch(_e){fail++;}}if(st)st.textContent='가져오기 완료 · 성공 '+ok+' / 실패 '+fail;await refreshCatalogUi(true);}
-function installAdmin(){const u=document.getElementById('characterAdminUploader73551015');if(!u)return;u.style.display=fullAdmin()?'block':'none';if(!fullAdmin()||u.dataset.bound73551015==='1')return;u.dataset.bound73551015='1';document.getElementById('charAdminUploadBtn73551015')?.addEventListener('click',adminUpload);document.getElementById('charLegacyImportBtn73551015')?.addEventListener('click',importLegacy);}
+function installAdmin(){const u=document.getElementById('characterAdminUploader73551015');if(!u)return;u.style.display=fullAdmin()?'block':'none';if(!fullAdmin()||u.dataset.bound73551015==='1')return;u.dataset.bound73551015='1';const st=document.getElementById('charAdminUploadStatus73551015');if(st&&!text(st.textContent))st.textContent='여러 장 선택 시 파일명 자동분류: 001__M__20s__냉정+카리스마__검사.jpg';document.getElementById('charAdminUploadBtn73551015')?.addEventListener('click',adminUpload);document.getElementById('charLegacyImportBtn73551015')?.addEventListener('click',importLegacy);}
 async function install(){installAdmin();refreshCatalogUi(false).catch(()=>{});try{const s=await getSelection(false);renderSaved(s);renderPast(s);}catch(_e){renderPast(null);}}
 
-global.__ULIM_CHARACTER_API_73551015__={version:VERSION,storageMode:'firebase-storage',listCatalog,getSelection,saveSelection,linkCurrentSelectionToPracticeRecord,hydratePracticeRecords,refreshCatalogUi,rollFromUi,saveCurrentFromUi,uploadFiles,compressImage,install};
+global.__ULIM_CHARACTER_API_73551015__={version:VERSION,storageMode:'firebase-storage',listCatalog,getSelection,saveSelection,linkCurrentSelectionToPracticeRecord,hydratePracticeRecords,refreshCatalogUi,rollFromUi,saveCurrentFromUi,uploadFiles,compressImage,parseBatchFilename73551015,validateBatchFiles73551015,uploadBatchByFilename73551015,install};
 global.addEventListener('ulim-firebase-auth-ready',()=>setTimeout(install,120));
 global.addEventListener('pageshow',()=>setTimeout(install,180));
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else setTimeout(install,0);
