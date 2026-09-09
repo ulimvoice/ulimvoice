@@ -3,7 +3,7 @@
 if(global.__ULIM_CHARACTER_STORAGE_PRIMARY_73551015__)return;
 global.__ULIM_CHARACTER_STORAGE_PRIMARY_73551015__=true;
 
-const VERSION='2026-09-09.73551015-character-admin-visibility';
+const VERSION='2026-09-09.73551015-character-public-meta-only';
 const CALLABLE='characterCatalog73551015';
 const TTL=30000;
 let catalogCache=[],catalogLoadedAt=0,selectionCache=null,selectionLoadedAt=0,adminCatalog73551015=[];
@@ -107,18 +107,21 @@ function filterItems(items,overrideGender){
 function renderCurrent(item){
   const img=document.getElementById('charImgDisplay'),ph=document.querySelector('#characterCard .char-placeholder'),u=text(item&&item.imageUrl);
   if(img){img.src=u;img.style.display=u?'block':'none';}if(ph)ph.style.display=u?'none':'block';
-  const n=document.getElementById('charNameDisplay'),j=document.getElementById('charJobDisplay'),d=document.getElementById('charDescDisplay');
+  const n=document.getElementById('charNameDisplay'),j=document.getElementById('charJobDisplay');
   const tags=Array.isArray(item&&item.tags)?item.tags.filter(Boolean):[];
-  if(n)n.textContent=text(item&&item.name)||'캐릭터';if(j)j.textContent=[genderLabel(item&&item.gender),ageLabel(item&&item.ageGroup)].concat(tags.slice(0,3)).join(' · ');if(d)d.textContent=text(item&&item.description)||(tags.length?tags.join(', '):'조건에 맞는 캐릭터가 선택되었습니다.');
+  if(n){n.textContent=text(item&&item.name)||'캐릭터';n.style.display=fullAdmin()?'block':'none';}
+  if(j)j.textContent=[genderLabel(item&&item.gender),ageLabel(item&&item.ageGroup)].concat(tags.slice(0,3)).join(' · ');
 }
 function renderSaved(s){
   const g=document.getElementById('charSaveGrid');if(!g)return;if(!s){g.innerHTML='';return;}
-  g.innerHTML='<div class="mini-char-card character-saved-card73551015">'+(text(s.imageUrl)?'<img class="mini-char-img" src="'+esc(s.imageUrl)+'" alt="'+esc(s.name||'선택 캐릭터')+'">':'')+'<div class="mini-char-info"><b>'+esc(s.name||'선택 캐릭터')+'</b><br><span>'+esc([genderLabel(s.gender),ageLabel(s.ageGroup)].concat(s.tags||[]).join(' · '))+'</span><br><small>기출문제에 사용할 캐릭터</small></div></div>';
+  const showName=fullAdmin();
+  g.innerHTML='<div class="mini-char-card character-saved-card73551015">'+(text(s.imageUrl)?'<img class="mini-char-img" src="'+esc(s.imageUrl)+'" alt="선택 캐릭터">':'')+'<div class="mini-char-info">'+(showName?'<b>'+esc(s.name||'선택 캐릭터')+'</b><br>':'')+'<span>'+esc([genderLabel(s.gender),ageLabel(s.ageGroup)].concat(s.tags||[]).join(' · '))+'</span><br><small>기출문제에 사용할 캐릭터</small></div></div>';
 }
 function renderPast(s){
   const b=document.getElementById('pastCharacterPreview73551015');if(!b)return;
   if(!s){b.innerHTML='<div class="past-character-empty73551015">캐릭터 뽑기에서 캐릭터를 저장하면 기출문제 대본 위에 표시됩니다.</div>';return;}
-  b.innerHTML='<div class="past-character-card73551015">'+(text(s.imageUrl)?'<img src="'+esc(s.imageUrl)+'" alt="'+esc(s.name||'선택 캐릭터')+'">':'')+'<div><span>선택 캐릭터</span><b>'+esc(s.name||'캐릭터')+'</b><small>'+esc([genderLabel(s.gender),ageLabel(s.ageGroup)].concat(s.tags||[]).join(' · '))+'</small></div></div>';
+  const showName=fullAdmin();
+  b.innerHTML='<div class="past-character-card73551015">'+(text(s.imageUrl)?'<img src="'+esc(s.imageUrl)+'" alt="선택 캐릭터">':'')+'<div><span>선택 캐릭터</span>'+(showName?'<b>'+esc(s.name||'캐릭터')+'</b>':'')+'<small>'+esc([genderLabel(s.gender),ageLabel(s.ageGroup)].concat(s.tags||[]).join(' · '))+'</small></div></div>';
 }
 async function refreshCatalogUi(force){
   let items=[];try{items=await listCatalog(force===true,false);}catch(e){const s=document.getElementById('charCatalogStatus73551015');if(s)s.textContent=text(e&&e.message)||'캐릭터 목록을 불러오지 못했습니다.';return [];}
