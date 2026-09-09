@@ -3,7 +3,7 @@
 if(global.__ULIM_CHARACTER_STORAGE_PRIMARY_73551015__)return;
 global.__ULIM_CHARACTER_STORAGE_PRIMARY_73551015__=true;
 
-const VERSION='2026-09-09.73551015-character-public-meta-only';
+const VERSION='2026-09-09.73551015-character-image-zoom';
 const CALLABLE='characterCatalog73551015';
 const TTL=30000;
 let catalogCache=[],catalogLoadedAt=0,selectionCache=null,selectionLoadedAt=0,adminCatalog73551015=[];
@@ -396,8 +396,81 @@ async function adminUpload(){
   finally{if(btn)btn.disabled=false;}
 }
 async function importLegacy(){if(!fullAdmin())return alert('전체관리자만 가져올 수 있습니다.');if(!confirm('기존 캐릭터 이미지 20장을 Firebase Storage로 가져올까요?'))return;const st=document.getElementById('charAdminUploadStatus73551015');let ok=0,fail=0;for(const gender of ['male','female'])for(let i=1;i<=10;i++){try{if(st)st.textContent='기존 이미지 가져오기 '+(ok+fail+1)+'/20';const r=await fetch('appdata/character/'+gender+'/'+i+'.jpg',{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);const blob=await r.blob(),file=new File([blob],(gender==='male'?'남성':'여성')+' 캐릭터 '+i+'.jpg',{type:blob.type||'image/jpeg'});await uploadFiles([file],{name:(gender==='male'?'남성':'여성')+' 캐릭터 '+i,gender,ageGroup:'all',tags:['기존'],description:'기존 캐릭터 이미지'});ok++;}catch(_e){fail++;}}if(st)st.textContent='가져오기 완료 · 성공 '+ok+' / 실패 '+fail;await refreshCatalogUi(true);}
+
+function ensureCharacterImageViewer73551015(){
+  if(document.getElementById('characterImageViewer73551015'))return;
+  if(!document.getElementById('characterImageViewerStyle73551015')){
+    const style=document.createElement('style');
+    style.id='characterImageViewerStyle73551015';
+    style.textContent=`
+#charImgDisplay,.character-saved-card73551015 img,.past-character-card73551015 img{cursor:zoom-in}
+.character-image-viewer73551015{position:fixed;inset:0;z-index:130000;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(15,23,42,.84);box-sizing:border-box}
+.character-image-viewer73551015.open{display:flex}
+.character-image-viewer73551015 img{display:block;max-width:min(94vw,1200px);max-height:90vh;width:auto;height:auto;object-fit:contain;border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.42);background:#fff}
+.character-image-viewer-close73551015{position:fixed;top:18px;right:18px;width:44px;height:44px;border:0;border-radius:999px;background:rgba(255,255,255,.94);color:#111827;font-size:26px;line-height:1;font-weight:800;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.24)}
+@media(max-width:640px){.character-image-viewer73551015{padding:14px}.character-image-viewer73551015 img{max-width:96vw;max-height:86vh;border-radius:12px}.character-image-viewer-close73551015{top:12px;right:12px}}
+`;
+    document.head.appendChild(style);
+  }
+
+  const modal=document.createElement('div');
+  modal.id='characterImageViewer73551015';
+  modal.className='character-image-viewer73551015';
+  modal.setAttribute('role','dialog');
+  modal.setAttribute('aria-modal','true');
+  modal.setAttribute('aria-label','캐릭터 이미지 크게 보기');
+  modal.innerHTML='<button type="button" class="character-image-viewer-close73551015" data-character-image-viewer-close73551015 aria-label="닫기">×</button><img id="characterImageViewerImage73551015" src="" alt="캐릭터 이미지">';
+  document.body.appendChild(modal);
+
+  const close=function(){
+    modal.classList.remove('open');
+    const image=document.getElementById('characterImageViewerImage73551015');
+    if(image)image.removeAttribute('src');
+  };
+
+  modal.addEventListener('click',function(e){
+    if(e.target===modal||e.target.closest('[data-character-image-viewer-close73551015]'))close();
+  });
+
+  if(!global.__ULIM_CHARACTER_IMAGE_VIEWER_KEY_73551015__){
+    global.__ULIM_CHARACTER_IMAGE_VIEWER_KEY_73551015__=true;
+    document.addEventListener('keydown',function(e){
+      if(e.key==='Escape'){
+        const m=document.getElementById('characterImageViewer73551015');
+        if(m&&m.classList.contains('open')){
+          m.classList.remove('open');
+          const image=document.getElementById('characterImageViewerImage73551015');
+          if(image)image.removeAttribute('src');
+        }
+      }
+    });
+  }
+
+  if(!global.__ULIM_CHARACTER_IMAGE_VIEWER_CLICK_73551015__){
+    global.__ULIM_CHARACTER_IMAGE_VIEWER_CLICK_73551015__=true;
+    document.addEventListener('click',function(e){
+      const target=e.target&&e.target.closest?e.target.closest('#charImgDisplay,.character-saved-card73551015 img,.past-character-card73551015 img'):null;
+      if(!target)return;
+      const src=text(target.currentSrc||target.src);
+      if(!src)return;
+      e.preventDefault();
+      e.stopPropagation();
+      openCharacterImageViewer73551015(src);
+    });
+  }
+}
+function openCharacterImageViewer73551015(src){
+  ensureCharacterImageViewer73551015();
+  const modal=document.getElementById('characterImageViewer73551015');
+  const image=document.getElementById('characterImageViewerImage73551015');
+  const url=text(src);
+  if(!modal||!image||!url)return;
+  image.src=url;
+  modal.classList.add('open');
+}
+
 function installAdmin(){const u=document.getElementById('characterAdminUploader73551015');if(!u)return;const allowed=fullAdmin();u.style.display=allowed?'block':'none';if(!allowed){try{closeManager73551015();}catch(_e){}return;}if(u.dataset.bound73551015==='1')return;u.dataset.bound73551015='1';const st=document.getElementById('charAdminUploadStatus73551015');if(st&&!text(st.textContent))st.textContent='여러 장 선택 시 파일명 자동분류: 001_F_10s_열혈.png';document.getElementById('charAdminUploadBtn73551015')?.addEventListener('click',adminUpload);document.getElementById('charLegacyImportBtn73551015')?.addEventListener('click',importLegacy);}
-async function install(){installAdmin();refreshCatalogUi(false).catch(()=>{});try{const s=await getSelection(false);renderSaved(s);renderPast(s);}catch(_e){renderPast(null);}}
+async function install(){ensureCharacterImageViewer73551015();installAdmin();refreshCatalogUi(false).catch(()=>{});try{const s=await getSelection(false);renderSaved(s);renderPast(s);}catch(_e){renderPast(null);}}
 
 global.__ULIM_CHARACTER_API_73551015__={version:VERSION,storageMode:'firebase-storage',listCatalog,getSelection,saveSelection,linkCurrentSelectionToPracticeRecord,hydratePracticeRecords,refreshCatalogUi,rollFromUi,saveCurrentFromUi,uploadFiles,compressImage,parseBatchFilename73551015,validateBatchFiles73551015,uploadBatchByFilename73551015,openManager73551015,install};
 global.addEventListener('ulim-firebase-auth-ready',()=>setTimeout(install,120));
