@@ -2,7 +2,7 @@
   'use strict';
   if (global.__ULIM_AUDIENCE_SEGMENTATION_7355034__) return;
   global.__ULIM_AUDIENCE_SEGMENTATION_7355034__ = true;
-  global.ULIM_AUDIENCE_SEGMENTATION_VERSION = '2026-08-11.7355038-policy-only';
+  global.ULIM_AUDIENCE_SEGMENTATION_VERSION = '2026-09-12.73551015-tablet-audience-policy-only';
 
   var installed = false;
   var loaded = null;
@@ -32,7 +32,7 @@
     if (!isSuperAdmin()) return;
     var host=container();if(!host)return;ensureStyle();
     if (!document.getElementById('ulimAudienceSegmentation7355034')) {
-      var details=document.createElement('details');details.id='ulimAudienceSegmentation7355034';details.innerHTML='<summary>알림톡 발송 대상</summary><div class="ulim-aud-body"><div id="ulimAudienceStatus7355034" class="ulim-aud-status7355034">열면 현재 발송 기준을 불러옵니다.</div><div id="ulimAudienceContent7355034"></div></div>';
+      var details=document.createElement('details');details.id='ulimAudienceSegmentation7355034';details.innerHTML='<summary>태블릿 등·하원 알림톡 발송 대상</summary><div class="ulim-aud-body"><div id="ulimAudienceStatus7355034" class="ulim-aud-status7355034">열면 현재 발송 기준을 불러옵니다.</div><div id="ulimAudienceContent7355034"></div></div>';
       host.appendChild(details);
       details.addEventListener('toggle',function(){if(details.open)load();});
     }
@@ -41,7 +41,7 @@
   function render() {
     var root=document.getElementById('ulimAudienceContent7355034');if(!root||!loaded)return;
     var policy=loaded.policy||{};
-    root.innerHTML='<div class="ulim-aud-policy7355034"><b>알림톡 발송</b><label><input type="checkbox" id="ulimAudAdultNotify7355034"'+(policy.adultEnabled!==false?' checked':'')+'> 성인반 발송</label><label><input type="checkbox" id="ulimAudYouthNotify7355034"'+(policy.youthEnabled!==false?' checked':'')+'> 청소년반 발송</label><button type="button" class="admin-btn blue" id="ulimAudPolicySave7355034">저장</button><span>태블릿 등·하원 등 반 기준 알림에 적용</span></div>';
+    root.innerHTML='<div class="ulim-aud-policy7355034"><b>태블릿 등·하원 알림톡</b><label><input type="checkbox" id="ulimAudAdultNotify7355034"'+(policy.adultEnabled!==false?' checked':'')+'> 성인반 발송</label><label><input type="checkbox" id="ulimAudYouthNotify7355034"'+(policy.youthEnabled!==false?' checked':'')+'> 청소년반 발송</label><button type="button" class="admin-btn blue" id="ulimAudPolicySave7355034">저장</button><span>태블릿 등·하원 알림에만 적용</span></div>';
     document.getElementById('ulimAudPolicySave7355034').onclick=savePolicy;
   }
   async function load() {
