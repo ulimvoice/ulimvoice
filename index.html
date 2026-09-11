@@ -5274,6 +5274,7 @@ function showLoading(message = "처리 중...") {
     el.style.display = "flex";
 }
 function hideLoading() {
+    if (Number(window.__ULIM_PRACTICE_CRITICAL_SAVE_LOCK_73551101__ || 0) > 0) return;
     const el = document.getElementById("loadingOverlay");
     if (el) el.style.display = "none";
 }
@@ -17517,7 +17518,7 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
     if(!found)found=evaluations.find(function(ev){const name=normalizeEvaluatorValue595(ev&&ev.teacherName);return name&&identity.names.indexOf(name)>=0;})||null;
     return found;
   }
-  function practiceEvaluationHasValue595(ev){return !!(ev&&(String(ev.scoreJson||'').trim()||String(ev.comment||'').trim()));}
+  function practiceEvaluationHasValue595(ev){return !!(ev&&(String(ev.scoreJson||'').trim()||String(ev.comment||'').trim()||String(ev.sampleAudioUrl||'').trim()));}
   function defsFor(log){return isR21VocalRecord595(log)?R21_VOCAL_SCORE_DEFS:(SCORE_DEFS[taskType(log)]||[]);}
   function adminOtherTeacherEvaluations595(log){
     let full=false;
@@ -17541,12 +17542,65 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
       const comment=String(ev&&ev.comment||'').trim();
       const sampleUrl=String(ev&&ev.sampleAudioUrl||'').trim();
       const saved=String(ev&& (ev.savedAt||ev.updatedAt)||'').trim();
-      return `<div style="border:1px solid #dbeafe;border-radius:14px;padding:12px;margin-top:10px;background:#f8fbff;"><div style="font-weight:900;color:#1e3a8a;margin-bottom:8px;">${esc(teacher)} 선생님 평가</div>${rows}${comment?`<div style="margin-top:10px;padding:10px;border-radius:10px;background:#fff;white-space:pre-wrap;line-height:1.6;">${esc(comment)}</div>`:''}${sampleUrl?`<div style="margin-top:10px;"><b style="font-size:12px;color:#1e3a8a;">🎧 강사 예시 음성</b><audio controls controlsList="nodownload" preload="none" src="${esc(sampleUrl)}" style="width:100%;margin-top:6px;"></audio></div>`:''}${saved?`<div style="margin-top:8px;font-size:12px;color:#64748b;">${esc(saved)}</div>`:''}</div>`;
+      return `<div style="border:1px solid #dbeafe;border-radius:14px;padding:12px;margin-top:10px;background:#f8fbff;"><div style="font-weight:900;color:#1e3a8a;margin-bottom:8px;">${esc(teacher)} 선생님 평가</div>${rows}${comment?`<div style="margin-top:10px;padding:10px;border-radius:10px;background:#fff;white-space:pre-wrap;line-height:1.6;">${esc(comment)}</div>`:''}${sampleUrl?`<div style="margin-top:10px;"><b style="font-size:12px;color:#1e3a8a;">🎧 강사 예시 음성</b><audio controls controlsList="nodownload" preload="metadata" src="${esc(teacherSamplePlayableUrl73551101(sampleUrl))}" data-fallback-src="${esc(teacherSampleFallbackUrl73551101(sampleUrl))}" data-fallback-used="0" onerror="ulimTeacherSampleAudioFallback73551101(this)" style="width:100%;margin-top:6px;"></audio></div>`:''}${saved?`<div style="margin-top:8px;font-size:12px;color:#64748b;">${esc(saved)}</div>`:''}</div>`;
     }).join('');
     return `<div style="margin-top:16px;padding-top:14px;border-top:2px solid #e2e8f0;"><div style="font-weight:900;color:#334155;">관리자 열람 · 다른 강사 평가 ${others.length}건</div>${cards}</div>`;
   }
   function scoreButtons(idx,key,value){let h='';for(let n=1;n<=5;n++)h+=`<button type="button" class="ulim-score-btn ${Number(value)===n?'selected':''}" data-idx="${idx}" data-key="${esc(key)}" data-value="${n}" onclick="ulimSetPracticeScore595(this)">${n}</button>`;return h;}
 
+  let practiceCriticalSaveDepth73551101 = 0;
+  function practiceCriticalSaveBeforeUnload73551101(event){
+    if(practiceCriticalSaveDepth73551101<=0)return;
+    event.preventDefault();
+    event.returnValue='저장 작업이 진행 중입니다. 완료될 때까지 화면을 닫지 마세요.';
+    return event.returnValue;
+  }
+  function beginPracticeCriticalSave73551101(message){
+    practiceCriticalSaveDepth73551101+=1;
+    window.__ULIM_PRACTICE_CRITICAL_SAVE_LOCK_73551101__=practiceCriticalSaveDepth73551101;
+    window.addEventListener('beforeunload',practiceCriticalSaveBeforeUnload73551101);
+    try{document.documentElement.dataset.ulimPracticeSaving73551101='1';}catch(_e){}
+    try{showLoading(String(message||'저장 중... 화면을 닫지 마세요.'));}catch(_e){}
+  }
+  function endPracticeCriticalSave73551101(){
+    practiceCriticalSaveDepth73551101=Math.max(0,practiceCriticalSaveDepth73551101-1);
+    window.__ULIM_PRACTICE_CRITICAL_SAVE_LOCK_73551101__=practiceCriticalSaveDepth73551101;
+    if(practiceCriticalSaveDepth73551101<=0){
+      window.removeEventListener('beforeunload',practiceCriticalSaveBeforeUnload73551101);
+      try{delete document.documentElement.dataset.ulimPracticeSaving73551101;}catch(_e){}
+      try{hideLoading();}catch(_e){}
+    }
+  }
+  function teacherSampleDriveFileId73551101(value){
+    const raw=String(value||'').trim();if(!raw)return '';
+    try{
+      const parsed=new URL(raw,location.href);
+      const byQuery=String(parsed.searchParams.get('id')||'').trim();if(byQuery)return byQuery;
+      const match=parsed.pathname.match(/\/d\/([^/?#]+)/i);if(match&&match[1])return String(match[1]).trim();
+    }catch(_e){}
+    const fallback=raw.match(/[?&]id=([^&#]+)/i)||raw.match(/\/d\/([^/?#]+)/i);
+    if(!fallback||!fallback[1])return '';
+    try{return decodeURIComponent(fallback[1]);}catch(_e){return fallback[1];}
+  }
+  function teacherSamplePlayableUrl73551101(value){
+    const raw=String(value||'').trim(),fileId=teacherSampleDriveFileId73551101(raw);
+    return fileId?`https://drive.usercontent.google.com/download?id=${encodeURIComponent(fileId)}&export=download&confirm=t`:raw;
+  }
+  function teacherSampleFallbackUrl73551101(value){
+    const fileId=teacherSampleDriveFileId73551101(value);
+    return fileId?`https://drive.google.com/uc?export=download&id=${encodeURIComponent(fileId)}`:'';
+  }
+  window.ulimTeacherSampleAudioFallback73551101=function(audio,idx){
+    if(!audio)return;
+    const fallback=String(audio.dataset&&audio.dataset.fallbackSrc||'').trim();
+    if(fallback&&audio.dataset.fallbackUsed!=='1'){
+      audio.dataset.fallbackUsed='1';
+      audio.src=fallback;
+      try{audio.load();}catch(_e){}
+      return;
+    }
+    if(Number.isFinite(Number(idx)))teacherSampleSetStatus73551100(Number(idx),'저장된 예시 음성을 불러오지 못했습니다. 다시 저장해주세요.','error');
+  };
   const teacherSampleState73551100 = new Map();
   function teacherSampleRecordKey73551100(log){return String(log&&log.recordId||'').trim();}
   function teacherSampleStateFor73551100(log){
@@ -17563,8 +17617,20 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
   function teacherSampleSetAudio73551100(idx,url){
     const audio=document.getElementById(`ulimTeacherSampleAudio_${idx}`);
     if(!audio)return;
-    if(url){audio.src=String(url);audio.style.display='block';}
-    else{audio.removeAttribute('src');audio.load();audio.style.display='none';}
+    const raw=String(url||'').trim();
+    if(raw){
+      const primary=teacherSamplePlayableUrl73551101(raw);
+      const fallback=teacherSampleFallbackUrl73551101(raw);
+      audio.dataset.fallbackUsed='0';
+      if(fallback&&fallback!==primary)audio.dataset.fallbackSrc=fallback;else delete audio.dataset.fallbackSrc;
+      audio.src=primary;
+      audio.style.display='block';
+      try{audio.load();}catch(_e){}
+    }else{
+      audio.removeAttribute('src');delete audio.dataset.fallbackSrc;delete audio.dataset.fallbackUsed;
+      try{audio.load();}catch(_e){}
+      audio.style.display='none';
+    }
   }
   function teacherSampleToggleButtons73551100(idx,state){
     const rec=document.getElementById(`ulimTeacherSampleRecord_${idx}`);
@@ -17611,7 +17677,7 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
         <b style="color:#0f172a;">🎧 강사 예시 음성</b>
         <span id="ulimTeacherSampleStatus_${idx}" style="font-size:12px;color:#64748b;">${sampleUrl?'저장된 예시 있음':'최대 3분 · 평가 저장 전에도 녹음 가능'}</span>
       </div>
-      <audio id="ulimTeacherSampleAudio_${idx}" controls controlsList="nodownload" preload="none" ${sampleUrl?`src="${esc(sampleUrl)}"`:''} style="width:100%;margin-top:10px;${sampleUrl?'':'display:none;'}"></audio>
+      <audio id="ulimTeacherSampleAudio_${idx}" controls controlsList="nodownload" preload="metadata" ${sampleUrl?`src="${esc(teacherSamplePlayableUrl73551101(sampleUrl))}" data-fallback-src="${esc(teacherSampleFallbackUrl73551101(sampleUrl))}" data-fallback-used="0"`:''} onerror="ulimTeacherSampleAudioFallback73551101(this,${idx})" style="width:100%;margin-top:10px;${sampleUrl?'':'display:none;'}"></audio>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
         <button type="button" id="ulimTeacherSampleRecord_${idx}" class="admin-btn" onclick="ulimTeacherSampleStart73551100(${idx})">${sampleUrl?'🎙️ 다시 녹음':'🎙️ 예시 녹음'}</button>
         <button type="button" id="ulimTeacherSampleStop_${idx}" class="admin-btn" style="display:none;" onclick="ulimTeacherSampleStop73551100(${idx})">⏹ 정지</button>
@@ -17665,6 +17731,7 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
     if(!api||typeof api.uploadTeacherSampleAudio!=='function')return alert('강사 예시 음성 저장 기능을 준비하지 못했습니다.');
     const saveBtn=document.getElementById(`ulimTeacherSampleSave_${idx}`);if(saveBtn)saveBtn.disabled=true;
     teacherSampleSetStatus73551100(idx,'Drive에 예시 음성을 저장하는 중입니다...','');
+    beginPracticeCriticalSave73551101('예시 음성 저장 중... 완료될 때까지 화면을 닫지 마세요.');
     try{
       const result=await api.uploadTeacherSampleAudio(log.recordId,state.blob,state.durationMs);
       state.savedUrl=String(result&&result.sampleAudioUrl||'');
@@ -17676,7 +17743,7 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
       teacherSampleSetStatus73551100(idx,'강사 예시 음성이 저장되었습니다.','ok');
       teacherSampleToggleButtons73551100(idx,state);
     }catch(error){teacherSampleSetStatus73551100(idx,'예시 음성 저장에 실패했습니다.','error');alert(error&&error.message?error.message:'강사 예시 음성 저장에 실패했습니다.');}
-    finally{if(saveBtn)saveBtn.disabled=false;}
+    finally{if(saveBtn)saveBtn.disabled=false;endPracticeCriticalSave73551101();}
   };
   window.ulimTeacherSampleDelete73551100=async function(idx){
     const log=adminVocalPracticeLogs[idx];const state=teacherSampleStateFor73551100(log);if(!log||!state)return;
@@ -18268,6 +18335,7 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
     const draft=collect(idx);if(!draft)return;const log=adminVocalPracticeLogs[idx];const defs=defsFor(log);if(finalize&&Object.keys(draft.scores).length<defs.length)return alert('모든 점수 항목을 선택해주세요.');
     if(finalize){try{const practiceApi=window.__ULIM_PRACTICE_INTELLIGENCE_API_7355042__;if(practiceApi&&typeof practiceApi.ensurePushToken==='function')practiceApi.ensurePushToken({prompt:true}).catch(function(){});}catch(ignore){}}
     const keepGroup=practiceViewerGroupKey706;const keepRecord=practiceViewerRecordId706||draft.recordId;
+    if(finalize)beginPracticeCriticalSave73551101('평가 저장 중... 완료될 때까지 화면을 닫지 마세요.');
     try{
       setStatus(idx,'저장 중...','');
       const data=await send(draft,!!finalize);
@@ -18284,6 +18352,7 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
         alert(isPast?'기출문제 강사평가가 저장되었습니다.':'평가가 저장되었습니다.');
       }
     }catch(e){const q=readQueue();q[draft.recordId]=draft;writeQueue(q);setStatus(idx,'저장 실패 · 재시도 대기','error');alert(e.message||String(e));}
+    finally{if(finalize)endPracticeCriticalSave73551101();}
   };
   window.addEventListener('online',()=>flushDue(false));setInterval(()=>flushDue(false),60000);setTimeout(schedule,800);
   try{if(window.ULIM_ADMIN_WRITE_ACTIONS&&ULIM_ADMIN_WRITE_ACTIONS.add)ULIM_ADMIN_WRITE_ACTIONS.add('adminSavePracticeEvaluation');}catch(e){}
@@ -18300,7 +18369,7 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
       savedAt:log&&log.teacherCommentAt||''
     }];
     const seen={};
-    return source.filter(ev=>ev&&(String(ev.scoreJson||'').trim()||String(ev.comment||'').trim())).filter(ev=>{
+    return source.filter(ev=>ev&&(String(ev.scoreJson||'').trim()||String(ev.comment||'').trim()||String(ev.sampleAudioUrl||'').trim())).filter(ev=>{
       const key=String(ev.evaluatorKey||ev.teacherName||'선생님').trim()||'선생님';
       if(seen[key])return false;seen[key]=true;return true;
     });
@@ -18308,7 +18377,7 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
   function buildSingleTeacherEval601(log,ev){
     const scores=safeJson(ev.scoreJson||'{}');const defs=scoreDefsForStudent(log);const avg=Number(ev.scoreAverage||0);const comment=String(ev.comment||'').trim();const teacherName=String(ev.teacherName||'선생님').trim();const sampleUrl=String(ev.sampleAudioUrl||'').trim();
     const items=defs.filter(d=>scores[d[0]]).map(d=>`<div class="ulim-student-score-item"><div class="ulim-student-score-label">${esc(d[1])} · ${scores[d[0]]}/5</div><div class="ulim-score-dots">${[1,2,3,4,5].map(n=>`<span class="ulim-score-dot ${n<=Number(scores[d[0]])?'on':''}"></span>`).join('')}</div></div>`).join('');
-    const sampleHtml=sampleUrl?`<div style="margin-top:12px;padding:12px;border-radius:12px;background:#eff6ff;border:1px solid #bfdbfe;"><b style="display:block;margin-bottom:8px;color:#1e3a8a;">🎧 ${esc(teacherName)} 선생님 예시 듣기</b><audio controls controlsList="nodownload" preload="none" src="${esc(sampleUrl)}" style="width:100%;"></audio></div>`:'';
+    const sampleHtml=sampleUrl?`<div style="margin-top:12px;padding:12px;border-radius:12px;background:#eff6ff;border:1px solid #bfdbfe;"><b style="display:block;margin-bottom:8px;color:#1e3a8a;">🎧 ${esc(teacherName)} 선생님 예시 듣기</b><audio controls controlsList="nodownload" preload="metadata" src="${esc(teacherSamplePlayableUrl73551101(sampleUrl))}" data-fallback-src="${esc(teacherSampleFallbackUrl73551101(sampleUrl))}" data-fallback-used="0" onerror="ulimTeacherSampleAudioFallback73551101(this)" style="width:100%;"></audio></div>`:'';
     return `<div class="ulim-student-eval-card" data-evaluator-key="${esc(ev.evaluatorKey||teacherName)}"><div class="ulim-student-eval-head"><strong>${esc(teacherName)} 선생님의 세부평가</strong>${avg?`<div class="ulim-average-badge">${avg.toFixed(1)}<small>/ 5</small></div>`:''}</div>${items?`<div class="ulim-student-score-list">${items}</div>`:''}${comment?`<div class="ulim-student-comment"><b>${esc(teacherName)} 선생님 코멘트</b><br>${esc(comment)}</div>`:''}${sampleHtml}</div>`;
   }
   function buildStudentEval(log){
@@ -21414,7 +21483,7 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 
 
 <!-- ULIM R20: vocalization Firestore-primary authority; GAS remains media/history compatibility only. -->
-<script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260912.73551100-teacher-sample-audio-r37"></script>
+<script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260912.73551101-teacher-sample-playback-r38"></script>
 <script src="./web/character-storage-primary-7.35.5.0.15.js?v=20260911.73551015-character-selection-reset-2"></script>
 <script id="ulim-vocal-primary-bind-7355041">
 window.__ULIM_VOCAL_PRIMARY_BUILD_7355041__='20260814-7355050b-r25.2-step6-next-upload';

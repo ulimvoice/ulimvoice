@@ -5,7 +5,7 @@
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_R21A_7355042__ = true;
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_7355041__ = true;
 
-  const VERSION = '2026-09-12.73551100-r37-teacher-sample-audio';
+  const VERSION = '2026-09-12.73551101-r38-teacher-sample-playback-fix';
   const DRIVE_FOLDER_FIRESTORE_PRIMARY_7355045 = true;
   const DRIVE_RESUMABLE_DIRECT_7355047 = false;
   const DRIVE_RESUMABLE_SERVER_PROXY_7355066 = true;
@@ -37,6 +37,42 @@
   function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
   function unique(values) { return Array.from(new Set((Array.isArray(values) ? values : []).map(text).filter(Boolean))); }
   function escapeHtml(value) { return String(value == null ? '' : value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function teacherSampleDriveFileId73551101(value) {
+    const raw = text(value);
+    if (!raw) return '';
+    try {
+      const parsed = new URL(raw, global.location && global.location.href || undefined);
+      const byQuery = text(parsed.searchParams.get('id'));
+      if (byQuery) return byQuery;
+      const match = parsed.pathname.match(/\/d\/([^/?#]+)/i);
+      if (match && match[1]) return text(match[1]);
+    } catch (_ignore73551101) {}
+    const fallback = raw.match(/[?&]id=([^&#]+)/i) || raw.match(/\/d\/([^/?#]+)/i);
+    try { return fallback && fallback[1] ? decodeURIComponent(fallback[1]) : ''; }
+    catch (_ignoreDecode73551101) { return fallback && fallback[1] || ''; }
+  }
+  function teacherSamplePlayableUrl73551101(value) {
+    const raw = text(value);
+    const fileId = teacherSampleDriveFileId73551101(raw);
+    return fileId ? 'https://drive.usercontent.google.com/download?id=' + encodeURIComponent(fileId) + '&export=download&confirm=t' : raw;
+  }
+  function teacherSampleFallbackUrl73551101(value) {
+    const fileId = teacherSampleDriveFileId73551101(value);
+    return fileId ? 'https://drive.google.com/uc?export=download&id=' + encodeURIComponent(fileId) : '';
+  }
+  function teacherSampleAudioHtml73551101(ev) {
+    const raw = text(ev && ev.sampleAudioUrl);
+    if (!raw) return '';
+    const primary = teacherSamplePlayableUrl73551101(raw);
+    const fallback = teacherSampleFallbackUrl73551101(raw);
+    const teacher = escapeHtml(ev && ev.teacherName || '선생님');
+    return '<div style="margin-top:12px;padding:12px;border-radius:12px;background:#eff6ff;border:1px solid #bfdbfe;">'
+      + '<b style="display:block;margin-bottom:8px;color:#1e3a8a;">🎧 ' + teacher + ' 선생님 예시 듣기</b>'
+      + '<audio controls controlsList="nodownload" preload="metadata" src="' + escapeHtml(primary) + '"'
+      + (fallback && fallback !== primary ? ' data-fallback-src="' + escapeHtml(fallback) + '"' : '')
+      + ' onerror="var f=this.dataset.fallbackSrc||\'\';if(f&&!this.dataset.fallbackUsed){this.dataset.fallbackUsed=\'1\';this.src=f;this.load();}"'
+      + ' style="width:100%;"></audio></div>';
+  }
   function kstDateKey(date) {
     const parts = new Intl.DateTimeFormat('en-CA', { timeZone:'Asia/Seoul', year:'numeric', month:'2-digit', day:'2-digit' }).formatToParts(date || new Date());
     const map = {};
@@ -540,7 +576,7 @@
     const evaluations = Array.isArray(log && log.teacherEvaluations) ? log.teacherEvaluations : [];
     const preferredId = text(preferredEvaluationId || preferredTeacherEvaluationId7355070);
     const preferredKey = text(preferredEvaluatorKey || preferredTeacherEvaluatorKey7355070);
-    const final = evaluations.filter(function(ev){ return ev && (text(ev.comment) || text(ev.scoreJson)); }).slice();
+    const final = evaluations.filter(function(ev){ return ev && (text(ev.comment) || text(ev.scoreJson) || text(ev.sampleAudioUrl)); }).slice();
     final.sort(function(a,b){
       const aPreferred = (preferredId && text(a.evaluationId) === preferredId) || (preferredKey && text(a.evaluatorKey) === preferredKey);
       const bPreferred = (preferredId && text(b.evaluationId) === preferredId) || (preferredKey && text(b.evaluatorKey) === preferredKey);
@@ -561,6 +597,7 @@
         + '<div style="font-weight:900;margin-bottom:8px;">' + escapeHtml(ev.teacherName || '선생님') + ' 선생님</div>'
         + rows
         + (text(ev.comment) ? '<div style="margin-top:12px;padding:12px;border-radius:12px;background:#fffbeb;line-height:1.65;white-space:pre-wrap;">' + escapeHtml(ev.comment) + '</div>' : '')
+        + teacherSampleAudioHtml73551101(ev)
         + '</div>';
     }).join('');
   }
