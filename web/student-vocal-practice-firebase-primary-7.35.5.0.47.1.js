@@ -5,7 +5,7 @@
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_R21A_7355042__ = true;
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_7355041__ = true;
 
-  const VERSION = '2026-08-17.735.05.0.82-r29.9.3-standard-ctc-past-owner-fix';
+  const VERSION = '2026-09-12.73551100-r37-teacher-sample-audio';
   const DRIVE_FOLDER_FIRESTORE_PRIMARY_7355045 = true;
   const DRIVE_RESUMABLE_DIRECT_7355047 = false;
   const DRIVE_RESUMABLE_SERVER_PROXY_7355066 = true;
@@ -1448,6 +1448,96 @@
     }
   }
 
+
+  async function uploadTeacherSampleChunkWithRetry73551100(payload) {
+    let lastError = null;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        return await callWithTimeout7355065('uploadPracticeTeacherSampleDriveChunk73551100', payload, 55000);
+      } catch (error) {
+        lastError = error;
+        const code = text(error && error.code).toLowerCase();
+        const message = text(error && error.message);
+        if (!/unavailable|deadline-exceeded|internal/.test(code) && !/timeout|지연|network/i.test(message)) throw error;
+        if (attempt < 2) await delay7355065(700 + attempt * 900);
+      }
+    }
+    throw lastError || new Error('강사 예시 음성 전송이 지연되었습니다.');
+  }
+
+  async function uploadTeacherSampleSession73551100(begin, session, blob, copyIndex, copyCount) {
+    const sessionUrl = text(session && session.sessionUrl);
+    const sampleId = text(begin && begin.sampleId);
+    const recordId = text(begin && begin.recordId);
+    if (!sampleId || !recordId || !/^https:\/\/www\.googleapis\.com\/upload\/drive\/v3\/files\?/i.test(sessionUrl)) {
+      throw new Error('강사 예시 음성 보관 연결을 준비하지 못했습니다.');
+    }
+    const total = Number(blob && blob.size || 0);
+    if (!total) throw new Error('강사 예시 음성 파일이 비어 있습니다.');
+    const mime = text(blob && blob.type || session.mimeType || 'audio/mp4').split(';')[0] || 'audio/mp4';
+    let offset = 0;
+    let metadata = {};
+    let safety = 0;
+    while (offset < total) {
+      safety += 1;
+      if (safety > 64) throw new Error('강사 예시 음성 전송 범위를 확인하지 못했습니다.');
+      const endExclusive = Math.min(total, offset + DRIVE_PROXY_CHUNK_BYTES_7355066);
+      const chunk = blob.slice(offset, endExclusive, mime);
+      const base64 = await blobChunkBase647355066(chunk);
+      const result = await uploadTeacherSampleChunkWithRetry73551100({
+        sampleId:sampleId, recordId:recordId, sessionUrl:sessionUrl, folderId:text(session.folderId),
+        start:offset, total:total, mimeType:mime, chunkBase64:base64
+      });
+      if (result && result.complete === true) {
+        metadata = result || {};
+        offset = total;
+        break;
+      }
+      const nextOffset = Number(result && result.nextOffset);
+      if (!Number.isFinite(nextOffset) || nextOffset <= offset || nextOffset > total) {
+        throw new Error('Google Drive가 다음 강사 예시 음성 업로드 위치를 반환하지 않았습니다.');
+      }
+      offset = nextOffset;
+    }
+    return {
+      fileId:text(metadata && metadata.fileId),
+      folderId:text(session.folderId),
+      instructorUid:text(session.instructorUid),
+      instructor:text(session.instructor),
+      webViewLink:text(metadata && metadata.webViewLink),
+      fileName:text(metadata && metadata.fileName || session.fileName)
+    };
+  }
+
+  async function uploadTeacherSampleAudio73551100(recordId, blob, durationMs) {
+    const id = text(recordId);
+    if (!id) throw new Error('연습 기록 식별값이 없습니다.');
+    if (!blob || !Number(blob.size || 0)) throw new Error('저장할 강사 예시 음성이 없습니다.');
+    if (Number(blob.size || 0) > 15 * 1024 * 1024) throw new Error('강사 예시 음성은 15MB 이하만 저장할 수 있습니다.');
+    const mimeType = text(blob.type || 'audio/mp4').split(';')[0] || 'audio/mp4';
+    const begin = await callWithTimeout7355065('beginPracticeTeacherSampleAudio73551100', {
+      recordId:id, mimeType:mimeType, fileSize:Number(blob.size || 0)
+    }, 18000);
+    const sessions = Array.isArray(begin && begin.archiveUploadSessions) ? begin.archiveUploadSessions : [];
+    if (!sessions.length) throw new Error('강사 예시 음성 Drive 업로드를 준비하지 못했습니다.');
+    const uploads = [];
+    for (let i = 0; i < sessions.length; i += 1) {
+      uploads.push(await uploadTeacherSampleSession73551100(begin, sessions[i], blob, i + 1, sessions.length));
+    }
+    return callWithTimeout7355065('finalizePracticeTeacherSampleAudio73551100', {
+      recordId:id, sampleId:text(begin.sampleId), driveUploads:uploads,
+      durationMs:Math.max(0, Number(durationMs || 0))
+    }, 30000);
+  }
+
+  async function getTeacherSampleAudio73551100(recordId) {
+    return call('getPracticeTeacherSampleAudio73551100', { recordId:text(recordId) });
+  }
+
+  async function deleteTeacherSampleAudio73551100(recordId) {
+    return call('deletePracticeTeacherSampleAudio73551100', { recordId:text(recordId) });
+  }
+
   async function getRandomPastQuestion7355063(input) {
     input = input || {};
     return call('getRandomPastQuestionFirestore7355063', { gender:text(input.gender) || 'male' });
@@ -1500,6 +1590,7 @@
     checkToday:checkToday, beginCompletion:beginCompletion, completeTrainingFromPage:completeTrainingFromPage, loadMonth:loadMonth,
     authSnapshot:authSnapshot, ensureResearchConsent:ensureResearchConsent, prewarmPronunciationEngine:prewarmPronunciationEngine, ensurePushToken:ensurePushToken, promptPushToken:promptPushToken,
     listStaffPracticeRecords:listStaffPracticeRecords, saveTeacherEvaluation:saveTeacherEvaluation, refreshTeacherComments:refreshTeacherComments,
+    uploadTeacherSampleAudio:uploadTeacherSampleAudio73551100, getTeacherSampleAudio:getTeacherSampleAudio73551100, deleteTeacherSampleAudio:deleteTeacherSampleAudio73551100,
     archivePracticeBlob:archivePracticeBlob7355054, analyzePracticeBlob:analyzePracticeBlob7355054, markPracticeLogsViewed:markPracticeLogsViewed7355054,
     getRandomPastQuestion:getRandomPastQuestion7355063, getPracticeContentAdminStatus:getPracticeContentAdminStatus7355063, refreshVocalSentenceSetAdmin:refreshVocalSentenceSetAdmin7355063,
     savePastQuestionDriveLinkAdmin:savePastQuestionDriveLinkAdmin7355063, syncPastQuestionCatalogAdmin:syncPastQuestionCatalogAdmin7355063,
