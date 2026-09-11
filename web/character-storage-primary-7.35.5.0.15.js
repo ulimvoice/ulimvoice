@@ -3,7 +3,7 @@
 if(global.__ULIM_CHARACTER_STORAGE_PRIMARY_73551015__)return;
 global.__ULIM_CHARACTER_STORAGE_PRIMARY_73551015__=true;
 
-const VERSION='2026-09-09.73551015-character-image-zoom';
+const VERSION='2026-09-11.73551015-character-selection-reset';
 const CALLABLE='characterCatalog73551015';
 const TTL=30000;
 let catalogCache=[],catalogLoadedAt=0,selectionCache=null,selectionLoadedAt=0,adminCatalog73551015=[];
@@ -26,6 +26,12 @@ function fullAdmin(){
 function hideAdminUi73551015(){const u=document.getElementById('characterAdminUploader73551015');if(u)u.style.display='none';try{closeManager73551015();}catch(_e){}}
 function genderLabel(v){return v==='male'?'남성':(v==='female'?'여성':'성별 무관');}
 function ageLabel(v){return ({child:'아동',teen:'10대','20s':'20대','30s':'30대','40s':'40대','50plus':'50대 이상',all:'나이 무관'})[v]||'나이 무관';}
+const RESET_KEY_PREFIX_73551015='ULIM_CHARACTER_SELECTION_RESET_73551015_';
+async function currentAuthUid73551015(){try{const rt=await runtime();return text(rt&&rt.auth&&rt.auth.currentUser&&rt.auth.currentUser.uid);}catch(_e){return '';}}
+function selectionResetKey73551015(uid){return RESET_KEY_PREFIX_73551015+text(uid);}
+function selectionResetMarker73551015(uid){if(!text(uid))return null;try{const raw=localStorage.getItem(selectionResetKey73551015(uid));if(!raw)return null;const v=JSON.parse(raw);return v&&text(v.characterId)?v:null;}catch(_e){return null;}}
+function setSelectionResetMarker73551015(uid,characterId){if(!text(uid)||!text(characterId))return;try{localStorage.setItem(selectionResetKey73551015(uid),JSON.stringify({characterId:text(characterId),resetAt:Date.now()}));}catch(_e){}}
+function clearSelectionResetMarker73551015(uid){if(!text(uid))return;try{localStorage.removeItem(selectionResetKey73551015(uid));}catch(_e){}}
 
 async function listCatalog(force,includeInactive){
   const now=Date.now();
@@ -37,15 +43,22 @@ async function listCatalog(force,includeInactive){
 }
 async function getSelection(force){
   const now=Date.now();
-  if(!force&&selectionCache&&now-selectionLoadedAt<TTL)return selectionCache;
+  if(!force&&selectionLoadedAt&&now-selectionLoadedAt<TTL)return selectionCache;
   const d=await call('getSelection',{});
-  selectionCache=d&&d.selection&&text(d.selection.characterId)?d.selection:null;
+  let selected=d&&d.selection&&text(d.selection.characterId)?d.selection:null;
+  const uid=await currentAuthUid73551015();
+  const marker=selectionResetMarker73551015(uid);
+  if(marker&&selected&&text(marker.characterId)===text(selected.characterId))selected=null;
+  else if(marker&&(!selected||text(marker.characterId)!==text(selected.characterId)))clearSelectionResetMarker73551015(uid);
+  selectionCache=selected;
   selectionLoadedAt=now;
   global.__ULIM_SELECTED_CHARACTER_73551015__=selectionCache;
   return selectionCache;
 }
 async function saveSelection(characterId){
   const out=await call('saveSelection',{characterId:text(characterId)});
+  const uid=await currentAuthUid73551015();
+  clearSelectionResetMarker73551015(uid);
   selectionLoadedAt=0;
   const s=await getSelection(true);
   renderSaved(s);renderPast(s);
@@ -115,7 +128,7 @@ function renderCurrent(item){
 function renderSaved(s){
   const g=document.getElementById('charSaveGrid');if(!g)return;if(!s){g.innerHTML='';return;}
   const showName=fullAdmin();
-  g.innerHTML='<div class="mini-char-card character-saved-card73551015">'+(text(s.imageUrl)?'<img class="mini-char-img" src="'+esc(s.imageUrl)+'" alt="선택 캐릭터">':'')+'<div class="mini-char-info">'+(showName?'<b>'+esc(s.name||'선택 캐릭터')+'</b><br>':'')+'<span>'+esc([genderLabel(s.gender),ageLabel(s.ageGroup)].concat(s.tags||[]).join(' · '))+'</span><br><small>기출문제에 사용할 캐릭터</small></div></div>';
+  g.innerHTML='<div class="character-saved-wrap73551015"><div class="mini-char-card character-saved-card73551015">'+(text(s.imageUrl)?'<img class="mini-char-img" src="'+esc(s.imageUrl)+'" alt="선택 캐릭터">':'')+'<div class="mini-char-info">'+(showName?'<b>'+esc(s.name||'선택 캐릭터')+'</b><br>':'')+'<span>'+esc([genderLabel(s.gender),ageLabel(s.ageGroup)].concat(s.tags||[]).join(' · '))+'</span><br><small>기출문제에 사용할 캐릭터</small></div></div><button type="button" class="character-selection-reset73551015" data-character-selection-reset73551015>↺ 저장 캐릭터 초기화</button></div>';
 }
 function renderPast(s){
   const b=document.getElementById('pastCharacterPreview73551015');if(!b)return;
@@ -397,6 +410,36 @@ async function adminUpload(){
 }
 async function importLegacy(){if(!fullAdmin())return alert('전체관리자만 가져올 수 있습니다.');if(!confirm('기존 캐릭터 이미지 20장을 Firebase Storage로 가져올까요?'))return;const st=document.getElementById('charAdminUploadStatus73551015');let ok=0,fail=0;for(const gender of ['male','female'])for(let i=1;i<=10;i++){try{if(st)st.textContent='기존 이미지 가져오기 '+(ok+fail+1)+'/20';const r=await fetch('appdata/character/'+gender+'/'+i+'.jpg',{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);const blob=await r.blob(),file=new File([blob],(gender==='male'?'남성':'여성')+' 캐릭터 '+i+'.jpg',{type:blob.type||'image/jpeg'});await uploadFiles([file],{name:(gender==='male'?'남성':'여성')+' 캐릭터 '+i,gender,ageGroup:'all',tags:['기존'],description:'기존 캐릭터 이미지'});ok++;}catch(_e){fail++;}}if(st)st.textContent='가져오기 완료 · 성공 '+ok+' / 실패 '+fail;await refreshCatalogUi(true);}
 
+async function resetSavedSelection73551015(){
+  let s=global.__ULIM_SELECTED_CHARACTER_73551015__||selectionCache;
+  if(!s)try{s=await getSelection(false);}catch(_e){}
+  if(!s||!text(s.characterId)){renderSaved(null);renderPast(null);alert('저장된 캐릭터가 없습니다.');return false;}
+  if(!confirm('저장한 캐릭터를 초기화할까요?\n기출문제에 사용할 현재 캐릭터 선택도 해제됩니다.'))return false;
+  const uid=await currentAuthUid73551015();
+  if(!uid){alert('로그인 정보를 확인하지 못했습니다.');return false;}
+  setSelectionResetMarker73551015(uid,s.characterId);
+  selectionCache=null;selectionLoadedAt=Date.now();
+  global.__ULIM_SELECTED_CHARACTER_73551015__=null;
+  renderSaved(null);renderPast(null);
+  alert('저장한 캐릭터를 초기화했습니다.');
+  return true;
+}
+function installCharacterSelectionReset73551015(){
+  if(!document.getElementById('characterSelectionResetStyle73551015')){
+    const style=document.createElement('style');
+    style.id='characterSelectionResetStyle73551015';
+    style.textContent='.character-saved-wrap73551015{display:flex;flex-direction:column;gap:8px}.character-selection-reset73551015{border:0;border-radius:10px;padding:10px 12px;background:#64748b;color:#fff;font-weight:800;cursor:pointer;box-shadow:0 2px 0 rgba(0,0,0,.16)}.character-selection-reset73551015:active{transform:translateY(1px);box-shadow:0 1px 0 rgba(0,0,0,.16)}';
+    document.head.appendChild(style);
+  }
+  if(global.__ULIM_CHARACTER_SELECTION_RESET_BOUND_73551015__)return;
+  global.__ULIM_CHARACTER_SELECTION_RESET_BOUND_73551015__=true;
+  document.addEventListener('click',function(e){
+    const btn=e.target&&e.target.closest?e.target.closest('[data-character-selection-reset73551015]'):null;
+    if(!btn)return;
+    e.preventDefault();
+    resetSavedSelection73551015().catch(function(err){alert(text(err&&err.message)||'캐릭터 초기화에 실패했습니다.');});
+  });
+}
 function ensureCharacterImageViewer73551015(){
   if(document.getElementById('characterImageViewer73551015'))return;
   if(!document.getElementById('characterImageViewerStyle73551015')){
@@ -470,9 +513,9 @@ function openCharacterImageViewer73551015(src){
 }
 
 function installAdmin(){const u=document.getElementById('characterAdminUploader73551015');if(!u)return;const allowed=fullAdmin();u.style.display=allowed?'block':'none';if(!allowed){try{closeManager73551015();}catch(_e){}return;}if(u.dataset.bound73551015==='1')return;u.dataset.bound73551015='1';const st=document.getElementById('charAdminUploadStatus73551015');if(st&&!text(st.textContent))st.textContent='여러 장 선택 시 파일명 자동분류: 001_F_10s_열혈.png';document.getElementById('charAdminUploadBtn73551015')?.addEventListener('click',adminUpload);document.getElementById('charLegacyImportBtn73551015')?.addEventListener('click',importLegacy);}
-async function install(){ensureCharacterImageViewer73551015();installAdmin();refreshCatalogUi(false).catch(()=>{});try{const s=await getSelection(false);renderSaved(s);renderPast(s);}catch(_e){renderPast(null);}}
+async function install(){installCharacterSelectionReset73551015();ensureCharacterImageViewer73551015();installAdmin();refreshCatalogUi(false).catch(()=>{});try{const s=await getSelection(false);renderSaved(s);renderPast(s);}catch(_e){renderPast(null);}}
 
-global.__ULIM_CHARACTER_API_73551015__={version:VERSION,storageMode:'firebase-storage',listCatalog,getSelection,saveSelection,linkCurrentSelectionToPracticeRecord,hydratePracticeRecords,refreshCatalogUi,rollFromUi,saveCurrentFromUi,uploadFiles,compressImage,parseBatchFilename73551015,validateBatchFiles73551015,uploadBatchByFilename73551015,openManager73551015,install};
+global.__ULIM_CHARACTER_API_73551015__={version:VERSION,storageMode:'firebase-storage',listCatalog,getSelection,saveSelection,linkCurrentSelectionToPracticeRecord,hydratePracticeRecords,refreshCatalogUi,rollFromUi,saveCurrentFromUi,uploadFiles,compressImage,parseBatchFilename73551015,validateBatchFiles73551015,uploadBatchByFilename73551015,openManager73551015,resetSavedSelection73551015,install};
 global.addEventListener('ulim-firebase-auth-ready',()=>setTimeout(install,120));
 global.addEventListener('ulim-student-home-bootstrap-ready',()=>setTimeout(install,0));
 global.addEventListener('ulim-staff-logout-start',()=>setTimeout(hideAdminUi73551015,0));
