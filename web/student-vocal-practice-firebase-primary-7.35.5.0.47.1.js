@@ -5,7 +5,7 @@
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_R21A_7355042__ = true;
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_7355041__ = true;
 
-  const VERSION = '2026-09-12.73551104-r39-teacher-sample-stable-finalize-preview';
+  const VERSION = '2026-09-12.73551105-r40b-teacher-sample-preview-center';
   const DRIVE_FOLDER_FIRESTORE_PRIMARY_7355045 = true;
   const DRIVE_RESUMABLE_DIRECT_7355047 = false;
   const DRIVE_RESUMABLE_SERVER_PROXY_7355066 = true;
@@ -73,7 +73,7 @@
       return '<div style="margin-top:12px;padding:12px;border-radius:12px;background:#eff6ff;border:1px solid #bfdbfe;">'
         + '<b style="display:block;margin-bottom:8px;color:#1e3a8a;">🎧 ' + teacher + ' 선생님 예시 듣기</b>'
         + '<iframe title="' + teacher + ' 선생님 예시 음성" src="' + escapeHtml(preview) + '" allow="autoplay" loading="lazy"'
-        + ' style="display:block;width:100%;height:82px;border:0;border-radius:10px;background:#fff;"></iframe></div>';
+        + ' style="display:block;width:100%;height:98px;border:0;border-radius:10px;background:#fff;"></iframe></div>';
     }
     const primary = teacherSamplePlayableUrl73551101(raw);
     return '<div style="margin-top:12px;padding:12px;border-radius:12px;background:#eff6ff;border:1px solid #bfdbfe;">'

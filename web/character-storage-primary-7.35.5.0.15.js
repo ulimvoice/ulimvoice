@@ -3,7 +3,7 @@
 if(global.__ULIM_CHARACTER_STORAGE_PRIMARY_73551015__)return;
 global.__ULIM_CHARACTER_STORAGE_PRIMARY_73551015__=true;
 
-const VERSION='2026-09-11.73551015-character-selection-reset';
+const VERSION='2026-09-12.73551105-character-clear-x-r40b';
 const CALLABLE='characterCatalog73551015';
 const TTL=30000;
 let catalogCache=[],catalogLoadedAt=0,selectionCache=null,selectionLoadedAt=0,adminCatalog73551015=[];
@@ -124,6 +124,7 @@ function renderCurrent(item){
   const tags=Array.isArray(item&&item.tags)?item.tags.filter(Boolean):[];
   if(n){n.textContent=text(item&&item.name)||'캐릭터';n.style.display=fullAdmin()?'block':'none';}
   if(j)j.textContent=[genderLabel(item&&item.gender),ageLabel(item&&item.ageGroup)].concat(tags.slice(0,3)).join(' · ');
+  const clearBtn=document.getElementById('charCurrentClearBtn73551105');if(clearBtn)clearBtn.style.display=item&&text(item&&item.id)?'flex':'none';
 }
 function renderSaved(s){
   const g=document.getElementById('charSaveGrid');if(!g)return;if(!s){g.innerHTML='';return;}
@@ -132,6 +133,7 @@ function renderSaved(s){
 }
 function renderPast(s){
   const b=document.getElementById('pastCharacterPreview73551015');if(!b)return;
+  const clearBtn=document.getElementById('pastCharacterClearBtn73551105');if(clearBtn)clearBtn.style.display=s&&text(s.characterId)?'flex':'none';
   if(!s){b.innerHTML='<div class="past-character-empty73551015">캐릭터 뽑기에서 캐릭터를 저장하면 기출문제 대본 위에 표시됩니다.</div>';return;}
   const showName=fullAdmin();
   b.innerHTML='<div class="past-character-card73551015">'+(text(s.imageUrl)?'<img src="'+esc(s.imageUrl)+'" alt="선택 캐릭터">':'')+'<div><span>선택 캐릭터</span>'+(showName?'<b>'+esc(s.name||'캐릭터')+'</b>':'')+'<small>'+esc([genderLabel(s.gender),ageLabel(s.ageGroup)].concat(s.tags||[]).join(' · '))+'</small></div></div>';
@@ -410,6 +412,18 @@ async function adminUpload(){
 }
 async function importLegacy(){if(!fullAdmin())return alert('전체관리자만 가져올 수 있습니다.');if(!confirm('기존 캐릭터 이미지 20장을 Firebase Storage로 가져올까요?'))return;const st=document.getElementById('charAdminUploadStatus73551015');let ok=0,fail=0;for(const gender of ['male','female'])for(let i=1;i<=10;i++){try{if(st)st.textContent='기존 이미지 가져오기 '+(ok+fail+1)+'/20';const r=await fetch('appdata/character/'+gender+'/'+i+'.jpg',{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);const blob=await r.blob(),file=new File([blob],(gender==='male'?'남성':'여성')+' 캐릭터 '+i+'.jpg',{type:blob.type||'image/jpeg'});await uploadFiles([file],{name:(gender==='male'?'남성':'여성')+' 캐릭터 '+i,gender,ageGroup:'all',tags:['기존'],description:'기존 캐릭터 이미지'});ok++;}catch(_e){fail++;}}if(st)st.textContent='가져오기 완료 · 성공 '+ok+' / 실패 '+fail;await refreshCatalogUi(true);}
 
+function clearCurrentFromUi73551105(){
+  global.currentChar=null;
+  try{currentChar=null;}catch(_e){}
+  const img=document.getElementById('charImgDisplay'),ph=document.querySelector('#characterCard .char-placeholder');
+  if(img){img.removeAttribute('src');img.style.display='none';}
+  if(ph)ph.style.display='block';
+  const n=document.getElementById('charNameDisplay');if(n){n.textContent='캐릭터 이름';n.style.display='none';}
+  const j=document.getElementById('charJobDisplay');if(j)j.textContent='직업';
+  const btn=document.getElementById('charCurrentClearBtn73551105');if(btn)btn.style.display='none';
+  return true;
+}
+
 async function resetSavedSelection73551015(){
   let s=global.__ULIM_SELECTED_CHARACTER_73551015__||selectionCache;
   if(!s)try{s=await getSelection(false);}catch(_e){}
@@ -434,6 +448,8 @@ function installCharacterSelectionReset73551015(){
   if(global.__ULIM_CHARACTER_SELECTION_RESET_BOUND_73551015__)return;
   global.__ULIM_CHARACTER_SELECTION_RESET_BOUND_73551015__=true;
   document.addEventListener('click',function(e){
+    const currentBtn=e.target&&e.target.closest?e.target.closest('[data-character-current-clear73551105]'):null;
+    if(currentBtn){e.preventDefault();e.stopPropagation();clearCurrentFromUi73551105();return;}
     const btn=e.target&&e.target.closest?e.target.closest('[data-character-selection-reset73551015]'):null;
     if(!btn)return;
     e.preventDefault();
@@ -515,7 +531,7 @@ function openCharacterImageViewer73551015(src){
 function installAdmin(){const u=document.getElementById('characterAdminUploader73551015');if(!u)return;const allowed=fullAdmin();u.style.display=allowed?'block':'none';if(!allowed){try{closeManager73551015();}catch(_e){}return;}if(u.dataset.bound73551015==='1')return;u.dataset.bound73551015='1';const st=document.getElementById('charAdminUploadStatus73551015');if(st&&!text(st.textContent))st.textContent='여러 장 선택 시 파일명 자동분류: 001_F_10s_열혈.png';document.getElementById('charAdminUploadBtn73551015')?.addEventListener('click',adminUpload);document.getElementById('charLegacyImportBtn73551015')?.addEventListener('click',importLegacy);}
 async function install(){installCharacterSelectionReset73551015();ensureCharacterImageViewer73551015();installAdmin();refreshCatalogUi(false).catch(()=>{});try{const s=await getSelection(false);renderSaved(s);renderPast(s);}catch(_e){renderPast(null);}}
 
-global.__ULIM_CHARACTER_API_73551015__={version:VERSION,storageMode:'firebase-storage',listCatalog,getSelection,saveSelection,linkCurrentSelectionToPracticeRecord,hydratePracticeRecords,refreshCatalogUi,rollFromUi,saveCurrentFromUi,uploadFiles,compressImage,parseBatchFilename73551015,validateBatchFiles73551015,uploadBatchByFilename73551015,openManager73551015,resetSavedSelection73551015,install};
+global.__ULIM_CHARACTER_API_73551015__={version:VERSION,storageMode:'firebase-storage',listCatalog,getSelection,saveSelection,linkCurrentSelectionToPracticeRecord,hydratePracticeRecords,refreshCatalogUi,rollFromUi,saveCurrentFromUi,uploadFiles,compressImage,parseBatchFilename73551015,validateBatchFiles73551015,uploadBatchByFilename73551015,openManager73551015,resetSavedSelection73551015,clearCurrentFromUi73551105,install};
 global.addEventListener('ulim-firebase-auth-ready',()=>setTimeout(install,120));
 global.addEventListener('ulim-student-home-bootstrap-ready',()=>setTimeout(install,0));
 global.addEventListener('ulim-staff-logout-start',()=>setTimeout(hideAdminUi73551015,0));
