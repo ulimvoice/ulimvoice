@@ -5,7 +5,7 @@
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_R21A_7355042__ = true;
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_7355041__ = true;
 
-  const VERSION = '2026-09-12.73551101-r38-teacher-sample-playback-fix';
+  const VERSION = '2026-09-12.73551104-r39-teacher-sample-stable-finalize-preview';
   const DRIVE_FOLDER_FIRESTORE_PRIMARY_7355045 = true;
   const DRIVE_RESUMABLE_DIRECT_7355047 = false;
   const DRIVE_RESUMABLE_SERVER_PROXY_7355066 = true;
@@ -60,18 +60,25 @@
     const fileId = teacherSampleDriveFileId73551101(value);
     return fileId ? 'https://drive.google.com/uc?export=download&id=' + encodeURIComponent(fileId) : '';
   }
+  function teacherSamplePreviewUrl73551104(value) {
+    const fileId = teacherSampleDriveFileId73551101(value);
+    return fileId ? 'https://drive.google.com/file/d/' + encodeURIComponent(fileId) + '/preview' : '';
+  }
   function teacherSampleAudioHtml73551101(ev) {
     const raw = text(ev && ev.sampleAudioUrl);
     if (!raw) return '';
-    const primary = teacherSamplePlayableUrl73551101(raw);
-    const fallback = teacherSampleFallbackUrl73551101(raw);
+    const preview = teacherSamplePreviewUrl73551104(raw);
     const teacher = escapeHtml(ev && ev.teacherName || '선생님');
+    if (preview) {
+      return '<div style="margin-top:12px;padding:12px;border-radius:12px;background:#eff6ff;border:1px solid #bfdbfe;">'
+        + '<b style="display:block;margin-bottom:8px;color:#1e3a8a;">🎧 ' + teacher + ' 선생님 예시 듣기</b>'
+        + '<iframe title="' + teacher + ' 선생님 예시 음성" src="' + escapeHtml(preview) + '" allow="autoplay" loading="lazy"'
+        + ' style="display:block;width:100%;height:82px;border:0;border-radius:10px;background:#fff;"></iframe></div>';
+    }
+    const primary = teacherSamplePlayableUrl73551101(raw);
     return '<div style="margin-top:12px;padding:12px;border-radius:12px;background:#eff6ff;border:1px solid #bfdbfe;">'
       + '<b style="display:block;margin-bottom:8px;color:#1e3a8a;">🎧 ' + teacher + ' 선생님 예시 듣기</b>'
-      + '<audio controls controlsList="nodownload" preload="metadata" src="' + escapeHtml(primary) + '"'
-      + (fallback && fallback !== primary ? ' data-fallback-src="' + escapeHtml(fallback) + '"' : '')
-      + ' onerror="var f=this.dataset.fallbackSrc||\'\';if(f&&!this.dataset.fallbackUsed){this.dataset.fallbackUsed=\'1\';this.src=f;this.load();}"'
-      + ' style="width:100%;"></audio></div>';
+      + '<audio controls controlsList="nodownload" preload="metadata" src="' + escapeHtml(primary) + '" style="width:100%;"></audio></div>';
   }
   function kstDateKey(date) {
     const parts = new Intl.DateTimeFormat('en-CA', { timeZone:'Asia/Seoul', year:'numeric', month:'2-digit', day:'2-digit' }).formatToParts(date || new Date());
@@ -1571,26 +1578,30 @@
     return null;
   }
 
-  async function finalizeTeacherSampleAudioReliable73551102(payload) {
+  async function finalizeTeacherSampleAudioReliable73551104(payload) {
     let directError = null;
-    const directSuccess = callWithTimeout7355065('finalizePracticeTeacherSampleAudio73551100', payload, 65000).then(function(result){
-      if (result && text(result.sampleAudioUrl)) return { source:'direct', value:result };
+    try {
+      const result = await call('finalizePracticeTeacherSampleAudio73551100', payload);
+      if (result && text(result.sampleAudioUrl)) {
+        return Object.assign({}, result, { finalizeSource73551104:'direct' });
+      }
       directError = new Error('강사 예시 음성 저장 결과를 확인하지 못했습니다.');
-      return new Promise(function(){});
-    }).catch(function(error){
+    } catch (error) {
       directError = error;
       if (!isTeacherSampleRetryableError73551102(error)) throw error;
-      return new Promise(function(){});
-    });
-    const observedSuccess = waitTeacherSampleFinalize73551102(payload && payload.recordId, 70000).then(function(result){
-      if (result && text(result.sampleAudioUrl)) return { source:'firestore-observed', value:result };
-      return new Promise(function(){});
-    });
-    const hardTimeout = delay7355065(72000).then(function(){ return { source:'timeout', value:null }; });
-    const winner = await Promise.race([directSuccess, observedSuccess, hardTimeout]);
-    if (winner && winner.value) return Object.assign({}, winner.value, { finalizeSource73551102:winner.source });
+    }
+
+    try {
+      const observed = await waitTeacherSampleFinalize73551102(payload && payload.recordId, 30000);
+      if (observed && text(observed.sampleAudioUrl)) {
+        return Object.assign({}, observed, { finalizeSource73551104:'firestore-reconciled' });
+      }
+    } catch (observeError) {
+      if (!isTeacherSampleRetryableError73551102(observeError)) throw observeError;
+    }
+
     if (directError && !isTeacherSampleRetryableError73551102(directError)) throw directError;
-    throw new Error('예시 음성은 Drive로 전송되었지만 저장 완료 확인이 지연되고 있습니다. 잠시 후 평가창을 다시 열어 확인해주세요.');
+    throw new Error('Drive 업로드는 완료되었지만 앱 저장 확인이 지연되고 있습니다. 잠시 후 평가창을 다시 열어 확인해주세요.');
   }
 
   async function uploadTeacherSampleAudio73551100(recordId, blob, durationMs) {
@@ -1608,7 +1619,7 @@
     for (let i = 0; i < sessions.length; i += 1) {
       uploads.push(await uploadTeacherSampleSession73551100(begin, sessions[i], blob, i + 1, sessions.length));
     }
-    return finalizeTeacherSampleAudioReliable73551102({
+    return finalizeTeacherSampleAudioReliable73551104({
       recordId:id, sampleId:text(begin.sampleId), driveUploads:uploads,
       durationMs:Math.max(0, Number(durationMs || 0))
     });
