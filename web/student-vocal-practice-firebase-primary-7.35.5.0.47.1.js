@@ -1546,6 +1546,53 @@
     };
   }
 
+  function isTeacherSampleRetryableError73551102(error) {
+    const code = text(error && error.code).toLowerCase();
+    const message = text(error && error.message);
+    return /deadline-exceeded|unavailable|internal/.test(code) || /CALL_TIMEOUT_7355065|timeout|지연|network/i.test(message);
+  }
+
+  async function getTeacherSampleAudioWithTimeout73551102(recordId, timeoutMs) {
+    return callWithTimeout7355065('getPracticeTeacherSampleAudio73551100', { recordId:text(recordId) }, Math.max(2500, Number(timeoutMs || 7000)));
+  }
+
+  async function waitTeacherSampleFinalize73551102(recordId, maxWaitMs) {
+    const deadline = Date.now() + Math.max(6000, Number(maxWaitMs || 70000));
+    await delay7355065(1200);
+    while (Date.now() < deadline) {
+      try {
+        const result = await getTeacherSampleAudioWithTimeout73551102(recordId, 7000);
+        if (result && text(result.sampleAudioUrl)) return result;
+      } catch (error) {
+        if (!isTeacherSampleRetryableError73551102(error)) throw error;
+      }
+      await delay7355065(1400);
+    }
+    return null;
+  }
+
+  async function finalizeTeacherSampleAudioReliable73551102(payload) {
+    let directError = null;
+    const directSuccess = callWithTimeout7355065('finalizePracticeTeacherSampleAudio73551100', payload, 65000).then(function(result){
+      if (result && text(result.sampleAudioUrl)) return { source:'direct', value:result };
+      directError = new Error('강사 예시 음성 저장 결과를 확인하지 못했습니다.');
+      return new Promise(function(){});
+    }).catch(function(error){
+      directError = error;
+      if (!isTeacherSampleRetryableError73551102(error)) throw error;
+      return new Promise(function(){});
+    });
+    const observedSuccess = waitTeacherSampleFinalize73551102(payload && payload.recordId, 70000).then(function(result){
+      if (result && text(result.sampleAudioUrl)) return { source:'firestore-observed', value:result };
+      return new Promise(function(){});
+    });
+    const hardTimeout = delay7355065(72000).then(function(){ return { source:'timeout', value:null }; });
+    const winner = await Promise.race([directSuccess, observedSuccess, hardTimeout]);
+    if (winner && winner.value) return Object.assign({}, winner.value, { finalizeSource73551102:winner.source });
+    if (directError && !isTeacherSampleRetryableError73551102(directError)) throw directError;
+    throw new Error('예시 음성은 Drive로 전송되었지만 저장 완료 확인이 지연되고 있습니다. 잠시 후 평가창을 다시 열어 확인해주세요.');
+  }
+
   async function uploadTeacherSampleAudio73551100(recordId, blob, durationMs) {
     const id = text(recordId);
     if (!id) throw new Error('연습 기록 식별값이 없습니다.');
@@ -1554,21 +1601,21 @@
     const mimeType = text(blob.type || 'audio/mp4').split(';')[0] || 'audio/mp4';
     const begin = await callWithTimeout7355065('beginPracticeTeacherSampleAudio73551100', {
       recordId:id, mimeType:mimeType, fileSize:Number(blob.size || 0)
-    }, 18000);
+    }, 25000);
     const sessions = Array.isArray(begin && begin.archiveUploadSessions) ? begin.archiveUploadSessions : [];
     if (!sessions.length) throw new Error('강사 예시 음성 Drive 업로드를 준비하지 못했습니다.');
     const uploads = [];
     for (let i = 0; i < sessions.length; i += 1) {
       uploads.push(await uploadTeacherSampleSession73551100(begin, sessions[i], blob, i + 1, sessions.length));
     }
-    return callWithTimeout7355065('finalizePracticeTeacherSampleAudio73551100', {
+    return finalizeTeacherSampleAudioReliable73551102({
       recordId:id, sampleId:text(begin.sampleId), driveUploads:uploads,
       durationMs:Math.max(0, Number(durationMs || 0))
-    }, 30000);
+    });
   }
 
   async function getTeacherSampleAudio73551100(recordId) {
-    return call('getPracticeTeacherSampleAudio73551100', { recordId:text(recordId) });
+    return getTeacherSampleAudioWithTimeout73551102(recordId, 12000);
   }
 
   async function deleteTeacherSampleAudio73551100(recordId) {
