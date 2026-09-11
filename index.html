@@ -2136,6 +2136,14 @@ body.ulim-attendance-modal-open73545{overflow:hidden}
     <div class="tab admin-only-tab" data-tab="tabAdmin" style="display:none;">🔐 교직원</div>
   </div>
 
+<style id="character-clear-buttons-73551105">
+.ulim-character-clear-btn73551105{position:absolute;top:10px;right:10px;width:30px;height:30px;border:0;border-radius:999px;background:rgba(15,23,42,.82);color:#fff;font-size:20px;font-weight:700;line-height:1;display:none;align-items:center;justify-content:center;cursor:pointer;z-index:9;box-shadow:0 3px 10px rgba(0,0,0,.24)}
+.ulim-character-clear-btn73551105:hover{background:rgba(15,23,42,.96)}
+.ulim-character-clear-btn73551105:focus{outline:2px solid #93c5fd;outline-offset:2px}
+.past-character-preview-wrap73551105{position:relative}
+.past-character-preview-wrap73551105 .ulim-character-clear-btn73551105{top:8px;right:8px}
+</style>
+
   <div class="tab-content active" id="tab1">
     <div class="section">
       <div class="scene-main-card">
@@ -2169,6 +2177,7 @@ body.ulim-attendance-modal-open73545{overflow:hidden}
       <div class="scene-main-card" id="characterCard">
         <div class="char-container">
             <div class="char-img-frame">
+                <button type="button" id="charCurrentClearBtn73551105" class="ulim-character-clear-btn73551105" data-character-current-clear73551105 title="선택 캐릭터 제거" aria-label="선택 캐릭터 제거">×</button>
                 <span class="char-placeholder">뽑기 버튼을 눌러주세요</span>
                 <img id="charImgDisplay" class="char-img" src="" style="display:none;" onerror="this.style.display='none'; this.previousElementSibling.style.display='block';">
             </div>
@@ -2291,7 +2300,7 @@ body.ulim-attendance-modal-open73545{overflow:hidden}
 <div class="tab-content" id="tab4">
     <div class="section">
       <div class="past-display-card">
-        <div id="pastCharacterPreview73551015" class="past-character-preview73551015"></div>
+        <div class="past-character-preview-wrap73551105"><div id="pastCharacterPreview73551015" class="past-character-preview73551015"></div><button type="button" id="pastCharacterClearBtn73551105" class="ulim-character-clear-btn73551105" data-character-selection-reset73551015 title="선택 캐릭터 제거" aria-label="선택 캐릭터 제거">×</button></div>
         <div id="pastRoleDisplay" class="past-role">버튼을 눌러 대본을 뽑아주세요</div>
         <div id="pastLinesDisplay" class="past-lines">-</div>
       </div>
@@ -17542,7 +17551,7 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
       const comment=String(ev&&ev.comment||'').trim();
       const sampleUrl=String(ev&&ev.sampleAudioUrl||'').trim();
       const saved=String(ev&& (ev.savedAt||ev.updatedAt)||'').trim();
-      return `<div style="border:1px solid #dbeafe;border-radius:14px;padding:12px;margin-top:10px;background:#f8fbff;"><div style="font-weight:900;color:#1e3a8a;margin-bottom:8px;">${esc(teacher)} 선생님 평가</div>${rows}${comment?`<div style="margin-top:10px;padding:10px;border-radius:10px;background:#fff;white-space:pre-wrap;line-height:1.6;">${esc(comment)}</div>`:''}${sampleUrl?`<div style="margin-top:10px;"><b style="font-size:12px;color:#1e3a8a;">🎧 강사 예시 음성</b><iframe title="${esc(teacher)} 선생님 예시 음성" src="${esc(teacherSamplePreviewUrl73551104(sampleUrl))}" allow="autoplay" loading="lazy" style="display:block;width:100%;height:82px;border:0;border-radius:10px;background:#fff;margin-top:6px;"></iframe></div>`:''}${saved?`<div style="margin-top:8px;font-size:12px;color:#64748b;">${esc(saved)}</div>`:''}</div>`;
+      return `<div style="border:1px solid #dbeafe;border-radius:14px;padding:12px;margin-top:10px;background:#f8fbff;"><div style="font-weight:900;color:#1e3a8a;margin-bottom:8px;">${esc(teacher)} 선생님 평가</div>${rows}${comment?`<div style="margin-top:10px;padding:10px;border-radius:10px;background:#fff;white-space:pre-wrap;line-height:1.6;">${esc(comment)}</div>`:''}${sampleUrl?`<div style="margin-top:10px;"><b style="font-size:12px;color:#1e3a8a;">🎧 강사 예시 음성</b><iframe title="${esc(teacher)} 선생님 예시 음성" src="${esc(teacherSamplePreviewUrl73551104(sampleUrl))}" allow="autoplay" loading="lazy" style="display:block;width:100%;height:98px;border:0;border-radius:10px;background:#fff;margin-top:6px;"></iframe></div>`:''}${saved?`<div style="margin-top:8px;font-size:12px;color:#64748b;">${esc(saved)}</div>`:''}</div>`;
     }).join('');
     return `<div style="margin-top:16px;padding-top:14px;border-top:2px solid #e2e8f0;"><div style="font-weight:900;color:#334155;">관리자 열람 · 다른 강사 평가 ${others.length}건</div>${cards}</div>`;
   }
@@ -17714,7 +17723,7 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
         <span id="ulimTeacherSampleStatus_${idx}" style="font-size:12px;color:#64748b;">${sampleUrl?'저장된 예시 있음':'최대 3분 · 평가 저장 전에도 녹음 가능'}</span>
       </div>
       <audio id="ulimTeacherSampleAudio_${idx}" controls controlsList="nodownload" preload="metadata" onerror="ulimTeacherSampleAudioFallback73551101(this,${idx})" style="width:100%;margin-top:10px;display:none;"></audio>
-      <iframe id="ulimTeacherSamplePreview_${idx}" title="강사 예시 음성" ${sampleUrl?`src="${esc(teacherSamplePreviewUrl73551104(sampleUrl))}"`:''} allow="autoplay" loading="lazy" style="width:100%;height:82px;border:0;border-radius:10px;background:#fff;margin-top:10px;${sampleUrl?'display:block;':'display:none;'}"></iframe>
+      <iframe id="ulimTeacherSamplePreview_${idx}" title="강사 예시 음성" ${sampleUrl?`src="${esc(teacherSamplePreviewUrl73551104(sampleUrl))}"`:''} allow="autoplay" loading="lazy" style="width:100%;height:98px;border:0;border-radius:10px;background:#fff;margin-top:10px;${sampleUrl?'display:block;':'display:none;'}"></iframe>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
         <button type="button" id="ulimTeacherSampleRecord_${idx}" class="admin-btn" onclick="ulimTeacherSampleStart73551100(${idx})">${sampleUrl?'🎙️ 다시 녹음':'🎙️ 예시 녹음'}</button>
         <button type="button" id="ulimTeacherSampleStop_${idx}" class="admin-btn" style="display:none;" onclick="ulimTeacherSampleStop73551100(${idx})">⏹ 정지</button>
@@ -18414,7 +18423,7 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
   function buildSingleTeacherEval601(log,ev){
     const scores=safeJson(ev.scoreJson||'{}');const defs=scoreDefsForStudent(log);const avg=Number(ev.scoreAverage||0);const comment=String(ev.comment||'').trim();const teacherName=String(ev.teacherName||'선생님').trim();const sampleUrl=String(ev.sampleAudioUrl||'').trim();
     const items=defs.filter(d=>scores[d[0]]).map(d=>`<div class="ulim-student-score-item"><div class="ulim-student-score-label">${esc(d[1])} · ${scores[d[0]]}/5</div><div class="ulim-score-dots">${[1,2,3,4,5].map(n=>`<span class="ulim-score-dot ${n<=Number(scores[d[0]])?'on':''}"></span>`).join('')}</div></div>`).join('');
-    const sampleHtml=sampleUrl?`<div style="margin-top:12px;padding:12px;border-radius:12px;background:#eff6ff;border:1px solid #bfdbfe;"><b style="display:block;margin-bottom:8px;color:#1e3a8a;">🎧 ${esc(teacherName)} 선생님 예시 듣기</b><iframe title="${esc(teacherName)} 선생님 예시 음성" src="${esc(teacherSamplePreviewUrl73551104(sampleUrl))}" allow="autoplay" loading="lazy" style="display:block;width:100%;height:82px;border:0;border-radius:10px;background:#fff;"></iframe></div>`:'';
+    const sampleHtml=sampleUrl?`<div style="margin-top:12px;padding:12px;border-radius:12px;background:#eff6ff;border:1px solid #bfdbfe;"><b style="display:block;margin-bottom:8px;color:#1e3a8a;">🎧 ${esc(teacherName)} 선생님 예시 듣기</b><iframe title="${esc(teacherName)} 선생님 예시 음성" src="${esc(teacherSamplePreviewUrl73551104(sampleUrl))}" allow="autoplay" loading="lazy" style="display:block;width:100%;height:98px;border:0;border-radius:10px;background:#fff;"></iframe></div>`:'';
     return `<div class="ulim-student-eval-card" data-evaluator-key="${esc(ev.evaluatorKey||teacherName)}"><div class="ulim-student-eval-head"><strong>${esc(teacherName)} 선생님의 세부평가</strong>${avg?`<div class="ulim-average-badge">${avg.toFixed(1)}<small>/ 5</small></div>`:''}</div>${items?`<div class="ulim-student-score-list">${items}</div>`:''}${comment?`<div class="ulim-student-comment"><b>${esc(teacherName)} 선생님 코멘트</b><br>${esc(comment)}</div>`:''}${sampleHtml}</div>`;
   }
   function buildStudentEval(log){
@@ -21520,8 +21529,8 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 
 
 <!-- ULIM R20: vocalization Firestore-primary authority; GAS remains media/history compatibility only. -->
-<script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260912.73551104-teacher-sample-stable-r39"></script>
-<script src="./web/character-storage-primary-7.35.5.0.15.js?v=20260911.73551015-character-selection-reset-2"></script>
+<script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260912.73551105-teacher-sample-center-r40b"></script>
+<script src="./web/character-storage-primary-7.35.5.0.15.js?v=20260912.73551105-character-clear-x-r40b"></script>
 <script id="ulim-vocal-primary-bind-7355041">
 window.__ULIM_VOCAL_PRIMARY_BUILD_7355041__='20260814-7355050b-r25.2-step6-next-upload';
 window.__ULIM_VOCAL_STEP6_NEXT_UPLOAD_BUILD_7355050B__='20260814-7355050b';
