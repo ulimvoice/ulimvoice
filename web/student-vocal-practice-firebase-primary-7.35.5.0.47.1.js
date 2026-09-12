@@ -5,7 +5,7 @@
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_R21A_7355042__ = true;
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_7355041__ = true;
 
-  const VERSION = '2026-09-12.73551105-r40b-teacher-sample-preview-center';
+  const VERSION = '2026-09-12.73551107-r41a-student-upload-timeout-past-lock';
   const DRIVE_FOLDER_FIRESTORE_PRIMARY_7355045 = true;
   const DRIVE_RESUMABLE_DIRECT_7355047 = false;
   const DRIVE_RESUMABLE_SERVER_PROXY_7355066 = true;
@@ -107,7 +107,7 @@
     const raw = text(error && error.message);
     if (/already-exists/i.test(text(error && error.code)) || /오늘은 연습을 완료했습니다/.test(raw)) return '오늘은 연습을 완료했습니다.';
     if (/failed-precondition/i.test(text(error && error.code)) && raw) return raw;
-    if (!raw || /internal|deadline-exceeded|unavailable/i.test(text(error && error.code))) return fallback || '연습정보 연결이 지연되었습니다. 잠시 후 다시 시도해주세요.';
+    if (!raw || /internal|deadline-exceeded|unavailable/i.test(text(error && error.code)) || /CALL_TIMEOUT_7355065|timeout/i.test(raw)) return fallback || '연습정보 연결이 지연되었습니다. 잠시 후 다시 시도해주세요.';
     return raw;
   }
   async function runtime() {
@@ -712,16 +712,29 @@
     let lastError = null;
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
-        return await callWithTimeout7355065('uploadStudentPracticeDriveChunk7355066', payload, 55000);
+        /*
+         * R41A:
+         * 학생 녹음 Drive chunk는 인위적인 55초 client timeout을 사용하지 않는다.
+         * iOS/Safari/모바일망에서 서버가 정상 처리 중인데 브라우저 timer가 먼저
+         * CALL_TIMEOUT_7355065를 발생시키는 false timeout을 방지한다.
+         */
+        return await call('uploadStudentPracticeDriveChunk7355066', payload);
       } catch (error) {
         lastError = error;
         const code = text(error && error.code).toLowerCase();
         const message = text(error && error.message);
-        if (!/unavailable|deadline-exceeded|internal/.test(code) && !/timeout|지연|network/i.test(message)) throw error;
-        if (attempt < 2) await delay7355065(700 + attempt * 900);
+        const retryable = /unavailable|deadline-exceeded|internal|resource-exhausted/.test(code)
+          || /CALL_TIMEOUT_7355065|timeout|지연|network|fetch/i.test(message);
+        if (!retryable) throw error;
+        if (attempt < 2) await delay7355065(1200 + attempt * 1600);
       }
     }
-    throw lastError || new Error('Google Drive 파일 전송이 지연되었습니다.');
+    const finalMessage = text(lastError && lastError.message);
+    if (/CALL_TIMEOUT_7355065|timeout/i.test(finalMessage)) {
+      throw new Error('녹음 파일 전송이 지연되고 있습니다. 네트워크 연결을 확인한 뒤 다시 시도해주세요.');
+    }
+    if (lastError) throw lastError;
+    throw new Error('녹음 파일 전송이 지연되고 있습니다. 네트워크 연결을 확인한 뒤 다시 시도해주세요.');
   }
 
   async function uploadOneDriveSession7355051(session, blob, copyIndex, copyCount, recordId) {
