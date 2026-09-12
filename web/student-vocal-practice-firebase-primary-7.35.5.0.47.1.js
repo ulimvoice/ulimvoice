@@ -5,7 +5,7 @@
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_R21A_7355042__ = true;
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_7355041__ = true;
 
-  const VERSION = '2026-09-12.73551107-r41a-student-upload-timeout-past-lock';
+  const VERSION = '2026-09-12.73551110-r44-past-upload-start-progress';
   const DRIVE_FOLDER_FIRESTORE_PRIMARY_7355045 = true;
   const DRIVE_RESUMABLE_DIRECT_7355047 = false;
   const DRIVE_RESUMABLE_SERVER_PROXY_7355066 = true;
@@ -759,7 +759,7 @@
         if (typeof showLoading === 'function') {
           const copyText = copyCount > 1 ? ' · 보관 ' + copyIndex + '/' + copyCount : '';
           const percent = Math.max(1, Math.min(99, Math.round((offset / total) * 100)));
-          showVocalLoading7355068('녹음 파일을 Drive로 보내는 중입니다... ' + percent + '%' + copyText, 70000);
+          showVocalLoading7355068('녹음 파일을 Drive로 보내는 중입니다... ' + percent + '%' + copyText, 600000);
         }
       } catch (_ignore) {}
       const result = await uploadDriveChunkWithRetry7355066({
@@ -1435,7 +1435,8 @@
     const suppliedAnalysis = input.analysis && typeof input.analysis === 'object' ? input.analysis : null;
 
     try {
-      begin = await callWithTimeout7355065('beginStudentPracticeArchive7355054', common, 18000);
+      showVocalLoading7355068('녹음 파일을 Drive로 보내는 중입니다... 1%', 600000);
+      begin = await call('beginStudentPracticeArchive7355054', common);
       upload = await uploadVocalDriveResumable7355047(begin, blob);
 
       // Drive 전송 완료 이후에는 UI를 절대 blocking하지 않습니다.
