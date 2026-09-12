@@ -3,7 +3,7 @@
 if(global.__ULIM_CHARACTER_STORAGE_PRIMARY_73551015__)return;
 global.__ULIM_CHARACTER_STORAGE_PRIMARY_73551015__=true;
 
-const VERSION='2026-09-12.73551105-character-clear-x-r40b';
+const VERSION='2026-09-12.73551108-teacher-eval-character-image-zoom';
 const CALLABLE='characterCatalog73551015';
 const TTL=30000;
 let catalogCache=[],catalogLoadedAt=0,selectionCache=null,selectionLoadedAt=0,adminCatalog73551015=[];
@@ -462,7 +462,7 @@ function ensureCharacterImageViewer73551015(){
     const style=document.createElement('style');
     style.id='characterImageViewerStyle73551015';
     style.textContent=`
-#charImgDisplay,.character-saved-card73551015 img,.past-character-card73551015 img{cursor:zoom-in}
+#charImgDisplay,.character-saved-card73551015 img,.past-character-card73551015 img,.ulim-practice-character-card73551015 img{cursor:zoom-in}
 .character-image-viewer73551015{position:fixed;inset:0;z-index:130000;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(15,23,42,.84);box-sizing:border-box}
 .character-image-viewer73551015.open{display:flex}
 .character-image-viewer73551015 img{display:block;max-width:min(94vw,1200px);max-height:90vh;width:auto;height:auto;object-fit:contain;border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.42);background:#fff}
@@ -508,7 +508,7 @@ function ensureCharacterImageViewer73551015(){
   if(!global.__ULIM_CHARACTER_IMAGE_VIEWER_CLICK_73551015__){
     global.__ULIM_CHARACTER_IMAGE_VIEWER_CLICK_73551015__=true;
     document.addEventListener('click',function(e){
-      const target=e.target&&e.target.closest?e.target.closest('#charImgDisplay,.character-saved-card73551015 img,.past-character-card73551015 img'):null;
+      const target=e.target&&e.target.closest?e.target.closest('#charImgDisplay,.character-saved-card73551015 img,.past-character-card73551015 img,.ulim-practice-character-card73551015 img'):null;
       if(!target)return;
       const src=text(target.currentSrc||target.src);
       if(!src)return;
