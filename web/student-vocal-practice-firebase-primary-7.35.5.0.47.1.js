@@ -5,7 +5,7 @@
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_R21A_7355042__ = true;
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_7355041__ = true;
 
-  const VERSION = '2026-09-12.73551110-r44-past-upload-start-progress';
+  const VERSION = '2026-09-13.73551122-r48b-storage-direct-cutover';
   const DRIVE_FOLDER_FIRESTORE_PRIMARY_7355045 = true;
   const DRIVE_RESUMABLE_DIRECT_7355047 = false;
   const DRIVE_RESUMABLE_SERVER_PROXY_7355066 = true;
@@ -279,7 +279,7 @@
   async function beginCompletion(train, blob) {
     const mimeType = text(blob && blob.type || 'audio/mp4').split(';')[0] || 'audio/mp4';
     const fileSize = Number(blob && blob.size || 0);
-    return call('beginStudentVocalPracticeCompletion7355041', { date:text(train && train.firebasePracticeDate) || kstDateKey(), sentenceId:text(train && train.id), sentenceSetId:text(train && train.sentenceSetId), mimeType:mimeType, fileSize:fileSize });
+    return call('beginStudentVocalPracticeCompletion7355041', { date:text(train && train.firebasePracticeDate) || kstDateKey(), sentenceId:text(train && train.id), sentenceSetId:text(train && train.sentenceSetId), mimeType:mimeType, fileSize:fileSize, storageTransportVersion:STORAGE_TRANSPORT_VERSION_73551122 });
   }
 
   function consentModal() {
@@ -815,6 +815,72 @@
     if (!uploads.length) throw new Error(errors[0] && errors[0].message || '녹음 파일을 보관하지 못했습니다.');
     return { ok:true, status:errors.length ? 'partial_success' : 'uploaded', driveUploads:uploads, uploadErrors:errors };
   }
+
+  const STORAGE_TRANSPORT_VERSION_73551122 = '73551122';
+  const PRACTICE_STORAGE_BUCKET_URL_73551122 = 'gs://ulim-7b09a-practice-staging-an3';
+  let practiceStorageSdkPromise73551122 = null;
+
+  async function practiceStorageRuntime73551122() {
+    const rt = await runtime();
+    if (!practiceStorageSdkPromise73551122) {
+      practiceStorageSdkPromise73551122 = import('https://www.gstatic.com/firebasejs/11.1.0/firebase-storage.js');
+    }
+    const sdk = await practiceStorageSdkPromise73551122;
+    const storage = sdk.getStorage(rt.app, PRACTICE_STORAGE_BUCKET_URL_73551122);
+    return { rt:rt, sdk:sdk, storage:storage };
+  }
+  async function uploadPracticeStorage73551122(begin, blob, label) {
+    const info = begin && begin.storageUpload && typeof begin.storageUpload === 'object' ? begin.storageUpload : null;
+    if (!info || !text(info.uploadId) || !text(info.objectPath) || !text(info.recordId)) {
+      throw new Error('Firebase Storage 업로드 정보를 준비하지 못했습니다.');
+    }
+    const runtimeStorage = await practiceStorageRuntime73551122();
+    const objectRef = runtimeStorage.sdk.ref(runtimeStorage.storage, text(info.objectPath));
+    const displayLabel = text(label) || '녹음 파일';
+    const task = runtimeStorage.sdk.uploadBytesResumable(objectRef, blob, {
+      contentType:text(info.mimeType || blob.type || 'audio/mp4').split(';')[0] || 'audio/mp4',
+      customMetadata:{
+        uploadId:text(info.uploadId),
+        recordId:text(info.recordId)
+      }
+    });
+    await new Promise(function(resolve,reject){
+      task.on('state_changed',function(snapshot){
+        const total = Math.max(1, Number(snapshot.totalBytes || blob.size || 1));
+        const pct = Math.max(1, Math.min(100, Math.round(Number(snapshot.bytesTransferred || 0) * 100 / total)));
+        try { showVocalLoading7355068(displayLabel + ' 업로드 중... ' + pct + '%', 240000); } catch (_ignore73551122) {}
+      },reject,resolve);
+    });
+    const confirmed = await callWithTimeout7355065('confirmPracticeStorageUpload73551120',{
+      uploadId:text(info.uploadId),
+      recordId:text(info.recordId)
+    },30000);
+    return {
+      ok:true,
+      status:'storage_ready',
+      storageUploadId:text(info.uploadId),
+      storageObjectPath:text(info.objectPath),
+      storageState:text(confirmed && confirmed.state) || 'ready',
+      storageTransportVersion:STORAGE_TRANSPORT_VERSION_73551122
+    };
+  }
+  async function uploadPracticeStorageOrDrive73551122(begin, blob, label) {
+    if (begin && begin.storageUpload && text(begin.storageUpload.uploadId)) {
+      return uploadPracticeStorage73551122(begin,blob,label);
+    }
+    return uploadVocalDriveResumable7355047(begin,blob);
+  }
+  async function resolvePendingPracticeAudio73551122(log) {
+    if (!log || text(log.fileUrl || log.audioUrl) || !text(log.storageUploadId)) return log;
+    try {
+      const resolved = await callWithTimeout7355065('resolvePracticeAudioPlayback73551122',{
+        recordId:text(log.recordId),
+        storageUploadId:text(log.storageUploadId)
+      },12000);
+      if (resolved && text(resolved.url)) log.fileUrl = text(resolved.url);
+    } catch (_ignore73551122) {}
+    return log;
+  }
   function queueIntelligenceRetry7355042(payload) {
     try { localStorage.setItem('ulimPracticeIntelligenceRetry7355042', JSON.stringify({payload:payload,savedAt:Date.now()})); } catch (_ignore) {}
     setTimeout(function(){
@@ -956,7 +1022,7 @@
     let uploadResult;
     try {
       showVocalLoading7355068('녹음 파일을 보관하는 중입니다...', 70000);
-      uploadResult = await uploadVocalDriveResumable7355047(begin, lastRecordedBlob);
+      uploadResult = await uploadPracticeStorageOrDrive73551122(begin, lastRecordedBlob, '발성훈련 녹음');
     } catch (_uploadError) {
       hardHideVocalLoading7355068();
       const uploadMessage = text(_uploadError && _uploadError.message) || '네트워크 상태를 확인한 뒤 다시 시도해주세요.';
@@ -1012,6 +1078,7 @@
       aiComment:'',
       analysisText:'',
       driveUploads:uploadResult.driveUploads || [],
+        storageUploadId:text(uploadResult.storageUploadId), storageObjectPath:text(uploadResult.storageObjectPath), storageTransportVersion:STORAGE_TRANSPORT_VERSION_73551122,
       mimeType:mime,
       fileSize:lastRecordedBlob.size || 0
     };
@@ -1128,6 +1195,8 @@
     try { firebaseData = await call('listStudentPracticeLogs7355041', { year:Number(year), month:month }); }
     catch (error) { throw new Error(callableError(error, '발성훈련 기록을 불러오지 못했습니다.')); }
     const firebaseLogs = Array.isArray(firebaseData.logs) ? firebaseData.logs : [];
+    const pendingStorageLogs=firebaseLogs.filter(function(log){return !text(log.fileUrl||log.audioUrl)&&text(log.storageUploadId);}).slice(0,20);
+    if(pendingStorageLogs.length) await Promise.all(pendingStorageLogs.map(resolvePendingPracticeAudio73551122));
     const legacyLogs = await fetchLegacyVocalMonth73550936(Number(year), Number(monthIndex));
     const merged = new Map();
     legacyLogs.forEach(function (log) {
@@ -1428,16 +1497,16 @@
       scriptSource:text(input.scriptSource || input.source),
       scriptFileId:text(input.scriptFileId), scriptFileName:text(input.scriptFileName),
       gender:text(input.gender), analysisMode:text(input.analysisMode),
-      mimeType:mimeType, fileSize:Number(blob.size || 0)
+      mimeType:mimeType, fileSize:Number(blob.size || 0), storageTransportVersion:STORAGE_TRANSPORT_VERSION_73551122
     };
 
     let begin=null, upload=null, finalize=null, finalizePayload=null;
     const suppliedAnalysis = input.analysis && typeof input.analysis === 'object' ? input.analysis : null;
 
     try {
-      showVocalLoading7355068('녹음 파일을 Drive로 보내는 중입니다... 1%', 600000);
+      showVocalLoading7355068('녹음 파일 업로드 중... 1%', 240000);
       begin = await call('beginStudentPracticeArchive7355054', common);
-      upload = await uploadVocalDriveResumable7355047(begin, blob);
+      upload = await uploadPracticeStorageOrDrive73551122(begin, blob, '녹음 파일');
 
       // Drive 전송 완료 이후에는 UI를 절대 blocking하지 않습니다.
       hardHideVocalLoading7355068();
@@ -1445,6 +1514,7 @@
       finalizePayload = Object.assign({}, common, {
         recordId:text(begin.recordId),
         driveUploads:upload.driveUploads || [],
+        storageUploadId:text(upload.storageUploadId), storageObjectPath:text(upload.storageObjectPath), storageTransportVersion:STORAGE_TRANSPORT_VERSION_73551122,
         recognizedText:text(input.recognizedText || input.localWhisperText || (suppliedAnalysis && suppliedAnalysis.recognizedText)),
         localWhisperText:text(input.localWhisperText || input.recognizedText || (suppliedAnalysis && suppliedAnalysis.recognizedText)),
         aiSource:text(input.aiSource || (suppliedAnalysis && (suppliedAnalysis.analysisProvider || suppliedAnalysis.model))),
@@ -1625,8 +1695,19 @@
     if (Number(blob.size || 0) > 15 * 1024 * 1024) throw new Error('강사 예시 음성은 15MB 이하만 저장할 수 있습니다.');
     const mimeType = text(blob.type || 'audio/mp4').split(';')[0] || 'audio/mp4';
     const begin = await callWithTimeout7355065('beginPracticeTeacherSampleAudio73551100', {
-      recordId:id, mimeType:mimeType, fileSize:Number(blob.size || 0)
+      recordId:id, mimeType:mimeType, fileSize:Number(blob.size || 0),
+      storageTransportVersion:STORAGE_TRANSPORT_VERSION_73551122
     }, 25000);
+    if (begin && begin.storageUpload && text(begin.storageUpload.uploadId)) {
+      const upload = await uploadPracticeStorage73551122(begin,blob,'강사 예시 음성');
+      return callWithTimeout7355065('finalizePracticeTeacherSampleAudio73551100',{
+        recordId:id,sampleId:text(begin.sampleId),
+        storageUploadId:text(upload.storageUploadId),
+        storageObjectPath:text(upload.storageObjectPath),
+        storageTransportVersion:STORAGE_TRANSPORT_VERSION_73551122,
+        durationMs:Math.max(0,Number(durationMs||0))
+      },30000);
+    }
     const sessions = Array.isArray(begin && begin.archiveUploadSessions) ? begin.archiveUploadSessions : [];
     if (!sessions.length) throw new Error('강사 예시 음성 Drive 업로드를 준비하지 못했습니다.');
     const uploads = [];
