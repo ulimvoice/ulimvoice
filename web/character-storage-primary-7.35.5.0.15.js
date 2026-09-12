@@ -3,7 +3,7 @@
 if(global.__ULIM_CHARACTER_STORAGE_PRIMARY_73551015__)return;
 global.__ULIM_CHARACTER_STORAGE_PRIMARY_73551015__=true;
 
-const VERSION='2026-09-12.73551108-teacher-eval-character-image-zoom';
+const VERSION='2026-09-12.73551110-character-viewer-top-r44';
 const CALLABLE='characterCatalog73551015';
 const TTL=30000;
 let catalogCache=[],catalogLoadedAt=0,selectionCache=null,selectionLoadedAt=0,adminCatalog73551015=[];
@@ -463,7 +463,7 @@ function ensureCharacterImageViewer73551015(){
     style.id='characterImageViewerStyle73551015';
     style.textContent=`
 #charImgDisplay,.character-saved-card73551015 img,.past-character-card73551015 img,.ulim-practice-character-card73551015 img{cursor:zoom-in}
-.character-image-viewer73551015{position:fixed;inset:0;z-index:130000;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(15,23,42,.84);box-sizing:border-box}
+.character-image-viewer73551015{position:fixed;inset:0;z-index:2147483647;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(15,23,42,.84);box-sizing:border-box}
 .character-image-viewer73551015.open{display:flex}
 .character-image-viewer73551015 img{display:block;max-width:min(94vw,1200px);max-height:90vh;width:auto;height:auto;object-fit:contain;border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.42);background:#fff}
 .character-image-viewer-close73551015{position:fixed;top:18px;right:18px;width:44px;height:44px;border:0;border-radius:999px;background:rgba(255,255,255,.94);color:#111827;font-size:26px;line-height:1;font-weight:800;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.24)}
