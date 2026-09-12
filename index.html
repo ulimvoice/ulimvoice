@@ -4985,6 +4985,45 @@ function getPastQuestionUploadMeta_() {
         duration: pastLastRecordingMeta && pastLastRecordingMeta.duration ? pastLastRecordingMeta.duration : 0
     };
 }
+let pastQuestionUploadLockDepth73551107 = 0;
+function pastQuestionUploadBeforeUnload73551107(event) {
+    if (pastQuestionUploadLockDepth73551107 <= 0) return;
+    event.preventDefault();
+    event.returnValue = '기출문제 업로드가 진행 중입니다. 완료될 때까지 화면을 닫지 마세요.';
+    return event.returnValue;
+}
+function beginPastQuestionUploadLock73551107() {
+    pastQuestionUploadLockDepth73551107 += 1;
+    if (pastQuestionUploadLockDepth73551107 > 1) return;
+    window.__ULIM_PAST_QUESTION_UPLOAD_LOCK_73551107__ = true;
+    window.addEventListener('beforeunload', pastQuestionUploadBeforeUnload73551107);
+    try { document.documentElement.dataset.ulimPastQuestionUploading73551107 = '1'; } catch (_e) {}
+    let overlay = document.getElementById('ulimPastQuestionUploadLock73551107');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'ulimPastQuestionUploadLock73551107';
+        overlay.setAttribute('role','status');
+        overlay.setAttribute('aria-live','polite');
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483646;background:rgba(15,23,42,.68);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;touch-action:none;overscroll-behavior:contain;';
+        overlay.innerHTML = '<div style="width:min(420px,92vw);background:#fff;border-radius:22px;padding:28px 24px;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.34);">'
+          + '<div style="font-size:42px;line-height:1;margin-bottom:14px;">⏳</div>'
+          + '<div style="font-size:20px;font-weight:900;color:#0f172a;margin-bottom:10px;">기출문제 업로드 중...</div>'
+          + '<div style="font-size:14px;line-height:1.7;color:#475569;">업로드가 완료될 때까지 화면을 닫거나 다른 탭으로 이동하지 마세요.</div>'
+          + '</div>';
+        document.body.appendChild(overlay);
+    }
+    overlay.style.display = 'flex';
+}
+function endPastQuestionUploadLock73551107() {
+    pastQuestionUploadLockDepth73551107 = Math.max(0, pastQuestionUploadLockDepth73551107 - 1);
+    if (pastQuestionUploadLockDepth73551107 > 0) return;
+    window.__ULIM_PAST_QUESTION_UPLOAD_LOCK_73551107__ = false;
+    window.removeEventListener('beforeunload', pastQuestionUploadBeforeUnload73551107);
+    try { delete document.documentElement.dataset.ulimPastQuestionUploading73551107; } catch (_e) {}
+    const overlay = document.getElementById('ulimPastQuestionUploadLock73551107');
+    if (overlay) overlay.remove();
+}
+
 async function uploadPastQuestionRecord() {
     const btn=document.getElementById('pastUploadBtn'),status=document.getElementById('pastUploadStatus');
     if(!pastLastRecordedBlob)return alert('기출문제 녹음을 완료한 뒤 업로드할 수 있습니다.');
@@ -4998,7 +5037,10 @@ async function uploadPastQuestionRecord() {
     }
     const practice=window.__ULIM_PRACTICE_INTELLIGENCE_API_7355042__;
     if(!practice||typeof practice.archivePracticeBlob!=='function')return alert('기출문제 저장 기능을 준비하지 못했습니다. 페이지를 다시 열어주세요.');
+    let pastUploadLock73551107=false;
     try{
+        beginPastQuestionUploadLock73551107();
+        pastUploadLock73551107=true;
         if(btn){btn.disabled=true;btn.textContent='업로드 중...';}if(status)status.textContent='기출 녹음 파일을 저장하는 중입니다.';
         const custom=meta.sourceMode==='custom'||meta.gender==='custom';
         const roleText=custom?'직접작성 대본':(meta.fileName||meta.role||'기출문제');
@@ -5029,6 +5071,7 @@ async function uploadPastQuestionRecord() {
         try{if(typeof window.ulimInvalidatePracticeCache609==='function')window.ulimInvalidatePracticeCache609();}catch(_e){}
         return result;
     }catch(error){if(status)status.textContent='저장에 실패했습니다. 다시 시도해주세요.';if(btn){btn.disabled=false;btn.textContent='업로드';}alert(error&&error.message?error.message:'기출 녹음 저장에 실패했습니다.');return null;}
+    finally{if(pastUploadLock73551107)endPastQuestionUploadLock73551107();}
 }
 
 
@@ -21529,7 +21572,7 @@ window.__ULIM_STAFF_LOGIN_FAST_BUILD__ = '2026-07-31.733.00';
 
 
 <!-- ULIM R20: vocalization Firestore-primary authority; GAS remains media/history compatibility only. -->
-<script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260912.73551105-teacher-sample-center-r40b"></script>
+<script src="./web/student-vocal-practice-firebase-primary-7.35.5.0.47.1.js?v=20260912.73551107-student-upload-past-lock-r41a"></script>
 <script src="./web/character-storage-primary-7.35.5.0.15.js?v=20260912.73551105-character-clear-x-r40b"></script>
 <script id="ulim-vocal-primary-bind-7355041">
 window.__ULIM_VOCAL_PRIMARY_BUILD_7355041__='20260814-7355050b-r25.2-step6-next-upload';
