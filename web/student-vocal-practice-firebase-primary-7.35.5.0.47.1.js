@@ -5,7 +5,7 @@
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_R21A_7355042__ = true;
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_7355041__ = true;
 
-  const VERSION = '2026-09-13.73551123-r48b1-staff-link-strict-storage';
+  const VERSION = '2026-09-13.73551125-r48b3-teacher-sample-native-audio';
   const DRIVE_FOLDER_FIRESTORE_PRIMARY_7355045 = true;
   const DRIVE_RESUMABLE_DIRECT_7355047 = false;
   const DRIVE_RESUMABLE_SERVER_PROXY_7355066 = true;
@@ -64,21 +64,21 @@
     const fileId = teacherSampleDriveFileId73551101(value);
     return fileId ? 'https://drive.google.com/file/d/' + encodeURIComponent(fileId) + '/preview' : '';
   }
+  const TEACHER_SAMPLE_NATIVE_AUDIO_UI_73551125 = true;
   function teacherSampleAudioHtml73551101(ev) {
     const raw = text(ev && ev.sampleAudioUrl);
     if (!raw) return '';
-    const preview = teacherSamplePreviewUrl73551104(raw);
     const teacher = escapeHtml(ev && ev.teacherName || '선생님');
-    if (preview) {
-      return '<div style="margin-top:12px;padding:12px;border-radius:12px;background:#eff6ff;border:1px solid #bfdbfe;">'
-        + '<b style="display:block;margin-bottom:8px;color:#1e3a8a;">🎧 ' + teacher + ' 선생님 예시 듣기</b>'
-        + '<iframe title="' + teacher + ' 선생님 예시 음성" src="' + escapeHtml(preview) + '" allow="autoplay" loading="lazy"'
-        + ' style="display:block;width:100%;height:98px;border:0;border-radius:10px;background:#fff;"></iframe></div>';
-    }
     const primary = teacherSamplePlayableUrl73551101(raw);
+    const fallback = teacherSampleFallbackUrl73551101(raw);
+    const sources = fallback && fallback !== primary
+      ? '<source src="' + escapeHtml(primary) + '"><source src="' + escapeHtml(fallback) + '">'
+      : '<source src="' + escapeHtml(primary) + '">';
     return '<div style="margin-top:12px;padding:12px;border-radius:12px;background:#eff6ff;border:1px solid #bfdbfe;">'
       + '<b style="display:block;margin-bottom:8px;color:#1e3a8a;">🎧 ' + teacher + ' 선생님 예시 듣기</b>'
-      + '<audio controls controlsList="nodownload" preload="metadata" src="' + escapeHtml(primary) + '" style="width:100%;"></audio></div>';
+      + '<audio controls controlsList="nodownload" preload="metadata" style="display:block;width:100%;height:40px;max-width:100%;">'
+      + sources
+      + '</audio></div>';
   }
   function kstDateKey(date) {
     const parts = new Intl.DateTimeFormat('en-CA', { timeZone:'Asia/Seoul', year:'numeric', month:'2-digit', day:'2-digit' }).formatToParts(date || new Date());
