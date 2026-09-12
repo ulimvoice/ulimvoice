@@ -5,7 +5,7 @@
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_R21A_7355042__ = true;
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_7355041__ = true;
 
-  const VERSION = '2026-09-13.73551125-r48b3-teacher-sample-native-audio';
+  const VERSION = '2026-09-13.73551126-r48b3a-teacher-sample-audio-vertical-center';
   const DRIVE_FOLDER_FIRESTORE_PRIMARY_7355045 = true;
   const DRIVE_RESUMABLE_DIRECT_7355047 = false;
   const DRIVE_RESUMABLE_SERVER_PROXY_7355066 = true;
@@ -65,6 +65,7 @@
     return fileId ? 'https://drive.google.com/file/d/' + encodeURIComponent(fileId) + '/preview' : '';
   }
   const TEACHER_SAMPLE_NATIVE_AUDIO_UI_73551125 = true;
+  const TEACHER_SAMPLE_AUDIO_VERTICAL_CENTER_73551126 = true;
   function teacherSampleAudioHtml73551101(ev) {
     const raw = text(ev && ev.sampleAudioUrl);
     if (!raw) return '';
@@ -76,7 +77,7 @@
       : '<source src="' + escapeHtml(primary) + '">';
     return '<div style="margin-top:12px;padding:12px;border-radius:12px;background:#eff6ff;border:1px solid #bfdbfe;">'
       + '<b style="display:block;margin-bottom:8px;color:#1e3a8a;">🎧 ' + teacher + ' 선생님 예시 듣기</b>'
-      + '<audio controls controlsList="nodownload" preload="metadata" style="display:block;width:100%;height:40px;max-width:100%;">'
+      + '<audio controls controlsList="nodownload" preload="metadata" style="display:block;width:100%;height:54px;min-height:54px;max-width:100%;">'
       + sources
       + '</audio></div>';
   }
