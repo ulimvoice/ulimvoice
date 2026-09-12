@@ -5,7 +5,7 @@
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_R21A_7355042__ = true;
   global.__ULIM_STUDENT_VOCAL_FIREBASE_PRIMARY_7355041__ = true;
 
-  const VERSION = '2026-09-13.73551122-r48b-storage-direct-cutover';
+  const VERSION = '2026-09-13.73551123-r48b1-staff-link-strict-storage';
   const DRIVE_FOLDER_FIRESTORE_PRIMARY_7355045 = true;
   const DRIVE_RESUMABLE_DIRECT_7355047 = false;
   const DRIVE_RESUMABLE_SERVER_PROXY_7355066 = true;
@@ -864,11 +864,12 @@
       storageTransportVersion:STORAGE_TRANSPORT_VERSION_73551122
     };
   }
+  const STORAGE_DIRECT_STRICT_73551123 = true;
   async function uploadPracticeStorageOrDrive73551122(begin, blob, label) {
-    if (begin && begin.storageUpload && text(begin.storageUpload.uploadId)) {
-      return uploadPracticeStorage73551122(begin,blob,label);
+    if (!(begin && begin.storageUpload && text(begin.storageUpload.uploadId))) {
+      throw new Error('Firebase Storage 업로드 정보를 준비하지 못했습니다. 화면을 새로고침한 뒤 다시 시도해주세요.');
     }
-    return uploadVocalDriveResumable7355047(begin,blob);
+    return uploadPracticeStorage73551122(begin,blob,label);
   }
   async function resolvePendingPracticeAudio73551122(log) {
     if (!log || text(log.fileUrl || log.audioUrl) || !text(log.storageUploadId)) return log;
@@ -1365,12 +1366,37 @@
     }).catch(function(){});
   }
 
+  async function resolveStaffPracticeAudio73551123(row) {
+    if (!row || text(row.fileUrl || row.audioUrl || row.uploadUrl) || !text(row.recordId)) return row;
+    try {
+      const resolved=await callWithTimeout7355065('resolvePracticeAudioPlayback73551122',{
+        recordId:text(row.recordId),
+        storageUploadId:text(row.storageUploadId)
+      },12000);
+      if(resolved && text(resolved.url)){
+        row.fileUrl = text(resolved.url);
+        row.audioUrl = text(resolved.url);
+        row.uploadUrl = text(resolved.url);
+        row.playbackSource73551123 = text(resolved.source);
+        row.playbackTemporary73551123 = resolved.temporary === true;
+      }
+    } catch(_ignore73551123) {}
+    return row;
+  }
   async function listStaffPracticeRecords(range, instructor, keyword) {
     range = range || {};
-    return call('listPracticeRecordsForStaff7355042', {
+    const result=await call('listPracticeRecordsForStaff7355042', {
       date:text(range.date || range.dateFrom), dateFrom:text(range.dateFrom), dateTo:text(range.dateTo), scope:text(range.scope || 'day'),
       instructor:text(instructor), keyword:text(keyword)
     });
+    const rows=Array.isArray(result && result.records) ? result.records
+      : Array.isArray(result && result.logs) ? result.logs
+      : Array.isArray(result && result.items) ? result.items : [];
+    const pending=rows.filter(function(row){
+      return row && text(row.recordId) && !text(row.fileUrl || row.audioUrl || row.uploadUrl);
+    }).slice(0,50);
+    if(pending.length) await Promise.all(pending.map(resolveStaffPracticeAudio73551123));
+    return result;
   }
   async function saveTeacherEvaluation(input) {
     input = input || {};
@@ -1708,16 +1734,7 @@
         durationMs:Math.max(0,Number(durationMs||0))
       },30000);
     }
-    const sessions = Array.isArray(begin && begin.archiveUploadSessions) ? begin.archiveUploadSessions : [];
-    if (!sessions.length) throw new Error('강사 예시 음성 Drive 업로드를 준비하지 못했습니다.');
-    const uploads = [];
-    for (let i = 0; i < sessions.length; i += 1) {
-      uploads.push(await uploadTeacherSampleSession73551100(begin, sessions[i], blob, i + 1, sessions.length));
-    }
-    return finalizeTeacherSampleAudioReliable73551104({
-      recordId:id, sampleId:text(begin.sampleId), driveUploads:uploads,
-      durationMs:Math.max(0, Number(durationMs || 0))
-    });
+    throw new Error('강사 예시 음성 Firebase Storage 업로드를 준비하지 못했습니다. 화면을 새로고침한 뒤 다시 시도해주세요.');
   }
 
   async function getTeacherSampleAudio73551100(recordId) {
