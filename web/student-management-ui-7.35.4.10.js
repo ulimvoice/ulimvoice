@@ -8,7 +8,7 @@
   global.__ULIM_NEW_STUDENT_ADMIN_BUTTON_PRIMARY_73550946__ = true;
   global.__ULIM_NEW_STUDENT_ADMIN_BUTTON_CLICK_BIND_73550948__ = true;
 
-  const VERSION = '2026-09-03.73550948-new-student-admin-button-click-direct-bind-fix';
+  const VERSION = '2026-09-15.73551406-retire-hard-delete-split';
   const CARD_ID = 'ulimStudentManagementCard7352';
   const TABLE_ID = 'ulimStudentManagementTable7352';
   const SUMMARY_ID = 'ulimStudentManagementSummary7352';
@@ -546,10 +546,13 @@
         const saveButton = document.createElement('button');
         saveButton.type = 'button'; saveButton.className = 'admin-btn blue'; saveButton.textContent = '저장'; saveButton.setAttribute('data-ulim-row-action', 'save');
         saveButton.addEventListener('click', function () { if (typeof global.ulimStudentManagementSaveRow7352 === 'function') global.ulimStudentManagementSaveRow7352(key); });
+        const withdrawButton = document.createElement('button');
+        withdrawButton.type = 'button'; withdrawButton.className = 'admin-btn orange'; withdrawButton.textContent = '퇴원처리'; withdrawButton.setAttribute('data-ulim-row-action', 'withdraw');
+        withdrawButton.addEventListener('click', function () { if (typeof global.ulimStudentManagementRetire7352 === 'function') global.ulimStudentManagementRetire7352(key, 'withdraw'); });
         const deleteButton = document.createElement('button');
-        deleteButton.type = 'button'; deleteButton.className = 'admin-btn red'; deleteButton.textContent = '삭제'; deleteButton.setAttribute('data-ulim-row-action', 'delete');
-        deleteButton.addEventListener('click', function () { if (typeof global.ulimStudentManagementRetire7352 === 'function') global.ulimStudentManagementRetire7352(key, 'withdraw_delete'); });
-        actionCell.appendChild(saveButton); actionCell.appendChild(deleteButton);
+        deleteButton.type = 'button'; deleteButton.className = 'admin-btn red'; deleteButton.textContent = '완전삭제'; deleteButton.setAttribute('data-ulim-row-action', 'delete');
+        deleteButton.addEventListener('click', function () { if (typeof global.ulimStudentManagementHardDelete73551406 === 'function') global.ulimStudentManagementHardDelete73551406(key); });
+        actionCell.appendChild(saveButton); actionCell.appendChild(withdrawButton); actionCell.appendChild(deleteButton);
       }
 
       const rowCheck = row.querySelector('input[data-ulim-row-check="1"]');
@@ -680,7 +683,7 @@
       <div style="margin-bottom:12px;font-weight:900;color:#0f172a;">${escapeHtml(name)}</div>
       <div class="ulim-sm-manage-actions73546">
         <button type="button" class="admin-btn blue" data-ulim-manage-action="save">이 학생 저장</button>
-        ${cancelled ? '<button type="button" class="admin-btn red" data-ulim-manage-action="delete">학생 삭제</button>' : '<button type="button" class="admin-btn" data-ulim-manage-action="withdraw">퇴원 처리</button><button type="button" class="admin-btn red" data-ulim-manage-action="cancel">등록 취소</button>'}
+        ${cancelled ? '<button type="button" class="admin-btn red" data-ulim-manage-action="delete">완전삭제</button>' : '<button type="button" class="admin-btn orange" data-ulim-manage-action="withdraw">퇴원처리</button><button type="button" class="admin-btn red" data-ulim-manage-action="cancel">등록 취소</button><button type="button" class="admin-btn red" data-ulim-manage-action="delete">완전삭제</button>'}
       </div>`;
     openModal('ulimStudentManageModal73546');
   }
@@ -693,7 +696,7 @@
     if (typeof global.ulimStudentManagementRetire7352 !== 'function') return;
     if (action === 'withdraw') return global.ulimStudentManagementRetire7352(key, 'withdraw');
     if (action === 'cancel') return global.ulimStudentManagementRetire7352(key, 'cancel');
-    if (action === 'delete') return global.ulimStudentManagementRetire7352(key, 'delete');
+    if (action === 'delete') { if (typeof global.ulimStudentManagementHardDelete73551406 === 'function') return global.ulimStudentManagementHardDelete73551406(key); return; }
   }
 
   function buildMessageTargets() {
