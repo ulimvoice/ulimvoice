@@ -1,7 +1,7 @@
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js';
 
-const VERSION = '2026-09-03.73550967-teacher-initial-card-style-fix';
+const VERSION = '2026-09-14.73551401-new-student-pdf';
 window.__ULIM_NEW_STUDENT_REGISTRATION_PUBLIC_73550937__ = true;
 window.__ULIM_NEW_STUDENT_PUBLIC_SPECIAL_OWNER_73550963__ = true;
 window.__ULIM_NEW_STUDENT_CURRICULUM_INSTRUCTOR_TABS_73550964__ = true;
@@ -550,7 +550,7 @@ async function submitRegistration(){
   try{
     const result=await call('submitNewStudentRegistration73550937',payload);
     const host=document.getElementById('applicationContent73550937');
-    host.innerHTML='<div class="card success"><div class="check">✓</div><h2>수강등록이 완료되었습니다.</h2><p><b>'+esc(form.name)+'</b> 학생이 울림앱 학생명단과 선택한 수강반에 신규 등록되었습니다.<br>출결번호 '+esc(result.attendanceNo||'')+' · 최초 비밀번호 '+esc(result.initialPassword||result.attendanceNo||'')+'</p><div class="notice">울림앱 로그인 시 이름과 최초 비밀번호를 사용해주세요. 최초 로그인 후 비밀번호 변경 안내가 표시될 수 있습니다.</div></div>';
+    const pdfLink=text(result.pdfDownloadUrl); const pdfNote=result.pdfState==='complete'?(pdfLink?'<div class="notice" style="margin-top:10px">전자서명이 포함된 수강신청서 PDF가 생성되었습니다.<br><a href="'+esc(pdfLink)+'" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;font-weight:900">수강신청서 PDF 확인</a></div>':'<div class="notice" style="margin-top:10px">수강신청서 PDF가 생성되었습니다. 등록한 휴대폰으로 전송됩니다.</div>'):'<div class="notice" style="margin-top:10px">수강신청서 PDF는 별도로 생성되어 등록한 휴대폰으로 전송됩니다.</div>'; host.innerHTML='<div class="card success"><div class="check">✓</div><h2>수강등록이 완료되었습니다.</h2><p><b>'+esc(form.name)+'</b> 학생이 울림앱 학생명단과 선택한 수강반에 신규 등록되었습니다.<br>출결번호 '+esc(result.attendanceNo||'')+' · 최초 비밀번호 '+esc(result.initialPassword||result.attendanceNo||'')+'</p><div class="notice">울림앱 로그인 시 이름과 최초 비밀번호를 사용해주세요. 최초 로그인 후 비밀번호 변경 안내가 표시될 수 있습니다.</div>'+pdfNote+'</div>';
     window.scrollTo({top:0,behavior:'smooth'});
   }catch(error){ alert(callableMessage(error,'수강등록을 완료하지 못했습니다. 입력 내용은 유지됩니다. 다시 시도해주세요.')); }
   finally{hideLoading();}
