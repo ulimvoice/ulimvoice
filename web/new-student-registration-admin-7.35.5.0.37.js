@@ -2,7 +2,7 @@
   'use strict';
   if(global.__ULIM_NEW_STUDENT_REGISTRATION_ADMIN_73550937__) return;
   global.__ULIM_NEW_STUDENT_REGISTRATION_ADMIN_73550937__=true;
-  const VERSION='2026-09-15.73551501-pdf-retry-list-hide';
+  const VERSION='2026-09-15.73551503-admin-timeout-fix';
   global.__ULIM_NEW_STUDENT_FIREBASE_STORAGE_IMAGE_73550956__=true;
   global.__ULIM_NEW_STUDENT_TEACHER_FACE_DETAIL_73550962__=true;
   global.__ULIM_NEW_STUDENT_ADMIN_SINGLE_ENTRY_OWNER_73550952__=true;
@@ -26,7 +26,7 @@
   function room(){return global.ULIM_ROOM_CLASSROOM_REALTIME_72919||global.ULIM_ROOM_CLASSROOM_REALTIME_72918||global.ULIM_ROOM_CLASSROOM_REALTIME_72917||global.ULIM_ROOM_CLASSROOM_REALTIME_72916||global.ULIM_ROOM_CLASSROOM_REALTIME_728||null;}
   function withTimeout73550951(promise,ms,message){return new Promise((resolve,reject)=>{let settled=false;const timer=setTimeout(()=>{if(settled)return;settled=true;reject(new Error(message||'요청 시간이 초과되었습니다.'));},Math.max(1000,Number(ms)||20000));Promise.resolve(promise).then(v=>{if(settled)return;settled=true;clearTimeout(timer);resolve(v);},e=>{if(settled)return;settled=true;clearTimeout(timer);reject(e);});});}
   async function runtime(){const r=room();if(!r||typeof r.preloadRuntime!=='function')throw new Error('관리자 기능을 준비하지 못했습니다.');const rt=await withTimeout73550951(r.preloadRuntime(),12000,'관리자 연결 시간이 초과되었습니다.');if(!rt||!rt.auth||!rt.auth.currentUser||!rt.sdk||!rt.functions)throw new Error('관리자 로그인이 필요합니다.');if(typeof r.getStableIdToken==='function')await withTimeout73550951(r.getStableIdToken(rt,false,'new-student-registration-admin-73550937'),10000,'관리자 인증 확인 시간이 초과되었습니다.');return rt;}
-  async function call(name,payload){const rt=await runtime();const fn=rt.sdk.httpsCallable(rt.functions,name);const res=await withTimeout73550951(fn(payload||{}),20000,'신규생 등록페이지 정보를 불러오는 시간이 초과되었습니다.');return res&&res.data||{};}
+  async function call(name,payload){const rt=await runtime();const fn=rt.sdk.httpsCallable(rt.functions,name);const timeoutMs=name==='getNewStudentRegistrationAdmin73550937'?60000:20000;const res=await withTimeout73550951(fn(payload||{}),timeoutMs,'신규생 등록페이지 정보를 불러오는 시간이 초과되었습니다.');return res&&res.data||{};}
   function requestId(p){return p+'-'+Date.now()+'-'+Math.random().toString(36).slice(2);}
   function showLoading(m){try{if(typeof global.showLoading==='function')global.showLoading(m||'처리 중...');}catch(_e){}}
   function hideLoading(){try{if(typeof global.hideLoading==='function')global.hideLoading();}catch(_e){}}
@@ -49,7 +49,7 @@
     document.body.appendChild(m);m.addEventListener('click',function(e){if(e.target.closest('[data-nr-close="1"]'))close();const b=e.target.closest('[data-nr-tab]');if(b){tab=b.dataset.nrTab;render();}});return m;
   }
   function close(){document.getElementById(MODAL_ID)?.classList.remove('open');document.body.classList.remove('ulim-nr-admin-open73550937');}
-  async function open(){if(!isSuperAdmin())return alert('전체관리자 권한이 필요합니다.');style();ensureModal().classList.add('open');document.body.classList.add('ulim-nr-admin-open73550937');await load(true);}
+  async function open(){if(!isSuperAdmin())return alert('전체관리자 권한이 필요합니다.');style();ensureModal().classList.add('open');document.body.classList.add('ulim-nr-admin-open73550937');await load(false);}
   async function load(force){const body=document.getElementById('ulimNrBody73550937');if(body)body.innerHTML='<div class="ulim-nr-card73550937">신규생 등록페이지 정보를 불러오는 중...</div>';try{const loaded73551501=await Promise.all([call('getNewStudentRegistrationAdmin73550937',{force:force===true,requestId:requestId('new-registration-admin-load')}),call('manageNewStudentRegistrationAdminList73551501',{action:'list',requestId:requestId('new-registration-hidden-list')}).catch(()=>({hiddenApplicationIds:[]}))]);data=loaded73551501[0];hiddenSubmissionIds73551501=new Set(Array.isArray(loaded73551501[1]&&loaded73551501[1].hiddenApplicationIds)?loaded73551501[1].hiddenApplicationIds.map(text).filter(Boolean):[]);render();}catch(e){if(body)body.innerHTML='<div class="ulim-nr-card73550937"><b>불러오지 못했습니다.</b><div class="ulim-nr-note73550937" style="margin-top:8px">잠시 후 다시 시도해주세요.</div></div>';alert(text(e&&e.message)||'신규생 등록페이지 설정을 불러오지 못했습니다.');}finally{hideLoading();}}
 
   function settings(){return data&&data.settings||{};}function appContent(){return settings().applicationContent||{};}function academyPages(){return Array.isArray(settings().academyPages)?settings().academyPages:[];}
