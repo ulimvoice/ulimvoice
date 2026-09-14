@@ -1,7 +1,7 @@
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js';
 
-const VERSION = '2026-09-14.73551401-new-student-pdf';
+const VERSION = '2026-09-15.73551504-phone-optional';
 window.__ULIM_NEW_STUDENT_REGISTRATION_PUBLIC_73550937__ = true;
 window.__ULIM_NEW_STUDENT_PUBLIC_SPECIAL_OWNER_73550963__ = true;
 window.__ULIM_NEW_STUDENT_CURRICULUM_INSTRUCTOR_TABS_73550964__ = true;
@@ -57,8 +57,8 @@ function boolLabel(v){ return v===true?'동의':v===false?'동의하지 않음':
 const stepDefs = [
   {id:'name',title:'이름을 입력해주세요',sub:'수강생 본인의 성명을 입력합니다.'},
   {id:'birth',title:'생년월일을 알려주세요',sub:'미성년 여부와 수강생 구분 확인에 사용됩니다.'},
-  {id:'guardian',title:'보호자 연락처를 입력해주세요',sub:'미성년 수강생에게만 표시되는 항목입니다.'},
-  {id:'phone',title:'본인 전화번호를 입력해주세요',sub:'학원 안내 및 울림앱 계정 연결에 사용됩니다.'},
+  {id:'guardian',title:'보호자 연락처를 입력해주세요 (선택)',sub:'미성년 수강생에게 표시되며, 입력하지 않아도 신청서를 저장할 수 있습니다.'},
+  {id:'phone',title:'본인 전화번호를 입력해주세요 (선택)',sub:'입력하면 학생명단 자동등록과 울림앱 최초 로그인에 사용됩니다.'},
   {id:'discovery',title:'울림을 어떻게 알게 되셨나요?',sub:'해당하는 항목을 선택해주세요.'},
   {id:'payment',title:'결제 방법을 선택해주세요',sub:'실제 결제 처리와 별도로 신청서에 선택 내용을 기록합니다.'},
   {id:'refund',title:'환불 규정을 확인해주세요',sub:'내용을 충분히 읽은 후 확인에 체크해주세요.'},
@@ -464,8 +464,8 @@ function renderApplication(){
   let body='';
   if(step.id==='name') body='<div class="field"><label>수강생 이름</label><input id="nrName73550937" autocomplete="name" maxlength="50" value="'+esc(form.name)+'" placeholder="예: 홍길동"></div>';
   if(step.id==='birth') body='<div class="field"><label>생년월일</label><input id="nrBirth73550937" type="date" value="'+esc(form.birthDate)+'"></div><div class="hint">생년월일에 따라 미성년자는 다음 단계에서 보호자 연락처를 입력합니다.</div>';
-  if(step.id==='guardian') body='<div class="field"><label>보호자 전화번호</label><input id="nrGuardian73550937" inputmode="tel" autocomplete="tel" maxlength="30" value="'+esc(form.parentPhone)+'" placeholder="010-0000-0000"></div>';
-  if(step.id==='phone') body='<div class="field"><label>본인 전화번호</label><input id="nrPhone73550937" inputmode="tel" autocomplete="tel" maxlength="30" value="'+esc(form.studentPhone)+'" placeholder="010-0000-0000"></div><div class="hint">등록 완료 후 울림앱 최초 비밀번호는 본인 전화번호 뒤 4자리로 생성됩니다.</div>';
+  if(step.id==='guardian') body='<div class="field"><label>보호자 전화번호 (선택)</label><input id="nrGuardian73550937" inputmode="tel" autocomplete="tel" maxlength="30" value="'+esc(form.parentPhone)+'" placeholder="010-0000-0000"></div><div class="hint">입력하지 않아도 수강신청서는 저장됩니다.</div>';
+  if(step.id==='phone') body='<div class="field"><label>본인 전화번호 (선택)</label><input id="nrPhone73550937" inputmode="tel" autocomplete="tel" maxlength="30" value="'+esc(form.studentPhone)+'" placeholder="010-0000-0000"></div><div class="hint">번호를 입력하면 학생명단에 자동 등록됩니다. 미입력 시 신청서는 저장되고 학생등록은 관리자 확인 후 진행됩니다.</div>';
   if(step.id==='discovery'){
     const values=optionList(config.applicationContent&&config.applicationContent.discoveryOptions);
     body=choicesHtml('nrDiscovery73550937',values,form.discoverySource)+(form.discoverySource==='기타'?'<div class="field"><label>기타 경로</label><input id="nrDiscoveryEtc73550937" maxlength="100" value="'+esc(form.discoveryEtc)+'" placeholder="알게 된 경로를 입력해주세요"></div>':'');
@@ -483,7 +483,7 @@ function renderApplication(){
   }
   if(step.id==='review'){
     const voice='샘플링 '+boolLabel(form.voiceSamplingConsent)+' · SNS '+boolLabel(form.voiceSocialUploadConsent)+' · 외부업체 '+boolLabel(form.voiceExternalSampleConsent);
-    body='<div class="review"><div class="review-row"><b>이름</b><span>'+esc(form.name)+'</span></div><div class="review-row"><b>생년월일</b><span>'+esc(form.birthDate)+'</span></div>'+(isMinor()?'<div class="review-row"><b>보호자전화</b><span>'+esc(form.parentPhone)+'</span></div>':'')+'<div class="review-row"><b>본인전화</b><span>'+esc(form.studentPhone)+'</span></div><div class="review-row"><b>알게된 경로</b><span>'+esc(form.discoverySource+(form.discoveryEtc?' / '+form.discoveryEtc:''))+'</span></div><div class="review-row"><b>결제방법</b><span>'+esc(form.paymentMethod)+'</span></div><div class="review-row"><b>초상권</b><span>'+esc(boolLabel(form.portraitConsent))+'</span></div><div class="review-row"><b>음성파일</b><span>'+esc(voice)+'</span></div><div class="review-row"><b>수강반</b><span>'+esc(selectedClassNames().join(', '))+'</span></div><div class="review-row"><b>서명자</b><span>'+esc(form.signerName)+'</span></div></div>';
+    body='<div class="review"><div class="review-row"><b>이름</b><span>'+esc(form.name)+'</span></div><div class="review-row"><b>생년월일</b><span>'+esc(form.birthDate)+'</span></div>'+(isMinor()?'<div class="review-row"><b>보호자전화</b><span>'+esc(form.parentPhone||'-')+'</span></div>':'')+'<div class="review-row"><b>본인전화</b><span>'+esc(form.studentPhone||'-')+'</span></div><div class="review-row"><b>알게된 경로</b><span>'+esc(form.discoverySource+(form.discoveryEtc?' / '+form.discoveryEtc:''))+'</span></div><div class="review-row"><b>결제방법</b><span>'+esc(form.paymentMethod)+'</span></div><div class="review-row"><b>초상권</b><span>'+esc(boolLabel(form.portraitConsent))+'</span></div><div class="review-row"><b>음성파일</b><span>'+esc(voice)+'</span></div><div class="review-row"><b>수강반</b><span>'+esc(selectedClassNames().join(', '))+'</span></div><div class="review-row"><b>서명자</b><span>'+esc(form.signerName)+'</span></div></div>';
   }
   host.innerHTML='<div class="card"><div class="progress"><i style="width:'+progress.toFixed(1)+'%"></i></div><div class="progress-label">'+(stepIndex+1)+' / '+steps.length+'</div><h2 class="page-title">'+esc(step.title)+'</h2><p class="page-sub">'+esc(step.sub)+'</p>'+body+'<div class="actions"><button type="button" id="nrPrev73550937" class="prev"'+(stepIndex===0?' disabled':'')+'>이전</button>'+(step.id==='review'?'<button type="button" id="nrSubmit73550937" class="next">신청 완료</button>':'<button type="button" id="nrNext73550937" class="next">다음</button>')+'</div></div>';
   bindStep(step.id);
@@ -510,8 +510,8 @@ function validateStep(id){
   captureStep(id);
   if(id==='name'&&!form.name) return '이름을 입력해주세요.';
   if(id==='birth'&&!/^\d{4}-\d{2}-\d{2}$/.test(form.birthDate)) return '생년월일을 입력해주세요.';
-  if(id==='guardian'&&digits(form.parentPhone).length<10) return '보호자 전화번호를 정확히 입력해주세요.';
-  if(id==='phone'&&digits(form.studentPhone).length<10) return '본인 전화번호를 정확히 입력해주세요.';
+  if(id==='guardian'&&form.parentPhone&&digits(form.parentPhone).length<10) return '보호자 전화번호를 입력하려면 정확한 번호를 입력해주세요.';
+  if(id==='phone'&&form.studentPhone&&digits(form.studentPhone).length<10) return '본인 전화번호를 입력하려면 정확한 번호를 입력해주세요.';
   if(id==='discovery'&&!form.discoverySource) return '학원을 알게 된 경로를 선택해주세요.';
   if(id==='discovery'&&form.discoverySource==='기타'&&!form.discoveryEtc) return '기타 경로를 입력해주세요.';
   if(id==='payment'&&!form.paymentMethod) return '결제 방법을 선택해주세요.';
@@ -550,7 +550,7 @@ async function submitRegistration(){
   try{
     const result=await call('submitNewStudentRegistration73550937',payload);
     const host=document.getElementById('applicationContent73550937');
-    const pdfLink=text(result.pdfDownloadUrl); const pdfNote=result.pdfState==='complete'?(pdfLink?'<div class="notice" style="margin-top:10px">전자서명이 포함된 수강신청서 PDF가 생성되었습니다.<br><a href="'+esc(pdfLink)+'" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;font-weight:900">수강신청서 PDF 확인</a></div>':'<div class="notice" style="margin-top:10px">수강신청서 PDF가 생성되었습니다. 등록한 휴대폰으로 전송됩니다.</div>'):'<div class="notice" style="margin-top:10px">수강신청서 PDF는 별도로 생성되어 등록한 휴대폰으로 전송됩니다.</div>'; host.innerHTML='<div class="card success"><div class="check">✓</div><h2>수강등록이 완료되었습니다.</h2><p><b>'+esc(form.name)+'</b> 학생이 울림앱 학생명단과 선택한 수강반에 신규 등록되었습니다.<br>출결번호 '+esc(result.attendanceNo||'')+' · 최초 비밀번호 '+esc(result.initialPassword||result.attendanceNo||'')+'</p><div class="notice">울림앱 로그인 시 이름과 최초 비밀번호를 사용해주세요. 최초 로그인 후 비밀번호 변경 안내가 표시될 수 있습니다.</div>'+pdfNote+'</div>';
+    const pdfLink=text(result.pdfDownloadUrl); const pdfNote=result.pdfState==='complete'?(pdfLink?'<div class="notice" style="margin-top:10px">전자서명이 포함된 수강신청서 PDF가 생성되었습니다.<br><a href="'+esc(pdfLink)+'" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;font-weight:900">수강신청서 PDF 확인</a></div>':'<div class="notice" style="margin-top:10px">수강신청서 PDF가 생성되었습니다.</div>'):'<div class="notice" style="margin-top:10px">수강신청서 PDF는 별도로 생성됩니다.</div>'; if(result.savedOnly===true){host.innerHTML='<div class="card success"><div class="check">✓</div><h2>수강신청서가 저장되었습니다.</h2><p><b>'+esc(form.name)+'</b> 신청서가 정상 접수되었습니다.<br>본인 연락처가 없어 학생명단 자동등록은 관리자 확인 후 진행됩니다.</p><div class="notice">연락처는 학원에서 추후 등록할 수 있습니다.</div>'+pdfNote+'</div>';}else{host.innerHTML='<div class="card success"><div class="check">✓</div><h2>수강등록이 완료되었습니다.</h2><p><b>'+esc(form.name)+'</b> 학생이 울림앱 학생명단과 선택한 수강반에 신규 등록되었습니다.<br>출결번호 '+esc(result.attendanceNo||'')+' · 최초 비밀번호 '+esc(result.initialPassword||result.attendanceNo||'')+'</p><div class="notice">울림앱 로그인 시 이름과 최초 비밀번호를 사용해주세요. 최초 로그인 후 비밀번호 변경 안내가 표시될 수 있습니다.</div>'+pdfNote+'</div>';}
     window.scrollTo({top:0,behavior:'smooth'});
   }catch(error){ alert(callableMessage(error,'수강등록을 완료하지 못했습니다. 입력 내용은 유지됩니다. 다시 시도해주세요.')); }
   finally{hideLoading();}
