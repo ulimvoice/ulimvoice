@@ -3,7 +3,7 @@
 
   if (global.__ULIM_STUDENT_FIREBASE_DIRECT_AUTH_7355030__) return;
 
-  const VERSION = '2026-08-15.7355030-r8-alias-canonical-status-fix';
+  const VERSION = '2026-09-17.73551527-secure-login-custom-token';
   const AUTO_LOGIN_KEY = 'ulimStudentAutoLogin';
   const EXPLICIT_LOGOUT_KEY = 'ULIM_EXPLICIT_LOGOUT_IN_PROGRESS';
   const AUTH_RESTORE_TIMEOUT_MS = 3500;
@@ -112,17 +112,32 @@
     return response && response.data ? response.data : response;
   }
 
-  async function resolveCandidates(rt, name) {
-    const callable = rt.sdk.httpsCallable(rt.functions, 'resolveStudentFirebaseLogin7355030');
-    const data = callableData(await callable({ name: text(name) })) || {};
-    const candidates = Array.isArray(data.candidates) ? data.candidates : [];
-    return candidates.map(function (item) {
-      return {
-        key: text(item && item.key),
-        email: text(item && item.email),
-        salt: text(item && item.salt)
-      };
-    }).filter(function (item) { return item.email && item.salt; });
+  function secureLoginError73551527(error) {
+    const code = text(error && error.code).toLowerCase();
+    if (code.indexOf('resource-exhausted') >= 0) {
+      return new Error('로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.');
+    }
+    if (code.indexOf('unavailable') >= 0 || code.indexOf('deadline-exceeded') >= 0) {
+      return new Error('로그인 확인이 지연되고 있습니다. 잠시 후 다시 시도해주세요.');
+    }
+    return new Error('학생 이름 또는 비밀번호가 일치하지 않습니다.');
+  }
+
+  async function requestSecureLoginToken73551527(rt, name, rawPassword) {
+    const callable = rt.sdk.httpsCallable(rt.functions, 'loginStudentFirebaseSecure73551526');
+    try {
+      const data = callableData(await callable({
+        name: text(name),
+        password: String(rawPassword == null ? '' : rawPassword)
+      })) || {};
+      const customToken = text(data.customToken);
+      if (!data.ok || !customToken) {
+        throw new Error('학생 로그인을 완료하지 못했습니다.');
+      }
+      return customToken;
+    } catch (error) {
+      throw secureLoginError73551527(error);
+    }
   }
 
   async function readProfile(rt) {
@@ -162,15 +177,6 @@
     return Object.assign({}, state.profile);
   }
 
-  function isCredentialError(error) {
-    const code = text(error && error.code).toLowerCase();
-    return code.indexOf('auth/invalid-credential') >= 0 ||
-      code.indexOf('auth/wrong-password') >= 0 ||
-      code.indexOf('auth/user-not-found') >= 0 ||
-      code.indexOf('auth/user-disabled') >= 0 ||
-      code.indexOf('auth/invalid-login-credentials') >= 0;
-  }
-
   async function login(name, rawPassword) {
     if (state.loginPromise) return state.loginPromise;
     state.loginPromise = (async function () {
@@ -179,6 +185,7 @@
       if (!cleanName || !password) throw new Error('학생 이름과 비밀번호를 입력해주세요.');
       if (!normalizeName(cleanName)) throw new Error('학생 이름을 확인해주세요.');
       if (password.length < 4) throw new Error('비밀번호는 4자리 이상 입력해주세요.');
+      if (password.length > MAX_PASSWORD_LENGTH) throw new Error('비밀번호가 너무 깁니다.');
       try { global.sessionStorage.removeItem(EXPLICIT_LOGOUT_KEY); } catch (_ignore) {}
 
       const rt = await runtime();
@@ -189,72 +196,21 @@
       state.profile = null;
       state.credential = null;
 
-      const candidates = await resolveCandidates(rt, cleanName);
-      if (!candidates.length) throw new Error('학생 이름 또는 비밀번호가 일치하지 않습니다.');
+      const customToken = await requestSecureLoginToken73551527(rt, cleanName, password);
 
-      if (candidates.length === 1) {
-        const candidate = candidates[0];
-        const internalPassword = await deriveFirebasePassword(candidate.salt, password);
-        try {
-          await rt.sdk.signInWithEmailAndPassword(rt.auth, candidate.email, internalPassword);
-          state.credential = { email: candidate.email, salt: candidate.salt };
-          return await readProfile(rt);
-        } catch (error) {
-          if (rt.auth.currentUser) {
-            try { await rt.sdk.signOut(rt.auth); } catch (_ignore) {}
-          }
-          state.profile = null;
-          state.credential = null;
-          if (isCredentialError(error)) throw new Error('학생 이름 또는 비밀번호가 일치하지 않습니다.');
-          throw error;
+      try {
+        const signedIn = await rt.sdk.signInWithCustomToken(rt.auth, customToken);
+        const user = signedIn && signedIn.user ? signedIn.user : rt.auth.currentUser;
+        if (!user) throw new Error('학생 로그인 상태를 확인하지 못했습니다.');
+        return await readProfile(rt);
+      } catch (error) {
+        if (rt.auth.currentUser) {
+          try { await rt.sdk.signOut(rt.auth); } catch (_ignore) {}
         }
+        state.profile = null;
+        state.credential = null;
+        throw error;
       }
-
-      /*
-       * Same-name students are valid. We therefore test every candidate before
-       * choosing an identity. Never accept the first success: if two candidates
-       * share the same visible password, the input is ambiguous and login must
-       * fail instead of opening the wrong student's account.
-       */
-      const matchedCandidates = [];
-      let lastCredentialError = null;
-      for (const candidate of candidates) {
-        const internalPassword = await deriveFirebasePassword(candidate.salt, password);
-        try {
-          const signedIn = await rt.sdk.signInWithEmailAndPassword(rt.auth, candidate.email, internalPassword);
-          const user = signedIn && signedIn.user ? signedIn.user : rt.auth.currentUser;
-          if (!user) throw new Error('학생 로그인 상태를 확인하지 못했습니다.');
-          const tokenResult = await rt.sdk.getIdTokenResult(user, false);
-          const claims = tokenResult && tokenResult.claims || {};
-          if (text(claims.role) !== 'student' || !text(claims.studentUid) || claims.authVersion == null) {
-            throw new Error('학생 계정이 아닙니다.');
-          }
-          matchedCandidates.push(candidate);
-        } catch (error) {
-          if (!isCredentialError(error)) throw error;
-          lastCredentialError = error;
-        } finally {
-          if (rt.auth.currentUser) {
-            try { await rt.sdk.signOut(rt.auth); } catch (_ignore) {}
-          }
-          state.profile = null;
-          state.credential = null;
-        }
-      }
-
-      if (matchedCandidates.length > 1) {
-        throw new Error('동일한 이름과 비밀번호를 사용하는 학생이 2명 이상입니다. 관리자에게 문의해주세요.');
-      }
-      if (matchedCandidates.length !== 1) {
-        if (lastCredentialError) throw new Error('학생 이름 또는 비밀번호가 일치하지 않습니다.');
-        throw new Error('학생 로그인을 완료하지 못했습니다.');
-      }
-
-      const selected = matchedCandidates[0];
-      const selectedInternalPassword = await deriveFirebasePassword(selected.salt, password);
-      await rt.sdk.signInWithEmailAndPassword(rt.auth, selected.email, selectedInternalPassword);
-      state.credential = { email: selected.email, salt: selected.salt };
-      return await readProfile(rt);
     })().finally(function () {
       state.loginPromise = null;
     });
