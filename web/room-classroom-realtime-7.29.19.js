@@ -3,7 +3,8 @@
   if (global.__ULIM_ROOM_CLASSROOM_REALTIME_72919__) return;
   global.__ULIM_ROOM_CLASSROOM_REALTIME_72919__ = true;
 
-  const VERSION = '2026-08-16.729.22-student-classroom-poll-guard';
+  const VERSION = '2026-09-19.73551590-app-check-observe-only';
+  const APP_CHECK_CLIENT_OBSERVE_73551590 = true;
   const FIREBASE_CONFIG = Object.freeze({
     apiKey: 'AIzaSyAW-sqtUQ_mJ6ZS_aV8pTOAKvHTSX-FXUM',
     authDomain: 'ulim-7b09a.firebaseapp.com',
@@ -14,6 +15,7 @@
   });
   const FUNCTIONS_REGION = 'asia-northeast3';
   const APP_NAME = 'ulim-firebase-primary-72919';
+  const APP_CHECK_SITE_KEY_73551590 = '6LeOw8ItAAAAANTM7Ds9WtneBiF7PbyWtw_nEGR2';
   const state = { runtimePromise:null, runtime:null, classroomDate:'', classroomUnsub:null, classroomPoll:null, roomMonth:'', roomUnsub:null, lastError:'' };
 
   function text(v){ return String(v == null ? '' : v).trim(); }
@@ -26,13 +28,14 @@
     return keep ? sdk.browserLocalPersistence : sdk.browserSessionPersistence;
   }
   async function loadSdk(){
-    const [appSdk,authSdk,functionsSdk,firestoreSdk] = await Promise.all([
+    const [appSdk,authSdk,functionsSdk,firestoreSdk,appCheckSdk] = await Promise.all([
       import('https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js'),
       import('https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js'),
       import('https://www.gstatic.com/firebasejs/11.1.0/firebase-functions.js'),
-      import('https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js')
+      import('https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js'),
+      import('https://www.gstatic.com/firebasejs/11.1.0/firebase-app-check.js')
     ]);
-    return Object.assign({}, appSdk, authSdk, functionsSdk, firestoreSdk);
+    return Object.assign({}, appSdk, authSdk, functionsSdk, firestoreSdk, appCheckSdk);
   }
   async function preloadRuntime(){
     if(state.runtime) return state.runtime;
@@ -40,6 +43,13 @@
     state.runtimePromise=(async function(){
       const sdk=await loadSdk(); let app;
       try{ app=sdk.getApp(APP_NAME); }catch(_e){ app=sdk.initializeApp(FIREBASE_CONFIG,APP_NAME); }
+      let appCheck=null;
+      try {
+        appCheck=sdk.initializeAppCheck(app,{
+          provider:new sdk.ReCaptchaEnterpriseProvider(APP_CHECK_SITE_KEY_73551590),
+          isTokenAutoRefreshEnabled:true
+        });
+      } catch(_appCheckError73551590) {}
       const auth=sdk.getAuth(app);
       await sdk.setPersistence(auth, preferredPersistence(sdk));
       const functions=sdk.getFunctions(app,FUNCTIONS_REGION);
@@ -48,7 +58,7 @@
       const releaseClassroom=sdk.httpsCallable(functions,'releaseClassroomUsageFirestorePrimary7355057');
       const updateClassroom=sdk.httpsCallable(functions,'updateClassroomUsageSlotFirestorePrimary7355057');
       const getClassroomDay=sdk.httpsCallable(functions,'getClassroomUsageDayFirestorePrimary7355058');
-      state.runtime={sdk,app,auth,functions,db,commitClassroom,releaseClassroom,updateClassroom,getClassroomDay};
+      state.runtime={sdk,app,appCheck,auth,functions,db,commitClassroom,releaseClassroom,updateClassroom,getClassroomDay};
       return state.runtime;
     })().finally(function(){state.runtimePromise=null;});
     return state.runtimePromise;
