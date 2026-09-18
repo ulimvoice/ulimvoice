@@ -5,7 +5,7 @@
 <meta name="theme-color" content="#16a34a">
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<meta name="ulim-tablet-build" content="20260815-7355062-tablet-callable-schema-contract" />
+<meta name="ulim-tablet-build" content="20260919-73551590-app-check-observe-only" />
 <title>울림연기학원 등하원 체크 2026.06.06.046.01</title>
 <style>
   :root {
@@ -440,6 +440,7 @@ body {
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-check-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
 <script>
@@ -453,7 +454,8 @@ body {
  * - Google Sheets는 오전 6시/관리자 백업 전용
  * - 등하원 알림톡은 Firebase Functions → SOLAPI 직접 발송
  ****************************************************/
-const TABLET_APP_VERSION = "2026.08.15.7.35.5.0.62-tablet-callable-schema-contract";
+const TABLET_APP_VERSION = "2026.09.19.7.35.5.0.90-app-check-observe-only";
+const TABLET_APP_CHECK_CLIENT_OBSERVE_73551590 = true;
 /* ULIM 7.35.5.0.62
  * Firebase Callable owns release/version authority.
  * The browser accepts a snapshot by stable schema + Seoul calendar date.
@@ -480,6 +482,7 @@ const TABLET_FIREBASE_CONFIG = {
   measurementId: "G-V3FH7V87E4"
 };
 const TABLET_FIREBASE_REGION = "asia-northeast3";
+const TABLET_APP_CHECK_SITE_KEY_73551590 = "6LeOw8ItAAAAANTM7Ds9WtneBiF7PbyWtw_nEGR2";
 
 const URL_PARAMS = new URLSearchParams(location.search);
 // DEVICE_SCOPED_KIOSK_CLIENT_CUTOVER_73551565
@@ -526,6 +529,7 @@ let statusRequestSeq = 0;
 let statusResetTimer = null;
 let tabletProcessingFallbackTimer = null;
 let tabletFirebaseRuntimePromise = null;
+let tabletAppCheckInitialized73551590 = false;
 let tabletSnapshotUnsubscribe = null;
 let tabletSnapshotListenerDate = "";
 let tabletLastCallableRefreshAt7355016 = 0;
@@ -626,6 +630,16 @@ async function getTabletFirebaseRuntime() {
     let app;
     try { app = firebase.app("ulim-tablet"); }
     catch (err) { app = firebase.initializeApp(TABLET_FIREBASE_CONFIG, "ulim-tablet"); }
+    if (!tabletAppCheckInitialized73551590) {
+      try {
+        const appCheck = app.appCheck();
+        appCheck.activate(
+          new firebase.appCheck.ReCaptchaEnterpriseProvider(TABLET_APP_CHECK_SITE_KEY_73551590),
+          true
+        );
+        tabletAppCheckInitialized73551590 = true;
+      } catch (_appCheckError73551590) {}
+    }
     const auth = app.auth();
     const functions = app.functions(TABLET_FIREBASE_REGION);
     if (!auth.currentUser) {

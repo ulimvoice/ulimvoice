@@ -1,7 +1,9 @@
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app-check.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js';
 
-const VERSION = '2026-09-15.73551508-review-hotfix';
+const VERSION = '2026-09-19.73551590-app-check-observe-only';
+const APP_CHECK_CLIENT_OBSERVE_73551590 = true;
 window.__ULIM_NEW_STUDENT_REGISTRATION_PUBLIC_73550937__ = true;
 window.__ULIM_NEW_STUDENT_PUBLIC_SPECIAL_OWNER_73550963__ = true;
 window.__ULIM_NEW_STUDENT_CURRICULUM_INSTRUCTOR_TABS_73550964__ = true;
@@ -20,7 +22,15 @@ const FIREBASE_CONFIG = Object.freeze({
   measurementId:'G-V3FH7V87E4'
 });
 
+const APP_CHECK_SITE_KEY_73551590 = '6LeOw8ItAAAAANTM7Ds9WtneBiF7PbyWtw_nEGR2';
 const app = getApps().length ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
+let appCheck73551590 = null;
+try {
+  appCheck73551590 = initializeAppCheck(app, {
+    provider: new ReCaptchaEnterpriseProvider(APP_CHECK_SITE_KEY_73551590),
+    isTokenAutoRefreshEnabled: true
+  });
+} catch (_appCheckError73551590) {}
 const functions = getFunctions(app, 'asia-northeast3');
 let config = null;
 let academyIndex = 0;
