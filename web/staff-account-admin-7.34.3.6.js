@@ -3,7 +3,8 @@
   if (global.__ULIM_STAFF_ACCOUNT_ADMIN_73436__) return;
   global.__ULIM_STAFF_ACCOUNT_ADMIN_73436__ = true;
 
-  const VERSION = '2026-08-12.735.05.0.45-drive-folder-firestore-primary';
+  const VERSION = '2026-09-19.73551576-kiosk-device-admin-ui';
+  const KIOSK_DEVICE_ADMIN_UI_73551576 = true;
   const DRIVE_FOLDER_FIRESTORE_PRIMARY_7355045 = true;
   let accounts = [];
   let listLoadingPromise = null;
@@ -12,6 +13,8 @@
   let lastListLoadedAt = 0;
   let rowEditDirty = false;
   let autoRefreshQueued = false;
+  let kioskDevices73551576 = [];
+  let kioskDeviceLoadingPromise73551576 = null;
   const AUTO_REFRESH_MIN_INTERVAL_MS = 60000;
   const rowKeyMap = new Map();
 
@@ -90,6 +93,111 @@
     el.dataset.state = state || '';
     el.style.display = message ? 'block' : 'none';
   }
+  function kioskStatus73551576(message, state) {
+    const el = document.getElementById('ulimTabletKioskStatus73551576');
+    if (!el) return;
+    el.textContent = message || '';
+    el.dataset.state = state || '';
+    el.style.display = message ? 'block' : 'none';
+  }
+  function formatKioskDate73551576(value) {
+    const ms = Number(value || 0);
+    if (!Number.isFinite(ms) || ms <= 0) return '-';
+    try {
+      return new Intl.DateTimeFormat('ko-KR', {
+        timeZone: 'Asia/Seoul',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23'
+      }).format(new Date(ms));
+    } catch (_ignore) {
+      return new Date(ms).toLocaleString();
+    }
+  }
+  function renderKioskDevices73551576() {
+    const wrap = document.getElementById('ulimTabletKioskDeviceTable73551576');
+    const summary = document.getElementById('ulimTabletKioskSummary73551576');
+    if (!wrap) return;
+    const devices = Array.isArray(kioskDevices73551576) ? kioskDevices73551576 : [];
+    const activeCount = devices.filter(function (item) { return item && item.active === true; }).length;
+    if (summary) {
+      summary.textContent =
+        '전체 ' + devices.length + '대 · 사용 ' + activeCount + '대 · 차단 ' + (devices.length - activeCount) + '대';
+    }
+    if (!devices.length) {
+      wrap.innerHTML = '<div class="ulim-kiosk-empty73551576">등록된 태블릿 기기가 없습니다.</div>';
+      return;
+    }
+    const rows = devices.map(function (device) {
+      const active = device && device.active === true;
+      const deviceId = text(device && device.deviceId);
+      const kioskId = text(device && device.kioskId) || '(이름 없음)';
+      const revokedBy = text(device && device.revokedByDisplayName);
+      return `<tr class="${active ? '' : 'ulim-kiosk-revoked73551576'}">
+        <td><b>${escapeHtml(kioskId)}</b><div class="ulim-kiosk-device-id73551576">ID ${escapeHtml(deviceId.slice(0, 10))}…</div></td>
+        <td>${active ? '<span class="ulim-kiosk-state73551576 active">사용</span>' : '<span class="ulim-kiosk-state73551576 revoked">차단</span>'}</td>
+        <td>${escapeHtml(formatKioskDate73551576(device && device.provisionedAtMs))}</td>
+        <td>${escapeHtml(formatKioskDate73551576(device && device.lastUsedAtMs))}</td>
+        <td>${active ? '-' : escapeHtml(formatKioskDate73551576(device && device.revokedAtMs)) + (revokedBy ? '<div class="ulim-kiosk-meta73551576">' + escapeHtml(revokedBy) + '</div>' : '')}</td>
+        <td>${active ? '<button type="button" class="admin-btn red" data-kiosk-revoke73551576="' + escapeHtml(deviceId) + '" data-kiosk-name73551576="' + escapeHtml(kioskId) + '">기기 차단</button>' : '<span class="ulim-kiosk-meta73551576">차단됨</span>'}</td>
+      </tr>`;
+    }).join('');
+    wrap.innerHTML =
+      '<table class="ulim-kiosk-table73551576"><thead><tr><th>기기</th><th>상태</th><th>등록</th><th>마지막 사용</th><th>차단 정보</th><th>관리</th></tr></thead><tbody>' +
+      rows +
+      '</tbody></table>';
+  }
+  async function loadKioskDevices73551576(options) {
+    const opts = options || {};
+    if (!isSuperAdmin()) {
+      kioskStatus73551576('태블릿 기기 관리는 전체관리자만 사용할 수 있습니다.', 'error');
+      return false;
+    }
+    if (kioskDeviceLoadingPromise73551576) return kioskDeviceLoadingPromise73551576;
+    const run = (async function () {
+      if (opts.silent !== true) kioskStatus73551576('태블릿 기기 목록을 불러오는 중...', 'loading');
+      const data = await call('getTabletKioskDevicesAdmin73551569', {}, 20000);
+      kioskDevices73551576 = Array.isArray(data && data.devices) ? data.devices : [];
+      renderKioskDevices73551576();
+      if (opts.silent !== true) kioskStatus73551576('태블릿 기기 목록을 불러왔습니다.', 'ok');
+      return data;
+    })().catch(function (error) {
+      kioskStatus73551576(text(error && error.message) || '태블릿 기기 목록 조회에 실패했습니다.', 'error');
+      throw error;
+    }).finally(function () {
+      if (kioskDeviceLoadingPromise73551576 === run) kioskDeviceLoadingPromise73551576 = null;
+    });
+    kioskDeviceLoadingPromise73551576 = run;
+    return run;
+  }
+  async function revokeKioskDevice73551576(deviceId, kioskId) {
+    if (!isSuperAdmin()) return alert('전체관리자 권한이 필요합니다.');
+    const id = text(deviceId);
+    const name = text(kioskId) || '(이름 없음)';
+    if (!/^[0-9a-f]{48}$/i.test(id)) return alert('태블릿 기기 식별정보가 올바르지 않습니다.');
+    const confirmed = confirm(
+      '[' + name + '] 태블릿 기기를 차단할까요?\n\n' +
+      '차단 후 이 기기의 device credential은 다음 토큰 발급부터 사용할 수 없습니다.\n' +
+      '이미 발급되어 사용 중인 당일 Firebase 세션은 즉시 강제 종료되지 않습니다.'
+    );
+    if (!confirmed) return false;
+    try {
+      showLoading('태블릿 기기 차단 중...');
+      kioskStatus73551576('태블릿 기기 차단을 처리하는 중...', 'loading');
+      await call('revokeTabletKioskDeviceAdmin73551569', { deviceId: id }, 20000);
+      await loadKioskDevices73551576({ silent: true });
+      kioskStatus73551576('태블릿 기기가 차단되었습니다. 다음 토큰 발급부터 인증이 거부됩니다.', 'ok');
+      return true;
+    } catch (error) {
+      kioskStatus73551576(text(error && error.message) || '태블릿 기기 차단에 실패했습니다.', 'error');
+      return false;
+    } finally {
+      hideLoading();
+    }
+  }
   function syncLabel(account) {
     const state = text(account.legacySyncState);
     if (state === 'complete') return '<span class="ulim-staff-sync ok">시트완료</span>';
@@ -130,6 +238,20 @@
       .ulim-staff-account-disabled{opacity:.6;background:#f8fafc}
       .ulim-staff-account-incomplete{background:#fff7ed;box-shadow:inset 4px 0 0 #f97316}
       .ulim-incomplete-badge{display:inline-block;margin-top:4px;padding:3px 7px;border-radius:999px;background:#ffedd5;color:#9a3412;font-size:10px;font-weight:800}
+      #adminPanelStaffAccounts .ulim-kiosk-admin-card73551576{margin-top:14px}
+      #ulimTabletKioskStatus73551576{display:none;margin:10px 0;padding:10px 12px;border-radius:9px;font-size:13px;white-space:pre-wrap}
+      #ulimTabletKioskStatus73551576[data-state="ok"]{display:block;background:#ecfdf5;color:#166534}
+      #ulimTabletKioskStatus73551576[data-state="loading"]{display:block;background:#eff6ff;color:#1d4ed8}
+      #ulimTabletKioskStatus73551576[data-state="error"]{display:block;background:#fff7ed;color:#9a3412}
+      #adminPanelStaffAccounts .ulim-kiosk-table73551576{width:100%;border-collapse:collapse;min-width:860px}
+      #adminPanelStaffAccounts .ulim-kiosk-table73551576 th,#adminPanelStaffAccounts .ulim-kiosk-table73551576 td{border-bottom:1px solid #e5e7eb;padding:9px;vertical-align:middle;font-size:12px;text-align:left}
+      #adminPanelStaffAccounts .ulim-kiosk-table73551576 th{background:#f8fafc}
+      .ulim-kiosk-state73551576{display:inline-block;padding:3px 8px;border-radius:999px;font-weight:800;font-size:11px}
+      .ulim-kiosk-state73551576.active{background:#dcfce7;color:#166534}
+      .ulim-kiosk-state73551576.revoked{background:#fee2e2;color:#991b1b}
+      .ulim-kiosk-revoked73551576{opacity:.72;background:#f8fafc}
+      .ulim-kiosk-device-id73551576,.ulim-kiosk-meta73551576{margin-top:3px;font-size:10px;color:#64748b}
+      .ulim-kiosk-empty73551576{padding:18px;color:#64748b}
     `;
     document.head.appendChild(style);
   }
@@ -178,6 +300,19 @@
         </div>
         <div id="ulimStaffAccountSummary7342" style="font-size:12px;color:#64748b;margin:10px 0;"></div>
         <div class="admin-table-wrap"><div id="ulimStaffAccountTable7342"></div></div>
+      </div>
+      <div class="admin-card admin-full-only ulim-kiosk-admin-card73551576">
+        <h3 style="margin-top:0;">태블릿 기기 관리</h3>
+        <p style="font-size:13px;color:#64748b;line-height:1.65;margin-top:-4px;">
+          등록된 태블릿 기기의 인증 상태를 확인하고 분실·교체된 기기를 개별 차단합니다.
+          차단은 <b>다음 토큰 발급부터</b> 적용되며 이미 발급된 당일 Firebase 세션을 즉시 강제 종료하지는 않습니다.
+        </p>
+        <div id="ulimTabletKioskStatus73551576"></div>
+        <div class="admin-btn-row" style="margin-top:10px;">
+          <button type="button" id="ulimTabletKioskRefresh73551576" class="admin-btn blue">기기 목록 새로고침</button>
+        </div>
+        <div id="ulimTabletKioskSummary73551576" style="font-size:12px;color:#64748b;margin:10px 0;">기기 목록을 불러오지 않았습니다.</div>
+        <div class="admin-table-wrap"><div id="ulimTabletKioskDeviceTable73551576"></div></div>
       </div>`;
     dashboard.appendChild(panel);
   }
@@ -524,6 +659,7 @@
     global.ulimStaffAccountRetire7342 = retire;
     const sheetRefreshButton = document.getElementById('ulimStaffSheetRefresh73434');
     const firestoreRefreshButton = document.getElementById('ulimStaffFirestoreRefresh73434');
+    const kioskRefreshButton73551576 = document.getElementById('ulimTabletKioskRefresh73551576');
     if (sheetRefreshButton && !sheetRefreshButton.dataset.ulimBound73434) {
       sheetRefreshButton.dataset.ulimBound73434 = '1';
       sheetRefreshButton.addEventListener('click', function () { syncDirectoryFromSheet(); });
@@ -531,6 +667,12 @@
     if (firestoreRefreshButton && !firestoreRefreshButton.dataset.ulimBound73434) {
       firestoreRefreshButton.dataset.ulimBound73434 = '1';
       firestoreRefreshButton.addEventListener('click', function () { refreshFirestoreOnly({ force: true }); });
+    }
+    if (kioskRefreshButton73551576 && !kioskRefreshButton73551576.dataset.ulimBound73551576) {
+      kioskRefreshButton73551576.dataset.ulimBound73551576 = '1';
+      kioskRefreshButton73551576.addEventListener('click', function () {
+        loadKioskDevices73551576({ silent: false }).catch(function () {});
+      });
     }
     const staffPanel = document.getElementById('adminPanelStaffAccounts');
     if (staffPanel && !staffPanel.dataset.ulimEditGuard73436) {
@@ -544,6 +686,19 @@
       };
       staffPanel.addEventListener('input', markDirty, true);
       staffPanel.addEventListener('change', markDirty, true);
+    }
+    if (staffPanel && !staffPanel.dataset.ulimKioskAdminBound73551576) {
+      staffPanel.dataset.ulimKioskAdminBound73551576 = '1';
+      staffPanel.addEventListener('click', function (event) {
+        const target = event && event.target && event.target.closest
+          ? event.target.closest('[data-kiosk-revoke73551576]')
+          : null;
+        if (!target) return;
+        revokeKioskDevice73551576(
+          target.getAttribute('data-kiosk-revoke73551576'),
+          target.getAttribute('data-kiosk-name73551576')
+        );
+      });
     }
     global.addEventListener('ulim-firebase-auth-ready', function () {
       if (panelIsActive()) queueAutomaticRefresh('auth-ready');
