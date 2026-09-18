@@ -482,10 +482,15 @@ const TABLET_FIREBASE_CONFIG = {
 const TABLET_FIREBASE_REGION = "asia-northeast3";
 
 const URL_PARAMS = new URLSearchParams(location.search);
-const KIOSK_KEY = URL_PARAMS.get("kioskKey") || localStorage.getItem("ULIM_TABLET_KIOSK_KEY") || "";
+// DEVICE_SCOPED_KIOSK_CLIENT_CUTOVER_73551565
+const KIOSK_URL_KEY = URL_PARAMS.get("kioskKey") || "";
+let KIOSK_KEY = KIOSK_URL_KEY || localStorage.getItem("ULIM_TABLET_KIOSK_KEY") || "";
+let KIOSK_DEVICE_CREDENTIAL = localStorage.getItem("ULIM_TABLET_KIOSK_DEVICE_CREDENTIAL") || "";
 const KIOSK_ID = (URL_PARAMS.get("kioskId") || localStorage.getItem("ULIM_TABLET_KIOSK_ID") || "main-tablet").replace(/[^0-9A-Za-z_.:-]/g, "") || "main-tablet";
-if (URL_PARAMS.get("kioskKey")) {
-  localStorage.setItem("ULIM_TABLET_KIOSK_KEY", KIOSK_KEY);
+if (KIOSK_URL_KEY) {
+  localStorage.removeItem("ULIM_TABLET_KIOSK_KEY");
+  localStorage.removeItem("ULIM_TABLET_KIOSK_DEVICE_CREDENTIAL");
+  KIOSK_DEVICE_CREDENTIAL = "";
   try {
     const cleanUrl = new URL(location.href);
     cleanUrl.searchParams.delete("kioskKey");
@@ -613,7 +618,7 @@ async function getTabletFirebaseRuntime() {
       error.ulimCode = "firebase-sdk-missing";
       throw error;
     }
-    if (!KIOSK_KEY) {
+    if (!KIOSK_KEY && !KIOSK_DEVICE_CREDENTIAL) {
       const error = new Error("이 태블릿에 인증키가 설정되지 않았습니다.");
       error.ulimCode = "kiosk-key-missing";
       throw error;
@@ -625,10 +630,28 @@ async function getTabletFirebaseRuntime() {
     const functions = app.functions(TABLET_FIREBASE_REGION);
     if (!auth.currentUser) {
       const issueToken = functions.httpsCallable("issueTabletKioskToken");
-      const tokenResult = await issueToken({ kioskKey: KIOSK_KEY, kioskId: KIOSK_ID });
+      const tokenPayload = KIOSK_DEVICE_CREDENTIAL
+        ? { deviceCredential: KIOSK_DEVICE_CREDENTIAL, kioskId: KIOSK_ID }
+        : { kioskKey: KIOSK_KEY, kioskId: KIOSK_ID };
+      const tokenResult = await issueToken(tokenPayload);
       const customToken = tokenResult && tokenResult.data && tokenResult.data.customToken;
       if (!customToken) throw new Error("태블릿 인증을 완료하지 못했습니다.");
+      const issuedDeviceCredential =
+        tokenResult && tokenResult.data
+          ? String(tokenResult.data.deviceCredential || "")
+          : "";
       await auth.signInWithCustomToken(customToken);
+      if (issuedDeviceCredential) {
+        KIOSK_DEVICE_CREDENTIAL = issuedDeviceCredential;
+        localStorage.setItem(
+          "ULIM_TABLET_KIOSK_DEVICE_CREDENTIAL",
+          KIOSK_DEVICE_CREDENTIAL
+        );
+      }
+      if (KIOSK_DEVICE_CREDENTIAL) {
+        localStorage.removeItem("ULIM_TABLET_KIOSK_KEY");
+        KIOSK_KEY = "";
+      }
     } else {
       const tokenInfo = await auth.currentUser.getIdTokenResult(false);
       if (!tokenInfo.claims || tokenInfo.claims.tabletKiosk !== true || String(tokenInfo.claims.tabletDate || "") !== getTodayKey()) {
