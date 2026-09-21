@@ -81,12 +81,25 @@
     return instructors.some(function(value){return value&&(wanted.indexOf(value)>=0||value.indexOf(wanted)>=0);});
   }
   function noticeCard(notice) {
+  function safeNoticeHttpUrl73551717_(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    try {
+      const parsed = new URL(raw, window.location.href);
+      return (parsed.protocol === 'http:' || parsed.protocol === 'https:') ? raw : '';
+    } catch (_) {
+      return '';
+    }
+  }
+  const safeNoticeYoutubeUrl73551717 = safeNoticeHttpUrl73551717_(notice && notice.youtubeUrl);
+  const safeNoticeLinkUrl73551717 = safeNoticeHttpUrl73551717_(notice && notice.linkUrl);
+
     let html='<div class="notice-card"><div class="notice-card-title">'+escapeHtml(notice.title||'공지사항')+'</div>';
     if(notice.content)html+='<div class="notice-text">'+escapeHtml(notice.content).replace(/\n/g,'<br>')+'</div>';
     if(notice.imageUrl)html+='<img src="'+escapeHtml(notice.imageUrl)+'" alt="'+escapeHtml(notice.title||'공지')+'">';
-    if(notice.youtubeUrl)html+='<div class="notice-youtube-wrap"><iframe src="'+escapeHtml(notice.youtubeUrl)+'" title="'+escapeHtml(notice.title||'공지')+'" allowfullscreen></iframe></div>';
+    if (safeNoticeYoutubeUrl73551717)html+='<div class="notice-youtube-wrap"><iframe src="'+escapeHtml(safeNoticeYoutubeUrl73551717)+'" title="'+escapeHtml(notice.title||'공지')+'" allowfullscreen></iframe></div>';
     if(notice.videoUrl)html+='<video controls playsinline><source src="'+escapeHtml(notice.videoUrl)+'"></video>';
-    if(notice.linkUrl)html+='<a href="'+escapeHtml(notice.linkUrl)+'" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;margin-top:14px;padding:13px 16px;background:#2ecc71;color:#fff;border-radius:12px;text-decoration:none;font-weight:900">🔗 '+escapeHtml(notice.linkText||'자세히 보기')+'</a>';
+    if (safeNoticeLinkUrl73551717)html+='<a href="'+escapeHtml(safeNoticeLinkUrl73551717)+'" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;margin-top:14px;padding:13px 16px;background:#2ecc71;color:#fff;border-radius:12px;text-decoration:none;font-weight:900">🔗 '+escapeHtml(notice.linkText||'자세히 보기')+'</a>';
     return html+'</div>';
   }
   function notifyResolved(reason) {

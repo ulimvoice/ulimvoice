@@ -5033,6 +5033,19 @@ function escapeHtml(value) {
         .replace(/'/g, "&#039;");
 }
 function renderNoticeCard(notice) {
+  function safeNoticeHttpUrl73551717_(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    try {
+      const parsed = new URL(raw, window.location.href);
+      return (parsed.protocol === 'http:' || parsed.protocol === 'https:') ? raw : '';
+    } catch (_) {
+      return '';
+    }
+  }
+  const safeNoticeYoutubeUrl73551717 = safeNoticeHttpUrl73551717_(notice && notice.youtubeUrl);
+  const safeNoticeLinkUrl73551717 = safeNoticeHttpUrl73551717_(notice && notice.linkUrl);
+
     let html = `
         <div class="notice-card">
             <div class="notice-card-title">${escapeHtml(notice.title)}</div>
@@ -5051,11 +5064,11 @@ function renderNoticeCard(notice) {
         `;
     }
 
-    if (notice.youtubeUrl) {
+    if (safeNoticeYoutubeUrl73551717) {
         html += `
             <div class="notice-youtube-wrap">
                 <iframe 
-                    src="${escapeHtml(notice.youtubeUrl)}"
+                    src="${escapeHtml(safeNoticeYoutubeUrl73551717)}"
                     title="${escapeHtml(notice.title)}"
                     allowfullscreen>
                 </iframe>
@@ -5072,9 +5085,9 @@ function renderNoticeCard(notice) {
         `;
     }
 
-    if (notice.linkUrl) {
+    if (safeNoticeLinkUrl73551717) {
         html += `
-            <a href="${escapeHtml(notice.linkUrl)}"
+            <a href="${escapeHtml(safeNoticeLinkUrl73551717)}"
                target="_blank"
                rel="noopener noreferrer"
                style="
