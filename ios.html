@@ -8121,9 +8121,13 @@ async function loadRoomReservations(force = false) {
             <div style="grid-column:1/-1; background:#fde9e9; border:1px solid #ffb3b3; border-radius:12px; padding:16px; color:#b00020; line-height:1.6;">
                 예약 정보를 불러오지 못했습니다.<br>
                 잠시 후 다시 시도해주세요. 계속 반복되면 학원에 문의해주세요.<br>
-                <small>${e.message || ''}</small>
+                <small data-ulim-room-error-detail></small>
             </div>
         `;
+        const ulimRoomErrorDetail73551697 = calendarEl.querySelector('[data-ulim-room-error-detail]');
+        if (ulimRoomErrorDetail73551697) {
+            ulimRoomErrorDetail73551697.textContent = e && e.message ? String(e.message) : '';
+        }
     }
 }
 
