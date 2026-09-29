@@ -302,7 +302,10 @@
         <div class="admin-table-wrap"><div id="ulimStaffAccountTable7342"></div></div>
       </div>
       <div class="admin-card admin-full-only ulim-kiosk-admin-card73551576">
-        <h3 style="margin-top:0;">태블릿 기기 관리</h3>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+          <h3 style="margin:0;">태블릿 기기 관리</h3>
+          <button type="button" id="ulimNewStudentDeviceAdminOpen73552027" class="admin-btn" onclick="if(typeof window.ulimOpenNewStudentDeviceAdmin73552027==='function'){window.ulimOpenNewStudentDeviceAdmin73552027();}else{alert('신규 수강신청 기기관리 기능을 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.');}">신규 수강신청 기기관리</button>
+        </div>
         <p style="font-size:13px;color:#64748b;line-height:1.65;margin-top:-4px;">
           등록된 태블릿 기기의 인증 상태를 확인하고 분실·교체된 기기를 개별 차단합니다.
           차단은 <b>다음 토큰 발급부터</b> 적용되며 이미 발급된 당일 Firebase 세션을 즉시 강제 종료하지는 않습니다.

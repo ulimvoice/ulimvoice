@@ -88,10 +88,6 @@ function renderBasic(body){const s=settings();const selected=new Set(Array.isArr
   function captureSettings(){const s=Object.assign({},settings());if(tab==='basic'){s.active=document.getElementById('nrAdminActive73550937')?.value==='true';s.publicTitle=text(document.getElementById('nrAdminTitle73550937')?.value);s.recruitingClassIds=Array.from(document.querySelectorAll('[data-nr-class]:checked')).map(x=>text(x.dataset.nrClass)).filter(Boolean);}if(tab==='academy')s.academyPages=capturePages();if(tab==='application'){s.applicationContent=Object.assign({},s.applicationContent||{},{discoveryOptions:lines(document.getElementById('nrDiscoveryOptions73550937')?.value),paymentOptions:lines(document.getElementById('nrPaymentOptions73550937')?.value),refundPolicy:text(document.getElementById('nrRefundPolicy73550937')?.value),privacyPolicy:text(document.getElementById('nrPrivacyPolicy73550937')?.value),portraitPolicy:text(document.getElementById('nrPortraitPolicy73550937')?.value),voicePolicy:text(document.getElementById('nrVoicePolicy73550937')?.value),academyRules:text(document.getElementById('nrAcademyRules73550937')?.value)});}return s;}
   async function save(section){const next=captureSettings();showLoading('신규생 등록페이지 설정을 저장하는 중...');try{await call('saveNewStudentRegistrationSettingsAdmin73550937',{settings:next,requestId:requestId('new-registration-settings')});alert('저장했습니다. 공개 페이지에 바로 반영됩니다.');await load(true);}catch(e){alert(text(e&&e.message)||'설정을 저장하지 못했습니다.');}finally{hideLoading();}}
 
-  global.ulimOpenNewStudentRegistrationAdmin73550937=open;
-})(window);
-
-
 const NEW_STUDENT_REGISTRATION_DEVICE_ID_STORAGE_KEY_73551986 = 'ulim.newStudentRegistration.deviceId.v73551986';
 const NEW_STUDENT_REGISTRATION_DEVICE_CREDENTIAL_STORAGE_KEY_73551986 = 'ulim.newStudentRegistration.deviceCredential.v73551986';
 
@@ -195,25 +191,29 @@ async function issueCurrentNewStudentDevice73551986(){
   }
 }
 
-function installNewStudentDeviceAdmin73551986(){
-  if(document.getElementById('ulimNewStudentDeviceAdmin73551986'))return;
-  const root=document.querySelector('main')||document.querySelector('.container')||document.querySelector('.wrap')||document.body;
-  if(!root)return;
+function ensureNewStudentDeviceAdmin73552027(){
+  let modal=document.getElementById('ulimNewStudentDeviceAdmin73551986');
+  if(modal)return modal;
 
-  const section=document.createElement('section');
-  section.id='ulimNewStudentDeviceAdmin73551986';
-  section.className='card';
-  section.style.marginTop='18px';
-  section.innerHTML=
-    '<h2 style="margin:0 0 8px">신규 수강신청 기기 관리</h2>'+
-    '<div style="font-size:13px;line-height:1.6;color:#475569;margin-bottom:10px">태블릿 출결 키와 완전히 분리된 신규 수강신청 전용 기기 인증입니다. 첫 기기를 등록하면 그 시점부터 미등록 외부 기기의 수강신청 페이지 접근·제출이 차단됩니다.</div>'+
-    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">'+
-      '<button type="button" id="ulimIssueNewStudentDevice73551986">현재 브라우저를 수강신청 기기로 등록</button>'+
-      '<button type="button" id="ulimRefreshNewStudentDevice73551986">목록 새로고침</button>'+
-      '<button type="button" id="ulimClearNewStudentDevice73551986">현재 브라우저 로컬 키 지우기</button>'+
-    '</div>'+
-    '<div id="ulimNewStudentDeviceList73551986"></div>';
-  root.appendChild(section);
+  modal=document.createElement('div');
+  modal.id='ulimNewStudentDeviceAdmin73551986';
+  modal.style.cssText='position:fixed;inset:0;z-index:100000;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(15,23,42,.56);box-sizing:border-box;';
+  modal.innerHTML=
+    '<section role="dialog" aria-modal="true" aria-labelledby="ulimNewStudentDeviceTitle73552027" style="width:min(760px,96vw);max-height:88vh;overflow:auto;background:#fff;border-radius:16px;box-shadow:0 24px 70px rgba(15,23,42,.32);padding:20px;box-sizing:border-box">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px">'+
+        '<h2 id="ulimNewStudentDeviceTitle73552027" style="margin:0">신규 수강신청 기기 관리</h2>'+
+        '<button type="button" id="ulimCloseNewStudentDevice73552027" class="admin-btn">닫기</button>'+
+      '</div>'+
+      '<div style="font-size:13px;line-height:1.6;color:#475569;margin-bottom:12px">태블릿 출결 키와 완전히 분리된 신규 수강신청 전용 기기 인증입니다. 첫 기기를 등록하면 그 시점부터 미등록 외부 기기의 수강신청 페이지 접근·제출이 차단됩니다.</div>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">'+
+        '<button type="button" id="ulimIssueNewStudentDevice73551986" class="admin-btn blue">현재 브라우저를 수강신청 기기로 등록</button>'+
+        '<button type="button" id="ulimRefreshNewStudentDevice73551986" class="admin-btn">목록 새로고침</button>'+
+        '<button type="button" id="ulimClearNewStudentDevice73551986" class="admin-btn">현재 브라우저 로컬 키 지우기</button>'+
+      '</div>'+
+      '<div id="ulimNewStudentDeviceList73551986"></div>'+
+    '</section>';
+
+  document.body.appendChild(modal);
 
   document.getElementById('ulimIssueNewStudentDevice73551986')?.addEventListener('click',issueCurrentNewStudentDevice73551986);
   document.getElementById('ulimRefreshNewStudentDevice73551986')?.addEventListener('click',refreshNewStudentDevices73551986);
@@ -222,12 +222,26 @@ function installNewStudentDeviceAdmin73551986(){
     clearNewStudentDevice73551986();
     refreshNewStudentDevices73551986();
   });
+  document.getElementById('ulimCloseNewStudentDevice73552027')?.addEventListener('click',closeNewStudentDeviceAdmin73552027);
+  modal.addEventListener('click',event=>{
+    if(event.target===modal)closeNewStudentDeviceAdmin73552027();
+  });
 
-  refreshNewStudentDevices73551986();
+  return modal;
 }
 
-if(document.readyState==='loading'){
-  document.addEventListener('DOMContentLoaded',()=>setTimeout(installNewStudentDeviceAdmin73551986,0),{once:true});
-}else{
-  setTimeout(installNewStudentDeviceAdmin73551986,0);
+function closeNewStudentDeviceAdmin73552027(){
+  const modal=document.getElementById('ulimNewStudentDeviceAdmin73551986');
+  if(modal)modal.style.display='none';
 }
+
+async function openNewStudentDeviceAdmin73552027(){
+  if(!isSuperAdmin())return alert('전체관리자 권한이 필요합니다.');
+  const modal=ensureNewStudentDeviceAdmin73552027();
+  modal.style.display='flex';
+  await refreshNewStudentDevices73551986();
+}
+
+  global.ulimOpenNewStudentDeviceAdmin73552027=openNewStudentDeviceAdmin73552027;
+  global.ulimOpenNewStudentRegistrationAdmin73550937=open;
+})(window);
