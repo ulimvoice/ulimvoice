@@ -90,3 +90,144 @@ function renderBasic(body){const s=settings();const selected=new Set(Array.isArr
 
   global.ulimOpenNewStudentRegistrationAdmin73550937=open;
 })(window);
+
+
+const NEW_STUDENT_REGISTRATION_DEVICE_ID_STORAGE_KEY_73551986 = 'ulim.newStudentRegistration.deviceId.v73551986';
+const NEW_STUDENT_REGISTRATION_DEVICE_CREDENTIAL_STORAGE_KEY_73551986 = 'ulim.newStudentRegistration.deviceCredential.v73551986';
+
+function escapeNewStudentDevice73551986(value){
+  return String(value==null?'':value).replace(/[&<>"']/g,ch=>({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[ch]));
+}
+
+function currentNewStudentDevice73551986(){
+  try{
+    return {
+      registrationDeviceId:String(localStorage.getItem(NEW_STUDENT_REGISTRATION_DEVICE_ID_STORAGE_KEY_73551986)||'').trim(),
+      registrationDeviceCredential:String(localStorage.getItem(NEW_STUDENT_REGISTRATION_DEVICE_CREDENTIAL_STORAGE_KEY_73551986)||'').trim()
+    };
+  }catch(_error){
+    return {registrationDeviceId:'',registrationDeviceCredential:''};
+  }
+}
+
+function saveNewStudentDevice73551986(id,credential){
+  localStorage.setItem(NEW_STUDENT_REGISTRATION_DEVICE_ID_STORAGE_KEY_73551986,String(id||''));
+  localStorage.setItem(NEW_STUDENT_REGISTRATION_DEVICE_CREDENTIAL_STORAGE_KEY_73551986,String(credential||''));
+}
+
+function clearNewStudentDevice73551986(){
+  try{
+    localStorage.removeItem(NEW_STUDENT_REGISTRATION_DEVICE_ID_STORAGE_KEY_73551986);
+    localStorage.removeItem(NEW_STUDENT_REGISTRATION_DEVICE_CREDENTIAL_STORAGE_KEY_73551986);
+  }catch(_error){}
+}
+
+async function refreshNewStudentDevices73551986(){
+  const host=document.getElementById('ulimNewStudentDeviceList73551986');
+  if(!host)return;
+  host.innerHTML='<div style="padding:10px 0">기기 목록을 불러오는 중...</div>';
+  try{
+    const result=await call('getNewStudentRegistrationDevicesAdmin73551986',{});
+    const current=currentNewStudentDevice73551986();
+    const rows=Array.isArray(result.devices)?result.devices:[];
+    const policy=result.enforced===true?'사용 중':'첫 기기 등록 전';
+    const body=rows.length?rows.map(row=>{
+      const id=String(row.registrationDeviceId||'');
+      const active=row.active===true;
+      const currentMark=id&&id===current.registrationDeviceId
+        ? ' <span style="font-weight:900;color:#166534">[현재 브라우저]</span>' : '';
+      return '<div style="border-top:1px solid #e5e7eb;padding:10px 0">'+
+        '<div><b>'+escapeNewStudentDevice73551986(row.deviceLabel||'수강신청 기기')+'</b>'+currentMark+'</div>'+
+        '<div style="font-size:12px;color:#64748b;margin-top:4px">ID '+escapeNewStudentDevice73551986(id.slice(0,12))+'… · '+(active?'사용 중':'폐기됨')+'</div>'+
+        (active?'<button type="button" data-ulim-new-device-revoke="'+escapeNewStudentDevice73551986(id)+'" style="margin-top:7px">이 기기 폐기</button>':'')+
+        '</div>';
+    }).join(''):'<div style="padding:10px 0">등록된 수강신청 기기가 없습니다.</div>';
+
+    host.innerHTML='<div style="padding-bottom:8px"><b>기기 인증 강제:</b> '+policy+'</div>'+body;
+
+    host.querySelectorAll('[data-ulim-new-device-revoke]').forEach(btn=>{
+      btn.addEventListener('click',async()=>{
+        const id=btn.getAttribute('data-ulim-new-device-revoke')||'';
+        if(!id||!confirm('이 수강신청 기기의 인증을 폐기할까요?'))return;
+        try{
+          await call('revokeNewStudentRegistrationDeviceAdmin73551986',{registrationDeviceId:id});
+          if(currentNewStudentDevice73551986().registrationDeviceId===id){
+            clearNewStudentDevice73551986();
+          }
+          await refreshNewStudentDevices73551986();
+        }catch(error){
+          alert((error&&error.message)||'기기 폐기에 실패했습니다.');
+        }
+      });
+    });
+  }catch(error){
+    host.innerHTML='<div style="padding:10px 0;color:#b91c1c">기기 목록을 불러오지 못했습니다.</div>';
+  }
+}
+
+async function issueCurrentNewStudentDevice73551986(){
+  try{
+    const test='ulim.newStudentRegistration.storageTest.v73551986';
+    localStorage.setItem(test,'1');
+    localStorage.removeItem(test);
+  }catch(_error){
+    alert('이 브라우저에서는 수강신청 기기 인증정보를 저장할 수 없습니다.');
+    return;
+  }
+
+  const label=prompt('이 수강신청 기기의 이름을 입력해주세요.','학원 수강신청 기기');
+  if(label===null)return;
+
+  try{
+    const result=await call('issueNewStudentRegistrationDeviceAdmin73551986',{
+      deviceLabel:String(label||'').trim()
+    });
+    const id=String(result.registrationDeviceId||'').trim();
+    const credential=String(result.registrationDeviceCredential||'').trim();
+    if(!id||!credential)throw new Error('발급된 기기 인증정보를 확인하지 못했습니다.');
+    saveNewStudentDevice73551986(id,credential);
+    alert('현재 브라우저가 신규 수강신청 전용 기기로 등록되었습니다.');
+    await refreshNewStudentDevices73551986();
+  }catch(error){
+    alert((error&&error.message)||'수강신청 기기 등록에 실패했습니다.');
+  }
+}
+
+function installNewStudentDeviceAdmin73551986(){
+  if(document.getElementById('ulimNewStudentDeviceAdmin73551986'))return;
+  const root=document.querySelector('main')||document.querySelector('.container')||document.querySelector('.wrap')||document.body;
+  if(!root)return;
+
+  const section=document.createElement('section');
+  section.id='ulimNewStudentDeviceAdmin73551986';
+  section.className='card';
+  section.style.marginTop='18px';
+  section.innerHTML=
+    '<h2 style="margin:0 0 8px">신규 수강신청 기기 관리</h2>'+
+    '<div style="font-size:13px;line-height:1.6;color:#475569;margin-bottom:10px">태블릿 출결 키와 완전히 분리된 신규 수강신청 전용 기기 인증입니다. 첫 기기를 등록하면 그 시점부터 미등록 외부 기기의 수강신청 페이지 접근·제출이 차단됩니다.</div>'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">'+
+      '<button type="button" id="ulimIssueNewStudentDevice73551986">현재 브라우저를 수강신청 기기로 등록</button>'+
+      '<button type="button" id="ulimRefreshNewStudentDevice73551986">목록 새로고침</button>'+
+      '<button type="button" id="ulimClearNewStudentDevice73551986">현재 브라우저 로컬 키 지우기</button>'+
+    '</div>'+
+    '<div id="ulimNewStudentDeviceList73551986"></div>';
+  root.appendChild(section);
+
+  document.getElementById('ulimIssueNewStudentDevice73551986')?.addEventListener('click',issueCurrentNewStudentDevice73551986);
+  document.getElementById('ulimRefreshNewStudentDevice73551986')?.addEventListener('click',refreshNewStudentDevices73551986);
+  document.getElementById('ulimClearNewStudentDevice73551986')?.addEventListener('click',()=>{
+    if(!confirm('현재 브라우저의 로컬 수강신청 키만 지울까요? 서버의 기기 등록 상태는 유지됩니다.'))return;
+    clearNewStudentDevice73551986();
+    refreshNewStudentDevices73551986();
+  });
+
+  refreshNewStudentDevices73551986();
+}
+
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',()=>setTimeout(installNewStudentDeviceAdmin73551986,0),{once:true});
+}else{
+  setTimeout(installNewStudentDeviceAdmin73551986,0);
+}

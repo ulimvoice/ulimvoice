@@ -5,6 +5,21 @@ import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/
 const VERSION = '2026-09-19.73551590-app-check-observe-only';
 const APP_CHECK_CLIENT_OBSERVE_73551590 = true;
 window.__ULIM_NEW_STUDENT_REGISTRATION_PUBLIC_73550937__ = true;
+
+const NEW_STUDENT_REGISTRATION_DEVICE_ID_STORAGE_KEY_73551986 = 'ulim.newStudentRegistration.deviceId.v73551986';
+const NEW_STUDENT_REGISTRATION_DEVICE_CREDENTIAL_STORAGE_KEY_73551986 = 'ulim.newStudentRegistration.deviceCredential.v73551986';
+
+function newStudentRegistrationDevicePayload73551986(){
+  try{
+    return {
+      registrationDeviceId:String(localStorage.getItem(NEW_STUDENT_REGISTRATION_DEVICE_ID_STORAGE_KEY_73551986)||'').trim(),
+      registrationDeviceCredential:String(localStorage.getItem(NEW_STUDENT_REGISTRATION_DEVICE_CREDENTIAL_STORAGE_KEY_73551986)||'').trim()
+    };
+  }catch(_error){
+    return {registrationDeviceId:'',registrationDeviceCredential:''};
+  }
+}
+
 window.__ULIM_NEW_STUDENT_PUBLIC_SPECIAL_OWNER_73550963__ = true;
 window.__ULIM_NEW_STUDENT_CURRICULUM_INSTRUCTOR_TABS_73550964__ = true;
 window.__ULIM_NEW_STUDENT_ACADEMY_INTRO_TITLE_HIDE_73550965__ = true;
@@ -561,7 +576,7 @@ function setupSignature(){
 async function submitRegistration(){
   const err=validateStep('review'); if(err)return alert(err);
   if(!confirm('확인한 내용으로 신규 수강등록을 완료할까요?')) return;
-  const payload={...form, submissionId:requestId('new-student-73550937'), clientVersion:VERSION};
+  const payload={...form, ...newStudentRegistrationDevicePayload73551986(), submissionId:requestId('new-student-73550937'), clientVersion:VERSION};
   showLoading('신규 수강등록을 처리하고 있습니다...');
   try{
     const result=await call('submitNewStudentRegistration73550937',payload);
@@ -587,7 +602,7 @@ async function load(){
   showLoading('학원안내와 수강신청 정보를 불러오는 중...');
   const loadingFailsafe73550951=setTimeout(hideLoading,28000);
   try{
-    config=await call('getPublicNewStudentRegistration73550937',{requestId:requestId('new-student-config-73550937')});
+    config=await call('getPublicNewStudentRegistration73550937',{...newStudentRegistrationDevicePayload73551986(),requestId:requestId('new-student-config-73550937')});
     document.getElementById('publicTitle73550937').textContent=text(config.publicTitle)||'울림 성우·스피치·연기학원';
     renderAcademy(); renderApplication();
   }catch(error){
