@@ -2496,25 +2496,31 @@
     if(!isFullAdmin())return alert('전체관리자 권한이 필요합니다.');
     if(!allClassesState735410.ledger)await loadAllClassesData735410(false);
     var modal=ensureMonthlySessionPlanModal735433();var month=text(allClassesState735410.ledger&&allClassesState735410.ledger.currentMonth)||today().slice(0,7);
-    modal.dataset.month=month;modal._ulimExtraDates73552049=[];modal._ulimRegularDates73552049=[];document.getElementById('ulimMonthlySessionPlanTitle735433').textContent=monthLabel7355033(month)+' 현재월 수업일 지정';
+    modal.dataset.month=month;modal._ulimExtraClassDates73552078=[];modal._ulimExtraClasses73552078=[];modal._ulimRegularDates73552049=[];document.getElementById('ulimMonthlySessionPlanTitle735433').textContent=monthLabel7355033(month)+' 현재월 수업일 지정';
     var weekdays=document.getElementById('ulimMonthlySessionWeekdays735433');weekdays.innerHTML=[{label:'월',day:1},{label:'화',day:2},{label:'수',day:3},{label:'목',day:4},{label:'금',day:5},{label:'토',day:6},{label:'일',day:0}].map(function(item){return '<button type="button" data-session-weekday735433="'+item.day+'">'+item.label+'요일</button>';}).join('');
     document.getElementById('ulimMonthlySessionPlanBody735433').innerHTML='<div class="ulim-ledger-plan-guide735433"><b style="display:block;margin-bottom:6px">추가 수업일 등록</b><span>먼저 위에서 요일을 선택하면 정규 수업일과 추가 수업일 날짜 입력란이 표시됩니다.</span></div>';document.getElementById('ulimMonthlySessionPlanApply735433').disabled=true;modal.style.display='flex';
   }
   function renderMonthlyExtraDates73552049(modal) {
     var list=document.getElementById('ulimMonthlySessionExtraDates73552049');if(!list||!modal)return;
-    var dates=Array.isArray(modal._ulimExtraDates73552049)?modal._ulimExtraDates73552049:[];
-    list.innerHTML=dates.length?dates.map(function(date){return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid #e2e8f0;border-radius:9px;background:#fff"><span><b>'+escapeHtml(dateLabel7355033(date))+'</b> <small>'+escapeHtml(scheduleWeekday7355014(date))+'요일</small></span><button type="button" class="admin-btn gray" data-remove-month-extra-date73552049="'+escapeHtml(date)+'" style="padding:5px 8px">삭제</button></div>';}).join(''):'<div class="ulim-ledger-plan-guide735433">추가 수업일이 없습니다.</div>';
-    Array.from(list.querySelectorAll('[data-remove-month-extra-date73552049]')).forEach(function(button){button.addEventListener('click',function(){var date=text(button.getAttribute('data-remove-month-extra-date73552049'));modal._ulimExtraDates73552049=dates.filter(function(item){return item!==date;});renderMonthlyExtraDates73552049(modal);});});
+    var pairs=Array.isArray(modal._ulimExtraClassDates73552078)?modal._ulimExtraClassDates73552078:[];
+    var classes=Array.isArray(modal._ulimExtraClasses73552078)?modal._ulimExtraClasses73552078:[];
+    var classById=new Map(classes.map(function(item){return [text(item&&item.classId),item||{}];}));
+    list.innerHTML=pairs.length?pairs.map(function(pair){var item=classById.get(text(pair&&pair.classId))||{};var classLabel=text(item.className)||text(pair&&pair.classId);var instructor=text(item.instructorName);var time=[text(item.startTime),text(item.endTime)].filter(Boolean).join('~');var meta=[instructor,time].filter(Boolean).join(' · ');return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid #e2e8f0;border-radius:9px;background:#fff"><span><b>'+escapeHtml(classLabel)+'</b><small style="display:block">'+escapeHtml(dateLabel7355033(pair.date))+' · '+escapeHtml(scheduleWeekday7355014(pair.date))+'요일'+(meta?' · '+escapeHtml(meta):'')+'</small></span><button type="button" class="admin-btn gray" data-remove-extra-class73552078="'+escapeHtml(pair.classId)+'" data-remove-extra-date73552078="'+escapeHtml(pair.date)+'" style="padding:5px 8px">삭제</button></div>';}).join(''):'<div class="ulim-ledger-plan-guide735433">반별 추가 수업일이 없습니다.</div>';
+    Array.from(list.querySelectorAll('[data-remove-extra-class73552078]')).forEach(function(button){button.addEventListener('click',function(){var classId=text(button.getAttribute('data-remove-extra-class73552078'));var date=text(button.getAttribute('data-remove-extra-date73552078'));modal._ulimExtraClassDates73552078=pairs.filter(function(pair){return text(pair&&pair.classId)!==classId||text(pair&&pair.date)!==date;});renderMonthlyExtraDates73552049(modal);});});
   }
   function addMonthlyExtraDate73552049(modal) {
-    var input=document.getElementById('ulimMonthlySessionExtraDateInput73552049');if(!modal||!input)return;
+    var classSelect=document.getElementById('ulimMonthlySessionExtraClass73552078');var input=document.getElementById('ulimMonthlySessionExtraDateInput73552049');if(!modal||!classSelect||!input)return;
+    var classId=text(classSelect.value);if(!classId)return alert('추가수업을 등록할 반을 선택해주세요.');
     var date=text(input.value);if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return alert('추가할 수업일을 선택해주세요.');
+    var month=text(modal.dataset.month);if(date.slice(0,7)!==month)return alert('현재 설정 중인 '+month+' 안의 날짜만 추가할 수 있습니다.');
     var regular=Array.isArray(modal._ulimRegularDates73552049)?modal._ulimRegularDates73552049:[];
-    if(regular.indexOf(date)>=0)return alert('정규 요일 날짜입니다. 위 수업일 목록에서 체크해주세요.');
-    var dates=Array.isArray(modal._ulimExtraDates73552049)?modal._ulimExtraDates73552049.slice():[];
-    if(dates.indexOf(date)>=0)return alert('이미 추가된 수업일입니다.');
-    if(dates.length>=12)return alert('추가 수업일은 한 요일 계획당 최대 12개까지 등록할 수 있습니다.');
-    dates.push(date);dates.sort();modal._ulimExtraDates73552049=dates;input.value='';renderMonthlyExtraDates73552049(modal);
+    if(regular.indexOf(date)>=0)return alert('이 날짜는 선택한 정규 요일의 날짜입니다. 위 정규 수업일 목록에서 설정해주세요.');
+    var classes=Array.isArray(modal._ulimExtraClasses73552078)?modal._ulimExtraClasses73552078:[];
+    if(!classes.some(function(item){return text(item&&item.classId)===classId;}))return alert('선택한 반을 확인할 수 없습니다. 요일을 다시 선택해주세요.');
+    var pairs=Array.isArray(modal._ulimExtraClassDates73552078)?modal._ulimExtraClassDates73552078.slice():[];
+    if(pairs.some(function(pair){return text(pair&&pair.classId)===classId&&text(pair&&pair.date)===date;}))return alert('이 반에 이미 추가된 수업일입니다.');
+    if(pairs.length>=24)return alert('반별 추가 수업일은 한 월·요일 계획당 최대 24건까지 등록할 수 있습니다.');
+    pairs.push({classId:classId,date:date});pairs.sort(function(a,b){return text(a.date).localeCompare(text(b.date))||text(a.classId).localeCompare(text(b.classId));});modal._ulimExtraClassDates73552078=pairs;input.value='';renderMonthlyExtraDates73552049(modal);
   }
   async function loadMonthlySessionWeekday735433(weekday) {
     var modal=document.getElementById('ulimMonthlySessionPlanModal735433');if(!modal)return;var month=text(modal.dataset.month)||today().slice(0,7);var body=document.getElementById('ulimMonthlySessionPlanBody735433');
@@ -2524,27 +2530,31 @@
       modal.dataset.weekday=String(weekday);
       Array.from(document.querySelectorAll('#ulimMonthlySessionWeekdays735433 [data-session-weekday735433]')).forEach(function(btn){btn.classList.toggle('active',Number(btn.dataset.sessionWeekday735433)===weekday);});
       var dates=Array.isArray(data.dates)?data.dates:[];
+      var classes=Array.isArray(data.classes)?data.classes:[];
       modal._ulimRegularDates73552049=dates.map(function(item){return text(item&&item.date);}).filter(Boolean);
-      modal._ulimExtraDates73552049=Array.from(new Set((Array.isArray(data.extraDates)?data.extraDates:[]).map(function(date){return text(date);}).filter(function(date){return /^\d{4}-\d{2}-\d{2}$/.test(date);}))).sort();
-      body.innerHTML='<div class="ulim-ledger-plan-summary735433"><b>'+escapeHtml(data.weekdayLabel||'')+'</b><span>'+Number(data.classCount||0)+'개 반에 일괄 적용</span><label><input type="checkbox" id="ulimMonthlySessionAll735433"> 전체선택</label></div><div class="ulim-ledger-plan-dates735433">'+(dates.length?dates.map(function(item){return '<label><input type="checkbox" data-month-session-date735433="1" value="'+escapeHtml(item.date)+'"'+(item.checked?' checked':'')+'><span><b>'+escapeHtml(dateLabel7355033(item.date))+'</b><small>'+escapeHtml(scheduleWeekday7355014(item.date))+(item.partial?' · 일부 반 제외됨':'')+'</small></span></label>';}).join(''):'<div class="ulim-ledger-plan-guide735433">해당 요일의 날짜가 없습니다.</div>')+'</div><div style="margin-top:14px;padding-top:12px;border-top:1px solid #e2e8f0"><div style="display:grid;gap:4px;margin-bottom:8px"><b>추가 수업일</b><small>정규 요일 외 5·6주차 또는 추가수업 날짜를 직접 등록합니다.</small></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px"><input type="date" id="ulimMonthlySessionExtraDateInput73552049" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:9px"><button type="button" class="admin-btn blue" id="ulimMonthlySessionExtraDateAdd73552049">날짜 추가</button></div><div id="ulimMonthlySessionExtraDates73552049" style="display:grid;gap:6px"></div></div>';
-      var boxes=Array.from(body.querySelectorAll('[data-month-session-date735433]'));var all=body.querySelector('#ulimMonthlySessionAll735433');var sync=function(){var count=boxes.filter(function(box){return box.checked;}).length;if(all){all.checked=boxes.length>0&&count===boxes.length;all.indeterminate=count>0&&count<boxes.length;}};boxes.forEach(function(box){box.addEventListener('change',sync);});if(all)all.addEventListener('change',function(){boxes.forEach(function(box){box.checked=all.checked;});all.indeterminate=false;});sync();
+      modal._ulimExtraClasses73552078=classes.map(function(item){return {classId:text(item&&item.classId),className:text(item&&item.className),instructorName:text(item&&item.instructorName),startTime:text(item&&item.startTime),endTime:text(item&&item.endTime)};}).filter(function(item){return !!item.classId;});
+      var seen73552078=new Set();modal._ulimExtraClassDates73552078=(Array.isArray(data.extraClassDates)?data.extraClassDates:[]).map(function(pair){return {classId:text(pair&&pair.classId),date:text(pair&&pair.date)};}).filter(function(pair){var key=pair.classId+'|'+pair.date;if(!pair.classId||!/^\d{4}-\d{2}-\d{2}$/.test(pair.date)||seen73552078.has(key))return false;seen73552078.add(key);return true;}).sort(function(a,b){return a.date.localeCompare(b.date)||a.classId.localeCompare(b.classId);});
+      var lastDate73552078=new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(5,7)),0,12)).toISOString().slice(0,10);
+      var classOptions73552078=modal._ulimExtraClasses73552078.map(function(item){var meta=[item.instructorName,[item.startTime,item.endTime].filter(Boolean).join('~')].filter(Boolean).join(' · ');return '<option value="'+escapeHtml(item.classId)+'">'+escapeHtml(item.className||item.classId)+(meta?' · '+escapeHtml(meta):'')+'</option>';}).join('');
+      body.innerHTML='<div class="ulim-ledger-plan-summary735433"><b>'+escapeHtml(data.weekdayLabel||'')+'</b><span>'+Number(data.classCount||0)+'개 반 정규 수업일 일괄 적용</span><label><input type="checkbox" id="ulimMonthlySessionAll735433"> 전체선택</label></div><div class="ulim-ledger-plan-dates735433">'+(dates.length?dates.map(function(item){return '<label><input type="checkbox" data-month-session-date735433="1" value="'+escapeHtml(item.date)+'"'+(item.checked?' checked':'')+'><span><b>'+escapeHtml(dateLabel7355033(item.date))+'</b><small>'+escapeHtml(scheduleWeekday7355014(item.date))+(item.partial?' · 일부 반 제외됨':'')+'</small></span></label>';}).join(''):'<div class="ulim-ledger-plan-guide735433">해당 요일의 날짜가 없습니다.</div>')+'</div><div style="margin-top:14px;padding-top:12px;border-top:1px solid #e2e8f0"><div style="display:grid;gap:4px;margin-bottom:8px"><b>특정 반 추가 수업일</b><small>반 1개를 선택한 뒤 현재 월 안의 임의 날짜를 추가합니다. 다른 반에는 적용되지 않습니다.</small></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px"><select id="ulimMonthlySessionExtraClass73552078" style="min-width:210px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:9px"><option value="">반 선택</option>'+classOptions73552078+'</select><input type="date" id="ulimMonthlySessionExtraDateInput73552049" min="'+escapeHtml(month+'-01')+'" max="'+escapeHtml(lastDate73552078)+'" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:9px"><button type="button" class="admin-btn blue" id="ulimMonthlySessionExtraDateAdd73552049">선택 반에 날짜 추가</button></div><div id="ulimMonthlySessionExtraDates73552049" style="display:grid;gap:6px"></div></div>';
+      var boxes=Array.from(body.querySelectorAll('[data-month-session-date735433]'));var all=body.querySelector('#ulimMonthlySessionAll735433');var sync=function(){var checked=boxes.filter(function(box){return box.checked;}).length;if(all){all.checked=boxes.length>0&&checked===boxes.length;all.indeterminate=checked>0&&checked<boxes.length;}};boxes.forEach(function(box){box.addEventListener('change',sync);});if(all)all.addEventListener('change',function(){boxes.forEach(function(box){box.checked=all.checked;});all.indeterminate=false;});sync();
       var add=document.getElementById('ulimMonthlySessionExtraDateAdd73552049');if(add)add.onclick=function(){addMonthlyExtraDate73552049(modal);};renderMonthlyExtraDates73552049(modal);
-      var apply=document.getElementById('ulimMonthlySessionPlanApply735433');apply.disabled=!dates.length&&!(modal._ulimExtraDates73552049||[]).length;apply.onclick=function(){applyMonthlySessionPlan735433();};
+      var apply=document.getElementById('ulimMonthlySessionPlanApply735433');apply.disabled=!dates.length&&!modal._ulimExtraClasses73552078.length&&!modal._ulimExtraClassDates73552078.length;apply.onclick=function(){applyMonthlySessionPlan735433();};
     }catch(error){body.innerHTML='<div class="ulim-ledger-plan-guide735433">'+escapeHtml(text(error&&error.message)||'수업일을 불러오지 못했습니다.')+'</div>';}
   }
   async function applyMonthlySessionPlan735433(){
     var modal=document.getElementById('ulimMonthlySessionPlanModal735433');if(!modal)return;
     var month=text(modal.dataset.month);var weekday=Number(modal.dataset.weekday);
     var selected=Array.from(modal.querySelectorAll('[data-month-session-date735433]:checked')).map(function(box){return text(box.value);});
-    var extraDates=Array.isArray(modal._ulimExtraDates73552049)?modal._ulimExtraDates73552049.slice():[];
+    var extraClassDates=Array.isArray(modal._ulimExtraClassDates73552078)?modal._ulimExtraClassDates73552078.map(function(pair){return {classId:text(pair&&pair.classId),date:text(pair&&pair.date)};}):[];
     if(!Number.isInteger(weekday))return alert('요일을 선택해주세요.');
-    if(!confirm('선택한 수업일과 추가 수업일을 이 요일의 모든 반에 적용할까요?\n정규 날짜의 체크 해제는 기존처럼 수업일에서 제외됩니다.'))return;
+    if(!confirm('정규 수업일 체크 상태는 이 요일의 모든 반에 적용됩니다.\n반별 추가 수업일은 표시된 특정 반에만 적용됩니다.\n저장할까요?'))return;
     try{
-      if(typeof global.showLoading==='function')global.showLoading('전체 반 수업일을 적용하는 중...');
-      var result=await call('setMonthlyWeekdaySessionsAdmin7355034',{month:month,weekday:weekday,selectedDates:selected,extraDates:extraDates,requestId:requestId('monthly-session-plan-save-735433')});
+      if(typeof global.showLoading==='function')global.showLoading('수업일 설정을 저장하는 중...');
+      var result=await call('setMonthlyWeekdaySessionsAdmin7355034',{month:month,weekday:weekday,selectedDates:selected,extraClassDates:extraClassDates,requestId:requestId('monthly-session-plan-save-735433')});
       modal.style.display='none';
       await loadAllClassesData735410(true,'monthly-session-plan');
-      if(Number(result&&result.skippedExtraConflicts||0)>0)alert('기존 휴강·대강·수업일 변경과 겹친 추가수업 '+Number(result.skippedExtraConflicts)+'건은 기존 일정을 보호하기 위해 건너뛰었습니다.');
+      if(Number(result&&result.skippedExtraConflicts||0)>0)alert('기존 휴강·대강·수업일 변경과 겹친 반별 추가수업 '+Number(result.skippedExtraConflicts)+'건은 기존 일정을 보호하기 위해 건너뛰었습니다.');
     }catch(error){alert(text(error&&error.message)||'수업일을 저장하지 못했습니다.');}
     finally{if(typeof global.hideLoading==='function')global.hideLoading();}
   }
