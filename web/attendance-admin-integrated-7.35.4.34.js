@@ -1919,10 +1919,10 @@
       +     '<div class="ulim-ledger-top-row735427">'
       +       '<div class="ulim-ledger-heading735427"><h3>전체반 출석부</h3></div>'
       +       '<div class="ulim-ledger-top-actions735427">'
-      +         '<div class="ulim-ledger-context-tools735433"><span id="ulimAllClassesContext735410">전월·현재월 동시 표시</span><button type="button" id="ulimMonthlySessionPlan735433">수업일 지정</button><button type="button" id="ulimPreviousMonthEdit735433" title="출석부 설정" aria-label="출석부 설정">⚙</button></div>'
+      +         '<div class="ulim-ledger-context-tools735433"><span id="ulimAllClassesContext735410">전월·현재월 동시 표시</span><button type="button" id="ulimMonthlySessionPlan735433">수업일 추가·지정</button><button type="button" id="ulimPreviousMonthEdit735433" title="출석부 설정" aria-label="출석부 설정">⚙</button></div>'
       +         '<label class="ulim-ledger-move-mode735427"><span>드래그 처리</span><select id="ulimAllClassesMoveMode735423"><option value="class_move">반이동</option><option value="existing">일반 이동</option><option value="new">신규</option><option value="makeup">보강</option></select></label>'
       +         '<button type="button" class="admin-btn red" id="ulimAllClassesRemoveSelected735423" style="display:none">선택 학생 제거</button>'
-      +         '<button type="button" class="admin-btn blue" id="ulimAllClassesReload735423">새로고침</button>'
+      +         '<button type="button" class="admin-btn blue" id="ulimAllClassesReload735423">다음월 갱신</button>'
       +         '<button type="button" class="admin-btn gray" data-close-all-classes="1">닫기</button>'
       +       '</div>'
       +     '</div>'
@@ -1968,6 +1968,7 @@
     if (!isFullAdmin()) return alert('전체관리자 권한이 필요합니다.');
     var button = document.getElementById('ulimAttendanceManualRollover73550920'); var status = document.getElementById('ulimAttendanceSettingsStatus73550920');
     var expectedMonth = today().slice(0, 7);
+    allClassesState735410.viewAnchorDate73552070 = today();
     try {
       if (button) button.disabled = true; if (status) status.textContent = expectedMonth + ' 출석부를 현재 재원 명단 기준으로 다시 계산하는 중...';
       var ledger = await loadAllClassesData735410(true, 'manual-month-rollover-73550920');
@@ -2016,7 +2017,7 @@
     var button = document.getElementById('ulimAllClassesReload735423');
     if (!button) return;
     button.disabled = loading === true;
-    button.textContent = loading === true ? '새로고침 중…' : (allClassesState735410.refreshAvailable ? '새로고침 ●' : '새로고침');
+    button.textContent = loading === true ? '다음월 갱신 중…' : (allClassesState735410.refreshAvailable ? '다음월 갱신 ●' : '다음월 갱신');
     button.setAttribute('aria-busy', loading === true ? 'true' : 'false');
   }
   function markAllClassesRefreshAvailable735426() {
@@ -2028,9 +2029,13 @@
     }
   }
   function requestManualAllClassesRefresh735426() {
+    var currentMonth73552070 = text(allClassesState735410.ledger && allClassesState735410.ledger.currentMonth) || today().slice(0, 7);
+    var parts73552070 = currentMonth73552070.split('-').map(Number);
+    var nextMonthAnchor73552070 = new Date(Date.UTC(parts73552070[0], parts73552070[1], 1, 12)).toISOString().slice(0, 10);
+    allClassesState735410.viewAnchorDate73552070 = nextMonthAnchor73552070;
     allClassesState735410.refreshAvailable = false;
     updateAllClassesRefreshButton735426(true);
-    return loadAllClassesData735410(true, 'manual').catch(function () {});
+    return loadAllClassesData735410(true, 'manual-next-month-73552070').catch(function () {});
   }
   function renderTeacherTabs735423() {
     var wrap = document.getElementById('ulimAllClassesTeacherTabs735423'); if (!wrap || !allClassesState735410.ledger) return;
@@ -2493,7 +2498,7 @@
     var modal=ensureMonthlySessionPlanModal735433();var month=text(allClassesState735410.ledger&&allClassesState735410.ledger.currentMonth)||today().slice(0,7);
     modal.dataset.month=month;modal._ulimExtraDates73552049=[];modal._ulimRegularDates73552049=[];document.getElementById('ulimMonthlySessionPlanTitle735433').textContent=monthLabel7355033(month)+' 현재월 수업일 지정';
     var weekdays=document.getElementById('ulimMonthlySessionWeekdays735433');weekdays.innerHTML=[{label:'월',day:1},{label:'화',day:2},{label:'수',day:3},{label:'목',day:4},{label:'금',day:5},{label:'토',day:6},{label:'일',day:0}].map(function(item){return '<button type="button" data-session-weekday735433="'+item.day+'">'+item.label+'요일</button>';}).join('');
-    document.getElementById('ulimMonthlySessionPlanBody735433').innerHTML='<div class="ulim-ledger-plan-guide735433">수업일을 조정할 요일을 선택해주세요.</div>';document.getElementById('ulimMonthlySessionPlanApply735433').disabled=true;modal.style.display='flex';
+    document.getElementById('ulimMonthlySessionPlanBody735433').innerHTML='<div class="ulim-ledger-plan-guide735433"><b style="display:block;margin-bottom:6px">추가 수업일 등록</b><span>먼저 위에서 요일을 선택하면 정규 수업일과 추가 수업일 날짜 입력란이 표시됩니다.</span></div>';document.getElementById('ulimMonthlySessionPlanApply735433').disabled=true;modal.style.display='flex';
   }
   function renderMonthlyExtraDates73552049(modal) {
     var list=document.getElementById('ulimMonthlySessionExtraDates73552049');if(!list||!modal)return;
@@ -3066,7 +3071,7 @@ function groupById735423(classId) { return (allClassesState735410.ledger && allC
         var ledger = await call('getAttendanceRosterAdmin73550', {
           ledger: true,
           view: 'ledger',
-          anchorDate: today(),
+          anchorDate: text(allClassesState735410.viewAnchorDate73552070) || today(),
           force: requestedForce735426,
           refreshNonce: requestedForce735426 ? requestId('attendance-ledger-refresh-735426') : '',
           requestId: requestId('attendance-ledger-735426')
@@ -3074,6 +3079,7 @@ function groupById735423(classId) { return (allClassesState735410.ledger && allC
         if (text(ledger && ledger.source) !== 'firestore_attendance_ledger_7355033') {
           throw new Error('최신 출석부 서버가 아직 반영되지 않았습니다.');
         }
+        allClassesState735410.viewAnchorDate73552070 = text(ledger && ledger.anchorDate) || text(allClassesState735410.viewAnchorDate73552070) || today();
         allClassesState735410.ledger = normalizeAttendanceLedger73550920(ledger);
         allClassesState735410.lastLoadedAt = Date.now();
         allClassesState735410.refreshAvailable = false;
