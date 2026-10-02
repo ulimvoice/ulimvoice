@@ -1753,8 +1753,11 @@
     modal.style.display='flex';
     body.innerHTML='<div>불러오는 중...</div>';
     try {
-      var result=await call('listMakeupAbsenceCasesAdmin73552114',{state:'all',limit:500});
-      var cases=Array.isArray(result&&result.cases)?result.cases:(Array.isArray(result&&result.rows)?result.rows:[]);
+      var openResult73552157=await call('listMakeupAbsenceCasesAdmin73552114',{state:'open',limit:500});
+      var assignedResult73552157=await call('listMakeupAbsenceCasesAdmin73552114',{state:'assigned',limit:500});
+      var openCases73552157=Array.isArray(openResult73552157&&openResult73552157.rows)?openResult73552157.rows:(Array.isArray(openResult73552157&&openResult73552157.cases)?openResult73552157.cases:[]);
+      var assignedCases73552157=Array.isArray(assignedResult73552157&&assignedResult73552157.rows)?assignedResult73552157.rows:(Array.isArray(assignedResult73552157&&assignedResult73552157.cases)?assignedResult73552157.cases:[]);
+      var cases=openCases73552157.concat(assignedCases73552157);
       body.innerHTML=cases.length?cases.map(function(item){
         var caseId=text(item.caseId||item.id);
         var state=text(item.state||'open');
