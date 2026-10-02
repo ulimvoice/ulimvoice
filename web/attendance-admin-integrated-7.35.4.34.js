@@ -498,14 +498,53 @@
     return text(value) === 'makeup_required' ? 'makeup_required' : 'normal';
   }
 
-  function absenceKindLabel73552144(value) {
-    return absenceKind73552144(value) === 'makeup_required' ? '보강필요결석' : '일반결석';
+  var absenceChoiceMenu73552174 = null;
+
+  function closeAbsenceChoiceMenu73552174() {
+    if (absenceChoiceMenu73552174 && absenceChoiceMenu73552174.parentNode) {
+      absenceChoiceMenu73552174.parentNode.removeChild(absenceChoiceMenu73552174);
+    }
+    absenceChoiceMenu73552174 = null;
   }
 
-  function absenceKindOptions73552144(value) {
-    var current = absenceKind73552144(value);
-    return '<option value="normal"' + (current === 'normal' ? ' selected' : '') + '>일반결석</option>'
-      + '<option value="makeup_required"' + (current === 'makeup_required' ? ' selected' : '') + '>보강필요결석</option>';
+  function openAbsenceChoiceMenu73552174(anchor, currentKind, onSelect) {
+    if (!anchor || typeof onSelect !== 'function') return;
+    closeAbsenceChoiceMenu73552174();
+    var menu = document.createElement('div');
+    menu.className = 'ulim-absence-choice-menu73552174';
+    menu.setAttribute('role', 'menu');
+    menu.style.cssText = 'position:fixed;z-index:2147483647;display:flex;gap:6px;padding:7px;background:#fff;border:1px solid #cbd5e1;border-radius:11px;box-shadow:0 10px 28px rgba(15,23,42,.22);white-space:nowrap';
+    ['normal','makeup_required'].forEach(function(kind) {
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.setAttribute('role', 'menuitem');
+      button.dataset.absenceChoice73552174 = kind;
+      button.textContent = kind === 'makeup_required' ? '보강결석' : '일반결석';
+      button.style.cssText = 'border:1px solid #cbd5e1;border-radius:8px;padding:7px 10px;background:' + (absenceKind73552144(currentKind) === kind ? '#e0f2fe' : '#fff') + ';font-weight:800;cursor:pointer';
+      button.addEventListener('click', function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        closeAbsenceChoiceMenu73552174();
+        Promise.resolve(onSelect(kind)).catch(function(error) {
+          alert(text(error && error.message) || '결석 구분 저장에 실패했습니다.');
+        });
+      });
+      menu.appendChild(button);
+    });
+    document.body.appendChild(menu);
+    var rect = anchor.getBoundingClientRect();
+    var menuRect = menu.getBoundingClientRect();
+    var top = Math.max(8, rect.top - menuRect.height - 8);
+    var left = Math.min(Math.max(8, rect.left + (rect.width - menuRect.width) / 2), Math.max(8, window.innerWidth - menuRect.width - 8));
+    menu.style.top = Math.round(top) + 'px';
+    menu.style.left = Math.round(left) + 'px';
+    absenceChoiceMenu73552174 = menu;
+    setTimeout(function() {
+      document.addEventListener('click', function closeOnce73552174(event) {
+        document.removeEventListener('click', closeOnce73552174, true);
+        if (absenceChoiceMenu73552174 && !absenceChoiceMenu73552174.contains(event.target)) closeAbsenceChoiceMenu73552174();
+      }, true);
+    }, 0);
   }
 
   function attendanceStatusOptions7355014(status) {
@@ -710,18 +749,16 @@
         + '</span></td>'
         + '<td data-label="출석체크"><div class="admin-att-action-wrap">'
         + '<button type="button" class="admin-att-mini ok' + (status === '출석' ? ' selected' : '') + '" data-att-quick="출석"' + (rowHold73550974 ? ' disabled' : '') + '>O</button>'
-        + '<button type="button" class="admin-att-mini no' + (status === '결석' ? ' selected' : '') + '" data-att-quick="결석"' + (rowHold73550974 ? ' disabled' : '') + '>X</button>'
+        + '<button type="button" class="admin-att-mini no' + (status === '결석' ? ' selected' : '') + '" data-att-quick="결석" data-att-absence-menu="1" title="' + (absenceKind73552144(record.absenceKind) === 'makeup_required' ? '보강결석' : '결석') + '"' + (rowHold73550974 ? ' disabled' : '') + '>X</button>'
         + '<select class="admin-att-status-select" data-field="status"' + (rowHold73550974 ? ' disabled' : '') + '>' + attendanceStatusOptions7355014(rowHold73550974 ? '결석' : status) + '</select>'
         + '<span id="admin-att-save-state-' + index + '" class="admin-att-save-state"></span>'
         + '</div></td>'
         + '<td data-label="현재상태"><input class="admin-small-input" data-field="currentStatus" maxlength="500" value="' + escapeHtml(current) + '" placeholder="강사 입력사항"></td>'
         + '<td data-label="특이사항">' + (special ? '<span class="admin-status-badge' + badgeClass + '">' + escapeHtml(specialLabel7355033(special)) + '</span>' : '-') + '</td>'
-        + '<div class="ulim-att-absence-kind73552144"' + (status === '결석' ? '' : ' style="display:none"') + '><select data-field="absenceKind">' + absenceKindOptions73552144(record.absenceKind) + '</select></div>'
         + '<td data-label="메모"><input class="admin-small-input" data-field="memo" value="' + escapeHtml(memo) + '" placeholder="해당 출석칸 메모"></td>'
         + '</tr>';
     });
     html += '</tbody></table><div class="ulim-attendance-actions-7355030" style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px">'
-      + (isFullAdmin() ? '<button type="button" class="admin-btn orange" id="ulimMakeupCasesOpen73552144">보강필요 관리</button>' : '')
       + '<button type="button" class="admin-btn" id="ulimAttendanceSaveSelected7355014">선택 출석부 저장</button>'
       + '<button type="button" class="admin-btn gray" id="ulimAttendanceManualReload7355014">출석부 다시 불러오기</button>'
       + '</div>';
@@ -742,20 +779,27 @@
       });
       row.querySelectorAll('[data-att-quick]').forEach(function (button) {
         button.addEventListener('click', function () {
-          return setAttendanceRowStatusOwned7355020(index, button.getAttribute('data-att-quick'), row);
+          var quickStatus73552174 = text(button.getAttribute('data-att-quick'));
+          if (quickStatus73552174 !== '결석') return setAttendanceRowStatusOwned7355020(index, quickStatus73552174, row);
+          var records73552174 = currentAttendanceRecords();
+          var record73552174 = records73552174[index];
+          if (!record73552174) return false;
+          record73552174.absenceKind = 'normal';
+          var defaultSave73552174 = Promise.resolve(setAttendanceRowStatusOwned7355020(index, '결석', row));
+          openAbsenceChoiceMenu73552174(button, 'normal', function(kind73552174) {
+            if (kind73552174 === 'normal') return defaultSave73552174;
+            return defaultSave73552174.then(function(ok73552174) {
+              if (ok73552174 === false) return false;
+              record73552174.absenceKind = kind73552174;
+              return setAttendanceRowStatusOwned7355020(index, '결석', row);
+            });
+          });
+          return defaultSave73552174;
         });
       });
       var statusSelect = row.querySelector('select[data-field="status"]');
       if (statusSelect) statusSelect.addEventListener('change', function () {
         return setAttendanceRowStatusOwned7355020(index, statusSelect.value, row);
-      });
-      var absenceSelect73552144 = row.querySelector('select[data-field="absenceKind"]');
-      if (absenceSelect73552144) absenceSelect73552144.addEventListener('change', function () {
-        var records73552144 = currentAttendanceRecords();
-        var record73552144 = records73552144[index];
-        if (!record73552144) return;
-        record73552144.absenceKind = absenceKind73552144(absenceSelect73552144.value);
-        return setAttendanceRowStatusOwned7355020(index, '결석', row);
       });
       var currentInput = row.querySelector('input[data-field="currentStatus"]');
       if (currentInput) currentInput.addEventListener('input', function () {
@@ -775,8 +819,6 @@
       });
     });
 
-    var makeupButton73552144 = wrap.querySelector('#ulimMakeupCasesOpen73552144');
-    if (makeupButton73552144) makeupButton73552144.addEventListener('click', function () { openMakeupCasesModal73552144(); });
     var saveButton = wrap.querySelector('#ulimAttendanceSaveSelected7355014');
     if (saveButton) saveButton.addEventListener('click', function () {
       saveSelectedAttendanceRows7355020();
@@ -1740,7 +1782,7 @@
     modal=document.createElement('div');
     modal.id='ulimMakeupCasesModal73552144';
     modal.style.cssText='display:none;position:fixed;inset:0;z-index:2147483655;align-items:center;justify-content:center;padding:18px;background:rgba(15,23,42,.62)';
-    modal.innerHTML='<section role="dialog" aria-modal="true" style="width:min(980px,96vw);max-height:92vh;background:#fff;border-radius:18px;overflow:hidden;display:flex;flex-direction:column"><header style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid #e2e8f0"><div><h3 style="margin:0">보강필요 결석 관리</h3><small>보강필요결석 조회 · 보강 수업 배정 · 배정 취소</small></div><button type="button" data-close-makeup73552144="1">×</button></header><div id="ulimMakeupCasesBody73552144" style="padding:16px;overflow:auto"></div><footer style="padding:12px 18px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end"><button type="button" class="admin-btn gray" data-close-makeup73552144="1">닫기</button></footer></section>';
+    modal.innerHTML='<section role="dialog" aria-modal="true" style="width:min(980px,96vw);max-height:92vh;background:#fff;border-radius:18px;overflow:hidden;display:flex;flex-direction:column"><header style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid #e2e8f0"><div><h3 style="margin:0">보강 관리</h3><small>보강결석 조회 · 보강 수업 배정 · 배정 취소</small></div><button type="button" data-close-makeup73552144="1">×</button></header><div id="ulimMakeupCasesBody73552144" style="padding:16px;overflow:auto"></div><footer style="padding:12px 18px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end"><button type="button" class="admin-btn gray" data-close-makeup73552144="1">닫기</button></footer></section>';
     modal.addEventListener('click',function(event){if(event.target===modal||(event.target&&event.target.closest('[data-close-makeup73552144="1"]')))modal.style.display='none';});
     document.body.appendChild(modal);
     return modal;
@@ -1762,12 +1804,26 @@
         var caseId=text(item.caseId||item.id);
         var state=text(item.state||'open');
         var assigned=state==='assigned';
-        return '<div data-makeup-case73552144="'+escapeHtml(caseId)+'" style="border:1px solid #e2e8f0;border-radius:12px;padding:12px;margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:12px"><div><b>'+escapeHtml(item.studentName||'')+'</b><div style="font-size:12px;color:#64748b">'+escapeHtml((item.sourceDate||item.date||'')+' · '+(item.sourceClassName||item.className||''))+'</div></div><span>'+escapeHtml(assigned?'배정완료':'미배정')+'</span></div>'+(assigned?'<button type="button" class="admin-btn gray" data-makeup-cancel73552144="'+escapeHtml(caseId)+'" style="margin-top:10px">배정 취소</button>':'<div style="display:grid;grid-template-columns:160px 1fr auto;gap:8px;margin-top:10px"><input type="date" data-makeup-date73552144><select data-makeup-class73552144><option value="">보강 반 선택</option></select><button type="button" class="admin-btn orange" data-makeup-assign73552144="'+escapeHtml(caseId)+'">보강 배정</button></div>')+'</div>';
-      }).join(''):'<div>보강필요 결석이 없습니다.</div>';
+        var attendanceNo73552174=text(item.attendanceNo||item.studentNo||item.loginId);
+        var sourceDate73552174=text(item.sourceDate||item.date);
+        var sourceClassName73552174=text(item.sourceClassName||item.className);
+        var targetDate73552174=text(item.targetDate||item.assignedDate);
+        var targetClassName73552174=text(item.targetClassName||item.assignedClassName);
+        return '<div data-makeup-case73552144="'+escapeHtml(caseId)+'" style="border:1px solid #e2e8f0;border-radius:12px;padding:12px;margin-bottom:10px">'
+          +'<div style="display:flex;justify-content:space-between;gap:12px">'
+          +'<div><b>'+escapeHtml(item.studentName||'')+'</b>'
+          +'<div style="font-size:12px;color:#475569;margin-top:3px">출결번호 '+escapeHtml(attendanceNo73552174||'-')+'</div>'
+          +'<div style="font-size:12px;color:#64748b;margin-top:2px">결석일 '+escapeHtml(sourceDate73552174||'-')+' · '+escapeHtml(sourceClassName73552174||'-')+'</div></div>'
+          +'<span>'+escapeHtml(assigned?'배정완료':'미배정')+'</span></div>'
+          +(assigned
+            ?'<div style="font-size:12px;color:#166534;margin-top:8px">보강 '+escapeHtml(targetDate73552174||'-')+' · '+escapeHtml(targetClassName73552174||'-')+'</div><button type="button" class="admin-btn gray" data-makeup-cancel73552144="'+escapeHtml(caseId)+'" style="margin-top:10px">배정 취소</button>'
+            :'<div style="display:grid;grid-template-columns:160px 1fr auto;gap:8px;margin-top:10px"><input type="date" data-makeup-date73552144><select data-makeup-class73552144><option value="">보강 반 선택</option></select><button type="button" class="admin-btn orange" data-makeup-assign73552144="'+escapeHtml(caseId)+'">보강 배정</button></div>')
+          +'</div>';
+      }).join(''):'<div>보강결석이 없습니다.</div>';
       if(!allClassesState735410.directory) allClassesState735410.directory=await loadDirectory(false);
       Array.from(body.querySelectorAll('[data-makeup-class73552144]')).forEach(function(select){
         var classes=(allClassesState735410.directory&&allClassesState735410.directory.classes)||[];
-        select.innerHTML='<option value="">보강 반 선택</option>'+classes.map(function(c){return '<option value="'+escapeHtml(text(c.classId))+'">'+escapeHtml(text(c.className))+'</option>';}).join('');
+        select.innerHTML='<option value="">보강 반 선택</option>'+classes.map(function(c){var meta73552174=[text(c.instructorName),[text(c.startTime),text(c.endTime)].filter(Boolean).join('~')].filter(Boolean).join(' · ');return '<option value="'+escapeHtml(text(c.classId))+'">'+escapeHtml(text(c.className))+(meta73552174?' · '+escapeHtml(meta73552174):'')+'</option>';}).join('');
       });
       body.onclick=async function(event){
         var assign=event.target&&event.target.closest&&event.target.closest('[data-makeup-assign73552144]');
@@ -1789,7 +1845,7 @@
         }
       };
     } catch(error) {
-      body.innerHTML='<div>'+escapeHtml(text(error&&error.message)||'보강필요 결석을 불러오지 못했습니다.')+'</div>';
+      body.innerHTML='<div>'+escapeHtml(text(error&&error.message)||'보강결석을 불러오지 못했습니다.')+'</div>';
     }
   }
 
@@ -2007,7 +2063,7 @@
       +     '<div class="ulim-ledger-top-row735427">'
       +       '<div class="ulim-ledger-heading735427"><h3>전체반 출석부</h3></div>'
       +       '<div class="ulim-ledger-top-actions735427">'
-      +         '<div class="ulim-ledger-context-tools735433"><span id="ulimAllClassesContext735410">전월·현재월 동시 표시</span><button type="button" id="ulimMonthlySessionPlan735433">수업일 추가·지정</button><button type="button" id="ulimPreviousMonthEdit735433" title="출석부 설정" aria-label="출석부 설정">⚙</button></div>'
+      +         '<div class="ulim-ledger-context-tools735433"><span id="ulimAllClassesContext735410">전월·현재월 동시 표시</span><button type="button" id="ulimMonthlySessionPlan735433">수업일 추가·지정</button><button type="button" id="ulimMakeupCasesOpen73552174">보강관리</button><button type="button" id="ulimPreviousMonthEdit735433" title="출석부 설정" aria-label="출석부 설정">⚙</button></div>'
       +         '<label class="ulim-ledger-move-mode735427"><span>드래그 처리</span><select id="ulimAllClassesMoveMode735423"><option value="class_move">반이동</option><option value="existing">일반 이동</option><option value="new">신규</option><option value="makeup">보강</option></select></label>'
       +         '<button type="button" class="admin-btn red" id="ulimAllClassesRemoveSelected735423" style="display:none">선택 학생 제거</button>'
       +         '<button type="button" class="admin-btn blue" id="ulimAllClassesReload735423">다음월 갱신</button>'
@@ -2069,6 +2125,14 @@
     finally { if (button) button.disabled = false; }
   }
   function bindAllClassesHeaderControls735425(modal) {
+    var makeupCasesButton73552174 = modal && modal.querySelector('#ulimMakeupCasesOpen73552174');
+    if (makeupCasesButton73552174) {
+      makeupCasesButton73552174.style.display = isFullAdmin() ? '' : 'none';
+      if (!makeupCasesButton73552174.dataset.ulimMakeupBound73552174) {
+        makeupCasesButton73552174.dataset.ulimMakeupBound73552174 = '1';
+        makeupCasesButton73552174.addEventListener('click', function() { openMakeupCasesModal73552144(); });
+      }
+    }
     if (!modal || modal.dataset.ulimHeaderControls735426 === '1') return;
     modal.dataset.ulimHeaderControls735426 = '1';
     modal.addEventListener('click', function (event) {
@@ -2278,7 +2342,8 @@
     var specialLabel = specialLabel7355033(special);
     var showDateSpecial = !!specialLabel && kind !== 'new' && kind !== 'class_move';
     var disabled = hold ? ' disabled' : '';
-    var actions = '<div class="ulim-ledger-cell-actions735423' + (cell && cell.__saving735425 ? ' saving' : '') + '"><button type="button" data-ledger-status="출석" class="ulim-ledger-ox735423 ' + (status === '출석' ? 'on-o' : '') + '"' + disabled + '>O</button><button type="button" data-ledger-status="결석" data-absence-kind="normal" class="ulim-ledger-ox735423 ' + (status === '결석' && absenceKind73552144(cell.absenceKind) === 'normal' ? 'on-x' : '') + '"' + disabled + '>X</button><button type="button" data-ledger-status="결석" data-absence-kind="makeup_required" class="ulim-ledger-ox735423 ' + (status === '결석' && absenceKind73552144(cell.absenceKind) === 'makeup_required' ? 'on-x' : '') + '" title="보강필요결석"' + disabled + '>보</button><button type="button" data-ledger-detail="1" class="ulim-ledger-more735423" title="당일 메모">⋯</button></div>';
+    var ledgerAbsenceTitle73552174 = absenceKind73552144(cell.absenceKind) === 'makeup_required' ? '보강결석' : '결석';
+    var actions = '<div class="ulim-ledger-cell-actions735423' + (cell && cell.__saving735425 ? ' saving' : '') + '"><button type="button" data-ledger-status="출석" class="ulim-ledger-ox735423 ' + (status === '출석' ? 'on-o' : '') + '"' + disabled + '>O</button><button type="button" data-ledger-status="결석" data-ledger-absence-menu="1" class="ulim-ledger-ox735423 ' + (status === '결석' ? 'on-x' : '') + '" title="' + ledgerAbsenceTitle73552174 + '"' + disabled + '>X</button><button type="button" data-ledger-detail="1" class="ulim-ledger-more735423" title="당일 메모">⋯</button></div>';
     var specialHtml = showDateSpecial ? '<div class="ulim-ledger-special735423' + specialCss7355033(special) + '">' + escapeHtml(specialLabel) + '</div>' : '';
     var memo = text(cell.memo || cell.note || cell.remark);
     var memoHtml = memo ? '<div class="ulim-ledger-memo-preview73550974">(' + escapeHtml(memo) + ')</div>' : '';
@@ -2718,19 +2783,14 @@ function groupById735423(classId) { return (allClassesState735410.ledger && allC
   function ensureLedgerDetailModal735423() {
     var modal = document.getElementById('ulimLedgerDetailModal735423'); if (modal) return modal;
     modal = document.createElement('div'); modal.id='ulimLedgerDetailModal735423'; modal.style.cssText='display:none;position:fixed;inset:0;z-index:2147483652;align-items:center;justify-content:center;background:rgba(15,23,42,.55);padding:18px';
-    modal.innerHTML='<section style="width:min(520px,96vw);background:#fff;border-radius:16px;overflow:hidden"><header style="padding:14px 16px;border-bottom:1px solid #e2e8f0"><b id="ulimLedgerDetailTitle735423">당일 메모</b></header><div style="padding:16px"><label id="ulimLedgerAbsenceWrap73552144" style="display:none;gap:6px;font-size:12px;font-weight:900;color:#334155;margin-bottom:12px">결석 구분<select id="ulimLedgerAbsenceKind73552144" style="padding:10px;border:1px solid #cbd5e1;border-radius:9px"></select></label><label style="display:grid;gap:6px;font-size:12px;font-weight:900;color:#334155">메모<textarea id="ulimLedgerMemo735423" rows="5" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:9px" placeholder="해당 수업일 메모"></textarea></label></div><footer style="padding:12px 16px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;gap:8px"><button class="admin-btn gray" data-ledger-detail-close="1">취소</button><button class="admin-btn blue" id="ulimLedgerDetailSave735423">저장</button></footer></section>';
+    modal.innerHTML='<section style="width:min(520px,96vw);background:#fff;border-radius:16px;overflow:hidden"><header style="padding:14px 16px;border-bottom:1px solid #e2e8f0"><b id="ulimLedgerDetailTitle735423">당일 메모</b></header><div style="padding:16px"><label style="display:grid;gap:6px;font-size:12px;font-weight:900;color:#334155">메모<textarea id="ulimLedgerMemo735423" rows="5" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:9px" placeholder="해당 수업일 메모"></textarea></label></div><footer style="padding:12px 16px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;gap:8px"><button class="admin-btn gray" data-ledger-detail-close="1">취소</button><button class="admin-btn blue" id="ulimLedgerDetailSave735423">저장</button></footer></section>';
     modal.onclick=function(e){if(e.target===modal || (e.target&&e.target.closest('[data-ledger-detail-close="1"]')))modal.style.display='none';}; document.body.appendChild(modal); return modal;
   }
   function openLedgerDetail735423(group, student, session) {
     var actionDate73550921=ledgerSessionAttendanceDate73550921(session); var cell=ledgerSessionCell73550921(student,session); var modal=ensureLedgerDetailModal735423();
     document.getElementById('ulimLedgerDetailTitle735423').textContent=actionDate73550921+' · '+student.studentName+' · 메모';
     document.getElementById('ulimLedgerMemo735423').value=text(cell.memo);
-    var absenceWrap73552144=document.getElementById('ulimLedgerAbsenceWrap73552144');
-    var absenceSelect73552144=document.getElementById('ulimLedgerAbsenceKind73552144');
-    var isAbsent73552144=cleanAttendanceStatus7355014(cell.status||cell.attendanceStatus)==='결석';
-    if(absenceWrap73552144) absenceWrap73552144.style.display=isAbsent73552144?'grid':'none';
-    if(absenceSelect73552144) absenceSelect73552144.innerHTML=absenceKindOptions73552144(cell.absenceKind);
-    document.getElementById('ulimLedgerDetailSave735423').onclick=async function(){var patch73552144={memo:document.getElementById('ulimLedgerMemo735423').value};if(cleanAttendanceStatus7355014(cell.status||cell.attendanceStatus)==='결석')patch73552144.absenceKind=absenceKind73552144(document.getElementById('ulimLedgerAbsenceKind73552144').value);await saveLedgerCell735423(group,student,session,patch73552144); modal.style.display='none';}; modal.style.display='flex';
+    document.getElementById('ulimLedgerDetailSave735423').onclick=async function(){await saveLedgerCell735423(group,student,session,{memo:document.getElementById('ulimLedgerMemo735423').value}); modal.style.display='none';}; modal.style.display='flex';
   }
 
   function ensureLedgerScheduleModal735427() {
@@ -2977,8 +3037,25 @@ function groupById735423(classId) { return (allClassesState735410.ledger && allC
       if (target.hasAttribute('data-ledger-status')) {
         var desired = text(target.dataset.ledgerStatus);
         var currentCell = ledgerSessionCell73550921(student, session);
-        var desiredAbsenceKind73552144 = desired === '결석' ? absenceKind73552144(target.dataset.absenceKind || currentCell.absenceKind) : '';
-        saveLedgerCell735423(group, student, session, { status: cleanAttendanceStatus7355014(currentCell.status) === desired && absenceKind73552144(currentCell.absenceKind) === desiredAbsenceKind73552144 ? '미체크' : desired, absenceKind: desiredAbsenceKind73552144 });
+        var currentStatus73552174 = cleanAttendanceStatus7355014(currentCell.status || currentCell.attendanceStatus);
+        if (desired === '결석') {
+          var currentKind73552174 = absenceKind73552144(currentCell.absenceKind);
+          var togglingOff73552174 = currentStatus73552174 === '결석' && currentKind73552174 === 'normal';
+          var nextStatus73552174 = togglingOff73552174 ? '미체크' : '결석';
+          var defaultSave73552174 = saveLedgerCell735423(group, student, session, { status: nextStatus73552174, absenceKind: nextStatus73552174 === '결석' ? 'normal' : '' });
+          if (nextStatus73552174 === '결석') {
+            openAbsenceChoiceMenu73552174(target, 'normal', function(kind73552174) {
+              if (kind73552174 === 'normal') return defaultSave73552174;
+              return Promise.resolve(defaultSave73552174).then(function() {
+                var refreshedCell73552174 = ledgerSessionCell73550921(student, session);
+                if (cleanAttendanceStatus7355014(refreshedCell73552174.status || refreshedCell73552174.attendanceStatus) !== '결석') return false;
+                return saveLedgerCell735423(group, student, session, { status: '결석', absenceKind: kind73552174 });
+              });
+            });
+          }
+          return;
+        }
+        saveLedgerCell735423(group, student, session, { status: currentStatus73552174 === desired ? '미체크' : desired, absenceKind: '' });
         return;
       }
       if (target.hasAttribute('data-ledger-detail')) {
