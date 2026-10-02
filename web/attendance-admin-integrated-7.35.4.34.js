@@ -542,45 +542,9 @@
     setTimeout(function() {
       document.addEventListener('click', function closeOnce73552174(event) {
         document.removeEventListener('click', closeOnce73552174, true);
-        if (absenceChoiceMenu73552174 && !absenceChoiceMenu73552174.contains(event.target) && event.target !== anchor && !(anchor.contains && anchor.contains(event.target))) closeAbsenceChoiceMenu73552174();
+        if (absenceChoiceMenu73552174 && !absenceChoiceMenu73552174.contains(event.target)) closeAbsenceChoiceMenu73552174();
       }, true);
     }, 0);
-  }
-
-  var absenceLongPressDelay73552184 = 520;
-
-  function bindAttendanceAbsenceLongPress73552184(button, onLongPress) {
-    if (!button || typeof onLongPress !== 'function' || button.dataset.ulimAbsenceLongPressBound73552184 === '1') return;
-    button.dataset.ulimAbsenceLongPressBound73552184 = '1';
-    var timer73552184 = 0;
-    function clearTimer73552184() {
-      if (timer73552184) {
-        clearTimeout(timer73552184);
-        timer73552184 = 0;
-      }
-    }
-    button.addEventListener('pointerdown', function(event) {
-      if (button.disabled) return;
-      if (event.pointerType === 'mouse' && event.button !== 0) return;
-      clearTimer73552184();
-      delete button.dataset.ulimAbsenceLongPress73552184;
-      timer73552184 = setTimeout(function() {
-        timer73552184 = 0;
-        button.dataset.ulimAbsenceLongPress73552184 = '1';
-        onLongPress();
-      }, absenceLongPressDelay73552184);
-    });
-    button.addEventListener('pointerup', clearTimer73552184);
-    button.addEventListener('pointercancel', clearTimer73552184);
-    button.addEventListener('contextmenu', function(event) {
-      event.preventDefault();
-    });
-  }
-
-  function consumeAttendanceAbsenceLongPress73552184(button) {
-    if (!button || button.dataset.ulimAbsenceLongPress73552184 !== '1') return false;
-    delete button.dataset.ulimAbsenceLongPress73552184;
-    return true;
   }
 
   function attendanceStatusOptions7355014(status) {
@@ -814,31 +778,23 @@
         openStudentDetail(index);
       });
       row.querySelectorAll('[data-att-quick]').forEach(function (button) {
-        var quickStatus73552184 = text(button.getAttribute('data-att-quick'));
-        if (quickStatus73552184 === '결석') {
-          bindAttendanceAbsenceLongPress73552184(button, function() {
-            var records73552184 = currentAttendanceRecords();
-            var record73552184 = records73552184[index];
-            if (!record73552184) return;
-            openAbsenceChoiceMenu73552174(button, absenceKind73552144(record73552184.absenceKind), function(kind73552184) {
-              record73552184.absenceKind = kind73552184;
+        button.addEventListener('click', function () {
+          var quickStatus73552174 = text(button.getAttribute('data-att-quick'));
+          if (quickStatus73552174 !== '결석') return setAttendanceRowStatusOwned7355020(index, quickStatus73552174, row);
+          var records73552174 = currentAttendanceRecords();
+          var record73552174 = records73552174[index];
+          if (!record73552174) return false;
+          record73552174.absenceKind = 'normal';
+          var defaultSave73552174 = Promise.resolve(setAttendanceRowStatusOwned7355020(index, '결석', row));
+          openAbsenceChoiceMenu73552174(button, 'normal', function(kind73552174) {
+            if (kind73552174 === 'normal') return defaultSave73552174;
+            return defaultSave73552174.then(function(ok73552174) {
+              if (ok73552174 === false) return false;
+              record73552174.absenceKind = kind73552174;
               return setAttendanceRowStatusOwned7355020(index, '결석', row);
             });
           });
-        }
-        button.addEventListener('click', function (event) {
-          var quickStatus73552184Click = text(button.getAttribute('data-att-quick'));
-          if (quickStatus73552184Click !== '결석') return setAttendanceRowStatusOwned7355020(index, quickStatus73552184Click, row);
-          if (consumeAttendanceAbsenceLongPress73552184(button)) {
-            event.preventDefault();
-            event.stopPropagation();
-            return false;
-          }
-          var records73552184Click = currentAttendanceRecords();
-          var record73552184Click = records73552184Click[index];
-          if (!record73552184Click) return false;
-          record73552184Click.absenceKind = 'normal';
-          return setAttendanceRowStatusOwned7355020(index, '결석', row);
+          return defaultSave73552174;
         });
       });
       var statusSelect = row.querySelector('select[data-field="status"]');
@@ -2135,14 +2091,13 @@
     if (modal) return modal;
     modal = document.createElement('div'); modal.id = 'ulimAttendanceSettingsModal73550920';
     modal.style.cssText = 'display:none;position:fixed;inset:0;z-index:2147483647;background:rgba(15,23,42,.48);align-items:center;justify-content:center;padding:20px';
-    modal.innerHTML = '<div style="width:min(460px,94vw);background:#fff;border-radius:16px;padding:18px;box-shadow:0 24px 60px rgba(15,23,42,.28)"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><b style="font-size:17px">출석부 설정</b><button type="button" id="ulimAttendanceSettingsClose73550920" class="admin-btn gray">닫기</button></div><div style="display:grid;gap:10px;margin-top:16px"><button type="button" id="ulimAttendanceOpenPrevious73550920" class="admin-btn">전월 출석부 편집</button><button type="button" id="ulimAttendanceRestorePrevious73552184" class="admin-btn">이전월 복구</button><button type="button" id="ulimAttendanceManualRollover73550920" class="admin-btn blue">다음월로 출석부 갱신</button></div><div id="ulimAttendanceSettingsStatus73550920" style="margin-top:12px;font-size:12px;line-height:1.55;color:#475569"></div></div>';
+    modal.innerHTML = '<div style="width:min(460px,94vw);background:#fff;border-radius:16px;padding:18px;box-shadow:0 24px 60px rgba(15,23,42,.28)"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><b style="font-size:17px">출석부 설정</b><button type="button" id="ulimAttendanceSettingsClose73550920" class="admin-btn gray">닫기</button></div><div style="display:grid;gap:10px;margin-top:16px"><button type="button" id="ulimAttendanceOpenPrevious73550920" class="admin-btn">전월 출석부 편집</button><button type="button" id="ulimAttendanceManualRollover73550920" class="admin-btn blue">다음월로 출석부 갱신</button></div><div id="ulimAttendanceSettingsStatus73550920" style="margin-top:12px;font-size:12px;line-height:1.55;color:#475569"></div></div>';
     document.body.appendChild(modal);
     modal.addEventListener('click', function (event) {
       var target = event.target && event.target.closest ? event.target.closest('button') : null;
       if (!target) { if (event.target === modal) modal.style.display='none'; return; }
       if (target.id === 'ulimAttendanceSettingsClose73550920') modal.style.display='none';
       if (target.id === 'ulimAttendanceOpenPrevious73550920') { modal.style.display='none'; openPreviousMonthEdit735433(); }
-      if (target.id === 'ulimAttendanceRestorePrevious73552184') runPreviousMonthRestore73552184();
       if (target.id === 'ulimAttendanceManualRollover73550920') runManualMonthRollover73550920();
     });
     return modal;
@@ -2169,43 +2124,6 @@
     } catch (error) { if (status) status.textContent = text(error && error.message) || '출석부 갱신에 실패했습니다.'; alert(text(error && error.message) || '출석부 갱신에 실패했습니다.'); }
     finally { if (button) button.disabled = false; }
   }
-  async function runPreviousMonthRestore73552184() {
-    if (!isFullAdmin()) return alert('전체관리자 권한이 필요합니다.');
-    var button = document.getElementById('ulimAttendanceRestorePrevious73552184');
-    var status = document.getElementById('ulimAttendanceSettingsStatus73550920');
-    var realCurrentMonth73552184 = today().slice(0, 7);
-    var activeMonth73552184 = text(allClassesState735410.ledger && allClassesState735410.ledger.currentMonth) || realCurrentMonth73552184;
-    if (activeMonth73552184 <= realCurrentMonth73552184) {
-      if (status) status.textContent = '현재 출석부는 이미 ' + activeMonth73552184 + ' 기준입니다. 복구할 다음월 갱신 상태가 없습니다.';
-      return false;
-    }
-    var parts73552184 = activeMonth73552184.split('-').map(Number);
-    var targetDate73552184 = new Date(Date.UTC(parts73552184[0], parts73552184[1] - 2, 1, 12)).toISOString().slice(0, 10);
-    var targetMonth73552184 = targetDate73552184.slice(0, 7);
-    if (targetMonth73552184 < realCurrentMonth73552184) {
-      targetMonth73552184 = realCurrentMonth73552184;
-      targetDate73552184 = realCurrentMonth73552184 + '-01';
-    }
-    allClassesState735410.viewAnchorDate73552070 = targetDate73552184;
-    try {
-      if (button) button.disabled = true;
-      if (status) status.textContent = activeMonth73552184 + ' → ' + targetMonth73552184 + ' 이전월 복구 중...';
-      var ledger73552184 = await loadAllClassesData735410(true, 'restore-previous-month-73552184');
-      var normalized73552184 = normalizeAttendanceLedger73550920(ledger73552184);
-      if (text(normalized73552184 && normalized73552184.currentMonth) !== targetMonth73552184) {
-        throw new Error('이전월 기준으로 복구되지 않았습니다.');
-      }
-      if (status) status.textContent = targetMonth73552184 + ' 출석부로 복구했습니다. 기존 출결 기록은 변경하지 않고 표시 기준만 이전월로 되돌렸습니다.';
-      return true;
-    } catch (error) {
-      if (status) status.textContent = text(error && error.message) || '이전월 복구에 실패했습니다.';
-      alert(text(error && error.message) || '이전월 복구에 실패했습니다.');
-      return false;
-    } finally {
-      if (button) button.disabled = false;
-    }
-  }
-
   function bindAllClassesHeaderControls735425(modal) {
     var makeupCasesButton73552174 = modal && modal.querySelector('#ulimMakeupCasesOpen73552174');
     if (makeupCasesButton73552174) {
@@ -3074,48 +2992,6 @@ function groupById735423(classId) { return (allClassesState735410.ledger && allC
     if (!board || board.dataset.ulimLedgerDelegation735433 === '1') return;
     board.dataset.ulimLedgerDelegation735433 = '1';
 
-    var ledgerAbsenceLongPressTimer73552184 = 0;
-    var ledgerAbsenceLongPressTarget73552184 = null;
-    function clearLedgerAbsenceLongPress73552184() {
-      if (ledgerAbsenceLongPressTimer73552184) {
-        clearTimeout(ledgerAbsenceLongPressTimer73552184);
-        ledgerAbsenceLongPressTimer73552184 = 0;
-      }
-      ledgerAbsenceLongPressTarget73552184 = null;
-    }
-    board.addEventListener('pointerdown', function(event) {
-      var button73552184 = event.target && event.target.closest ? event.target.closest('[data-ledger-status="결석"][data-ledger-absence-menu="1"]') : null;
-      if (!button73552184 || !board.contains(button73552184) || button73552184.disabled) return;
-      if (event.pointerType === 'mouse' && event.button !== 0) return;
-      clearLedgerAbsenceLongPress73552184();
-      delete button73552184.dataset.ulimAbsenceLongPress73552184;
-      ledgerAbsenceLongPressTarget73552184 = button73552184;
-      ledgerAbsenceLongPressTimer73552184 = setTimeout(function() {
-        ledgerAbsenceLongPressTimer73552184 = 0;
-        if (!document.body.contains(button73552184)) return;
-        var cellNode73552184 = button73552184.closest('[data-ledger-cell]');
-        var rowNode73552184 = button73552184.closest('tr[data-ledger-student]');
-        var classId73552184 = text((cellNode73552184 && cellNode73552184.dataset.classId) || (rowNode73552184 && rowNode73552184.dataset.sourceClass));
-        var studentUid73552184 = text((cellNode73552184 && cellNode73552184.dataset.studentUid) || (rowNode73552184 && rowNode73552184.dataset.ledgerStudent));
-        var group73552184 = groupById735423(classId73552184);
-        var student73552184 = group73552184 && studentByLedger735423(group73552184, studentUid73552184);
-        if (!cellNode73552184 || !group73552184 || !student73552184) return;
-        var session73552184 = (group73552184.sessions || []).find(function(s) { return text(s.date) === text(cellNode73552184.dataset.date); });
-        if (!session73552184) return;
-        button73552184.dataset.ulimAbsenceLongPress73552184 = '1';
-        var currentCell73552184 = ledgerSessionCell73550921(student73552184, session73552184);
-        openAbsenceChoiceMenu73552174(button73552184, absenceKind73552144(currentCell73552184.absenceKind), function(kind73552184) {
-          return saveLedgerCell735423(group73552184, student73552184, session73552184, { status: '결석', absenceKind: kind73552184 });
-        });
-      }, absenceLongPressDelay73552184);
-    }, true);
-    board.addEventListener('pointerup', clearLedgerAbsenceLongPress73552184, true);
-    board.addEventListener('pointercancel', clearLedgerAbsenceLongPress73552184, true);
-    board.addEventListener('contextmenu', function(event) {
-      var button73552184 = event.target && event.target.closest ? event.target.closest('[data-ledger-status="결석"][data-ledger-absence-menu="1"]') : null;
-      if (button73552184 && board.contains(button73552184)) event.preventDefault();
-    }, true);
-
     board.addEventListener('click', function (event) {
       var target = event.target && event.target.closest ? event.target.closest('[data-ledger-status],[data-ledger-detail],[data-ledger-add],[data-ledger-header],[data-ledger-gear],[data-ledger-add-class],[data-history-remove]') : null;
       if (!target || !board.contains(target)) return;
@@ -3163,14 +3039,20 @@ function groupById735423(classId) { return (allClassesState735410.ledger && allC
         var currentCell = ledgerSessionCell73550921(student, session);
         var currentStatus73552174 = cleanAttendanceStatus7355014(currentCell.status || currentCell.attendanceStatus);
         if (desired === '결석') {
-          if (target.dataset.ulimAbsenceLongPress73552184 === '1') {
-            delete target.dataset.ulimAbsenceLongPress73552184;
-            return;
+          var currentKind73552174 = absenceKind73552144(currentCell.absenceKind);
+          var togglingOff73552174 = currentStatus73552174 === '결석' && currentKind73552174 === 'normal';
+          var nextStatus73552174 = togglingOff73552174 ? '미체크' : '결석';
+          var defaultSave73552174 = saveLedgerCell735423(group, student, session, { status: nextStatus73552174, absenceKind: nextStatus73552174 === '결석' ? 'normal' : '' });
+          if (nextStatus73552174 === '결석') {
+            openAbsenceChoiceMenu73552174(target, 'normal', function(kind73552174) {
+              if (kind73552174 === 'normal') return defaultSave73552174;
+              return Promise.resolve(defaultSave73552174).then(function() {
+                var refreshedCell73552174 = ledgerSessionCell73550921(student, session);
+                if (cleanAttendanceStatus7355014(refreshedCell73552174.status || refreshedCell73552174.attendanceStatus) !== '결석') return false;
+                return saveLedgerCell735423(group, student, session, { status: '결석', absenceKind: kind73552174 });
+              });
+            });
           }
-          var currentKind73552184 = absenceKind73552144(currentCell.absenceKind);
-          var togglingOff73552184 = currentStatus73552174 === '결석' && currentKind73552184 === 'normal';
-          var nextStatus73552184 = togglingOff73552184 ? '미체크' : '결석';
-          saveLedgerCell735423(group, student, session, { status: nextStatus73552184, absenceKind: nextStatus73552184 === '결석' ? 'normal' : '' });
           return;
         }
         saveLedgerCell735423(group, student, session, { status: currentStatus73552174 === desired ? '미체크' : desired, absenceKind: '' });
