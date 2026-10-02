@@ -521,22 +521,29 @@
       button.dataset.absenceChoice73552174 = kind;
       button.textContent = kind === 'makeup_required' ? '보강결석' : '일반결석';
       button.style.cssText = 'border:1px solid #cbd5e1;border-radius:8px;padding:7px 10px;background:' + (absenceKind73552144(currentKind) === kind ? '#e0f2fe' : '#fff') + ';font-weight:800;cursor:pointer';
-      var makeupChoiceSelected73552213 = false;
-      function selectAbsenceChoice73552213(event) {
-        if (makeupChoiceSelected73552213) return;
-        makeupChoiceSelected73552213 = true;
-        if (event) {
-          event.preventDefault();
-          event.stopPropagation();
-          if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
-        }
-        closeAbsenceChoiceMenu73552174();
+      var makeupChoiceCommitted73552218 = false;
+      function stopAbsenceChoiceEvent73552218(event) {
+        if (!event) return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+      }
+      function commitAbsenceChoice73552218() {
+        if (makeupChoiceCommitted73552218) return;
+        makeupChoiceCommitted73552218 = true;
         Promise.resolve(onSelect(kind)).catch(function(error) {
           alert(text(error && error.message) || '결석 구분 저장에 실패했습니다.');
         });
       }
-      button.addEventListener('pointerdown', selectAbsenceChoice73552213);
-      button.addEventListener('click', selectAbsenceChoice73552213);
+      button.addEventListener('pointerdown', function(event) {
+        stopAbsenceChoiceEvent73552218(event);
+        commitAbsenceChoice73552218();
+      });
+      button.addEventListener('click', function(event) {
+        stopAbsenceChoiceEvent73552218(event);
+        commitAbsenceChoice73552218();
+        closeAbsenceChoiceMenu73552174();
+      });
       menu.appendChild(button);
     });
     document.body.appendChild(menu);
