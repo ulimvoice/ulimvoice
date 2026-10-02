@@ -15214,25 +15214,52 @@ ${ruleSummary}`, isFallback ? "success" : "success");
 
     function injectDailyDraftControls_() {
         const panel = document.getElementById('adminPanelDailyEval');
-        if (!panel || document.getElementById('adminDailyDraftStatus')) return;
+        if (!panel) return;
 
         const rows = Array.from(panel.querySelectorAll('.admin-btn-row'));
         const targetRow = rows.find(row => row.innerHTML.indexOf('adminLoadDailyEvalStudents') !== -1);
         if (!targetRow) return;
 
+        const evalSaveButton = Array.from(targetRow.querySelectorAll('button')).find(function(btn) {
+            return String(btn.getAttribute('onclick') || '').indexOf('adminSaveDailyEvaluations(false)') !== -1;
+        }) || null;
 
-        Array.from(targetRow.querySelectorAll('button')).forEach(function(btn) {
-            const label = String(btn.textContent || '').replace(/\s/g, '');
-            if (label === '임시저장' || label === '임시저장불러오기') btn.remove();
-        });
+        let saveDraftButton = document.getElementById('adminDailyDraftSaveBtn73552168');
+        if (!saveDraftButton) {
+            saveDraftButton = document.createElement('button');
+            saveDraftButton.type = 'button';
+            saveDraftButton.id = 'adminDailyDraftSaveBtn73552168';
+            saveDraftButton.className = 'admin-btn';
+            saveDraftButton.textContent = '임시저장';
+            saveDraftButton.addEventListener('click', function() {
+                if (typeof window.adminSaveDailyEvalDraft === 'function') window.adminSaveDailyEvalDraft(true);
+            });
+            targetRow.insertBefore(saveDraftButton, evalSaveButton);
+        }
 
-        const status = document.createElement('div');
-        status.id = 'adminDailyDraftStatus';
-        status.className = 'admin-permission-note';
-        status.style.width = '100%';
-        status.style.fontWeight = '800';
-        status.textContent = '';
-        targetRow.appendChild(status);
+        let loadDraftButton = document.getElementById('adminDailyDraftLoadBtn73552168');
+        if (!loadDraftButton) {
+            loadDraftButton = document.createElement('button');
+            loadDraftButton.type = 'button';
+            loadDraftButton.id = 'adminDailyDraftLoadBtn73552168';
+            loadDraftButton.className = 'admin-btn blue';
+            loadDraftButton.textContent = '임시저장 불러오기';
+            loadDraftButton.addEventListener('click', function() {
+                if (typeof window.adminLoadDailyEvalDraft === 'function') window.adminLoadDailyEvalDraft(true);
+            });
+            targetRow.insertBefore(loadDraftButton, evalSaveButton);
+        }
+
+        let status = document.getElementById('adminDailyDraftStatus');
+        if (!status) {
+            status = document.createElement('div');
+            status.id = 'adminDailyDraftStatus';
+            status.className = 'admin-permission-note';
+            status.style.width = '100%';
+            status.style.fontWeight = '800';
+            status.textContent = '';
+            targetRow.appendChild(status);
+        }
     }
 
     function ensureDailyPatchStyle_() {
@@ -15467,7 +15494,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
             localStorage.setItem(getLocalDraftKey_(), JSON.stringify(draft));
             dailyDraftLastKey = getDailyContextKey_();
             dailyDraftLastSavedAt = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-            setDraftStatus_('로컬 자동저장 완료 (' + dailyDraftLastSavedAt + ') · 1분 후 시트 반영', 'ok');
+            setDraftStatus_('로컬 자동저장 완료 (' + dailyDraftLastSavedAt + ') · 평가저장 전까지 브라우저에 보관', 'ok');
             return true;
         } catch (err) {
             setDraftStatus_('로컬 임시저장 실패: ' + (err.message || err), 'error');
@@ -15533,7 +15560,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
         };
 
         adminRenderDailyEvalRows('로컬 자동 임시저장본을 불러왔습니다.');
-        setDraftStatus_('로컬 자동저장본 복구 완료 · 1분 후 시트 반영', 'ok');
+        setDraftStatus_('로컬 자동저장본 복구 완료 · 평가저장 전까지 브라우저에 보관', 'ok');
         return true;
     }
     window.ulimApplyDailyEvalDraft704_ = applyDailyDraft_;
@@ -15668,6 +15695,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
         setTimeout(function() {
             try { if (typeof window.ulimSyncDailyClassVideoLink7355024 === 'function') window.ulimSyncDailyClassVideoLink7355024(); } catch (_ignore) {}
         }, 0);
+        bindDailyDraftInputs_();
         if (typeof ulimAdminAfterRender_ === 'function') ulimAdminAfterRender_();
     };
 
