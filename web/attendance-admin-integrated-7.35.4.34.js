@@ -521,14 +521,22 @@
       button.dataset.absenceChoice73552174 = kind;
       button.textContent = kind === 'makeup_required' ? '보강결석' : '일반결석';
       button.style.cssText = 'border:1px solid #cbd5e1;border-radius:8px;padding:7px 10px;background:' + (absenceKind73552144(currentKind) === kind ? '#e0f2fe' : '#fff') + ';font-weight:800;cursor:pointer';
-      button.addEventListener('click', function(event) {
-        event.preventDefault();
-        event.stopPropagation();
+      var makeupChoiceSelected73552213 = false;
+      function selectAbsenceChoice73552213(event) {
+        if (makeupChoiceSelected73552213) return;
+        makeupChoiceSelected73552213 = true;
+        if (event) {
+          event.preventDefault();
+          event.stopPropagation();
+          if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+        }
         closeAbsenceChoiceMenu73552174();
         Promise.resolve(onSelect(kind)).catch(function(error) {
           alert(text(error && error.message) || '결석 구분 저장에 실패했습니다.');
         });
-      });
+      }
+      button.addEventListener('pointerdown', selectAbsenceChoice73552213);
+      button.addEventListener('click', selectAbsenceChoice73552213);
       menu.appendChild(button);
     });
     document.body.appendChild(menu);
