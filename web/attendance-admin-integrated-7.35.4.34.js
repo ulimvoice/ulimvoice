@@ -662,44 +662,173 @@
     });
   }
 
+  var attendanceBackgroundQueues73552275 = Object.create(null);
+  var attendanceBackgroundRevision73552275 = 0;
+
+  function attendanceBackgroundKey73552275(payload) {
+    return [text(payload && payload.date), text(payload && payload.classId), text(payload && payload.studentUid)].join('|');
+  }
+
+  function attendanceBackgroundTransient73552275(error) {
+    var code = text(error && error.code).toLowerCase();
+    var message = text(error && error.message).toLowerCase();
+    return /unavailable|deadline-exceeded|aborted|resource-exhausted|internal|unknown|network|timeout|timed out|429|500|502|503|504/.test(code + ' ' + message);
+  }
+
+  function attendanceBackgroundRow73552275(index, row) {
+    if (row && row.isConnected) return row;
+    var wrap = attendanceWrap();
+    return wrap && wrap.querySelector('tr[data-att-index="' + Number(index) + '"]');
+  }
+
+  function attendanceBackgroundDelay73552275(ms) {
+    return new Promise(function (resolve) { setTimeout(resolve, ms); });
+  }
+
+  async function drainAttendanceBackgroundQueue73552275(key) {
+    var queue = attendanceBackgroundQueues73552275[key];
+    if (!queue || queue.running) return;
+    queue.running = true;
+    try {
+      while (queue.jobs.length) {
+        var job = queue.jobs[0];
+        if (queue.latestRevision === job.revision) setAttendanceSaveState7355020(job.index, '저장 중...', false);
+        var saved = false;
+        var lastError = null;
+
+        for (var attempt = 0; attempt < 3; attempt += 1) {
+          try {
+            await saveAttendancePayloads7355020([job.payload], 'attendance-row-bg-73552275-r' + job.revision);
+            saved = true;
+            break;
+          } catch (error) {
+            lastError = error;
+            if (!attendanceBackgroundTransient73552275(error) || attempt >= 2) break;
+            await attendanceBackgroundDelay73552275(attempt === 0 ? 350 : 900);
+          }
+        }
+
+        if (saved) {
+          queue.persistedStatus = cleanAttendanceStatus7355014(job.payload.status || job.payload.attendanceStatus);
+          queue.persistedAbsenceKind = text(job.payload.absenceKind);
+
+          if (queue.latestRevision === job.revision) {
+            var records = currentAttendanceRecords();
+            var record = records[Number(job.index)];
+            if (record) {
+              record.currentStatus = job.payload.currentStatus;
+              record.memo = job.payload.memo;
+              record.appMemo = job.payload.memo;
+              record.manualMemo = job.payload.memo;
+            }
+
+            var currentRow = attendanceBackgroundRow73552275(job.index, job.row);
+            if (currentRow) {
+              delete currentRow.dataset.currentStatusDirty;
+              delete currentRow.dataset.memoDirty;
+              delete currentRow.dataset.attendanceBgRevision73552275;
+              var currentInput = currentRow.querySelector('input[data-field="currentStatus"]');
+              var memoInput = currentRow.querySelector('input[data-field="memo"]');
+              if (currentInput) delete currentInput.dataset.currentStatusDirty;
+              if (memoInput) delete memoInput.dataset.memoDirty;
+            }
+
+            attendanceDraftDirty7355014 = !!attendanceWrap().querySelector('[data-current-status-dirty="1"],[data-memo-dirty="1"],tr[data-current-status-dirty="1"],tr[data-memo-dirty="1"]');
+            flushAttendanceRealtimePending735423();
+            setAttendanceSaveState7355020(job.index, '저장됨', false);
+
+            setTimeout(function (index, revision) {
+              var currentQueue = attendanceBackgroundQueues73552275[key];
+              if (!currentQueue || currentQueue.latestRevision === revision) setAttendanceSaveState7355020(index, '', false);
+            }, 1200, job.index, job.revision);
+          }
+        } else {
+          var isLatest = queue.latestRevision === job.revision;
+          if (isLatest) {
+            var failedRecords = currentAttendanceRecords();
+            var failedRecord = failedRecords[Number(job.index)];
+            if (failedRecord) {
+              failedRecord.status = queue.persistedStatus;
+              failedRecord.attendanceStatus = queue.persistedStatus;
+              failedRecord.absenceKind = queue.persistedStatus === '결석' ? queue.persistedAbsenceKind : '';
+            }
+            var failedRow = attendanceBackgroundRow73552275(job.index, job.row);
+            if (failedRow) {
+              delete failedRow.dataset.attendanceBgRevision73552275;
+              setAttendanceRowUi7355020(failedRow, queue.persistedStatus);
+            }
+            setAttendanceSaveState7355020(job.index, '저장 실패', true);
+            alert(text(lastError && lastError.message) || '출석 상태를 저장하지 못했습니다.');
+          } else {
+            try { console.warn('ULIM_ATTENDANCE_BG_STALE_FAIL_73552275', lastError); } catch (_ignore73552275) {}
+          }
+        }
+
+        queue.jobs.shift();
+      }
+    } finally {
+      queue.running = false;
+      if (!queue.jobs.length) delete attendanceBackgroundQueues73552275[key];
+    }
+  }
+
+  function enqueueAttendanceBackground73552275(index, row, payload, previousStatus, previousAbsenceKind) {
+    var key = attendanceBackgroundKey73552275(payload);
+    if (!key || key === '||') throw new Error('출석 저장 키를 만들지 못했습니다.');
+
+    var queue = attendanceBackgroundQueues73552275[key];
+    if (!queue) {
+      queue = attendanceBackgroundQueues73552275[key] = {
+        running: false,
+        jobs: [],
+        latestRevision: 0,
+        persistedStatus: cleanAttendanceStatus7355014(previousStatus),
+        persistedAbsenceKind: text(previousAbsenceKind)
+      };
+    }
+
+    var revision = ++attendanceBackgroundRevision73552275;
+    queue.latestRevision = revision;
+    queue.jobs.push({ revision:revision, index:Number(index), row:row, payload:payload });
+    if (row) row.dataset.attendanceBgRevision73552275 = String(revision);
+
+    setAttendanceSaveState7355020(index, '저장 중...', false);
+    Promise.resolve().then(function () {
+      return drainAttendanceBackgroundQueue73552275(key);
+    }).catch(function (error) {
+      try { console.error('ULIM_ATTENDANCE_BG_DRAIN_73552275', error); } catch (_ignore73552275) {}
+    });
+
+    return revision;
+  }
+
   async function setAttendanceRowStatusOwned7355020(index, value, row) {
     var records = currentAttendanceRecords();
     var record = records[Number(index)];
     if (!record || !row) return false;
+
     var next = cleanAttendanceStatus7355014(value);
     var previous = cleanAttendanceStatus7355014(record.status || record.attendanceStatus);
+    var previousAbsenceKind = text(record.absenceKind);
+
     record.status = next;
     record.attendanceStatus = next;
     if (next !== '결석') record.absenceKind = '';
     setAttendanceRowUi7355020(row, next);
-    setAttendanceSaveState7355020(index, '저장 중...', false);
-    try {
-      var payload = attendanceRowPayload7355020(index, row);
-      if (!payload.classId || !payload.studentUid) throw new Error('반 또는 학생 식별정보를 찾지 못했습니다. 출석부를 다시 불러와주세요.');
-      await saveAttendancePayloads7355020([payload], 'attendance-row-status-7355020');
-      record.currentStatus = payload.currentStatus;
-      record.memo = payload.memo;
-      record.appMemo = payload.memo;
-      record.manualMemo = payload.memo;
-      delete row.dataset.currentStatusDirty;
-      delete row.dataset.memoDirty;
-      var currentInput = row.querySelector('input[data-field="currentStatus"]');
-      var memoInput = row.querySelector('input[data-field="memo"]');
-      if (currentInput) delete currentInput.dataset.currentStatusDirty;
-      if (memoInput) delete memoInput.dataset.memoDirty;
-      attendanceDraftDirty7355014 = !!attendanceWrap().querySelector('[data-current-status-dirty="1"],[data-memo-dirty="1"],tr[data-current-status-dirty="1"],tr[data-memo-dirty="1"]');
-      flushAttendanceRealtimePending735423();
-      setAttendanceSaveState7355020(index, '저장됨', false);
-      setTimeout(function () { setAttendanceSaveState7355020(index, '', false); }, 1200);
-      return true;
-    } catch (error) {
+
+    var payload = attendanceRowPayload7355020(index, row);
+    if (!payload.classId || !payload.studentUid) {
       record.status = previous;
       record.attendanceStatus = previous;
+      record.absenceKind = previous === '결석' ? previousAbsenceKind : '';
       setAttendanceRowUi7355020(row, previous);
       setAttendanceSaveState7355020(index, '저장 실패', true);
-      alert(text(error && error.message) || '출석 상태를 저장하지 못했습니다.');
+      alert('반 또는 학생 식별정보를 찾지 못했습니다. 출석부를 다시 불러와주세요.');
       return false;
     }
+
+    enqueueAttendanceBackground73552275(index, row, payload, previous, previousAbsenceKind);
+    return true;
   }
 
   async function saveSelectedAttendanceOwned7355020(wrap) {
