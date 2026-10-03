@@ -1760,7 +1760,10 @@
     return call('savePastQuestionDriveLinkAdmin7355063', { driveFolderUrl:text(driveFolderUrl) });
   }
   async function syncPastQuestionCatalogAdmin7355063() {
-    return call('syncPastQuestionCatalogAdmin7355063', {});
+    const rt = await runtime();
+    const fn = rt.sdk.httpsCallable(rt.functions, 'syncPastQuestionCatalogAdmin7355063', { timeout:600000 });
+    const response = await fn({});
+    return response && response.data || {};
   }
 
   async function markPracticeLogsViewed7355054(recordIds) {
