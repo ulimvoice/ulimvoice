@@ -122,7 +122,7 @@
     if(!rt||!rt.auth||!rt.auth.currentUser||!(await isStaffSession72922(rt)))throw new Error('교직원 로그인이 필요합니다.');
     if(typeof rt.getClassroomDay!=='function')throw new Error('강의실 조회 기능을 준비하지 못했습니다.');
     const payload=data(await rt.getClassroomDay({date:date,requestId:'CLASSROOM-READ-7355058-'+Date.now()}));
-    const rows=normalizeClassroomRows(payload.records,date);
+    const rows=classroomOverlayPending73552279(normalizeClassroomRows(payload.records,date),date);
     try{global.adminClassroomUsageRows=rows.map(function(x){return Object.assign({},x);});global.adminClassroomUsageLoadedDate=date;}catch(_e){}
     return rows;
   }
@@ -147,7 +147,7 @@
     state.classroomUnsub=rt.sdk.onSnapshot(rt.sdk.doc(rt.db,'realtimeClassroomDays',date),function(snap){
       try{if(state.classroomPoll)clearInterval(state.classroomPoll);}catch(_e){}
       state.classroomPoll=null;
-      const payload=snap.exists()?(snap.data()||{}):{}; const rows=normalizeClassroomRows(payload.records,date);
+      const payload=snap.exists()?(snap.data()||{}):{}; const rows=classroomOverlayPending73552279(normalizeClassroomRows(payload.records,date),date);
       try{global.adminClassroomUsageRows=rows.map(x=>Object.assign({},x));global.adminClassroomUsageLoadedDate=date;if(typeof global.adminRenderClassroomUsageTable==='function')global.adminRenderClassroomUsageTable();}catch(_e){}
     },function(err){
       state.lastError=text(err&&err.message);
@@ -187,16 +187,96 @@
     if(Array.isArray(result.records)){global.adminClassroomUsageRows=result.records;global.adminClassroomUsageLoadedDate=req.date;if(typeof global.adminRenderClassroomUsageTable==='function')global.adminRenderClassroomUsageTable();}
     await subscribeClassroom(req.date); return result;
   }
+  const classroomPending73552279=Object.create(null);
+  let classroomRevision73552279=0;
+  function classroomPendingKey73552279(date,room,hour){return [text(date),text(room).replace(/\s/g,''),String(Number(hour))].join('|');}
+  function classroomTransient73552279(error){
+    const code=text(error&&error.code).toLowerCase(),message=text(error&&error.message).toLowerCase();
+    return /unavailable|deadline-exceeded|aborted|resource-exhausted|internal|unknown|network|timeout|timed out|429|500|502|503|504/.test(code+' '+message);
+  }
+  function classroomDelay73552279(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});}
+  function classroomOverlayPending73552279(rows,date){
+    const base=(Array.isArray(rows)?rows:[]).map(function(x){return Object.assign({},x);});
+    Object.keys(classroomPending73552279).forEach(function(key){
+      const pending=classroomPending73552279[key];
+      if(!pending||text(pending.date)!==text(date))return;
+      const exists=base.some(function(x){return text(x.room).replace(/\s/g,'')===text(pending.room).replace(/\s/g,'')&&Number(x.startHour)===Number(pending.startHour);});
+      if(!exists)base.push(Object.assign({},pending));
+    });
+    return base;
+  }
+  function classroomRenderRows73552279(rows,date){
+    global.adminClassroomUsageRows=classroomOverlayPending73552279(rows,date);
+    global.adminClassroomUsageLoadedDate=date;
+    if(typeof global.adminRenderClassroomUsageTable==='function')global.adminRenderClassroomUsageTable();
+  }
+  function classroomRemoveOptimistic73552279(key,date){
+    delete classroomPending73552279[key];
+    const current=Array.isArray(global.adminClassroomUsageRows)?global.adminClassroomUsageRows:[];
+    global.adminClassroomUsageRows=current.filter(function(x){return text(x&&x.__pendingKey73552279)!==key;});
+    global.adminClassroomUsageLoadedDate=date;
+    if(typeof global.adminRenderClassroomUsageTable==='function')global.adminRenderClassroomUsageTable();
+  }
+  async function classroomCommitBackground73552279(job){
+    let result=null,lastError=null;
+    for(let attempt=0;attempt<3;attempt+=1){
+      try{
+        const rt=await ensureAuthenticated();if(!rt)throw new Error('로그인 후 이용해주세요.');
+        result=data(await rt.commitClassroom(job.payload));
+        if(result&&result.ok===false)throw new Error(result.message||'강의실 사용 저장에 실패했습니다.');
+        lastError=null;break;
+      }catch(error){
+        lastError=error;
+        if(!classroomTransient73552279(error)||attempt>=2)break;
+        await classroomDelay73552279(attempt===0?350:900);
+      }
+    }
+    const current=classroomPending73552279[job.key];
+    if(!current||Number(current.__pendingRevision73552279)!==Number(job.revision))return result||null;
+    if(lastError){
+      classroomRemoveOptimistic73552279(job.key,job.date);
+      readClassroomRecords(job.date).then(function(rows){classroomRenderRows73552279(rows,job.date);}).catch(function(){});
+      try{alert(text(lastError&&lastError.message)||'강의실 사용 저장에 실패했습니다.');}catch(_e){}
+      return null;
+    }
+    delete classroomPending73552279[job.key];
+    if(Array.isArray(result&&result.records)){
+      classroomRenderRows73552279(normalizeClassroomRows(result.records,job.date),job.date);
+    }else{
+      readClassroomRecords(job.date).then(function(rows){classroomRenderRows73552279(rows,job.date);}).catch(function(){});
+    }
+    subscribeClassroom(job.date).catch(function(){});
+    return result;
+  }
+
   async function commitSingleClassroomSlot(room,hour){
-    const rt=await ensureAuthenticated();if(!rt)throw new Error('로그인 후 이용해주세요.');
     const date=dateKey(),startHour=Number(hour),roomName=text(room);
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!roomName||!Number.isInteger(startHour))throw new Error('사용일·강의실·시간을 확인해주세요.');
     const assignedInstructor=text(document.getElementById('adminClassroomUsageInstructor')&&document.getElementById('adminClassroomUsageInstructor').value)||text(global.adminInfo&&(global.adminInfo.name||global.adminInfo.id));
     const className=text(document.getElementById('adminClassroomUsageClass')&&document.getElementById('adminClassroomUsageClass').value);
     const memo=text(document.getElementById('adminClassroomUsageMemo')&&document.getElementById('adminClassroomUsageMemo').value);
-    const result=data(await rt.commitClassroom({date:date,groups:[{room:roomName,startHour:startHour,endHour:startHour+1}],assignedInstructor:assignedInstructor,className:className,memo:memo,forceOverride:false,requestId:'CLASSROOM-SLOT-7355054-'+Date.now()+'-'+Math.random().toString(36).slice(2)}));
-    if(Array.isArray(result.records)){global.adminClassroomUsageRows=result.records.map(x=>Object.assign({},x));global.adminClassroomUsageLoadedDate=date;if(typeof global.adminRenderClassroomUsageTable==='function')global.adminRenderClassroomUsageTable();}
-    await subscribeClassroom(date);return result;
+    const key=classroomPendingKey73552279(date,roomName,startHour);
+    if(classroomPending73552279[key])return {ok:true,pending:true,requestId:classroomPending73552279[key].requestId||''};
+
+    const revision=++classroomRevision73552279;
+    const requestId='CLASSROOM-SLOT-BG-73552279-'+Date.now()+'-'+Math.random().toString(36).slice(2);
+    const optimistic=normalizeClassroomRows([{
+      recordId:'PENDING-73552279-'+revision,
+      date:date,room:roomName,startHour:startHour,endHour:startHour+1,
+      instructor:assignedInstructor,adminName:assignedInstructor,
+      className:className,purpose:className,memo:memo,status:'사용중',
+      requestId:requestId,__pendingKey73552279:key,__pendingRevision73552279:revision
+    }],date)[0];
+    if(!optimistic)throw new Error('강의실 사용정보를 만들지 못했습니다.');
+
+    classroomPending73552279[key]=optimistic;
+    classroomRenderRows73552279(Array.isArray(global.adminClassroomUsageRows)?global.adminClassroomUsageRows:[],date);
+
+    const payload={date:date,groups:[{room:roomName,startHour:startHour,endHour:startHour+1}],assignedInstructor:assignedInstructor,className:className,memo:memo,forceOverride:false,requestId:requestId};
+    Promise.resolve().then(function(){return classroomCommitBackground73552279({key:key,date:date,revision:revision,payload:payload});}).catch(function(error){
+      try{console.error('ULIM_CLASSROOM_BG_73552279',error);}catch(_e){}
+    });
+    return {ok:true,pending:true,requestId:requestId};
   }
   global.ulimCommitClassroomSlot729_=commitSingleClassroomSlot;
   async function loadClassroom(date){ const target=text(date||dateKey()); const records=await readClassroomRecords(target); subscribeClassroom(target).catch(function(){}); return {status:'success',records:records}; }
