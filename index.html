@@ -12853,7 +12853,6 @@ async function adminQuickClassroomUsage(room, hour) {
     if (endEl) endEl.value = String(numericHour + 1);
     if (instructorEl && !instructorEl.value) instructorEl.value = (adminInfo && (adminInfo.name || adminInfo.id)) || '';
     try {
-        await adminEnsureClassroomRuntime_();
         if (typeof window.ulimCommitClassroomSlot729_ !== 'function') throw new Error('강의실 저장 기능을 준비하지 못했습니다.');
         showLoading('강의실 사용 체크 중...');
         const result = await window.ulimCommitClassroomSlot729_(room, numericHour);
