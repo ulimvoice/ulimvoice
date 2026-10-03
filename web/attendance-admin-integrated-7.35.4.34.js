@@ -1879,11 +1879,56 @@
             :'<div style="display:grid;grid-template-columns:160px 1fr auto;gap:8px;margin-top:10px"><input type="date" data-makeup-date73552144><select data-makeup-class73552144><option value="">보강 반 선택</option></select><button type="button" class="admin-btn orange" data-makeup-assign73552144="'+escapeHtml(caseId)+'">보강 배정</button></div>')
           +'</div>';
       }).join(''):'<div>보강결석이 없습니다.</div>';
-      if(!allClassesState735410.directory) allClassesState735410.directory=await loadDirectory(false);
-      Array.from(body.querySelectorAll('[data-makeup-class73552144]')).forEach(function(select){
-        var classes=(allClassesState735410.directory&&allClassesState735410.directory.classes)||[];
+      function renderMakeupClassOptions73552238(select, classes73552238) {
+        var classes=Array.isArray(classes73552238)?classes73552238:[];
+        select.__ulimMakeupClasses73552238=classes;
         select.innerHTML='<option value="">보강 반 선택</option>'+classes.map(function(c){var meta73552174=[text(c.instructorName),[text(c.startTime),text(c.endTime)].filter(Boolean).join('~')].filter(Boolean).join(' · ');return '<option value="'+escapeHtml(text(c.classId))+'">'+escapeHtml(text(c.className))+(meta73552174?' · '+escapeHtml(meta73552174):'')+'</option>';}).join('');
+        if(!classes.length) select.innerHTML='<option value="">해당 날짜 수업반 없음</option>';
+      }
+      async function refreshMakeupClassesForDate73552238(dateInput73552238) {
+        var card73552238=dateInput73552238&&dateInput73552238.closest&&dateInput73552238.closest('[data-makeup-case73552144]');
+        var select73552238=card73552238&&card73552238.querySelector('[data-makeup-class73552144]');
+        if(!select73552238) return;
+        var date73552238=text(dateInput73552238.value);
+        var seq73552238=(Number(select73552238.__ulimMakeupClassSeq73552238)||0)+1;
+        select73552238.__ulimMakeupClassSeq73552238=seq73552238;
+        select73552238.__ulimMakeupClasses73552238=[];
+        select73552238.disabled=true;
+        if(!date73552238){
+          select73552238.innerHTML='<option value="">날짜를 먼저 선택해주세요</option>';
+          return;
+        }
+        select73552238.innerHTML='<option value="">반 목록 불러오는 중...</option>';
+        try {
+          var data73552238=await call('getStaffClassListOperationalSnapshot',{
+            date:date73552238,
+            force:false,
+            requestId:requestId('makeup-class-list-73552238')
+          });
+          if(Number(select73552238.__ulimMakeupClassSeq73552238)!==seq73552238) return;
+          if(text(dateInput73552238.value)!==date73552238) return;
+          if(text(data73552238&&data73552238.source)!=='firestore_canonical_class_catalog_7355016') {
+            throw new Error('선택한 날짜의 수업반 정보를 확인하지 못했습니다.');
+          }
+          var classes73552238=strictClassesForDate7355015(date73552238,Array.isArray(data73552238&&data73552238.classes)?data73552238.classes:[]);
+          select73552238.disabled=false;
+          renderMakeupClassOptions73552238(select73552238,classes73552238);
+        } catch(error73552238) {
+          if(Number(select73552238.__ulimMakeupClassSeq73552238)!==seq73552238) return;
+          select73552238.__ulimMakeupClasses73552238=[];
+          select73552238.disabled=false;
+          select73552238.innerHTML='<option value="">반 목록 불러오기 실패</option>';
+        }
+      }
+      Array.from(body.querySelectorAll('[data-makeup-class73552144]')).forEach(function(select73552238){
+        select73552238.disabled=true;
+        select73552238.innerHTML='<option value="">날짜를 먼저 선택해주세요</option>';
+        select73552238.__ulimMakeupClasses73552238=[];
       });
+      body.onchange=function(event73552238){
+        var dateInput73552238=event73552238.target&&event73552238.target.closest&&event73552238.target.closest('[data-makeup-date73552144]');
+        if(dateInput73552238) refreshMakeupClassesForDate73552238(dateInput73552238);
+      };
       body.onclick=async function(event){
         var assign=event.target&&event.target.closest&&event.target.closest('[data-makeup-assign73552144]');
         var cancel=event.target&&event.target.closest&&event.target.closest('[data-makeup-cancel73552144]');
@@ -1891,8 +1936,10 @@
           var card=assign.closest('[data-makeup-case73552144]');
           var caseId=text(assign.dataset.makeupAssign73552144);
           var date=text(card.querySelector('[data-makeup-date73552144]').value);
-          var classId=text(card.querySelector('[data-makeup-class73552144]').value);
-          var cls=classById7355033(allClassesState735410.directory||{},classId);
+          var classSelect73552238=card.querySelector('[data-makeup-class73552144]');
+          var classId=text(classSelect73552238&&classSelect73552238.value);
+          var makeupClasses73552238=Array.isArray(classSelect73552238&&classSelect73552238.__ulimMakeupClasses73552238)?classSelect73552238.__ulimMakeupClasses73552238:[];
+          var cls=makeupClasses73552238.find(function(item73552238){return text(item73552238.classId)===classId;})||null;
           if(!date||!classId||!cls) return alert('보강 날짜와 반을 선택해주세요.');
           await call('assignMakeupAbsenceCaseAdmin73552114',{caseId:caseId,targetDate:date,targetClassId:classId,targetClassName:cls.className,requestId:requestId('makeup-assign-73552144')});
           await openMakeupCasesModal73552144();
