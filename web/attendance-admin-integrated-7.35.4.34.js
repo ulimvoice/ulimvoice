@@ -3653,9 +3653,30 @@ function groupById735423(classId) { return (allClassesState735410.ledger && allC
       try { global.adminAttendanceRecords = []; } catch (_ignoreTodayGlobalRows735426) {}
       try { renderAttendanceOwned7355014(); } catch (_ignoreTodayRender735426) {}
     }
-    await loadClassListFirebaseFirst(dateValue, false);
-    var selected = text(document.getElementById('adminAttendanceClass') && document.getElementById('adminAttendanceClass').value);
-    if (selected && selected !== '전체반') await safeLoadAttendanceSnapshot(false);
+    // 7.35.4.35: exact-date cache is applied synchronously before the class-list
+    // network await. When the cached canonical selection still has a classId,
+    // start the attendance snapshot immediately and let the class-list refresh
+    // continue in parallel. If the refreshed list changes the selection/key,
+    // the existing stale guard drops the warm result and we reload the final key.
+    var classListPromise73552297 = loadClassListFirebaseFirst(dateValue, false);
+    var warmContext73552297 = attendanceContext();
+    var warmEligible73552297 = !!(warmContext73552297 && warmContext73552297.className && warmContext73552297.className !== '전체반' && warmContext73552297.classId && text(warmContext73552297.date) === dateValue);
+    var warmKey73552297 = warmEligible73552297 ? contextKey(warmContext73552297) : '';
+    var warmSnapshotPromise73552297 = warmEligible73552297 ? safeLoadAttendanceSnapshot(false) : null;
+
+    await classListPromise73552297;
+
+    var finalContext73552297 = attendanceContext();
+    if (!finalContext73552297.className || finalContext73552297.className === '전체반') return true;
+
+    var finalKey73552297 = contextKey(finalContext73552297);
+    if (warmSnapshotPromise73552297 && finalKey73552297 === warmKey73552297) {
+      await warmSnapshotPromise73552297;
+      return true;
+    }
+
+    if (warmSnapshotPromise73552297) await warmSnapshotPromise73552297;
+    await safeLoadAttendanceSnapshot(false);
     return true;
   }
 
