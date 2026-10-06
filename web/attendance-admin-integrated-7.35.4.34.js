@@ -1047,8 +1047,9 @@
     });
   }
 
-  async function safeLoadAttendanceSnapshot(showAlert) {
+  async function safeLoadAttendanceSnapshot(showAlert, options) {
     var alertWhenEmpty = showAlert !== false;
+    var preserveRows73552301 = !!(options && options.preserveRows === true);
     var context = attendanceContext();
     if (!context.className) {
       invalidateAttendanceView('반을 선택하면 출석부가 표시됩니다.');
@@ -1066,7 +1067,7 @@
     var key = contextKey(context);
     var sequence = ++loadSequence;
     global.__ULIM_ATTENDANCE_ACTIVE_REQUEST_735410__ = { sequence: sequence, key: key, startedAt: Date.now() };
-    clearAttendanceForNewRequest('출석부를 불러오는 중...');
+    if (!preserveRows73552301) clearAttendanceForNewRequest('출석부를 불러오는 중...');
 
     try {
       var data = await loadFromFirebase(context);
@@ -1086,8 +1087,10 @@
       return data;
     } catch (error) {
       if (sequence !== loadSequence || contextKey(attendanceContext()) !== key) return { stale: true };
-      assignAttendanceRecords([]);
-      renderAttendance();
+      if (!preserveRows73552301) {
+        assignAttendanceRecords([]);
+        renderAttendance();
+      }
       setSummary('출석부를 불러오지 못했습니다. 다시 시도해주세요.');
       if (alertWhenEmpty) alert(text(error && error.message) || '출석부를 불러오지 못했습니다.');
       return { status: 'error', message: text(error && error.message) };
@@ -3634,7 +3637,7 @@ function groupById735423(classId) { return (allClassesState735410.ledger && allC
       invalidateWholeLedger7355049();
       if(attendancePanelActive7355016()){
         if(attendanceDraftDirty7355014){attendanceRealtimePending735423=true;return;}
-        var selected=text(document.getElementById('adminAttendanceClass')&&document.getElementById('adminAttendanceClass').value);if(selected&&selected!=='전체반'){attendanceRealtimePending735423=false;safeLoadAttendanceSnapshot(false);}
+        var selected=text(document.getElementById('adminAttendanceClass')&&document.getElementById('adminAttendanceClass').value);if(selected&&selected!=='전체반'){attendanceRealtimePending735423=false;safeLoadAttendanceSnapshot(false, { preserveRows: true });}
       }
     },120);
   }
