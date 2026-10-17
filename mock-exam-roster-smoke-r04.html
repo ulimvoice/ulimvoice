@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="no-referrer">
+<title>울림 R04 관리자 명단 읽기 전용 검증</title>
+<style>
+:root{color-scheme:light;font-family:system-ui,'Malgun Gothic',sans-serif;color:#182332;background:#f3f6fa}
+body{max-width:660px;margin:24px auto;padding:16px;line-height:1.6}
+main{padding:25px;background:white;border:1px solid #d6dfea;border-radius:16px;box-shadow:0 6px 24px rgba(18,35,49,.1)}
+h1{font-size:1.4rem;margin-top:0}p{color:#384658}
+label{display:block;font-weight:650}input{padding:12px;margin:8px 0 12px;width:180px;font:inherit;border:1px solid #b3bfcf;border-radius:8px}
+button{display:block;background:#174c73;color:#fff;padding:12px 19px;border:0;border-radius:9px;font:inherit;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.6;cursor:wait}
+pre{padding:16px;white-space:pre-wrap;overflow-wrap:anywhere;background:#eff4f8;border-radius:10px;min-height:48px}
+small{display:block;color:#526175;margin-top:14px}
+</style>
+<script src="./web/room-classroom-realtime-7.29.19.js"></script>
+</head>
+<body>
+<main>
+<h1>울림 모의고사 · 실제 계정 명단 조회 검증</h1>
+<p>기존 울림앱에 <strong>관리자 계정으로 로그인한 같은 브라우저</strong>에서 테스트합니다. 비밀번호 입력이 없으며, 학생 이름·UID·연락처·토큰을 출력하지 않습니다.</p>
+<label for="examDate">검증 대상 날짜</label>
+<input id="examDate" type="date" value="2026-10-17" min="2026-01-01" max="2028-12-31">
+<button id="checkBtn" type="button">읽기 전용 명단 조회 검사</button>
+<pre id="result" role="status" aria-live="polite">버튼을 누르기 전에는 Firebase에 요청하지 않습니다.</pre>
+<small>이 페이지는 출석부를 수정하거나 평가 점수를 저장하지 않습니다. 결과는 집계 정보만 표시합니다. 원본 응답은 로컬 화면에 보관하지 않습니다.</small>
+</main>
+<script>
+(()=>{
+'use strict';
+const $=id=>document.getElementById(id);
+const out=$('result');
+const show=lines=>{out.textContent=lines.join('\n')};
+const normCode=e=>{
+ const code=String(e&&e.code||'UNKNOWN').replace(/[^a-zA-Z0-9/_-]/g,'').slice(0,65);
+ return code||'UNKNOWN';
+};
+function dateValid(d){
+ if(!/^20\d\d-\d\d-\d\d$/.test(d))return false;
+ const t=new Date(d+'T00:00:00Z');return !Number.isNaN(t.valueOf())&&t.toISOString().slice(0,10)===d;
+}
+function safeShape(data){
+ const arr=Array.isArray(data&&data.participants)?data.participants:null;
+ if(!data||data.ok!==true||!arr)return {shape:false,count:0,uidUnique:false,groupValid:false,piiAbsent:false,countMatches:false};
+ const uuids=arr.map(x=>x&&x.studentUid);
+ const ident=uuids.every(s=>typeof s==='string'&&s.length>0);
+ const groupValid=arr.every(x=>x&&['청소년','성인'].includes(x.group));
+ const unique=ident&&new Set(uuids).size===uuids.length;
+ const prohibited=new Set(['phone','studentPhone','parentPhone','birthDate','birth','residentNumber','email','address','password','token']);
+ const piiAbsent=arr.every(x=>x&&typeof x==='object'&&!Object.keys(x).some(k=>prohibited.has(k)));
+ return {shape:true,count:arr.length,uidUnique:unique,groupValid,piiAbsent,countMatches:Number(data.count)===arr.length};
+}
+async function waitAuth(rt){
+ if(rt.auth.currentUser)return rt.auth.currentUser;
+ return await new Promise(resolve=>{
+  let done=false;let stop=()=>{};
+  const tm=setTimeout(()=>{if(!done){done=true;stop();resolve(rt.auth.currentUser||null)}},5000);
+  stop=rt.sdk.onAuthStateChanged(rt.auth,user=>{if(!done){done=true;clearTimeout(tm);resolve(user)}},()=>{if(!done){done=true;clearTimeout(tm);resolve(null)}});
+ });
+}
+$('checkBtn').addEventListener('click',async()=>{
+ const date=$('examDate').value;
+ if(!dateValid(date)){show(['RESULT: INVALID_DATE']);return}
+ const btn=$('checkBtn');btn.disabled=true;
+ show(['STATE: RUNNING','DATE: '+date,'REQUEST: READ_ONLY']);
+ try{
+  const owner=window.ULIM_ROOM_CLASSROOM_REALTIME_72919;
+  if(!owner||typeof owner.preloadRuntime!=='function')throw Object.assign(new Error('missing runtime'),{code:'RUNTIME_NOT_LOADED'});
+  const rt=await owner.preloadRuntime();
+  const user=await waitAuth(rt);
+  if(!user){show(['RESULT: NOT_LOGGED_IN','ACTION: 기존 울림앱 관리자 로그인 후 같은 브라우저에서 재확인']);return}
+  const claim=(await rt.sdk.getIdTokenResult(user,false)).claims||{};
+  const role=String(claim.role||'unknown');
+  if(!['admin','superAdmin','teacher','student'].includes(role)){
+   show(['RESULT: UNEXPECTED_ROLE','ROLE: other']);return;
+  }
+  const basic=['DATE: '+date,'ROLE_CATEGORY: '+role,'AUTH_VERSION_PRESENT: '+(claim.authVersion!==undefined)];
+  try{
+   const resp=await rt.sdk.httpsCallable(rt.functions,'getMockExamRosterPreviewR04')({date});
+   const data=resp&&resp.data;
+   if(role!=='admin'&&role!=='superAdmin'){
+    show([...basic,'RESULT: FAIL_NONADMIN_READ_SUCCEEDED','PII_AND_ROSTER_CONTENT: NOT_DISPLAYED']);return;
+   }
+   const s=safeShape(data);
+   show([...basic,'RESPONSE_SHAPE_OK: '+s.shape,'PARTICIPANT_COUNT: '+s.count,
+    'COUNT_MATCHES: '+s.countMatches,'UID_UNIQUE: '+s.uidUnique,'GROUP_VALUES_VALID: '+s.groupValid,
+    'NO_PII_FIELDS: '+s.piiAbsent,'RESULT: '+(s.shape&&s.countMatches&&s.uidUnique&&s.groupValid&&s.piiAbsent&&s.count>0?'PASS_ADMIN_READ':s.shape&&s.count===0?'REVIEW_EMPTY_ROSTER':'REVIEW_REQUIRED'),
+    'PII_AND_ROSTER_CONTENT: NOT_DISPLAYED']);
+  }catch(e){
+   const code=normCode(e);
+   const expected=role==='teacher'||role==='student';
+   const isDenied=/(^|\/)permission-denied$/i.test(code);
+   show([...basic,'ERROR_CODE: '+code,'RESULT: '+(expected&&isDenied?'PASS_NONADMIN_DENIED':'REVIEW_REQUIRED'),
+    'PII_AND_ROSTER_CONTENT: NOT_DISPLAYED']);
+  }
+ }catch(e){show(['RESULT: RUNTIME_OR_AUTH_ERROR','ERROR_CODE: '+normCode(e),'PII_AND_ROSTER_CONTENT: NOT_DISPLAYED'])}
+ finally{btn.disabled=false}
+});
+})();
+</script>
+</body>
+</html>
