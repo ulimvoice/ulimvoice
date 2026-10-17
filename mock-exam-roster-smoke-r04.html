@@ -31,7 +31,7 @@ small{display:block;color:#526175;margin-top:14px}
 <body>
 <main>
 <h1>울림 모의고사 · 실제 계정 명단 조회 검증</h1>
-<p>기존 울림앱에 <strong>관리자 계정으로 로그인한 같은 브라우저</strong>에서 테스트합니다. 비밀번호를 입력하지 않습니다. 기본 검사는 학생 개인정보를 표시하지 않습니다. 최고관리자·관리자가 별도로 선택한 경우에만 검토 대상 학생명과 수강반을 화면에 표시합니다.</p>
+<p>기존 울림앱에 <strong>관리자 계정으로 로그인한 같은 브라우저</strong>에서 테스트합니다. 비밀번호를 입력하지 않습니다. 기본 검사는 학생 개인정보를 표시하지 않습니다. 복수 수강 학생은 반마다 별도 평가 대상으로 계산합니다. 최고관리자·관리자가 별도로 선택한 경우에만 검토 대상 학생명과 수강반을 화면에 표시합니다.</p>
 <label for="examDate">검증 대상 날짜</label>
 <input id="examDate" type="date" value="2026-10-17" min="2026-01-01" max="2028-12-31">
 <button id="checkBtn" type="button">읽기 전용 명단 조회 검사</button>
@@ -66,15 +66,24 @@ function dateValid(d){
  const t=new Date(d+'T00:00:00Z');return !Number.isNaN(t.valueOf())&&t.toISOString().slice(0,10)===d;
 }
 function safeShape(data){
+ // RUN43: an enrollment record is identified by (studentUid, classId).
+ // A student taking two classes must remain two independently graded records.
  const arr=Array.isArray(data&&data.participants)?data.participants:null;
- if(!data||data.ok!==true||!arr)return {shape:false,count:0,uidUnique:false,groupValid:false,piiAbsent:false,countMatches:false};
- const uuids=arr.map(x=>x&&x.studentUid);
- const ident=uuids.every(s=>typeof s==='string'&&s.length>0);
+ if(!data||data.ok!==true||!arr)return {shape:false,count:0,classPairUnique:false,
+  groupValid:false,piiAbsent:false,countMatches:false,uniqueStudents:0,multiClassStudents:0};
+ const validId=s=>typeof s==='string'&&s.trim()===s&&s.length>0&&s.length<=180;
+ const identityValid=arr.every(x=>x&&typeof x==='object'&&validId(x.studentUid)&&validId(x.classId));
+ const pairs=identityValid?arr.map(x=>JSON.stringify([x.studentUid,x.classId])):[];
+ const classPairUnique=identityValid&&new Set(pairs).size===arr.length;
+ const uids=identityValid?arr.map(x=>x.studentUid):[];
+ const frequencies=new Map();
+ for(const uid of uids)frequencies.set(uid,(frequencies.get(uid)||0)+1);
  const groupValid=arr.every(x=>x&&['청소년','성인'].includes(x.group));
- const unique=ident&&new Set(uuids).size===uuids.length;
  const prohibited=new Set(['phone','studentPhone','parentPhone','birthDate','birth','residentNumber','email','address','password','token']);
  const piiAbsent=arr.every(x=>x&&typeof x==='object'&&!Object.keys(x).some(k=>prohibited.has(k)));
- return {shape:true,count:arr.length,uidUnique:unique,groupValid,piiAbsent,countMatches:Number(data.count)===arr.length};
+ return {shape:identityValid,count:arr.length,classPairUnique,groupValid,piiAbsent,
+  countMatches:Number(data.count)===arr.length,uniqueStudents:frequencies.size,
+  multiClassStudents:[...frequencies.values()].filter(n=>n>1).length};
 }
 function safeReviewSummary(data){
  // The server deliberately withholds participants until all admin-review issues are resolved.
@@ -186,8 +195,10 @@ $('checkBtn').addEventListener('click',async()=>{
    }
    const s=safeShape(data);
    show([...basic,'RESPONSE_SHAPE_OK: '+s.shape,'PARTICIPANT_COUNT: '+s.count,
-    'COUNT_MATCHES: '+s.countMatches,'UID_UNIQUE: '+s.uidUnique,'GROUP_VALUES_VALID: '+s.groupValid,
-    'NO_PII_FIELDS: '+s.piiAbsent,'RESULT: '+(s.shape&&s.countMatches&&s.uidUnique&&s.groupValid&&s.piiAbsent&&s.count>0?'PASS_ADMIN_READ':s.shape&&s.count===0?'REVIEW_EMPTY_ROSTER':'REVIEW_REQUIRED'),
+    'UNIQUE_STUDENTS_COUNT: '+s.uniqueStudents,'MULTICLASS_STUDENTS_COUNT: '+s.multiClassStudents,
+    'COUNT_MATCHES: '+s.countMatches,'STUDENT_CLASS_PAIR_UNIQUE: '+s.classPairUnique,
+    'GROUP_VALUES_VALID: '+s.groupValid,'NO_PII_FIELDS: '+s.piiAbsent,
+    'RESULT: '+(s.shape&&s.countMatches&&s.classPairUnique&&s.groupValid&&s.piiAbsent&&s.count>0?'PASS_ADMIN_READ':s.shape&&s.count===0?'REVIEW_EMPTY_ROSTER':'REVIEW_REQUIRED'),
     'PII_AND_ROSTER_CONTENT: NOT_DISPLAYED']);
   }catch(e){
    const code=normCode(e);
