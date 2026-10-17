@@ -54,6 +54,22 @@ function safeShape(data){
  const piiAbsent=arr.every(x=>x&&typeof x==='object'&&!Object.keys(x).some(k=>prohibited.has(k)));
  return {shape:true,count:arr.length,uidUnique:unique,groupValid,piiAbsent,countMatches:Number(data.count)===arr.length};
 }
+function safeReviewSummary(data){
+ // The server deliberately withholds participants until all admin-review issues are resolved.
+ if(!data||data.ok!==false||data.requiresAdminReview!==true||!Array.isArray(data.participants)||
+    data.participants.length!==0||data.count!==0)return null;
+ const s=data.reviewSummary;
+ if(!s||typeof s!=='object'||Array.isArray(s))return null;
+ const isCount=v=>Number.isSafeInteger(v)&&v>=0&&v<=100000;
+ if(!isCount(s.multipleClasses)||!isCount(s.unresolvedAudience)||!isCount(s.readyCandidates)||
+    typeof s.noEligibleParticipants!=='boolean'||typeof s.capacityExceeded!=='boolean')return null;
+ if(!(s.multipleClasses>0||s.unresolvedAudience>0||s.noEligibleParticipants||s.capacityExceeded))return null;
+ return {
+  multipleClasses:s.multipleClasses,unresolvedAudience:s.unresolvedAudience,
+  readyCandidates:s.readyCandidates,noEligibleParticipants:s.noEligibleParticipants,
+  capacityExceeded:s.capacityExceeded
+ };
+}
 async function waitAuth(rt){
  if(rt.auth.currentUser)return rt.auth.currentUser;
  return await new Promise(resolve=>{
@@ -84,6 +100,26 @@ $('checkBtn').addEventListener('click',async()=>{
    const data=resp&&resp.data;
    if(role!=='admin'&&role!=='superAdmin'){
     show([...basic,'RESULT: FAIL_NONADMIN_READ_SUCCEEDED','PII_AND_ROSTER_CONTENT: NOT_DISPLAYED']);return;
+   }
+   // RUN32: expected fail-closed server response for an unconfirmed roster.
+   // Only numeric/boolean aggregate fields are displayed; never print the raw response.
+   if(data && data.ok===false && data.requiresAdminReview===true){
+    const validReason=data.reason==='MOCK_EXAM_ROSTER_REQUIRES_ADMIN_REVIEW';
+    const summary=safeReviewSummary(data);
+    if(validReason && summary){
+     show([...basic,'REVIEW_RESPONSE_VALID: true','ROSTER_READY: false',
+      'MULTIPLE_CLASSES_COUNT: '+summary.multipleClasses,
+      'UNRESOLVED_AUDIENCE_COUNT: '+summary.unresolvedAudience,
+      'READY_CANDIDATES_COUNT: '+summary.readyCandidates,
+      'NO_ELIGIBLE_PARTICIPANTS: '+summary.noEligibleParticipants,
+      'CAPACITY_EXCEEDED: '+summary.capacityExceeded,
+      'PARTIAL_ROSTER_RELEASED: false','RESULT: REVIEW_BLOCKED_EXPECTED',
+      'PII_AND_ROSTER_CONTENT: NOT_DISPLAYED']);
+    } else {
+     show([...basic,'REVIEW_RESPONSE_VALID: false','RESULT: REVIEW_RESPONSE_INVALID',
+      'PII_AND_ROSTER_CONTENT: NOT_DISPLAYED']);
+    }
+    return;
    }
    const s=safeShape(data);
    show([...basic,'RESPONSE_SHAPE_OK: '+s.shape,'PARTICIPANT_COUNT: '+s.count,
