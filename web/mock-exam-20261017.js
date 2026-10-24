@@ -2,7 +2,7 @@
 'use strict';
 // Single owner: this file is the only UI/controller owner for the standalone mock examination.
 const EXAM_ID='2026-10-17';
-const FN={sessions:'listMockExamSessions20261017',overview:'getMockExamOverview20261017',save:'saveMockExamGrade20261017',admin:'manageMockExam20261017',r04RosterPreview:'getMockExamCanonicalRosterAdminR04',r04Persisted:'getMockExamPersistedSessionAdminR04',r04State:'setMockExamSessionGradingAdminR04',r04TeacherWorkspace:'getMockExamTeacherWorkspaceR04',r04TeacherSave:'saveMockExamTeacherGradeR04',r04StudentHistory:'getMockExamStudentHistoryR04',r04AdminRelease:'manageMockExamResultReleaseAdminR04'};
+const FN={sessions:'listMockExamSessions20261017',overview:'getMockExamOverview20261017',save:'saveMockExamGrade20261017',admin:'manageMockExam20261017',r04RosterPreview:'getMockExamCanonicalRosterAdminR04',r04Persisted:'getMockExamPersistedSessionAdminR04',r04State:'setMockExamSessionGradingAdminR04',r04TeacherWorkspace:'getMockExamTeacherWorkspaceR04',r04TeacherSave:'saveMockExamTeacherGradeR04',r04StudentHistory:'getMockExamStudentHistoryR04',r04AdminRelease:'manageMockExamResultReleaseAdminR04',r04AdminMedia:'manageMockExamParticipationMediaAdminR04'};
 const NA=['발음의 정확성','발성의 안정성','호흡과 문장 처리','정보 전달력','다큐멘터리 톤과 리듬'];
 const ACT=['인물 및 상황 이해','감정·의도 표현','발성·발음','호흡·대사 흐름','몰입도와 전달력'];
 const GROUPS=['청소년','성인'];
@@ -32,7 +32,7 @@ const SAFE_HOSTS=new Set(['drive.google.com','docs.google.com']);
 function driveLink(value){try{const u=new URL(str(value));return u.protocol==='https:'&&SAFE_HOSTS.has(u.hostname)?u.href:null;}catch(_){return null;}}
 function toast(msg){const t=$('toast');if(!t)return;t.textContent=str(msg);t.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>t.classList.remove('show'),4000)}
 function errorMessage(e){const c=str(e&&e.code);if(c.includes('permission-denied'))return'접근 권한이 없습니다.';if(c.includes('unauthenticated'))return'로그인 후 다시 진행해주세요.';if(c.includes('not-found'))return'평가 서버 기능이 아직 연결되지 않았습니다.';return str(e&&e.message)||'요청을 처리하지 못했습니다.';}
-let S={role:null,auth:null,rt:null,examId:'',sessions:[],sessionTitle:'',examDate:'',archived:false,previewData:{},roster:[],grades:[],judges:[],folders:{},published:false,selected:null,group:'청소년',view:'completion',judgePage:0,edit:{},previewRole:'teacher',expandedClasses:{'청소년':[],'성인':[]},rubrics:defaultRubrics(),rubricVersion:0,rubricFrozen:false,rosterSearch:'',rosterGroup:'전체',rosterPreviewOnly:false,rosterDate:'',rosterReview:[],rosterReviewSummary:{},r04SessionId:'r04_202610_r01',r04SessionState:null,r04StateMutationPending:false,r04ReleasePreview:null,r04ReleasePending:false,r04ReleasePreviewPending:false,r04TeacherReady:false,r04TeacherGradingOpen:false,r04TeacherSavePending:false,r04StudentHistoryRecords:[],r04StudentHistoryReady:false,r04StudentHistoryError:'',r04StudentHistorySelection:'',r04StudentEvaluationPage:0};
+let S={role:null,auth:null,rt:null,examId:'',sessions:[],sessionTitle:'',examDate:'',archived:false,previewData:{},roster:[],grades:[],judges:[],folders:{},published:false,selected:null,group:'청소년',view:'completion',judgePage:0,edit:{},previewRole:'teacher',expandedClasses:{'청소년':[],'성인':[]},rubrics:defaultRubrics(),rubricVersion:0,rubricFrozen:false,rosterSearch:'',rosterGroup:'전체',rosterPreviewOnly:false,rosterDate:'',rosterReview:[],rosterReviewSummary:{},r04SessionId:'r04_202610_r01',r04SessionState:null,r04StateMutationPending:false,r04ReleasePreview:null,r04ReleasePending:false,r04ReleasePreviewPending:false,r04MediaRoster:[],r04MediaRosterExamId:'',r04MediaRosterState:'',r04MediaResultsReleased:false,r04MediaRosterPending:false,r04MediaSelection:'',r04MediaRecord:null,r04MediaReadPending:false,r04MediaSavePending:false,r04MediaUnsafe:false,r04TeacherReady:false,r04TeacherGradingOpen:false,r04TeacherSavePending:false,r04StudentHistoryRecords:[],r04StudentHistoryReady:false,r04StudentHistoryError:'',r04StudentHistorySelection:'',r04StudentEvaluationPage:0};
 const app=$('app'),logoutBtn=$('logoutBtn');
 function badge(){const a=$('accountBadge');if(a)a.textContent=S.auth?`${S.auth.name} · ${S.role==='teacher'?'강사':S.role==='admin'?'관리자':'학생'}`:'로그인 필요';logoutBtn.hidden=!S.auth||preview;}
 function withBusy(btn,fn){if(btn)btn.disabled=true;return Promise.resolve().then(fn).catch(e=>{toast(errorMessage(e));return null}).finally(()=>{if(btn)btn.disabled=false})}
@@ -140,7 +140,7 @@ function renderR04AdminSessionControls(){
   valid?('참가자 '+m.participantCount+'건 · 상태 버전 '+m.stateVersion+' · 읽기/쓰기 권한은 서버가 검증합니다.'):
   '회차를 조회해야 현재 상태와 버전을 확인할 수 있습니다. 조회 전에는 변경할 수 없습니다.';
  app.insertAdjacentHTML('afterbegin',`<section class="panel" id="r04AdminStatePanel"><div class="heading-row"><div><h2>R04 평가 회차 관리</h2><p class="muted">평가 기간 제한 없음 · 관리자만 ON/OFF · OFF 후 최종 잠금</p></div><span class="chip ${valid&&m.gradingOpen?'ok':'wait'}">${esc(label)}</span></div><div class="flex"><label>회차 ID <input id="r04StateExamId" maxlength="20" value="${esc(S.r04SessionId)}" aria-label="R04 평가 회차 ID"></label><button id="r04LoadState" class="btn line" type="button">현재 상태 조회</button><button id="r04ApplyState" class="btn" type="button" ${disabled?'disabled':''}>${esc(action?title:'상태 변경 불가')}</button></div><p class="hint">${esc(hint)}</p><p class="warn">OFF는 취소할 수 없습니다. 상태 조회 및 ON/OFF는 현재 관리자 계정에만 허용됩니다. 강사 평가 저장 및 학생 결과 공개는 별도 기능입니다.</p></section>`);
- $('r04StateExamId').onchange=e=>{S.r04SessionId=str(e.target.value);S.r04SessionState=null;S.r04ReleasePreview=null;render();};
+ $('r04StateExamId').onchange=e=>{const next=str(e.target.value);if(next!==S.r04SessionId)resetR04AdminMedia();S.r04SessionId=next;S.r04SessionState=null;S.r04ReleasePreview=null;render();};
  $('r04LoadState').onclick=()=>withBusy($('r04LoadState'),()=>{
   const id=str($('r04StateExamId').value);
   if(!R04_EXAM_ID_PATTERN.test(id))throw Error('R04 회차 ID 형식을 확인해 주세요.');
@@ -149,6 +149,7 @@ function renderR04AdminSessionControls(){
  });
  if(action&&!S.r04StateMutationPending)$('r04ApplyState').onclick=()=>changeR04SessionState(action);
  renderR04AdminReleaseControls();
+ renderR04AdminMediaControls();
 }
 
 // RUN191: independent administrator-only R04 results release owner.
@@ -240,6 +241,150 @@ function renderR04AdminReleaseControls(){
  anchor.insertAdjacentHTML('afterend',html);
  const read=$('r04LoadReleasePreview');if(read&&!busy)read.onclick=()=>loadR04AdminReleasePreview(S.r04SessionId);
  const release=$('r04ConfirmResultsRelease');if(release&&ready)release.onclick=()=>releaseR04AdminResults();
+}
+
+// RUN197: verified per-participation media admin UI. Never match by student UID alone.
+// The persisted immutable R04 participation IDs are the only selection source.
+function resetR04AdminMedia(){
+ S.r04MediaRoster=[];S.r04MediaRosterExamId='';S.r04MediaRosterState='';
+ S.r04MediaResultsReleased=false;S.r04MediaSelection='';S.r04MediaRecord=null;
+ S.r04MediaRosterPending=false;S.r04MediaReadPending=false;S.r04MediaSavePending=false;S.r04MediaUnsafe=false;
+}
+function validateR04MediaAdminRoster(raw,examId){
+ const safeId=x=>typeof x==='string'&&x.length>0&&x.length<=180&&x===x.trim()&&
+  x!=='.'&&x!=='..'&&!/[/\\\x00-\x1f\x7f]/u.test(x);
+ if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.ok!==true||
+    raw.mode!=='admin-persisted-session-roster-read-only'||raw.saveEnabled!==false||
+    raw.examId!==examId||!R04_EXAM_ID_PATTERN.test(examId)||
+    !Number.isSafeInteger(raw.stateVersion)||raw.stateVersion<0||
+    !Number.isSafeInteger(raw.participantCount)||raw.participantCount<1||raw.participantCount>150||
+    !['open','closed'].includes(raw.sessionState)||typeof raw.gradingOpen!=='boolean'||
+    typeof raw.resultsReleased!=='boolean'||
+    (raw.sessionState==='closed'&&raw.gradingOpen)||
+    (raw.resultsReleased&&raw.sessionState!=='closed')||
+    !Array.isArray(raw.participants)||raw.participants.length!==raw.participantCount)
+   throw Error('저장된 평가 참가 기록을 검증하지 못했습니다. 자료 편집을 차단합니다.');
+ const seen=new Set(),rows=[];
+ for(const p of raw.participants){
+  if(!p||typeof p!=='object'||Array.isArray(p)||!safeId(p.participationId)||seen.has(p.participationId)||
+     !safeId(p.classId)||!['청소년','성인'].includes(p.group)||
+     !['active','archived'].includes(p.status)||
+     typeof p.studentLabel!=='string'||p.studentLabel.length>100||
+     typeof p.classLabel!=='string'||p.classLabel.length>150||
+     typeof p.currentRosterMatch!=='boolean'||
+     (p.currentRosterMatch&&(!p.studentLabel||!p.classLabel)))
+    throw Error('참가 기록 중복 또는 식별 정보가 일치하지 않습니다.');
+  seen.add(p.participationId);
+  rows.push({participationId:p.participationId,classId:p.classId,group:p.group,
+    status:p.status,studentLabel:p.studentLabel,classLabel:p.classLabel,
+    currentRosterMatch:p.currentRosterMatch});
+ }
+ return {examId,sessionState:raw.sessionState,resultsReleased:raw.resultsReleased,stateVersion:raw.stateVersion,rows};
+}
+function validR04MediaUrl(raw){
+ if(typeof raw!=='string'||raw.length>2048||raw!==raw.trim())return false;
+ if(raw==='')return true;
+ if(!raw.startsWith('https://')||/[\x00-\x1f\x7f\\]/u.test(raw))return false;
+ try{const u=new URL(raw);return u.protocol==='https:'&&
+  (u.hostname==='drive.google.com'||u.hostname==='docs.google.com')&&
+  !u.username&&!u.password&&!u.port&&u.pathname!=='/'&&u.href===raw;
+ }catch{return false;}
+}
+function validateR04MediaAdminRecord(raw,examId,participationId){
+ if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.ok!==true||
+    raw.mode!=='admin-r04-media-read-only'||raw.examId!==examId||
+    raw.participationId!==participationId||!Number.isSafeInteger(raw.revision)||raw.revision<0||
+    !validR04MediaUrl(raw.audioUrl)||!validR04MediaUrl(raw.videoUrl))
+   throw Error('저장된 음성·영상 링크의 형식이 올바르지 않습니다.');
+ return {examId,participationId,revision:raw.revision,audioUrl:raw.audioUrl,videoUrl:raw.videoUrl};
+}
+function selectedR04MediaParticipation(){
+ return S.r04MediaRosterExamId===S.r04SessionId&&
+  S.r04MediaRoster.find(x=>x.participationId===S.r04MediaSelection)||null;
+}
+function canSaveR04MediaAdmin(){
+ const p=selectedR04MediaParticipation(),r=S.r04MediaRecord;
+ return !!(!preview&&S.role==='admin'&&p&&p.status==='active'&&
+   S.r04MediaRosterState==='open'&&S.r04MediaResultsReleased===false&&
+   !S.r04MediaUnsafe&&!S.r04MediaRosterPending&&!S.r04MediaReadPending&&!S.r04MediaSavePending&&
+   r&&r.examId===S.r04SessionId&&r.participationId===p.participationId);
+}
+async function loadR04MediaAdminRoster(){
+ if(preview||S.role!=='admin'||S.r04MediaRosterPending||S.r04MediaSavePending)return;
+ const id=S.r04SessionId;
+ if(!R04_EXAM_ID_PATTERN.test(id))return toast('평가 회차 ID 형식을 확인해 주세요.');
+ S.r04MediaRosterPending=true;S.r04MediaRoster=[];S.r04MediaRosterExamId='';
+ S.r04MediaSelection='';S.r04MediaRecord=null;S.r04MediaUnsafe=false;render();
+ try{
+  const raw=await call(FN.r04Persisted,{examId:id});
+  const checked=validateR04MediaAdminRoster(raw,id);
+  if(S.role!=='admin'||S.r04SessionId!==id)return;
+  S.r04MediaRoster=checked.rows;S.r04MediaRosterExamId=id;
+  S.r04MediaRosterState=checked.sessionState;S.r04MediaResultsReleased=checked.resultsReleased;
+  S.r04MediaSelection=checked.rows[0].participationId;
+ }catch(e){if(S.r04SessionId===id){S.r04MediaRoster=[];S.r04MediaRecord=null;S.r04MediaUnsafe=true;toast(errorMessage(e));}}
+ finally{S.r04MediaRosterPending=false;if(S.role==='admin'&&S.r04SessionId===id)render();}
+}
+async function loadR04MediaAdminRecord(){
+ if(preview||S.role!=='admin'||S.r04MediaReadPending||S.r04MediaSavePending)return;
+ const id=S.r04SessionId,p=selectedR04MediaParticipation();if(!p)return;
+ S.r04MediaReadPending=true;S.r04MediaRecord=null;S.r04MediaUnsafe=false;render();
+ try{
+  const raw=await call(FN.r04AdminMedia,{action:'read',examId:id,participationId:p.participationId});
+  const record=validateR04MediaAdminRecord(raw,id,p.participationId);
+  if(S.role==='admin'&&S.r04SessionId===id&&S.r04MediaSelection===p.participationId)
+   S.r04MediaRecord=record;
+ }catch(e){if(S.r04SessionId===id&&S.r04MediaSelection===p.participationId){S.r04MediaUnsafe=true;toast(errorMessage(e));}}
+ finally{S.r04MediaReadPending=false;if(S.role==='admin'&&S.r04SessionId===id)render();}
+}
+async function saveR04MediaAdminRecord(){
+ if(!canSaveR04MediaAdmin())return;
+ const p=selectedR04MediaParticipation(),r=S.r04MediaRecord;
+ const a=$('r04MediaAudioUrl'),v=$('r04MediaVideoUrl');if(!a||!v)return;
+ const audioUrl=a.value,videoUrl=v.value;
+ if(!validR04MediaUrl(audioUrl)||!validR04MediaUrl(videoUrl))return toast('Google Drive HTTPS 링크만 입력할 수 있습니다.');
+ if(audioUrl===r.audioUrl&&videoUrl===r.videoUrl)return toast('변경된 링크가 없습니다.');
+ if(!window.confirm('선택한 평가 참가 기록의 음성·영상 링크만 저장하시겠습니까? 복수 수강반은 별도로 관리됩니다.'))return;
+ if(!canSaveR04MediaAdmin()||r!==S.r04MediaRecord)return;
+ const id=S.r04SessionId,part=p.participationId;
+ S.r04MediaSavePending=true;S.r04MediaRecord=null;S.r04MediaUnsafe=true;render();
+ try{
+  const out=await call(FN.r04AdminMedia,{action:'save',examId:id,participationId:part,
+   expectedRevision:r.revision,audioUrl,videoUrl});
+  if(!out||out.ok!==true||out.examId!==id||out.participationId!==part||
+     typeof out.changed!=='boolean'||!Number.isSafeInteger(out.revision)||
+     out.revision!==(out.changed?r.revision+1:r.revision))
+   throw Error('저장 응답을 검증하지 못했습니다. 재저장하지 말고 링크를 다시 조회하세요.');
+  toast('서버 저장 응답을 확인했습니다. 링크를 다시 조회하여 최종 상태를 확인하세요.');
+ }catch(e){toast('저장 결과가 불확실합니다. 반복 저장하지 말고 링크를 다시 조회하세요. '+errorMessage(e));}
+ finally{S.r04MediaSavePending=false;S.r04MediaUnsafe=true;if(S.role==='admin'&&S.r04SessionId===id)render();}
+}
+function renderR04AdminMediaControls(){
+ if(preview||S.role!=='admin')return;
+ const ready=S.r04MediaRosterExamId===S.r04SessionId&&S.r04MediaRoster.length>0;
+ const p=selectedR04MediaParticipation(),r=S.r04MediaRecord;
+ const busy=S.r04MediaRosterPending||S.r04MediaReadPending||S.r04MediaSavePending;
+ const canSave=canSaveR04MediaAdmin();
+ const options=ready?S.r04MediaRoster.map((x,i)=>`<option value="${esc(x.participationId)}" ${x.participationId===S.r04MediaSelection?'selected':''}>${esc(x.group)} · ${esc(x.classLabel||'현재 명단 외 수강반')} · ${esc(x.studentLabel||'현재 명단 외 학생')} · ${i+1}번${x.status==='archived'?' (보관)':''}</option>`).join(''):'';
+ const status=!ready?'회차의 저장된 평가 참가 기록을 먼저 조회하세요.':
+   `${S.r04MediaRoster.length}건 · ${S.r04MediaRosterState==='open'?'평가 회차 진행 중':'평가 회차 최종 종료'} · 선택된 기록의 링크만 관리합니다.`;
+ const editing=ready&&p&&r&&r.participationId===p.participationId&&r.examId===S.r04SessionId;
+ const inputDisabled=!canSave?'disabled':'';
+ const details=ready?`<div class="flex top-gap"><label>평가 참가 기록 <select id="r04MediaParticipationPicker" ${busy?'disabled':''}>${options}</select></label><button id="r04MediaRead" type="button" class="btn line" ${busy||!p?'disabled':''}>선택 기록 링크 조회</button></div><p class="hint">복수 수강 학생도 수강반별 참가 기록에 각각 저장됩니다. 참가 기록이 2개면 링크도 별개입니다.</p>`:'';
+ const fields=editing?`<div class="field"><label>음성 Google Drive 링크</label><input id="r04MediaAudioUrl" type="url" maxlength="2048" value="${esc(r.audioUrl)}" ${inputDisabled} placeholder="https://drive.google.com/file/d/..."></div><div class="field"><label>영상 Google Drive 링크</label><input id="r04MediaVideoUrl" type="url" maxlength="2048" value="${esc(r.videoUrl)}" ${inputDisabled} placeholder="https://drive.google.com/file/d/..."></div><div class="flex"><button id="r04MediaSave" type="button" class="btn" ${canSave?'':'disabled'}>선택 참가 기록 링크 저장</button><span class="muted">수정 버전 ${r.revision}</span></div>`:
+   '<p class="hint">선택한 참가 기록의 기존 링크를 먼저 조회해야 저장할 수 있습니다. 저장 후에도 다시 조회해야 합니다.</p>';
+ const blockNote=S.r04MediaRosterState==='closed'||S.r04MediaResultsReleased?'<p class="warn">최종 종료·결과 공개된 회차는 기존 링크를 읽을 수 있지만 수정은 불가합니다.</p>':
+  p&&p.status==='archived'?'<p class="warn">보관된 참가 기록은 수정할 수 없습니다.</p>':'';
+ const html=`<section class="panel" id="r04AdminMediaPanel"><div class="heading-row"><div><h2>R04 음성·영상 링크 관리</h2><p class="muted">관리자 전용 · 서버 참가 ID 기준 · Google Drive HTTPS만 허용</p></div><span class="chip wait">수동 관리</span></div><div class="flex"><button id="r04MediaRosterLoad" type="button" class="btn line" ${busy?'disabled':''}>저장된 참가 기록 조회</button></div><p class="hint">${esc(status)}</p>${details}${fields}${blockNote}<p class="hint">Google Drive 파일 접근 권한은 Drive에서 별도로 관리해야 합니다. 폴더 자동매칭은 아직 제공하지 않습니다.</p></section>`;
+ const anchor=$('r04AdminReleasePanel')||$('r04AdminStatePanel');if(!anchor)return;
+ anchor.insertAdjacentHTML('afterend',html);
+ const reload=$('r04MediaRosterLoad');if(reload&&!busy)reload.onclick=()=>loadR04MediaAdminRoster();
+ const picker=$('r04MediaParticipationPicker');if(picker&&!busy)picker.onchange=e=>{
+  if(!S.r04MediaRoster.some(p=>p.participationId===e.target.value))return;
+  S.r04MediaSelection=e.target.value;S.r04MediaRecord=null;S.r04MediaUnsafe=false;render();
+ };
+ const read=$('r04MediaRead');if(read&&!busy)read.onclick=()=>loadR04MediaAdminRecord();
+ const save=$('r04MediaSave');if(save&&canSave)save.onclick=()=>saveR04MediaAdminRecord();
 }
 
 // RUN178 R04 teacher workspace uses only the deployed authenticated R04 API.
@@ -601,7 +746,7 @@ function studentView(){const mine=S.roster.filter(p=>p.studentUid===S.auth.stude
  app.querySelectorAll('[data-own-class]').forEach(b=>b.onclick=()=>{S.selected=b.dataset.ownClass;S.judgePage=0;render()});
  if($('prevJudge')){$('prevJudge').disabled=S.judgePage===0;$('prevJudge').onclick=()=>{S.judgePage--;render()}}if($('nextJudge')){$('nextJudge').disabled=S.judgePage>=S.judges.length-1;$('nextJudge').onclick=()=>{S.judgePage++;render()}}}
 function render(){badge();if(!S.auth){loginView();return;}if(!preview&&S.role==='student'){renderR04StudentHistory();return;}if(S.role==='admin'&&S.rosterPreviewOnly){renderCanonicalAdminRosterR04();return;}if(S.role==='teacher')teacherView();else if(S.role==='admin')adminView();else studentView();bindSessionPicker();if(preview){app.querySelectorAll('[data-preview-role]').forEach(b=>b.onclick=()=>setPreviewRole(b.dataset.previewRole));const pb=$('togglePreviewPublished');if(pb)pb.onclick=()=>{S.published=!S.published;const meta=S.sessions.find(x=>x.examId===S.examId);if(meta)meta.published=S.published;S.previewData[S.examId]=currentSnapshot();render()}}}
-logoutBtn.onclick=()=>withBusy(logoutBtn,async()=>{const rt=await runtime();await rt.sdk.signOut(rt.auth);S={...S,role:null,auth:null,rt,roster:[],grades:[],judges:[],folders:{},edit:{},examId:'',sessions:[],rosterPreviewOnly:false,rosterDate:'',rosterReview:[],rosterReviewSummary:{},r04SessionState:null,r04StateMutationPending:false,r04ReleasePreview:null,r04ReleasePending:false,r04ReleasePreviewPending:false,r04TeacherReady:false,r04TeacherGradingOpen:false,r04TeacherSavePending:false,r04StudentHistoryRecords:[],r04StudentHistoryReady:false,r04StudentHistoryError:'',r04StudentHistorySelection:'',r04StudentEvaluationPage:0};render()});
+logoutBtn.onclick=()=>withBusy(logoutBtn,async()=>{const rt=await runtime();await rt.sdk.signOut(rt.auth);S={...S,role:null,auth:null,rt,roster:[],grades:[],judges:[],folders:{},edit:{},examId:'',sessions:[],rosterPreviewOnly:false,rosterDate:'',rosterReview:[],rosterReviewSummary:{},r04SessionState:null,r04StateMutationPending:false,r04ReleasePreview:null,r04ReleasePending:false,r04ReleasePreviewPending:false,r04MediaRoster:[],r04MediaRosterExamId:'',r04MediaRosterState:'',r04MediaResultsReleased:false,r04MediaRosterPending:false,r04MediaSelection:'',r04MediaRecord:null,r04MediaReadPending:false,r04MediaSavePending:false,r04MediaUnsafe:false,r04TeacherReady:false,r04TeacherGradingOpen:false,r04TeacherSavePending:false,r04StudentHistoryRecords:[],r04StudentHistoryReady:false,r04StudentHistoryError:'',r04StudentHistorySelection:'',r04StudentEvaluationPage:0};render()});
 async function start(){if(preview){initPreview();return}render();try{const rt=await runtime();await new Promise(resolve=>{let settled=false;let stop=()=>{};const timer=setTimeout(()=>{if(!settled){settled=true;stop();resolve()}},4500);stop=rt.sdk.onAuthStateChanged(rt.auth,()=>{if(!settled){settled=true;clearTimeout(timer);resolve()}},()=>{if(!settled){settled=true;clearTimeout(timer);resolve()}})});if(rt.auth.currentUser)await bindSession();else loginView()}catch(e){app.innerHTML=`<section class="center-state"><h1>평가 서비스 연결을 확인해주세요.</h1><p>${esc(errorMessage(e))}</p><div class="action-row"><button id="retryBtn" class="btn">다시 시도</button></div></section>`;$('retryBtn').onclick=start}}
 start();
 })();
