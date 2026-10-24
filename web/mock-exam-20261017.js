@@ -2,7 +2,7 @@
 'use strict';
 // Single owner: this file is the only UI/controller owner for the standalone mock examination.
 const EXAM_ID='2026-10-17';
-const FN={sessions:'listMockExamSessions20261017',overview:'getMockExamOverview20261017',save:'saveMockExamGrade20261017',admin:'manageMockExam20261017',r04RosterPreview:'getMockExamCanonicalRosterAdminR04',r04Persisted:'getMockExamPersistedSessionAdminR04',r04State:'setMockExamSessionGradingAdminR04',r04TeacherWorkspace:'getMockExamTeacherWorkspaceR04',r04TeacherSave:'saveMockExamTeacherGradeR04'};
+const FN={sessions:'listMockExamSessions20261017',overview:'getMockExamOverview20261017',save:'saveMockExamGrade20261017',admin:'manageMockExam20261017',r04RosterPreview:'getMockExamCanonicalRosterAdminR04',r04Persisted:'getMockExamPersistedSessionAdminR04',r04State:'setMockExamSessionGradingAdminR04',r04TeacherWorkspace:'getMockExamTeacherWorkspaceR04',r04TeacherSave:'saveMockExamTeacherGradeR04',r04StudentHistory:'getMockExamStudentHistoryR04'};
 const NA=['발음의 정확성','발성의 안정성','호흡과 문장 처리','정보 전달력','다큐멘터리 톤과 리듬'];
 const ACT=['인물 및 상황 이해','감정·의도 표현','발성·발음','호흡·대사 흐름','몰입도와 전달력'];
 const GROUPS=['청소년','성인'];
@@ -32,7 +32,7 @@ const SAFE_HOSTS=new Set(['drive.google.com','docs.google.com']);
 function driveLink(value){try{const u=new URL(str(value));return u.protocol==='https:'&&SAFE_HOSTS.has(u.hostname)?u.href:null;}catch(_){return null;}}
 function toast(msg){const t=$('toast');if(!t)return;t.textContent=str(msg);t.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>t.classList.remove('show'),4000)}
 function errorMessage(e){const c=str(e&&e.code);if(c.includes('permission-denied'))return'접근 권한이 없습니다.';if(c.includes('unauthenticated'))return'로그인 후 다시 진행해주세요.';if(c.includes('not-found'))return'평가 서버 기능이 아직 연결되지 않았습니다.';return str(e&&e.message)||'요청을 처리하지 못했습니다.';}
-let S={role:null,auth:null,rt:null,examId:'',sessions:[],sessionTitle:'',examDate:'',archived:false,previewData:{},roster:[],grades:[],judges:[],folders:{},published:false,selected:null,group:'청소년',view:'completion',judgePage:0,edit:{},previewRole:'teacher',expandedClasses:{'청소년':[],'성인':[]},rubrics:defaultRubrics(),rubricVersion:0,rubricFrozen:false,rosterSearch:'',rosterGroup:'전체',rosterPreviewOnly:false,rosterDate:'',rosterReview:[],rosterReviewSummary:{},r04SessionId:'r04_202610_r01',r04SessionState:null,r04StateMutationPending:false,r04TeacherReady:false,r04TeacherGradingOpen:false,r04TeacherSavePending:false};
+let S={role:null,auth:null,rt:null,examId:'',sessions:[],sessionTitle:'',examDate:'',archived:false,previewData:{},roster:[],grades:[],judges:[],folders:{},published:false,selected:null,group:'청소년',view:'completion',judgePage:0,edit:{},previewRole:'teacher',expandedClasses:{'청소년':[],'성인':[]},rubrics:defaultRubrics(),rubricVersion:0,rubricFrozen:false,rosterSearch:'',rosterGroup:'전체',rosterPreviewOnly:false,rosterDate:'',rosterReview:[],rosterReviewSummary:{},r04SessionId:'r04_202610_r01',r04SessionState:null,r04StateMutationPending:false,r04TeacherReady:false,r04TeacherGradingOpen:false,r04TeacherSavePending:false,r04StudentHistoryRecords:[],r04StudentHistoryReady:false,r04StudentHistoryError:'',r04StudentHistorySelection:'',r04StudentEvaluationPage:0};
 const app=$('app'),logoutBtn=$('logoutBtn');
 function badge(){const a=$('accountBadge');if(a)a.textContent=S.auth?`${S.auth.name} · ${S.role==='teacher'?'강사':S.role==='admin'?'관리자':'학생'}`:'로그인 필요';logoutBtn.hidden=!S.auth||preview;}
 function withBusy(btn,fn){if(btn)btn.disabled=true;return Promise.resolve().then(fn).catch(e=>{toast(errorMessage(e));return null}).finally(()=>{if(btn)btn.disabled=false})}
@@ -194,7 +194,125 @@ async function reloadR04Teacher(){
  S.edit={};S.selected=S.roster.some(p=>participantKey(p)===S.selected)?S.selected:null;
  render();
 }
-async function refreshSessions(){if(preview)return;if(S.role==='teacher'){S.examId='r04_202610_r01';S.sessions=[{examId:S.examId,date:'2026-10-30',month:'2026-10',title:'R04 모의고사 1회차',published:false,archived:false}];return reloadR04Teacher();}if(S.role==='admin')return refreshCanonicalAdminRosterR04();const out=await call(FN.sessions,{});if(out.ok!==true)throw Error('평가 회차 목록을 불러오지 못했습니다.');S.sessions=Array.isArray(out.sessions)?out.sessions:[];if(!S.sessions.some(x=>x.examId===S.examId))S.examId=S.sessions.length?S.sessions[0].examId:'';if(S.examId)await reload();else{applySnapshot({});S.sessionTitle='';render();}}
+// RUN185: student R04 display is exclusively sourced from the server-verified own-history API.
+// Never send a student UID, a participation ID, or an exam ID as a callable argument.
+function validateR04StudentHistory(out){
+ if(!out||typeof out!=='object'||Array.isArray(out)||out.ok!==true||
+   out.mode!=='student-own-history-read-only'||!Number.isSafeInteger(out.historyCount)||
+   out.historyCount<0||out.historyCount>400||!Array.isArray(out.records)||
+   out.records.length!==out.historyCount||
+   Object.keys(out).some(k=>!['ok','mode','historyCount','records'].includes(k)))
+    throw Error('학생 평가 기록의 형식을 확인할 수 없습니다.');
+ const expected=['examId','examDate','round','participationId','classId','group',
+   'participationStatus','sessionState','resultsReleased','evaluations'];
+ const gradeFields=['evaluatorLabel','na','act','note','total'];
+ const ids=new Set();
+ const validPoints=v=>typeof v==='number'&&Number.isFinite(v)&&v>=0&&v<=5&&Number.isInteger(v*2);
+ const rows=[];
+ for(const raw of out.records){
+  if(!raw||typeof raw!=='object'||Array.isArray(raw)||Object.keys(raw).length!==expected.length||
+    expected.some(k=>!Object.prototype.hasOwnProperty.call(raw,k))||
+    !/^r04_20\d{4}_r0[1-9]$/u.test(raw.examId)||
+    typeof raw.examDate!=='string'||!/^20\d{2}-\d{2}-\d{2}$/u.test(raw.examDate)||
+    !Number.isSafeInteger(raw.round)||raw.round<1||
+    typeof raw.participationId!=='string'||!raw.participationId||raw.participationId.length>180||
+    typeof raw.classId!=='string'||!raw.classId||raw.classId.length>180||
+    !['성인','청소년'].includes(raw.group)||!['active','archived'].includes(raw.participationStatus)||
+    !['open','closed'].includes(raw.sessionState)||typeof raw.resultsReleased!=='boolean'||
+    !Array.isArray(raw.evaluations)||raw.evaluations.length>60||
+    ids.has(raw.participationId)||
+    (raw.resultsReleased&&raw.sessionState!=='closed')||
+    (!raw.resultsReleased&&raw.evaluations.length!==0))
+      throw Error('학생 평가 참가 기록의 무결성을 확인할 수 없습니다.');
+  ids.add(raw.participationId);
+  const evaluations=[];
+  for(let i=0;i<raw.evaluations.length;i++){
+   const g=raw.evaluations[i];
+   if(!g||typeof g!=='object'||Array.isArray(g)||Object.keys(g).length!==gradeFields.length||
+     gradeFields.some(k=>!Object.prototype.hasOwnProperty.call(g,k))||
+     g.evaluatorLabel!==`평가위원 ${i+1}`||!Array.isArray(g.na)||!Array.isArray(g.act)||
+     g.na.length!==5||g.act.length!==5||![...g.na,...g.act].every(validPoints)||
+     typeof g.note!=='string'||!g.note||g.note.length>1000||g.note.trim()!==g.note||
+     typeof g.total!=='number'||Math.abs([...g.na,...g.act].reduce((a,b)=>a+b,0)-g.total)>0.000001)
+       throw Error('학생 평가 점수의 무결성을 확인할 수 없습니다.');
+   // Project only deliberately public values: never pass through unknown/private response fields.
+   evaluations.push({evaluatorLabel:g.evaluatorLabel,na:[...g.na],act:[...g.act],
+     note:g.note,total:g.total});
+  }
+  rows.push({examId:raw.examId,examDate:raw.examDate,round:raw.round,
+    participationId:raw.participationId,classId:raw.classId,group:raw.group,
+    participationStatus:raw.participationStatus,sessionState:raw.sessionState,
+    resultsReleased:raw.resultsReleased,evaluations});
+ }
+ return rows;
+}
+async function refreshR04StudentHistory(){
+ if(preview||S.role!=='student'||!S.auth)return;
+ const uid=S.auth.uid;
+ S.r04StudentHistoryReady=false;S.r04StudentHistoryError='';render();
+ try{
+  const out=await call(FN.r04StudentHistory,{});
+  if(S.role!=='student'||!S.auth||S.auth.uid!==uid)return;
+  const rows=validateR04StudentHistory(out);
+  S.r04StudentHistoryRecords=rows;S.r04StudentHistoryReady=true;
+  if(!rows.some(p=>p.participationId===S.r04StudentHistorySelection)){
+   S.r04StudentHistorySelection=rows.length?rows[0].participationId:'';
+   S.r04StudentEvaluationPage=0;
+  }
+  render();
+ }catch(e){
+  if(S.role!=='student'||!S.auth||S.auth.uid!==uid)return;
+  S.r04StudentHistoryRecords=[];S.r04StudentHistoryReady=false;
+  S.r04StudentHistoryError=errorMessage(e);render();
+ }
+}
+function renderR04StudentHistory(){
+ const rows=S.r04StudentHistoryRecords||[];
+ const head='<div class="heading-row"><div><h1>나의 모의고사 평가표</h1><p>내 참가 회차만 열람할 수 있으며 강사 이름은 표시하지 않습니다.</p></div></div>';
+ if(S.r04StudentHistoryError){
+  app.innerHTML=head+`<section class="center-state"><h2>평가 기록 조회 오류</h2><p>${esc(S.r04StudentHistoryError)}</p><button class="btn" id="r04StudentRetry">다시 조회</button></section>`;
+  $('r04StudentRetry').onclick=()=>refreshR04StudentHistory();return;
+ }
+ if(!S.r04StudentHistoryReady){
+  app.innerHTML=head+'<section class="center-state"><h2>내 평가 기록을 확인하고 있습니다.</h2><p>조회 중에는 학생 정보와 점수가 표시되지 않습니다.</p></section>';return;
+ }
+ if(!rows.length){
+  app.innerHTML=head+'<section class="center-state"><h2>평가 참가 기록이 없습니다.</h2><p>저장된 모의고사 회차에 참가한 기록이 확인되지 않았습니다.</p><button class="btn line" id="r04StudentRetry">새로고침</button></section>';
+  $('r04StudentRetry').onclick=()=>refreshR04StudentHistory();return;
+ }
+ const exams=[...new Map(rows.map(p=>[p.examId,{examId:p.examId,examDate:p.examDate,round:p.round}])).values()];
+ let selected=rows.find(p=>p.participationId===S.r04StudentHistorySelection)||rows[0];
+ const sameExam=rows.filter(p=>p.examId===selected.examId);
+ const idx=sameExam.findIndex(p=>p.participationId===selected.participationId);
+ const sessionOptions=exams.map(x=>`<option value="${esc(x.examId)}" ${x.examId===selected.examId?'selected':''}>${esc(x.examDate)} · ${x.round}회차</option>`).join('');
+ const classOptions=sameExam.map((p,i)=>`<button class="seg ${p.participationId===selected.participationId?'active':''}" data-r04-own-part="${i}">${esc(p.group)} · 수강반 ${i+1}${p.participationStatus==='archived'?' (이전 수강)':''}</button>`).join('');
+ let body='';
+ if(!selected.resultsReleased){
+  body='<section class="panel"><h2>평가 결과 공개 대기</h2><p>관리자가 평가를 종료하고 결과를 공개하면 점수와 강사별 한줄평을 볼 수 있습니다.</p></section>';
+ }else if(!selected.evaluations.length){
+  body='<section class="panel"><h2>공개된 강사 평가가 없습니다.</h2><p>해당 참가 기록에 최종 제출된 평가표가 없습니다.</p></section>';
+ }else{
+  const vals=selected.evaluations, page=Math.max(0,Math.min(S.r04StudentEvaluationPage,vals.length-1));
+  S.r04StudentEvaluationPage=page;
+  const grade=vals[page],avg=vals.reduce((sum,g)=>sum+g.total,0)/vals.length;
+  const table=(title,key)=>`<section class="rubric"><h3>${title} <span class="numeric">${fmt(grade[key].reduce((sum,n)=>sum+n,0))} / 25점</span></h3><table><thead><tr><th>평가 순번</th><th>점수</th></tr></thead><tbody>${grade[key].map((n,i)=>`<tr><td>${i+1}번 항목</td><td><strong>${fmt(n)}점</strong></td></tr>`).join('')}</tbody></table></section>`;
+  body=`<section class="panel"><div class="score-hero"><div><h2>${esc(selected.group)} · 수강반 ${idx+1}</h2><p>${esc(selected.examDate)} · ${selected.round}회차</p></div><div class="score-number">${fmt(avg)} <small>제출된 평가 평균 / 50점</small></div></div><div class="judge-card"><h3>${esc(grade.evaluatorLabel)}</h3><p class="muted">총점 ${fmt(grade.total)} / 50점</p>${table('NA · 나레이션','na')}${table('독백 · 연기','act')}<div class="field"><label>강사 한줄평</label><div class="note">${esc(grade.note)}</div></div></div><div class="pager"><button class="btn line" id="r04StudentPrev" ${page===0?'disabled':''}>◀ 이전 평가표</button><span>${page+1} / ${vals.length}</span><button class="btn line" id="r04StudentNext" ${page>=vals.length-1?'disabled':''}>다음 평가표 ▶</button></div></section>`;
+ }
+ app.innerHTML=head+`<section class="session-bar"><div><strong>참가 회차 선택</strong><small>저장된 참가 기록 기준</small></div><div class="session-picker"><select id="r04StudentExamSelect" aria-label="평가 회차">${sessionOptions}</select><button class="btn line" id="r04StudentRefresh">새로고침</button></div></section>`+ (sameExam.length>1?`<div class="tabs">${classOptions}</div>`:'')+body;
+ $('r04StudentRefresh').onclick=()=>refreshR04StudentHistory();
+ $('r04StudentExamSelect').onchange=e=>{
+  const next=rows.find(p=>p.examId===e.target.value);
+  if(next){S.r04StudentHistorySelection=next.participationId;S.r04StudentEvaluationPage=0;render();}
+ };
+ app.querySelectorAll('[data-r04-own-part]').forEach(el=>el.onclick=()=>{
+  const p=sameExam[Number(el.dataset.r04OwnPart)];if(!p)return;
+  S.r04StudentHistorySelection=p.participationId;S.r04StudentEvaluationPage=0;render();
+ });
+ const prev=$('r04StudentPrev'),next=$('r04StudentNext');
+ if(prev)prev.onclick=()=>{S.r04StudentEvaluationPage--;render()};
+ if(next)next.onclick=()=>{S.r04StudentEvaluationPage++;render()};
+}
+async function refreshSessions(){if(preview)return;if(S.role==='student')return refreshR04StudentHistory();if(S.role==='teacher'){S.examId='r04_202610_r01';S.sessions=[{examId:S.examId,date:'2026-10-30',month:'2026-10',title:'R04 모의고사 1회차',published:false,archived:false}];return reloadR04Teacher();}if(S.role==='admin')return refreshCanonicalAdminRosterR04();const out=await call(FN.sessions,{});if(out.ok!==true)throw Error('평가 회차 목록을 불러오지 못했습니다.');S.sessions=Array.isArray(out.sessions)?out.sessions:[];if(!S.sessions.some(x=>x.examId===S.examId))S.examId=S.sessions.length?S.sessions[0].examId:'';if(S.examId)await reload();else{applySnapshot({});S.sessionTitle='';render();}}
 async function switchExam(id){if(!S.sessions.some(x=>x.examId===id))return toast('해당 회차를 열람할 수 없습니다.');if(preview){switchPreviewExam(id);return;}S.examId=id;S.edit={};S.selected=null;S.judgePage=0;S.expandedClasses={'청소년':[],'성인':[]};await reload();}
 function sessionBar(){const m=S.sessions.find(x=>x.examId===S.examId);return `<section class="session-bar"><div><strong>평가 회차</strong><small>${m?esc(m.date+' · '+m.title):'생성 또는 선택된 회차 없음'}</small></div><div class="session-picker"><select aria-label="평가 회차 선택" id="sessionSelect"><option value="" ${!S.examId?'selected':''} disabled>회차를 선택하세요</option>${S.sessions.map(x=>`<option value="${esc(x.examId)}" ${S.examId===x.examId?'selected':''}>${esc(x.month+' · '+x.title)}${x.archived?' · 보관':x.published?' · 공개':''}</option>`).join('')}</select><span class="chip ${S.archived?'wait':S.published?'ok':'wait'}">${S.archived?'보관됨':S.published?'공개됨':'작성 중'}</span></div></section>`;}
 function prefix(){return (preview?previewBar():'')+sessionBar();}
@@ -212,7 +330,7 @@ S.auth={uid:str(user.uid),studentUid:str(c.studentUid),teacherUid:str(c.teacherU
 // Personal names and permissions displayed here are advisory: every endpoint must revalidate Firebase token claims.
 try{if(S.role==='student'){const p=await call('getStudentFirebaseProfile7355030',{});if(p&&p.ok&&str(p.studentUid)===S.auth.studentUid)S.auth.name=str(p.name)||S.auth.name;else throw Error('학생 프로필 확인에 실패했습니다.');}}catch(e){if(S.role==='student')throw e;}
 badge();await refreshSessions();}
-async function reload(){if(!preview&&S.role==='teacher')return reloadR04Teacher();if(!S.examId){applySnapshot({});render();return;}const requestExamId=S.examId;const a=await call(FN.overview,{examId:requestExamId});if(requestExamId!==S.examId)return;if(a.ok!==true)throw Error('평가 현황을 불러오지 못했습니다.');S.roster=rosterForView(Array.isArray(a.participants)?a.participants:[],S.role);S.grades=Array.isArray(a.grades)?a.grades:[];S.judges=Array.isArray(a.judges)?a.judges:[];S.folders=a.classFolders||{};S.rubrics=normalizeRubrics(a.rubrics);S.rubricVersion=Number(a.rubricVersion)||0;S.rubricFrozen=a.rubricFrozen===true;S.published=a.published===true;S.archived=a.archived===true;S.sessionTitle=str(a.title);S.examDate=str(a.date);S.selected=S.roster.some(p=>participantKey(p)===S.selected)?S.selected:null;render();}
+async function reload(){if(!preview&&S.role==='student')return refreshR04StudentHistory();if(!preview&&S.role==='teacher')return reloadR04Teacher();if(!S.examId){applySnapshot({});render();return;}const requestExamId=S.examId;const a=await call(FN.overview,{examId:requestExamId});if(requestExamId!==S.examId)return;if(a.ok!==true)throw Error('평가 현황을 불러오지 못했습니다.');S.roster=rosterForView(Array.isArray(a.participants)?a.participants:[],S.role);S.grades=Array.isArray(a.grades)?a.grades:[];S.judges=Array.isArray(a.judges)?a.judges:[];S.folders=a.classFolders||{};S.rubrics=normalizeRubrics(a.rubrics);S.rubricVersion=Number(a.rubricVersion)||0;S.rubricFrozen=a.rubricFrozen===true;S.published=a.published===true;S.archived=a.archived===true;S.sessionTitle=str(a.title);S.examDate=str(a.date);S.selected=S.roster.some(p=>participantKey(p)===S.selected)?S.selected:null;render();}
 function loginView(){app.innerHTML=`<section class="login-box"><h1>모의고사 평가</h1><p class="muted">강사는 울림앱 교직원 계정, 학생은 기존 울림앱 학생 계정으로 로그인합니다.</p><div class="login-switch"><button class="seg active" data-login-mode="staff">강사 · 관리자</button><button class="seg" data-login-mode="student">학생</button></div><form id="loginForm"><div class="field"><label id="loginIdLabel">교직원 아이디</label><input name="loginId" required autocomplete="username" placeholder="울림앱 아이디"></div><div class="field"><label>비밀번호</label><input name="loginPw" required type="password" autocomplete="current-password"></div><button class="btn wide" type="submit">로그인</button></form><div class="warn">평가 서버가 연결되고 계정 권한이 검증되기 전에는 평가 데이터를 표시하거나 저장하지 않습니다.</div></section>`;let mode='staff';app.querySelectorAll('[data-login-mode]').forEach(btn=>btn.onclick=()=>{mode=btn.dataset.loginMode;app.querySelectorAll('[data-login-mode]').forEach(x=>x.classList.toggle('active',x===btn));$('loginIdLabel').textContent=mode==='student'?'학생 이름':'교직원 아이디';app.querySelector('[name=loginId]').placeholder=mode==='student'?'학생 이름':'울림앱 아이디'});$('loginForm').onsubmit=e=>{e.preventDefault();const form=e.target,id=form.elements.loginId.value,pw=form.elements.loginPw.value;const btn=form.querySelector('button[type=submit]');withBusy(btn,async()=>{if(mode==='staff')await authenticateStaff(id,pw);else await authenticateStudent(id,pw);toast('로그인이 완료되었습니다.')})};}
 function rubric(g,editable,group){const sections=S.rubrics[group]||defaultRubrics()[group];const row=(items,key)=>`<section class="rubric"><h3>${key==='na'?'NA · 나레이션':'독백 · 연기'} <span class="numeric" data-sum="${key}">${fmt((g&&Array.isArray(g[key])?g[key]:[]).reduce((n,x)=>n+(typeof x==='number'?x:0),0))} / 25</span></h3><table><thead><tr><th>평가 항목</th><th>5점 만점</th></tr></thead><tbody>${items.map((item,i)=>`<tr><td><strong>${esc(item.title)}</strong>${item.description?`<div class="rubric-detail">${esc(item.description)}</div>`:''}</td><td>${editable?`<select data-score="${key}" data-idx="${i}"><option value="">선택</option>${Array.from({length:11},(_,p)=>{const x=p*.5;return `<option value="${x}" ${g&&g[key]&&g[key][i]===x?'selected':''}>${x}점</option>`}).join('')}</select>`:`<strong>${g&&typeof g[key][i]==='number'?fmt(g[key][i])+'점':'—'}</strong>`}</td></tr>`).join('')}</tbody></table></section>`;return row(sections.na,'na')+row(sections.act,'act');}
 
@@ -390,8 +508,8 @@ function studentView(){const mine=S.roster.filter(p=>p.studentUid===S.auth.stude
  app.innerHTML=prefix()+`<div class="heading-row"><div><h1>나의 모의고사 평가표</h1><p>평가표를 넘기며 확인할 수 있습니다. 강사 이름은 비공개입니다.</p></div></div>${classPicker}<div class="panel">${hero(p,studentAverage(p),'평가 점수 평균 / 50점')}${media(p)}${j?gradePresentation(g,j,p.group):'<p>평가 자료가 없습니다.</p>'}<div class="pager"><button id="prevJudge">◀ 이전 평가표</button><span>${S.judges.length?S.judgePage+1:0} / ${S.judges.length}</span><button id="nextJudge">다음 평가표 ▶</button></div></div>`;
  app.querySelectorAll('[data-own-class]').forEach(b=>b.onclick=()=>{S.selected=b.dataset.ownClass;S.judgePage=0;render()});
  if($('prevJudge')){$('prevJudge').disabled=S.judgePage===0;$('prevJudge').onclick=()=>{S.judgePage--;render()}}if($('nextJudge')){$('nextJudge').disabled=S.judgePage>=S.judges.length-1;$('nextJudge').onclick=()=>{S.judgePage++;render()}}}
-function render(){badge();if(!S.auth){loginView();return;}if(S.role==='admin'&&S.rosterPreviewOnly){renderCanonicalAdminRosterR04();return;}if(S.role==='teacher')teacherView();else if(S.role==='admin')adminView();else studentView();bindSessionPicker();if(preview){app.querySelectorAll('[data-preview-role]').forEach(b=>b.onclick=()=>setPreviewRole(b.dataset.previewRole));const pb=$('togglePreviewPublished');if(pb)pb.onclick=()=>{S.published=!S.published;const meta=S.sessions.find(x=>x.examId===S.examId);if(meta)meta.published=S.published;S.previewData[S.examId]=currentSnapshot();render()}}}
-logoutBtn.onclick=()=>withBusy(logoutBtn,async()=>{const rt=await runtime();await rt.sdk.signOut(rt.auth);S={...S,role:null,auth:null,rt,roster:[],grades:[],judges:[],folders:{},edit:{},examId:'',sessions:[],rosterPreviewOnly:false,rosterDate:'',rosterReview:[],rosterReviewSummary:{},r04SessionState:null,r04StateMutationPending:false,r04TeacherReady:false,r04TeacherGradingOpen:false,r04TeacherSavePending:false};render()});
+function render(){badge();if(!S.auth){loginView();return;}if(!preview&&S.role==='student'){renderR04StudentHistory();return;}if(S.role==='admin'&&S.rosterPreviewOnly){renderCanonicalAdminRosterR04();return;}if(S.role==='teacher')teacherView();else if(S.role==='admin')adminView();else studentView();bindSessionPicker();if(preview){app.querySelectorAll('[data-preview-role]').forEach(b=>b.onclick=()=>setPreviewRole(b.dataset.previewRole));const pb=$('togglePreviewPublished');if(pb)pb.onclick=()=>{S.published=!S.published;const meta=S.sessions.find(x=>x.examId===S.examId);if(meta)meta.published=S.published;S.previewData[S.examId]=currentSnapshot();render()}}}
+logoutBtn.onclick=()=>withBusy(logoutBtn,async()=>{const rt=await runtime();await rt.sdk.signOut(rt.auth);S={...S,role:null,auth:null,rt,roster:[],grades:[],judges:[],folders:{},edit:{},examId:'',sessions:[],rosterPreviewOnly:false,rosterDate:'',rosterReview:[],rosterReviewSummary:{},r04SessionState:null,r04StateMutationPending:false,r04TeacherReady:false,r04TeacherGradingOpen:false,r04TeacherSavePending:false,r04StudentHistoryRecords:[],r04StudentHistoryReady:false,r04StudentHistoryError:'',r04StudentHistorySelection:'',r04StudentEvaluationPage:0};render()});
 async function start(){if(preview){initPreview();return}render();try{const rt=await runtime();await new Promise(resolve=>{let settled=false;let stop=()=>{};const timer=setTimeout(()=>{if(!settled){settled=true;stop();resolve()}},4500);stop=rt.sdk.onAuthStateChanged(rt.auth,()=>{if(!settled){settled=true;clearTimeout(timer);resolve()}},()=>{if(!settled){settled=true;clearTimeout(timer);resolve()}})});if(rt.auth.currentUser)await bindSession();else loginView()}catch(e){app.innerHTML=`<section class="center-state"><h1>평가 서비스 연결을 확인해주세요.</h1><p>${esc(errorMessage(e))}</p><div class="action-row"><button id="retryBtn" class="btn">다시 시도</button></div></section>`;$('retryBtn').onclick=start}}
 start();
 })();
