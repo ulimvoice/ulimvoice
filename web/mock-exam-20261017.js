@@ -403,6 +403,15 @@ function validateR04TeacherRow(row){
     !validR04GradeScores(g.act,g.status)||typeof g.note!=='string'||g.note.length>1000||
     (g.status==='submitted'&&!g.note.trim()))throw Error('저장된 평가표 정보가 올바르지 않습니다.');
  }
+ // RUN204: the server guarantees one media document for each exact participation ID.
+ // Reject malformed/missing media instead of showing an unrelated class's recording.
+ const media=row.media;
+ if(!media||typeof media!=='object'||Array.isArray(media)||
+    Object.keys(media).length!==2||
+    !Object.prototype.hasOwnProperty.call(media,'audioUrl')||
+    !Object.prototype.hasOwnProperty.call(media,'videoUrl')||
+    !validR04MediaUrl(media.audioUrl)||!validR04MediaUrl(media.videoUrl))
+   throw Error('평가 음성·영상 자료 정보의 무결성을 확인할 수 없습니다.');
  return true;
 }
 function validR04GradeScores(arr,status){return Array.isArray(arr)&&arr.length===5&&arr.every(x=>x===null&&status==='draft'||
@@ -422,7 +431,7 @@ async function reloadR04Teacher(){
   ids.add(row.participationId);
   rows.push({participationId:row.participationId,studentUid:'',classId:row.classLabel,
     className:row.classLabel,name:row.studentLabel,group:row.audience==='adult'?'성인':'청소년',
-    participationStatus:row.participationStatus,media:{audio:'',video:''}});
+    participationStatus:row.participationStatus,media:{audio:row.media.audioUrl,video:row.media.videoUrl}});
   if(row.grade)grades.push({...row.grade,participationId:row.participationId,teacherUid:S.auth.teacherUid});
  }
  if(examId!==S.examId||S.role!=='teacher')return;
