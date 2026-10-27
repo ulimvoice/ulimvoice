@@ -2789,7 +2789,7 @@ body.ulim-attendance-modal-open73545{overflow:hidden}
             <div class="admin-btn-row">
               <button type="button" class="admin-btn orange admin-full-only" onclick="adminSaveClassroomUsageFromForm(false, true)">관리자 배정/용도변경</button>
               <button type="button" class="admin-btn gray" onclick="adminClearClassroomUsageForm()">입력 초기화</button>
-              <button type="button" class="admin-btn blue" onclick="adminLoadClassroomUsage(true, true)">현황 새로고침</button>
+              <button type="button" class="admin-btn blue" onclick="adminLoadClassroomRoomOverlay7355301(adminClassroomUsageDate_()); adminLoadClassroomUsage(true, true)">현황 새로고침</button>
             </div>
 
             <div class="admin-summary classroom-usage-chip-row">
@@ -8003,6 +8003,7 @@ function showAdminPanel(panelId) {
 
     if (panelId === 'adminPanelClassroomUsage') {
         adminInitClassroomUsagePanel();
+        adminLoadClassroomRoomOverlay7355301(adminClassroomUsageDate_());
         adminLoadClassroomUsage(false);
     }
 
@@ -12540,7 +12541,118 @@ async function adminEnsureClassroomRuntime_() {
     return { owner, rt };
 }
 
+/* RUN029: classroom timetable display overlay for practice-room reservations.
+ * This UI-only owner never mutates classroom records or room reservations.
+ * Server-side bidirectional collision gates remain the authority. */
+const ADMIN_CLASSROOM_PRACTICE_ROOMS_7355301 = new Set(['2강의실', '3강의실', '4강의실', '5강의실', '신체훈련실']);
+const adminClassroomRoomOverlay7355301 = {
+    date:'', month:'', reservations:[], loaded:false, error:'',
+    seq:0, listenMonth:'', listenUid:'', unsubscribe:null
+};
+function adminResetClassroomReservationOverlay7355301() {
+    const state = adminClassroomRoomOverlay7355301;
+    state.seq += 1;
+    if (typeof state.unsubscribe === 'function') {
+        try { state.unsubscribe(); } catch (_ignore) {}
+    }
+    state.unsubscribe = null;
+    state.date = ''; state.month = ''; state.reservations = [];
+    state.loaded = false; state.error = '';
+    state.listenMonth = ''; state.listenUid = '';
+}
+window.adminResetClassroomReservationOverlay7355301 = adminResetClassroomReservationOverlay7355301;
+function adminRoomReservationAtClassroomSlot7355301(date, room, hour) {
+    const overlay = adminClassroomRoomOverlay7355301;
+    if (!overlay.loaded || overlay.date !== date) return null;
+    const name = String(room || '').replace(/\s+/g, '');
+    const target = Number(hour);
+    return overlay.reservations.find(row => {
+        if (!row || String(row.date || '') !== date ||
+            String(row.room || '').replace(/\s+/g, '') !== name) return false;
+        // RUN029_RESUME01: show only administrator-confirmed reservations.
+        // Pending, rejected, unavailable, cancelled and completed statuses are not displayed.
+        const status = String(row.status || '').normalize('NFKC').replace(/\s+/g, '').toLowerCase();
+        if (status !== '예약확정' && status !== '변경확정') return false;
+        const start = Number(row.startHour), end = Number(row.endHour);
+        return Number.isInteger(start) && start <= target && target < (Number.isInteger(end) ? end : start + 1);
+    }) || null;
+}
+async function adminRefreshClassroomReservations7355301(date) {
+    date = String(date || adminClassroomUsageDate_() || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+    const overlay = adminClassroomRoomOverlay7355301;
+    if (overlay.date !== date) {
+        overlay.date = date;
+        overlay.month = date.slice(0, 7);
+        overlay.loaded = false;
+        overlay.reservations = [];
+        overlay.error = '';
+        adminRenderClassroomUsageTable();
+    }
+    const seq = ++overlay.seq;
+    try {
+        const api = window.__ULIM_PRACTICE_ROOM_FIRESTORE_PRIMARY_7355033__;
+        if (!api || typeof api.getMonth !== 'function') throw new Error('예약 조회 모듈을 확인할 수 없습니다.');
+        const year = Number(date.slice(0, 4)), month = Number(date.slice(5, 7));
+        const data = await api.getMonth(year, month);
+        if (!data || data.status !== 'success' || !Array.isArray(data.reservations)) {
+            throw new Error('예약 조회 응답이 올바르지 않습니다.');
+        }
+        if (seq !== overlay.seq || adminClassroomUsageDate_() !== date) return;
+        overlay.reservations = data.reservations.filter(row => row && String(row.date || '') === date);
+        overlay.loaded = true;
+        overlay.error = '';
+    } catch (error) {
+        if (seq !== overlay.seq || adminClassroomUsageDate_() !== date) return;
+        overlay.reservations = [];
+        overlay.loaded = false;
+        overlay.error = String(error && error.message || '예약 조회 실패');
+    }
+    if (seq === overlay.seq && adminClassroomUsageDate_() === date) adminRenderClassroomUsageTable();
+}
+async function adminSubscribeClassroomReservations7355301(date) {
+    date = String(date || adminClassroomUsageDate_() || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+    const month = date.slice(0, 7);
+    const overlay = adminClassroomRoomOverlay7355301;
+    try {
+        const owner = window.ULIM_ROOM_CLASSROOM_REALTIME_72919;
+        if (!owner || typeof owner.ensureAuthenticated !== 'function') return;
+        const rt = await owner.ensureAuthenticated();
+        if (!rt || !rt.auth || !rt.auth.currentUser || !rt.sdk || !rt.db) return;
+        if (adminClassroomUsageDate_().slice(0, 7) !== month) return;
+        const uid = String(rt.auth.currentUser.uid || '');
+        if (overlay.unsubscribe && overlay.listenMonth === month && overlay.listenUid === uid) return;
+        if (typeof overlay.unsubscribe === 'function') {
+            try { overlay.unsubscribe(); } catch (_ignore) {}
+        }
+        overlay.unsubscribe = null;
+        overlay.listenMonth = month;
+        overlay.listenUid = uid;
+        overlay.unsubscribe = rt.sdk.onSnapshot(rt.sdk.doc(rt.db, 'realtimeRoomMonths', month), function () {
+            const activeDate = adminClassroomUsageDate_();
+            if (activeDate.slice(0, 7) !== month || !adminToken) return;
+            Promise.resolve(adminRefreshClassroomReservations7355301(activeDate)).catch(function () {});
+        }, function () {
+            // Manual refresh remains available; do not claim a free slot on unreadable data.
+            if (adminClassroomUsageDate_().slice(0, 7) !== month) return;
+            // Preserve a successful callable snapshot; manual refresh remains available.
+            overlay.error = '예약 실시간 갱신 실패';
+            if (!overlay.loaded) adminRenderClassroomUsageTable();
+        });
+    } catch (_ignore) {
+        // The callable refresh independently guards the display.
+    }
+}
+function adminLoadClassroomRoomOverlay7355301(date) {
+    const chosen = String(date || adminClassroomUsageDate_() || '');
+    Promise.resolve(adminSubscribeClassroomReservations7355301(chosen)).catch(function () {});
+    Promise.resolve(adminRefreshClassroomReservations7355301(chosen)).catch(function () {});
+}
+
+
 async function adminClassroomUsageDateChanged718_() {
+    adminLoadClassroomRoomOverlay7355301(adminClassroomUsageDate_());
     await adminLoadClassroomUsage(true);
 }
 
@@ -12780,6 +12892,29 @@ function adminRenderClassroomUsageTable() {
                         : '') +
                     '</td>';
                 return;
+            }
+
+            // RUN029: the classroom source has no student reservations. Render a
+            // separate read-only overlay, never a synthetic editable classroom row.
+            if (ADMIN_CLASSROOM_PRACTICE_ROOMS_7355301.has(String(room || '').replace(/\s+/g, ''))) {
+                const overlay = adminClassroomRoomOverlay7355301;
+                if (!overlay.loaded || overlay.date !== date) {
+                    tableHtml += '<td class="classroom-usage-cell-used" style="background:#fff5db;color:#754c12;text-align:center;">' +
+                        '<div class="ulim-classroom-card-purpose-729">' +
+                        (overlay.error ? '예약 상태 확인 불가' : '예약 확인 중') +
+                        '</div></td>';
+                    return;
+                }
+                const booking = adminRoomReservationAtClassroomSlot7355301(date, room, hour);
+                if (booking) {
+                    tableHtml += '<td class="classroom-usage-cell-used" style="background:#fff0cf;color:#805009;text-align:center;">' +
+                        '<div class="ulim-classroom-card-instructor-729">연습실 예약</div>' +
+                        '<div class="ulim-classroom-card-purpose-729">사용중</div>' +
+                        '<div class="ulim-classroom-card-time-729">' +
+                        adminFormatClassroomHour_(hour) + '~' + adminFormatClassroomHour_(hour + 1) +
+                        '</div></td>';
+                    return;
+                }
             }
 
             const saving =
@@ -15157,6 +15292,8 @@ ${ruleSummary}`, isFallback ? "success" : "success");
     }
 
     function clearAdminSensitiveScreen_(reason) {
+
+        try { if (typeof window.adminResetClassroomReservationOverlay7355301 === 'function') window.adminResetClassroomReservationOverlay7355301(); } catch (_ignore) {}
 
         try {
             adminStudents = [];
@@ -20009,6 +20146,7 @@ body {
       if (typeof adminDailyEvalRows !== 'undefined') adminDailyEvalRows = [];
       if (typeof adminVocalPracticeLogs !== 'undefined') adminVocalPracticeLogs = [];
       if (typeof adminClassroomUsageRows !== 'undefined') adminClassroomUsageRows = [];
+      if (typeof window.adminResetClassroomReservationOverlay7355301 === 'function') window.adminResetClassroomReservationOverlay7355301();
       if (typeof adminClassroomUsageOptionsLoadedDate !== 'undefined') adminClassroomUsageOptionsLoadedDate = '';
       if (typeof ADMIN_CLASSROOM_USAGE_INSTRUCTORS !== 'undefined') ADMIN_CLASSROOM_USAGE_INSTRUCTORS = [];
       if (typeof adminStudentsLoaded !== 'undefined') adminStudentsLoaded = false;
