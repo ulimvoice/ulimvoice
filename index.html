@@ -2767,7 +2767,6 @@ body.ulim-attendance-modal-open73545{overflow:hidden}
                 <label for="adminClassroomUsageInstructor">배정 강사</label>
                 <!-- RUN036: 선택 전용 강사 드롭다운. 기존 관리자/강사 데이터 API 재사용. -->
                 <select id="adminClassroomUsageInstructor" aria-label="배정 강사 선택"><option value="">강사 선택</option></select>
-                <small id="adminClassroomStaffDirectoryStatus037" aria-live="polite" style="display:block;font-size:11px;margin-top:4px;color:#64748b;"></small>
               </div>
               <div class="admin-field">
                 <label for="adminClassroomUsageStart">시작</label>
@@ -2786,6 +2785,7 @@ body.ulim-attendance-modal-open73545{overflow:hidden}
                 <input type="text" id="adminClassroomUsageMemo" placeholder="선택사항">
               </div>
             </div>
+            <small id="adminClassroomStaffDirectoryStatus037" role="status" aria-live="polite" style="display:none;font-size:11px;margin-top:4px;color:#b45309;"></small>
 
             <div class="admin-btn-row">
               <button type="button" class="admin-btn orange admin-full-only" onclick="adminSaveClassroomUsageFromForm(false, true)">관리자 배정/용도변경</button>
@@ -12765,15 +12765,14 @@ function adminRenderClassroomUsageOptionControls_() {
         else if (mine && !adminIsFullAdmin() && names.includes(mine)) instructorEl.value = mine;
         else instructorEl.value = '';
     }
+    // RUN038: keep routine staff counts out of the grid; show only errors below it.
     const directoryStatusEl = document.getElementById('adminClassroomStaffDirectoryStatus037');
     if (directoryStatusEl) {
-        if (adminIsFullAdmin() && adminClassroomStaffDirectoryState037 === 'loaded') {
-            directoryStatusEl.textContent = '교직원 관리에 등록된 활성 교직원 ' + ADMIN_CLASSROOM_USAGE_INSTRUCTORS.length + '명';
-            directoryStatusEl.style.color = '#64748b';
-        } else if (adminIsFullAdmin() && adminClassroomStaffDirectoryState037 === 'error') {
-            directoryStatusEl.textContent = '교직원 전체 명단 조회 실패: 현재 일부 강사만 표시됩니다. 새로고침 후 다시 확인해주세요.';
-            directoryStatusEl.style.color = '#b45309';
-        } else directoryStatusEl.textContent = '';
+        const showStaffError = adminIsFullAdmin() && adminClassroomStaffDirectoryState037 === 'error';
+        directoryStatusEl.textContent = showStaffError
+            ? '교직원 전체 명단 조회 실패: 현재 일부 강사만 표시됩니다. 새로고침 후 다시 확인해주세요.'
+            : '';
+        directoryStatusEl.style.display = showStaffError ? 'block' : 'none';
     }
 }
 
