@@ -16380,19 +16380,32 @@ ${ruleSummary}`, isFallback ? "success" : "success");
         return 'vocal';
     }
 
+    // RUN041: classify each uploaded record independently by type AND evaluation state.
     function vocalCalendarActivityForDate73551014_(dateKey) {
         const logs = vocalCalendarActivityLogs73551014_.filter(function(log) {
             return practiceDate73551014_(log) === dateKey;
         });
         const byType = { vocal:0, past:0, pron:0 };
+        const byTypeStatus041 = {
+            vocal:{pending:0,evaluated:0},
+            past:{pending:0,evaluated:0},
+            pron:{pending:0,evaluated:0}
+        };
         let pending = 0;
         let evaluated = 0;
         logs.forEach(function(log) {
-            byType[vocalActivityType040_(log)]++;
-            if (practiceHasFinal73551014_(log)) evaluated++;
-            else pending++;
+            const kind = vocalActivityType040_(log);
+            const isEvaluated = practiceHasFinal73551014_(log);
+            byType[kind]++;
+            if (isEvaluated) {
+                evaluated++;
+                byTypeStatus041[kind].evaluated++;
+            } else {
+                pending++;
+                byTypeStatus041[kind].pending++;
+            }
         });
-        return { total:logs.length, pending:pending, evaluated:evaluated, byType:byType };
+        return { total:logs.length, pending:pending, evaluated:evaluated, byType:byType, byTypeStatus041:byTypeStatus041 };
     }
 
     function vocalCalendarActivityKey73551014_(fromKey, instructor, keyword) {
@@ -16631,26 +16644,30 @@ ${ruleSummary}`, isFallback ? "success" : "success");
                     weekRangeActive && !dayActive ? 'week-active' : ''
                 ].filter(Boolean).join(' ');
                 const activity73551014 = vocalCalendarActivityForDate73551014_(key);
-                // RUN040: badges are typed uploads; a practice day is counted only once per student below.
-                const activityParts040 = [
-                    ['vocal', '발성', 'vocal040'],
-                    ['past', '기출', 'past040'],
-                    ['pron', '발음', 'pron040']
-                ].filter(function(entry) { return activity73551014.byType[entry[0]] > 0; });
-                const activityHtml73551014 = activityParts040.length
-                    ? '<span class="vocal-calendar-activity73551014">' + activityParts040.map(function(entry) {
-                        return '<span class="' + entry[2] + '">' + entry[1] + ' ' + activity73551014.byType[entry[0]] + '</span>';
+                // RUN041: display evaluated and pending uploads as separate colored badges per category.
+                const activityTypes041 = [
+                    ['vocal','발성','vocal040'],
+                    ['past','기출','past040'],
+                    ['pron','발음','pron040']
+                ];
+                const activityParts041 = [];
+                activityTypes041.forEach(function(entry) {
+                    const state = activity73551014.byTypeStatus041[entry[0]];
+                    if (state.evaluated) activityParts041.push({ label:entry[1], count:state.evaluated, status:'평가완료', css:entry[2] });
+                    if (state.pending) activityParts041.push({ label:entry[1], count:state.pending, status:'평가대기', css:'pending041' });
+                });
+                const activityHtml73551014 = activityParts041.length
+                    ? '<span class="vocal-calendar-activity73551014">' + activityParts041.map(function(entry) {
+                        return '<span class="' + entry.css + '" title="' + entry.label + ' ' + entry.status + ' ' + entry.count + '건" aria-label="' + entry.label + ' ' + entry.status + ' ' + entry.count + '건">' + entry.label + ' ' + entry.count + '</span>';
                     }).join('') + '</span>' : '';
-                const activityTitle73551014 = activity73551014.total
-                    ? ' · ' + activityParts040.map(function(entry) { return entry[1] + ' ' + activity73551014.byType[entry[0]] + '건'; }).join(' · ')
-                        + (activity73551014.pending ? ' · 평가대기 ' + activity73551014.pending + '건' : '')
-                        + (activity73551014.evaluated ? ' · 평가완료 ' + activity73551014.evaluated + '건' : '')
+                const activityTitle73551014 = activityParts041.length
+                    ? ' · ' + activityParts041.map(function(entry) { return entry.label + ' ' + entry.status + ' ' + entry.count + '건'; }).join(' · ')
                     : '';
                 html += `<div class="${classes}" data-vocal-day="${key}" title="${key} 하루 조회${activityTitle73551014}"><span class="vocal-calendar-day-number73551014">${day.getDate()}</span>${activityHtml73551014}</div>`;
             }
         }
 
-        html += `</div><div class="vocal-calendar-range-label" id="adminVocalPracticeRangeLabel">조회 범위: ${ulimAdminEsc_(vocalRangeState.label || '')}</div><div class="vocal-calendar-legend73551014"><span class="vocal040">● 발성훈련</span><span class="past040">● 기출문제</span><span class="pron040">● 발음연습(표준발음)</span><span>표시 숫자는 유형별 업로드 건수</span></div>`;
+        html += `</div><div class="vocal-calendar-range-label" id="adminVocalPracticeRangeLabel">조회 범위: ${ulimAdminEsc_(vocalRangeState.label || '')}</div><div class="vocal-calendar-legend73551014"><span class="vocal040">● 발성 평가완료</span><span class="past040">● 기출 평가완료</span><span class="pron040">● 발음 평가완료</span><span class="pending041">● 빨간 글씨 = 강사평가 대기</span><span>동일 유형도 완료/대기 건수를 따로 표시</span></div>`;
         box.innerHTML = html;
 
         box.querySelector('[data-vocal-cal-prev]')?.addEventListener('click', function(){
@@ -17814,6 +17831,10 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
 .vocal-calendar-activity73551014 span.vocal040, .ulim-practice-typecount040.vocal040 { background:#dbeafe; color:#1d4ed8; }
 .vocal-calendar-activity73551014 span.past040, .ulim-practice-typecount040.past040 { background:#ffedd5; color:#c2410c; }
 .vocal-calendar-activity73551014 span.pron040, .ulim-practice-typecount040.pron040 { background:#dcfce7; color:#15803d; }
+/* RUN041: pending staff evaluations always use red, overriding original category colors. */
+.vocal-calendar-activity73551014 span.pending041 { background:#fee2e2; color:#b91c1c; }
+.vocal-calendar-day.active .vocal-calendar-activity73551014 span.pending041 { background:#fff1f2; color:#b91c1c; }
+.vocal-calendar-legend73551014 .pending041 { color:#b91c1c; }
 .vocal-calendar-activity73551014 { flex-wrap:wrap; white-space:normal; }
 .vocal-calendar-activity73551014 span { height:auto; min-height:13px; padding:2px 3px; font-size:9px; }
 .vocal-calendar-legend73551014 .vocal040 { color:#1d4ed8; }
