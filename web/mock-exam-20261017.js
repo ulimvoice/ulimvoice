@@ -2,7 +2,7 @@
 'use strict';
 // Single owner: this file is the only UI/controller owner for the standalone mock examination.
 const EXAM_ID='2026-10-17';
-const FN={sessions:'listMockExamSessions20261017',overview:'getMockExamOverview20261017',save:'saveMockExamGrade20261017',admin:'manageMockExam20261017',r04RosterPreview:'getMockExamCanonicalRosterAdminR04',r04Persisted:'getMockExamPersistedSessionAdminR04',r04State:'setMockExamSessionGradingAdminR04',r04TeacherWorkspace:'getMockExamTeacherWorkspaceR04',r04TeacherSave:'saveMockExamTeacherGradeR04',r04StudentHistory:'getMockExamStudentHistoryR04',r04AdminRelease:'manageMockExamResultReleaseAdminR04',r04AdminMedia:'manageMockExamParticipationMediaAdminR04'};
+const FN={sessions:'listMockExamSessions20261017',overview:'getMockExamOverview20261017',save:'saveMockExamGrade20261017',admin:'manageMockExam20261017',r04RosterPreview:'getMockExamCanonicalRosterAdminR04',r04Persisted:'getMockExamPersistedSessionAdminR04',r04State:'setMockExamSessionGradingAdminR04',r04TeacherWorkspace:'getMockExamTeacherWorkspaceR04',r04TeacherSave:'saveMockExamTeacherGradeR04',r04StudentHistory:'getMockExamStudentHistoryR04',r04AdminRelease:'manageMockExamResultReleaseAdminR04',r04AdminMedia:'manageMockExamParticipationMediaAdminR04',r04GradingMatrix:'getMockExamAdminGradingMatrixR04'};
 const NA=['발음의 정확성','발성의 안정성','호흡과 문장 처리','정보 전달력','다큐멘터리 톤과 리듬'];
 const ACT=['인물 및 상황 이해','감정·의도 표현','발성·발음','호흡·대사 흐름','몰입도와 전달력'];
 const GROUPS=['청소년','성인'];
@@ -150,6 +150,222 @@ function renderR04AdminSessionControls(){
  if(action&&!S.r04StateMutationPending)$('r04ApplyState').onclick=()=>changeR04SessionState(action);
  renderR04AdminReleaseControls();
  renderR04AdminMediaControls();
+ renderR04PersistedRosterView();
+}
+
+// RUN274: Administrator-only persisted R04 participant overview, read-only.
+// This panel never infers a teacher's grading completion from a participation record.
+const R04_PERSISTED_VIEW={examId:'',rows:[],stateVersion:-1,loading:false,error:'',group:'전체',status:'전체',search:''};
+function clearR04PersistedView(){
+ R04_PERSISTED_VIEW.examId='';R04_PERSISTED_VIEW.rows=[];R04_PERSISTED_VIEW.stateVersion=-1;
+ R04_PERSISTED_VIEW.loading=false;R04_PERSISTED_VIEW.error='';R04_PERSISTED_VIEW.group='전체';
+ R04_PERSISTED_VIEW.status='전체';R04_PERSISTED_VIEW.search='';
+}
+async function loadR04PersistedRosterView(){
+ if(preview||S.role!=='admin'||!S.auth||R04_PERSISTED_VIEW.loading)return;
+ const id=str(S.r04SessionId),callerUid=str(S.auth.uid);if(!R04_EXAM_ID_PATTERN.test(id))return toast('R04 회차 ID를 확인해주세요.');
+ R04_PERSISTED_VIEW.loading=true;R04_PERSISTED_VIEW.examId='';R04_PERSISTED_VIEW.rows=[];
+ R04_PERSISTED_VIEW.stateVersion=-1;R04_PERSISTED_VIEW.error='';render();
+ try{
+  const raw=await call(FN.r04Persisted,{examId:id});
+  const parsed=validateR04MediaAdminRoster(raw,id);
+  if(S.role!=='admin'||!S.auth||str(S.auth.uid)!==callerUid||S.r04SessionId!==id)return;
+  R04_PERSISTED_VIEW.examId=id;R04_PERSISTED_VIEW.rows=parsed.rows;
+  R04_PERSISTED_VIEW.stateVersion=parsed.stateVersion;
+ }catch(e){
+  if(S.role==='admin'&&S.auth&&str(S.auth.uid)===callerUid&&S.r04SessionId===id){
+   R04_PERSISTED_VIEW.error=errorMessage(e);R04_PERSISTED_VIEW.rows=[];
+  }
+ }finally{
+  R04_PERSISTED_VIEW.loading=false;
+  if(S.role==='admin'&&S.auth&&str(S.auth.uid)===callerUid&&S.r04SessionId===id)render();
+ }
+}
+function renderR04PersistedRosterView(){
+ if(preview||S.role!=='admin'||!S.auth)return;
+ const v=R04_PERSISTED_VIEW,id=str(S.r04SessionId);
+ const hasData=v.examId===id&&v.rows.length>0;
+ const state=S.r04SessionState;
+ const stale=!!(hasData&&state&&state.examId===id&&state.stateVersion!==v.stateVersion);
+ const rows=hasData&&!stale?v.rows:[];
+ const active=rows.filter(x=>x.status==='active').length,archived=rows.filter(x=>x.status==='archived').length;
+ const groupRows=rows.filter(x=>(v.group==='전체'||x.group===v.group)&&
+  (v.status==='전체'||x.status===v.status));
+ const q=str(v.search).toLocaleLowerCase('ko');
+ const visible=q?groupRows.filter(x=>[x.studentLabel,x.classLabel,x.group].some(z=>str(z).toLocaleLowerCase('ko').includes(q))):groupRows;
+ const groupOptions=['전체','청소년','성인'].map(x=>`<option value="${x}" ${v.group===x?'selected':''}>${x}</option>`).join('');
+ const statusOptions=[['전체','전체'],['active','활성'],['archived','보관']].map(([key,text])=>
+  `<option value="${key}" ${v.status===key?'selected':''}>${text}</option>`).join('');
+ const table=rows.length?`<div class="scroll-table top-gap"><table class="wide-table"><thead><tr><th>번호</th><th>구분</th><th>수강반</th><th>학생</th><th>참가 상태</th><th>수강 명단 비교</th></tr></thead><tbody>${visible.map((x,i)=>
+  `<tr><td>${i+1}</td><td>${esc(x.group)}</td><td>${esc(x.classLabel||'이전 수강반')}</td><td>${esc(x.studentLabel||'이전 수강생')}</td><td><span class="chip ${x.status==='active'?'ok':'wait'}">${x.status==='active'?'활성':'보관'}</span></td><td>${x.currentRosterMatch?'현재 수강':'현재 명단 외'}</td></tr>`).join('')||'<tr><td colspan="6">현재 필터에 해당하는 평가 참가 기록이 없습니다.</td></tr>'}</tbody></table></div>`:'';
+ const summary=rows.length?`<div class="stat-grid"><div class="stat"><small>저장된 참가 기록</small><strong>${rows.length}</strong></div><div class="stat"><small>활성 참가 기록</small><strong>${active}</strong></div><div class="stat"><small>보관 참가 기록</small><strong>${archived}</strong></div><div class="stat"><small>현재 표시</small><strong>${visible.length}</strong></div></div>`:'';
+ const message=v.loading?'<p class="hint">서버의 참가 명단을 확인하고 있습니다.</p>':
+  stale?'<p class="warn">회차 상태 버전이 변경되어 기존 명단을 숨겼습니다. 다시 조회해 주세요.</p>':
+  v.error?`<p class="warn">${esc(v.error)}</p>`:
+  !rows.length?'<p class="hint">[저장된 평가 참가 명단 조회]를 누르면 기존 R04 참가 기록을 읽기 전용으로 표시합니다.</p>':'';
+ const html=`<section class="panel" id="r04PersistedRosterPanel"><div class="heading-row"><div><h2>R04 실제 평가 참가 명단</h2><p class="muted">저장된 회차 기록 · 관리자 전용 · 강사 화면의 익명화와 무관한 관리자 조회</p></div><span class="chip wait">읽기 전용</span></div><div class="flex"><button type="button" id="r04PersistedRosterLoad" class="btn line" ${v.loading?'disabled':''}>${v.loading?'조회 중':'저장된 평가 참가 명단 조회'}</button>${rows.length?`<span class="muted">상태 버전 ${v.stateVersion} · 반마다 개별 참가 기록</span>`:''}</div>${message}${summary}${rows.length?`<div class="flex top-gap"><label>구분 <select id="r04PersistedRosterGroup">${groupOptions}</select></label><label>상태 <select id="r04PersistedRosterStatus">${statusOptions}</select></label><label>학생·수강반 검색 <input id="r04PersistedRosterSearch" maxlength="100" value="${esc(v.search)}" placeholder="학생 또는 반"></label></div>${table}`:''}<p class="hint">이 목록은 참가 명단과 보관 상태만 나타냅니다. 강사별 채점 완료 여부는 이 응답에 없으므로 임의로 표시하지 않습니다. 최종 제출 집계는 위의 [결과 공개 현황 조회]를 사용하세요. 여기에서 참가 기록을 수정하지 않습니다.</p></section>`;
+ const anchor=$('r04AdminMediaPanel')||$('r04AdminReleasePanel')||$('r04AdminStatePanel');
+ if(!anchor)return;
+ anchor.insertAdjacentHTML('afterend',html);
+ const load=$('r04PersistedRosterLoad');if(load&&!v.loading)load.onclick=()=>loadR04PersistedRosterView();
+ const group=$('r04PersistedRosterGroup');if(group)group.onchange=e=>{v.group=e.target.value;render();};
+ const status=$('r04PersistedRosterStatus');if(status)status.onchange=e=>{v.status=e.target.value;render();};
+ const search=$('r04PersistedRosterSearch');if(search)search.onchange=e=>{v.search=str(e.target.value);render();};
+ renderR04AdminCompletionDashboard();
+}
+
+// RUN275: R04 admin-only completion dashboard using EXISTING verified aggregate read API.
+// No per-teacher completion or individual grade status is inferred from aggregate data.
+function r04AdminCompletionProjection(raw,view,session,examId){
+ if(!raw||raw.examId!==examId||!Number.isSafeInteger(raw.stateVersion)||raw.stateVersion<0||
+    !Number.isSafeInteger(raw.participantCount)||raw.participantCount<1||raw.participantCount>150||
+    !Number.isSafeInteger(raw.assessedParticipants)||!Number.isSafeInteger(raw.unassessedParticipants)||
+    !Number.isSafeInteger(raw.submittedCount)||!Number.isSafeInteger(raw.draftCount)||
+    !Number.isSafeInteger(raw.gradeDocumentCount)||
+    raw.assessedParticipants<0||raw.unassessedParticipants<0||raw.submittedCount<0||raw.draftCount<0||
+    raw.assessedParticipants+raw.unassessedParticipants!==raw.participantCount||
+    raw.gradeDocumentCount!==raw.submittedCount+raw.draftCount)return null;
+ if(session&&session.examId===examId&&session.stateVersion!==raw.stateVersion)return null;
+ if(view&&view.examId===examId){
+  if(view.stateVersion!==raw.stateVersion||!Array.isArray(view.rows)||
+     view.rows.length!==raw.participantCount)return null;
+ }
+ return {total:raw.participantCount,assessed:raw.assessedParticipants,
+   unassessed:raw.unassessedParticipants,submitted:raw.submittedCount,
+   draft:raw.draftCount,percent:Math.round(raw.assessedParticipants*100/raw.participantCount),
+   released:raw.resultsReleased===true,closed:raw.sessionState==='closed'};
+}
+function renderR04AdminCompletionDashboard(){
+ if(preview||S.role!=='admin'||!S.auth)return;
+ const id=str(S.r04SessionId),raw=S.r04ReleasePreview;
+ const progress=raw&&raw.examId===id?r04AdminCompletionProjection(raw,R04_PERSISTED_VIEW,S.r04SessionState,id):null;
+ const stale=!!(raw&&raw.examId===id&&!progress);
+ const busy=S.r04ReleasePreviewPending||S.r04ReleasePending||S.r04StateMutationPending;
+ const prompt=stale?'<p class="warn">회차 버전 또는 참가 명단이 일치하지 않아 이전 집계를 표시하지 않습니다. 명단과 집계를 다시 조회하세요.</p>':
+  '<p class="hint">[평가 진행 현황 새로고침]으로 서버에서 제출 집계를 조회합니다. 개별 강사의 제출 여부는 별도 관리자 전용 서버 API가 연결되기 전까지 표시하지 않습니다.</p>';
+ const bars=progress?`<div class="stat-grid"><div class="stat"><small>저장된 참가 기록</small><strong>${progress.total}건</strong></div><div class="stat"><small>1명 이상 최종 평가한 참가 기록</small><strong>${progress.assessed}건</strong></div><div class="stat"><small>아직 최종 평가가 없는 참가 기록</small><strong>${progress.unassessed}건</strong></div><div class="stat"><small>참가 기록 평가율 · 일부 평가 기준</small><strong>${progress.percent}%</strong></div></div><div role="progressbar" aria-label="1명 이상 최종 평가된 참가 기록 비율" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress.percent}" style="height:12px;border-radius:12px;background:#e4ece7;overflow:hidden"><div style="width:${progress.percent}%;background:#168252;height:100%"></div></div><p class="hint top-gap">최종 제출된 강사 평가표 ${progress.submitted}건 · 임시저장 평가표 ${progress.draft}건. 이 비율은 강사 전원 평가 완료율이 아니며, 강사별 평가 현황은 집계할 수 없습니다.</p><p class="hint">${progress.closed?'회차 최종 종료 · 기존 평가 열람만 가능':'회차 진행 중'} · ${progress.released?'학생 결과 공개 완료':'학생 결과 미공개'}</p>`:'';
+ const html=`<section class="panel" id="r04AdminCompletionDashboard"><div class="heading-row"><div><h2>R04 채점 진행 현황</h2><p class="muted">관리자 전용 · 기존 서버 집계 연결 · 개인별 채점 정보 미조회</p></div><span class="chip wait">읽기 전용</span></div><button type="button" id="r04AdminCompletionRefresh" class="btn line" ${busy?'disabled':''}>${S.r04ReleasePreviewPending?'조회 중':'평가 진행 현황 새로고침'}</button>${progress?bars:prompt}<p class="hint">모든 강사가 평가를 마쳤다는 의미로 해석하지 마세요. 강사별 완료표는 관리자 전용 채점 현황 API 연결 후 구현합니다.</p></section>`;
+ const anchor=$('r04PersistedRosterPanel')||$('r04AdminMediaPanel')||$('r04AdminReleasePanel')||$('r04AdminStatePanel');
+ if(!anchor)return;
+ anchor.insertAdjacentHTML('afterend',html);
+ const button=$('r04AdminCompletionRefresh');if(button&&!busy)button.onclick=()=>loadR04AdminReleasePreview(id);
+ renderR04AdminEvaluatorMatrix();
+}
+
+// RUN277 — administrator-only evaluator completion matrix; data from verified read-only API.
+const R04_EVALUATOR_VIEW={examId:'',callerUid:'',stateVersion:-1,loading:false,error:'',evaluators:[],selected:0,group:'전체',status:'전체',search:'',participantCount:0,activeCount:0,archivedCount:0};
+function validateR04EvaluatorMatrix(raw,id){
+ const integer=x=>Number.isSafeInteger(x)&&x>=0;
+ if(!raw||raw.ok!==true||raw.mode!=='admin-grading-matrix-read-only'||raw.examId!==id||
+   !integer(raw.stateVersion)||!integer(raw.participantCount)||raw.participantCount<1||raw.participantCount>150||
+   !integer(raw.activeParticipantCount)||!integer(raw.archivedParticipantCount)||
+   raw.activeParticipantCount+raw.archivedParticipantCount!==raw.participantCount||
+   !integer(raw.evaluatorCount)||raw.evaluatorCount>60||
+   !Array.isArray(raw.evaluators)||raw.evaluators.length!==raw.evaluatorCount)
+   throw Error('R04 평가 강사별 완료 현황의 형식이 올바르지 않습니다.');
+ const allIds=new Set(),labels=new Set();
+ const evaluators=raw.evaluators.map((entry,i)=>{
+   if(!entry||entry.evaluatorLabel!==`평가강사 ${i+1}`||labels.has(entry.evaluatorLabel)||
+     !integer(entry.submittedCount)||!integer(entry.draftCount)||!integer(entry.missingCount)||
+     entry.submittedCount+entry.draftCount+entry.missingCount!==raw.activeParticipantCount||
+     !Array.isArray(entry.grades)||entry.grades.length!==entry.submittedCount+entry.draftCount)
+     throw Error('R04 강사별 집계가 일치하지 않습니다.');
+   labels.add(entry.evaluatorLabel);
+   const ids=new Set();let submitted=0,draft=0;
+   const grades=entry.grades.map(x=>{
+     if(!x||typeof x.participationId!=='string'||!x.participationId||x.participationId.length>180||
+       (x.status!=='draft'&&x.status!=='submitted')||ids.has(x.participationId))
+       throw Error('R04 강사 평가 기록이 중복되거나 손상됐습니다.');
+     ids.add(x.participationId);allIds.add(x.participationId);
+     if(x.status==='submitted')submitted++;else draft++;
+     return {participationId:x.participationId,status:x.status};
+   });
+   if(submitted!==entry.submittedCount||draft!==entry.draftCount)
+     throw Error('강사별 최종 제출·임시저장 집계가 일치하지 않습니다.');
+   return {evaluatorLabel:entry.evaluatorLabel,submittedCount:submitted,draftCount:draft,
+     missingCount:entry.missingCount,grades};
+ });
+ return {examId:id,participantCount:raw.participantCount,activeCount:raw.activeParticipantCount,
+   archivedCount:raw.archivedParticipantCount,stateVersion:raw.stateVersion,evaluators,allIds:[...allIds]};
+}
+async function loadR04EvaluatorMatrix(){
+ if(preview||S.role!=='admin'||!S.auth||R04_EVALUATOR_VIEW.loading||S.r04StateMutationPending)return;
+ const id=str(S.r04SessionId),uid=str(S.auth.uid),view=R04_PERSISTED_VIEW;
+ if(!R04_EXAM_ID_PATTERN.test(id)||view.examId!==id||!view.rows.length)return toast('저장된 평가 참가 명단을 먼저 조회해주세요.');
+ R04_EVALUATOR_VIEW.loading=true;R04_EVALUATOR_VIEW.examId='';R04_EVALUATOR_VIEW.evaluators=[];
+ R04_EVALUATOR_VIEW.error='';render();
+ try{
+   const raw=await call(FN.r04GradingMatrix,{examId:id});
+   const parsed=validateR04EvaluatorMatrix(raw,id);
+   if(S.role!=='admin'||!S.auth||str(S.auth.uid)!==uid||S.r04SessionId!==id)return;
+   const latest=R04_PERSISTED_VIEW;
+   if(latest.examId!==id||latest.stateVersion!==parsed.stateVersion||
+      latest.rows.length!==parsed.participantCount||
+      latest.rows.filter(x=>x.status==='active').length!==parsed.activeCount||
+      latest.rows.filter(x=>x.status==='archived').length!==parsed.archivedCount)
+     throw Error('서로 다른 버전의 참가 명단과 채점 현황입니다. 다시 조회해주세요.');
+   const known=new Set(latest.rows.filter(x=>x.status==='active').map(x=>x.participationId));
+   if(parsed.allIds.some(x=>!known.has(x)))throw Error('현재 활성 참가 명단 외 평가 기록이 있습니다.');
+   Object.assign(R04_EVALUATOR_VIEW,{examId:id,callerUid:uid,stateVersion:parsed.stateVersion,
+     evaluators:parsed.evaluators,participantCount:parsed.participantCount,
+     activeCount:parsed.activeCount,archivedCount:parsed.archivedCount,selected:0,group:'전체',status:'전체',search:''});
+ }catch(e){
+   if(S.role==='admin'&&S.auth&&str(S.auth.uid)===uid&&S.r04SessionId===id){
+     R04_EVALUATOR_VIEW.examId='';R04_EVALUATOR_VIEW.evaluators=[];
+     R04_EVALUATOR_VIEW.error=errorMessage(e);
+   }
+ }finally{
+   R04_EVALUATOR_VIEW.loading=false;
+   if(S.role==='admin'&&S.auth&&str(S.auth.uid)===uid&&S.r04SessionId===id)render();
+ }
+}
+function renderR04AdminEvaluatorMatrix(){
+ if(preview||S.role!=='admin'||!S.auth)return;
+ const v=R04_EVALUATOR_VIEW,id=str(S.r04SessionId),roster=R04_PERSISTED_VIEW;
+ const current=v.examId===id&&v.callerUid===str(S.auth.uid)&&
+   roster.examId===id&&roster.stateVersion===v.stateVersion&&
+   roster.rows.length===v.participantCount&&
+   (!S.r04SessionState||S.r04SessionState.examId!==id||S.r04SessionState.stateVersion===v.stateVersion);
+ const active=roster.rows.filter(x=>x.status==='active'),activeIds=new Set(active.map(x=>x.participationId));
+ // Fail closed when another roster has replaced the displayed participants.
+ const linked=v.evaluators.every(e=>e.grades.every(g=>activeIds.has(g.participationId)));
+ const ready=current&&v.activeCount===active.length&&linked;
+ const buttons=ready?v.evaluators.map((g,i)=>`<button type="button" class="seg ${v.selected===i?'active':''}" data-r04-evaluator-index="${i}">${esc(g.evaluatorLabel)} · 완료 ${g.submittedCount}</button>`).join(''):'';
+ const selected=ready?v.evaluators[v.selected]||null:null;
+ const byPart=selected?new Map(selected.grades.map(x=>[x.participationId,x.status])):new Map();
+ const statusName={submitted:'완료',draft:'임시저장',missing:'미평가'};
+ const statusOptions=[['전체','모든 상태'],['missing','미평가'],['draft','임시저장'],['submitted','완료']]
+   .map(([value,title])=>`<option value="${value}" ${v.status===value?'selected':''}>${title}</option>`).join('');
+ const groupOptions=['전체','청소년','성인']
+   .map(value=>`<option value="${value}" ${v.group===value?'selected':''}>${value}</option>`).join('');
+ const query=str(v.search).toLocaleLowerCase('ko');
+ const items=selected?active.map(x=>({...x,gradeStatus:byPart.get(x.participationId)||'missing'}))
+   .filter(x=>(v.group==='전체'||x.group===v.group)&&
+     (v.status==='전체'||x.gradeStatus===v.status)&&
+     (!query||[x.studentLabel,x.classLabel,x.group].some(z=>str(z).toLocaleLowerCase('ko').includes(query)))):[];
+ // Missing and draft cases go first only within the filtered list; never change server counts.
+ const rows=items.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.group)}</td><td>${esc(x.classLabel||'현재 명단 외 수강반')}</td><td>${esc(x.studentLabel||'현재 명단 외 학생')}</td><td><span class="chip ${x.gradeStatus==='submitted'?'ok':'wait'}">${statusName[x.gradeStatus]}</span></td></tr>`).join('');
+ const cards=selected?`<div class="stat-grid"><div class="stat"><small>현재 평가자</small><strong>${esc(selected.evaluatorLabel)}</strong></div><div class="stat"><small>최종 제출</small><strong>${selected.submittedCount}</strong></div><div class="stat"><small>임시저장</small><strong>${selected.draftCount}</strong></div><div class="stat"><small>미평가</small><strong>${selected.missingCount}</strong></div></div>`:'';
+ const filters=selected?`<div class="flex top-gap"><label>구분 <select id="r04EvalGroupFilter" aria-label="평가 구분">${groupOptions}</select></label><label>채점 상태 <select id="r04EvalStatusFilter" aria-label="평가 채점 상태">${statusOptions}</select></label><label>학생·수강반 검색 <input id="r04EvalSearch" type="search" maxlength="100" value="${esc(v.search)}" placeholder="학생 또는 수강반"></label><span class="muted">표시 ${items.length} / ${active.length}건</span></div>`:'';
+ const note=v.loading?'<p class="hint">평가 강사별 상태를 조회하고 있습니다.</p>':
+   v.error?`<p class="warn">${esc(v.error)}</p>`:
+   ready&&!v.evaluators.length?'<p class="hint">저장된 평가표가 아직 없습니다. 채점 기록이 없는 강사는 서버에서 식별할 수 없습니다.</p>':
+   !ready?'<p class="hint">먼저 [저장된 평가 참가 명단 조회]를 누른 뒤, [강사별 채점 현황 조회]를 실행하세요.</p>':'';
+ const table=selected?`<div class="scroll-table top-gap"><table class="wide-table"><thead><tr><th>번호</th><th>구분</th><th>수강반</th><th>학생</th><th>채점 상태</th></tr></thead><tbody>${rows||'<tr><td colspan="5">현재 필터에 해당하는 학생이 없습니다.</td></tr>'}</tbody></table></div>`:'';
+ const html=`<section id="r04AdminEvaluatorMatrix" class="panel"><div class="heading-row"><div><h2>R04 강사별 · 학생별 채점 현황</h2><p class="muted">관리자 전용 · 실제 최종 제출·임시저장·미평가 · 점수/한줄평 미조회</p></div><span class="chip wait">읽기 전용</span></div><button id="r04AdminEvaluatorRefresh" type="button" class="btn line" ${v.loading||roster.examId!==id||!roster.rows.length?'disabled':''}>${v.loading?'조회 중':'강사별 채점 현황 조회'}</button>${note}${buttons?`<div class="tabs">${buttons}</div>`:''}${cards}${filters}${table}<p class="hint">강사 번호는 제출 기록 기준이며 현재 평가표가 없는 강사는 목록에 표시되지 않습니다. 전체 등록 강사 명단과 다를 수 있습니다.</p></section>`;
+ const anchor=$('r04AdminCompletionDashboard')||$('r04PersistedRosterPanel')||$('r04AdminReleasePanel');
+ if(!anchor)return;
+ anchor.insertAdjacentHTML('afterend',html);
+ const reload=$('r04AdminEvaluatorRefresh');if(reload&&!reload.disabled)reload.onclick=()=>loadR04EvaluatorMatrix();
+ app.querySelectorAll('[data-r04-evaluator-index]').forEach(el=>el.onclick=()=>{
+   const next=Number(el.dataset.r04EvaluatorIndex);
+   if(!Number.isSafeInteger(next)||next<0||next>=v.evaluators.length)return;
+   v.selected=next;render();
+ });
+ const group=$('r04EvalGroupFilter'),status=$('r04EvalStatusFilter'),search=$('r04EvalSearch');
+ if(group)group.onchange=e=>{if(!['전체','청소년','성인'].includes(e.target.value))return;v.group=e.target.value;render();};
+ if(status)status.onchange=e=>{if(!['전체','missing','draft','submitted'].includes(e.target.value))return;v.status=e.target.value;render();};
+ if(search)search.onchange=e=>{v.search=str(e.target.value);render();};
 }
 
 // RUN191: independent administrator-only R04 results release owner.
@@ -512,39 +728,64 @@ async function refreshR04StudentHistory(){
   S.r04StudentHistoryError=errorMessage(e);render();
  }
 }
+// RUN276: Student-only R04 results view on the existing authenticated own-history endpoint.
+// Never infer evaluator names, rubric titles or release status; no new server requests.
+function r04StudentPublishedSummary(p){
+ if(!p||p.resultsReleased!==true||p.sessionState!=='closed'||p.participationStatus!=='active'||
+    !Array.isArray(p.evaluations)||!p.evaluations.length)return null;
+ const rows=p.evaluations;
+ const valid=rows.every(g=>g&&typeof g==='object'&&Array.isArray(g.na)&&g.na.length===5&&
+  Array.isArray(g.act)&&g.act.length===5&&[...g.na,...g.act].every(x=>
+   typeof x==='number'&&Number.isFinite(x)&&x>=0&&x<=5&&Number.isInteger(x*2))&&
+  typeof g.total==='number'&&Number.isFinite(g.total)&&Math.abs([...g.na,...g.act].reduce((a,b)=>a+b,0)-g.total)<0.000001);
+ if(!valid)return null;
+ const count=rows.length,na=rows.reduce((a,g)=>a+g.na.reduce((x,y)=>x+y,0),0)/count;
+ const act=rows.reduce((a,g)=>a+g.act.reduce((x,y)=>x+y,0),0)/count;
+ return {count,na,act,total:na+act};
+}
 function renderR04StudentHistory(){
+ if(preview||S.role!=='student'||!S.auth)return;
  const rows=S.r04StudentHistoryRecords||[];
- const head='<div class="heading-row"><div><h1>나의 모의고사 평가표</h1><p>내 참가 회차만 열람할 수 있으며 강사 이름은 표시하지 않습니다.</p></div></div>';
+ const head='<div class="heading-row"><div><h1>나의 모의고사 평가표</h1><p>본인이 참가한 회차와 수강반별 평가만 볼 수 있습니다. 평가위원의 실명은 표시하지 않습니다.</p></div></div>';
  if(S.r04StudentHistoryError){
   app.innerHTML=head+`<section class="center-state"><h2>평가 기록 조회 오류</h2><p>${esc(S.r04StudentHistoryError)}</p><button class="btn" id="r04StudentRetry">다시 조회</button></section>`;
   $('r04StudentRetry').onclick=()=>refreshR04StudentHistory();return;
  }
  if(!S.r04StudentHistoryReady){
-  app.innerHTML=head+'<section class="center-state"><h2>내 평가 기록을 확인하고 있습니다.</h2><p>조회 중에는 학생 정보와 점수가 표시되지 않습니다.</p></section>';return;
+  app.innerHTML=head+'<section class="center-state"><h2>평가 기록을 확인하고 있습니다.</h2><p>조회 중에는 점수와 한줄평이 표시되지 않습니다.</p></section>';return;
  }
  if(!rows.length){
-  app.innerHTML=head+'<section class="center-state"><h2>평가 참가 기록이 없습니다.</h2><p>저장된 모의고사 회차에 참가한 기록이 확인되지 않았습니다.</p><button class="btn line" id="r04StudentRetry">새로고침</button></section>';
+  app.innerHTML=head+'<section class="center-state"><h2>참가한 평가 회차가 없습니다.</h2><p>현재 계정에 연결된 모의고사 기록이 확인되지 않았습니다.</p><button class="btn line" id="r04StudentRetry">새로고침</button></section>';
   $('r04StudentRetry').onclick=()=>refreshR04StudentHistory();return;
  }
  const exams=[...new Map(rows.map(p=>[p.examId,{examId:p.examId,examDate:p.examDate,round:p.round}])).values()];
- let selected=rows.find(p=>p.participationId===S.r04StudentHistorySelection)||rows[0];
+ const selected=rows.find(p=>p.participationId===S.r04StudentHistorySelection)||rows[0];
  const sameExam=rows.filter(p=>p.examId===selected.examId);
- const idx=sameExam.findIndex(p=>p.participationId===selected.participationId);
- const sessionOptions=exams.map(x=>`<option value="${esc(x.examId)}" ${x.examId===selected.examId?'selected':''}>${esc(x.examDate)} · ${x.round}회차</option>`).join('');
- const classOptions=sameExam.map((p,i)=>`<button class="seg ${p.participationId===selected.participationId?'active':''}" data-r04-own-part="${i}">${esc(p.group)} · 수강반 ${i+1}${p.participationStatus==='archived'?' (이전 수강)':''}</button>`).join('');
+ const classIndex=sameExam.findIndex(p=>p.participationId===selected.participationId);
+ const options=exams.map(x=>`<option value="${esc(x.examId)}" ${x.examId===selected.examId?'selected':''}>${esc(x.examDate)} · ${x.round}회차</option>`).join('');
+ const classButtons=sameExam.map((p,i)=>`<button type="button" class="seg ${p.participationId===selected.participationId?'active':''}" data-r04-own-part="${i}" aria-pressed="${p.participationId===selected.participationId?'true':'false'}">${esc(p.group)} · 수강반 ${i+1}${p.participationStatus==='archived'?' · 이전 수강':''}</button>`).join('');
+ const archived=selected.participationStatus==='archived',closed=selected.sessionState==='closed';
+ const summary=r04StudentPublishedSummary(selected);
+ const isReleased=selected.resultsReleased===true&&closed&&!archived;
+ const statusLabel=archived?'이전 수강 기록':!isReleased?'결과 공개 대기':summary?'결과 공개됨':'공개된 평가 없음';
+ const status=`<section class="panel"><div class="flex"><strong>${esc(selected.examDate)} · ${selected.round}회차 · ${esc(selected.group)} · 수강반 ${classIndex+1}</strong><span class="chip ${summary?'ok':'wait'}">${statusLabel}</span></div><p class="hint top-gap">수강반마다 별도 평가 기록으로 관리합니다. 학생과 평가위원의 개인 식별정보는 이 화면에 표시되지 않습니다.</p></section>`;
  let body='';
- if(!selected.resultsReleased){
-  body='<section class="panel"><h2>평가 결과 공개 대기</h2><p>관리자가 평가를 종료하고 결과를 공개하면 점수와 강사별 한줄평을 볼 수 있습니다.</p></section>';
- }else if(!selected.evaluations.length){
-  body='<section class="panel"><h2>공개된 강사 평가가 없습니다.</h2><p>해당 참가 기록에 최종 제출된 평가표가 없습니다.</p></section>';
+ if(archived){
+  body='<section class="panel"><h2>이전 수강 기록</h2><p class="muted">보관된 참가 기록은 열람할 수 있으나 점수와 평가 내용은 표시되지 않습니다.</p></section>';
+ }else if(!isReleased){
+  body='<section class="panel"><h2>평가 결과 공개 대기</h2><p class="muted">관리자가 회차를 종료하고 결과를 공개하면 평가표를 볼 수 있습니다. 평가 중인 점수와 임시저장 의견은 표시되지 않습니다.</p></section>';
+ }else if(!summary){
+  body='<section class="panel"><h2>공개된 평가표가 없습니다.</h2><p class="muted">결과 공개는 완료됐지만 이 참가 기록에 최종 제출된 강사 평가표가 없습니다.</p></section>';
  }else{
-  const vals=selected.evaluations, page=Math.max(0,Math.min(S.r04StudentEvaluationPage,vals.length-1));
+  const vals=selected.evaluations;
+  const page=Math.max(0,Math.min(S.r04StudentEvaluationPage,vals.length-1));
   S.r04StudentEvaluationPage=page;
-  const grade=vals[page],avg=vals.reduce((sum,g)=>sum+g.total,0)/vals.length;
-  const table=(title,key)=>`<section class="rubric"><h3>${title} <span class="numeric">${fmt(grade[key].reduce((sum,n)=>sum+n,0))} / 25점</span></h3><table><thead><tr><th>평가 순번</th><th>점수</th></tr></thead><tbody>${grade[key].map((n,i)=>`<tr><td>${i+1}번 항목</td><td><strong>${fmt(n)}점</strong></td></tr>`).join('')}</tbody></table></section>`;
-  body=`<section class="panel"><div class="score-hero"><div><h2>${esc(selected.group)} · 수강반 ${idx+1}</h2><p>${esc(selected.examDate)} · ${selected.round}회차</p></div><div class="score-number">${fmt(avg)} <small>제출된 평가 평균 / 50점</small></div></div><div class="judge-card"><h3>${esc(grade.evaluatorLabel)}</h3><p class="muted">총점 ${fmt(grade.total)} / 50점</p>${table('NA · 나레이션','na')}${table('독백 · 연기','act')}<div class="field"><label>강사 한줄평</label><div class="note">${esc(grade.note)}</div></div></div><div class="pager"><button class="btn line" id="r04StudentPrev" ${page===0?'disabled':''}>◀ 이전 평가표</button><span>${page+1} / ${vals.length}</span><button class="btn line" id="r04StudentNext" ${page>=vals.length-1?'disabled':''}>다음 평가표 ▶</button></div></section>`;
+  const grade=vals[page];
+  const section=(title,key)=>`<section class="rubric"><h3>${title}<span class="numeric">${fmt(grade[key].reduce((a,b)=>a+b,0))} / 25점</span></h3><table><thead><tr><th>평가 항목 순번</th><th>평가 점수</th></tr></thead><tbody>${grade[key].map((n,i)=>`<tr><td>${i+1}번 항목</td><td><strong>${fmt(n)} / 5점</strong></td></tr>`).join('')}</tbody></table></section>`;
+  const cards=`<div class="stat-grid"><div class="stat"><small>전체 평균 · 50점 만점</small><strong>${fmt(summary.total)}</strong></div><div class="stat"><small>NA 평균 · 25점 만점</small><strong>${fmt(summary.na)}</strong></div><div class="stat"><small>독백 평균 · 25점 만점</small><strong>${fmt(summary.act)}</strong></div><div class="stat"><small>제출된 평가표</small><strong>${summary.count}건</strong></div></div>`;
+  body=`<section class="panel"><h2 class="panel-title">평가 결과 요약</h2>${cards}<p class="hint">최종 제출된 평가표만 평균에 포함합니다. NA·독백 각 25점, 전체 50점 만점입니다.</p></section><section class="panel"><div class="heading-row"><div><h2>${esc(grade.evaluatorLabel)} 평가표</h2><p class="muted">${page+1} / ${vals.length} · 평가위원 실명 비공개</p></div><strong>${fmt(grade.total)} / 50점</strong></div>${section('NA · 나레이션','na')}${section('독백 · 연기','act')}<div class="field"><label>평가위원 한줄평</label><div class="note">${esc(grade.note)}</div></div><div class="pager"><button class="btn line" type="button" id="r04StudentPrev" ${page===0?'disabled':''}>◀ 이전 평가표</button><span>${page+1} / ${vals.length}</span><button class="btn line" type="button" id="r04StudentNext" ${page===vals.length-1?'disabled':''}>다음 평가표 ▶</button></div></section>`;
  }
- app.innerHTML=head+`<section class="session-bar"><div><strong>참가 회차 선택</strong><small>저장된 참가 기록 기준</small></div><div class="session-picker"><select id="r04StudentExamSelect" aria-label="평가 회차">${sessionOptions}</select><button class="btn line" id="r04StudentRefresh">새로고침</button></div></section>`+ (sameExam.length>1?`<div class="tabs">${classOptions}</div>`:'')+body;
+ app.innerHTML=head+`<section class="session-bar"><div><strong>평가 회차</strong><small>실제 저장된 참가 회차만 조회합니다.</small></div><div class="session-picker"><select id="r04StudentExamSelect" aria-label="평가 회차 선택">${options}</select><button class="btn line" type="button" id="r04StudentRefresh">새로고침</button></div></section>`+(sameExam.length>1?`<div class="tabs" role="group" aria-label="내 수강반 선택">${classButtons}</div>`:'')+status+body;
  $('r04StudentRefresh').onclick=()=>refreshR04StudentHistory();
  $('r04StudentExamSelect').onchange=e=>{
   const next=rows.find(p=>p.examId===e.target.value);
@@ -555,9 +796,10 @@ function renderR04StudentHistory(){
   S.r04StudentHistorySelection=p.participationId;S.r04StudentEvaluationPage=0;render();
  });
  const prev=$('r04StudentPrev'),next=$('r04StudentNext');
- if(prev)prev.onclick=()=>{S.r04StudentEvaluationPage--;render()};
- if(next)next.onclick=()=>{S.r04StudentEvaluationPage++;render()};
+ if(prev)prev.onclick=()=>{if(S.r04StudentEvaluationPage>0){S.r04StudentEvaluationPage--;render();}};
+ if(next)next.onclick=()=>{if(S.r04StudentEvaluationPage+1<selected.evaluations.length){S.r04StudentEvaluationPage++;render();}};
 }
+
 async function refreshSessions(){if(preview)return;if(S.role==='student')return refreshR04StudentHistory();if(S.role==='teacher'){S.examId='r04_202610_r01';S.sessions=[{examId:S.examId,date:'2026-10-30',month:'2026-10',title:'R04 모의고사 1회차',published:false,archived:false}];return reloadR04Teacher();}if(S.role==='admin')return refreshCanonicalAdminRosterR04();const out=await call(FN.sessions,{});if(out.ok!==true)throw Error('평가 회차 목록을 불러오지 못했습니다.');S.sessions=Array.isArray(out.sessions)?out.sessions:[];if(!S.sessions.some(x=>x.examId===S.examId))S.examId=S.sessions.length?S.sessions[0].examId:'';if(S.examId)await reload();else{applySnapshot({});S.sessionTitle='';render();}}
 async function switchExam(id){if(!S.sessions.some(x=>x.examId===id))return toast('해당 회차를 열람할 수 없습니다.');if(preview){switchPreviewExam(id);return;}S.examId=id;S.edit={};S.selected=null;S.judgePage=0;S.expandedClasses={'청소년':[],'성인':[]};await reload();}
 function sessionBar(){const m=S.sessions.find(x=>x.examId===S.examId);return `<section class="session-bar"><div><strong>평가 회차</strong><small>${m?esc(m.date+' · '+m.title):'생성 또는 선택된 회차 없음'}</small></div><div class="session-picker"><select aria-label="평가 회차 선택" id="sessionSelect"><option value="" ${!S.examId?'selected':''} disabled>회차를 선택하세요</option>${S.sessions.map(x=>`<option value="${esc(x.examId)}" ${S.examId===x.examId?'selected':''}>${esc(x.month+' · '+x.title)}${x.archived?' · 보관':x.published?' · 공개':''}</option>`).join('')}</select><span class="chip ${S.archived?'wait':S.published?'ok':'wait'}">${S.archived?'보관됨':S.published?'공개됨':'작성 중'}</span></div></section>`;}
@@ -570,7 +812,7 @@ async function runtime(){if(S.rt)return S.rt;const owner=window.ULIM_ROOM_CLASSR
 async function call(name,payload){const rt=await runtime();if(!rt.auth.currentUser)throw Error('로그인이 필요합니다.');const res=await rt.sdk.httpsCallable(rt.functions,name)(payload||{});return res&&res.data||{};}
 async function authenticateStaff(id,pw){const rt=await runtime();const norm=str(id).normalize('NFKC').toLowerCase();if(!norm||!pw)throw Error('교직원 ID와 비밀번호를 입력해주세요.');const bytes=new TextEncoder().encode('ulimvoice-staff-password-v1\u001f'+norm),d=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes));let raw='';d.forEach(v=>raw+=String.fromCharCode(v));const email='u_'+btoa(raw).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/g,'')+'@auth.ulimvoice.app';await rt.sdk.setPersistence(rt.auth,rt.sdk.browserLocalPersistence);await rt.sdk.signInWithEmailAndPassword(rt.auth,email,pw);await bindSession();}
 async function authenticateStudent(name,pw){const rt=await runtime();const login=await rt.sdk.httpsCallable(rt.functions,'loginStudentFirebaseSecure73551526')({name:str(name),password:String(pw)});const token=str(login&&login.data&&login.data.customToken);if(!token)throw Error('학생 인증에 실패했습니다.');await rt.sdk.setPersistence(rt.auth,rt.sdk.browserLocalPersistence);await rt.sdk.signInWithCustomToken(rt.auth,token);await bindSession();}
-async function bindSession(){const rt=await runtime(),user=rt.auth.currentUser;if(!user){S.auth=null;S.role=null;badge();render();return;}const c=(await rt.sdk.getIdTokenResult(user,false)).claims||{},r=str(c.role);if(!['teacher','admin','superAdmin','student'].includes(r)||c.authVersion==null)throw Error('현재 계정의 인증 권한을 확인할 수 없습니다.');if(r==='teacher'&&!str(c.teacherUid)||r==='student'&&!str(c.studentUid))throw Error('계정 식별 정보가 없습니다.');
+async function bindSession(){const rt=await runtime(),user=rt.auth.currentUser;if(!user){clearR04PersistedView();S.auth=null;S.role=null;badge();render();return;}const c=(await rt.sdk.getIdTokenResult(user,false)).claims||{},r=str(c.role);if(!['teacher','admin','superAdmin','student'].includes(r)||c.authVersion==null)throw Error('현재 계정의 인증 권한을 확인할 수 없습니다.');if(r==='teacher'&&!str(c.teacherUid)||r==='student'&&!str(c.studentUid))throw Error('계정 식별 정보가 없습니다.');
 S.role=r==='superAdmin'||r==='admin'?'admin':r;
 S.auth={uid:str(user.uid),studentUid:str(c.studentUid),teacherUid:str(c.teacherUid),name:str(c.name||c.displayName||user.displayName||c.loginId||(r==='student'?'학생':'강사'))};
 // Personal names and permissions displayed here are advisory: every endpoint must revalidate Firebase token claims.
@@ -613,33 +855,81 @@ function teacherClasses(list){
  return [...map.values()];
 }
 function teacherView(){
- const list=S.roster.filter(p=>p.group===S.group);
- const classes=teacherClasses(list);
- if(S.selected&&!list.some(p=>participantKey(p)===S.selected))S.selected=null;
- const p=list.find(x=>participantKey(x)===S.selected)||null,g=p?draft(p):null;
- const opened=S.expandedClasses[S.group]||[];
- const classMarkup=classes.map((c,i)=>{
-   const isOpen=opened.includes(c.key),done=c.students.filter(x=>{const grade=myGrade(x);return grade&&grade.status==='submitted'}).length;
-   return `<section class="class-accordion"><button type="button" class="class-toggle ${isOpen?'open':''}" data-class-toggle="${esc(c.key)}" aria-expanded="${isOpen?'true':'false'}" aria-controls="exam-class-${i}"><span class="class-title"><span class="class-chevron" aria-hidden="true">${isOpen?'▾':'▸'}</span><span><strong>${esc(c.name)}</strong>${preview&&c.id?`<small>${esc(c.id)}</small>`:''}</span></span><span class="class-count">${c.students.length}명 <small>완료 ${done}/${c.students.length}</small></span></button><div class="class-students" id="exam-class-${i}" ${isOpen?'':'hidden'}>${c.students.map(student=>{const h=myGrade(student),key=participantKey(student);return `<button type="button" class="student-choice ${S.selected===key?'active':''}" data-student="${esc(key)}" ${S.selected===key?'aria-current="true"':''}><b>${esc(student.name)}</b><span class="chip ${h&&h.status==='submitted'?'ok':'wait'}">${h&&h.status==='submitted'?'완료':'미완료'}</span></button>`}).join('')}</div></section>`;
- }).join('');
- app.innerHTML=prefix()+`<div class="heading-row"><div><h1>강사 평가 입력</h1><p>NA 25점 + 독백 25점 = 총 50점 · ${!preview?(S.r04TeacherGradingOpen?'현재 채점 ON':'현재 채점 OFF · 읽기 전용'): '미리보기'}</p></div><button class="btn line" id="refreshBtn" ${preview?'hidden':''}>새로고침</button></div><div class="tabs"><button class="seg ${S.group==='청소년'?'active':''}" data-group="청소년">청소년반</button><button class="seg ${S.group==='성인'?'active':''}" data-group="성인">성인반</button></div><div class="layout"><aside class="panel"><div class="panel-title">평가 대상 <span class="hint">${classes.length}개 반 · ${list.length}명</span></div><p class="hint class-help">반명을 눌러 학생 목록을 펼치거나 접을 수 있습니다.</p><div class="student-list">${classMarkup||'<p class="muted">이 그룹에 연결된 익명 평가 대상이 없습니다. 서버에서 R04 익명 명단 API를 연결해야 합니다.</p>'}</div></aside><article class="panel">${p?hero(p,gradeTotal(g),'작성 중 · 50점 만점')+media(p)+rubric(g,preview||S.r04TeacherGradingOpen&&!S.archived&&p.participationStatus==='active',p.group)+`<div class="field"><label>강사 한줄평 · 최종 제출 시 필수</label><textarea id="noteInput" maxlength="300" ${!preview&&(!S.r04TeacherGradingOpen||S.archived||p.participationStatus==='archived')?'disabled':''} placeholder="학생의 강점과 개선점을 구체적으로 작성해주세요.">${esc(g.note)}</textarea></div><p class="hint">임시저장은 미완료 상태로 기록됩니다. 최종 제출하려면 점수 10항목과 한줄평을 모두 작성해주세요.</p><div class="action-row"><button id="draftBtn" class="btn line" ${S.archived||S.published||!preview&&(!S.r04TeacherGradingOpen||p.participationStatus==='archived'||S.r04TeacherSavePending)?'disabled':''}>임시저장</button><button id="submitBtn" class="btn" ${S.archived||S.published||!preview&&(!S.r04TeacherGradingOpen||p.participationStatus==='archived'||S.r04TeacherSavePending)?'disabled':''}>평가 완료 · 저장</button></div>`:'<div class="empty-evaluation"><h2>평가 학생 선택</h2><p>왼쪽에서 반명을 클릭해 학생 목록을 펼친 후 평가할 학생을 선택해주세요.</p></div>'}</article></div>`;
- app.querySelectorAll('[data-group]').forEach(b=>b.onclick=()=>{S.group=b.dataset.group;S.selected=null;render()});
- app.querySelectorAll('[data-class-toggle]').forEach(b=>b.onclick=()=>{
-   const group=S.group,key=b.dataset.classToggle,opened=S.expandedClasses[group]||[];
-   S.expandedClasses[group]=opened.includes(key)?opened.filter(x=>x!==key):[...opened,key];
-   render();
-   const next=[...app.querySelectorAll('[data-class-toggle]')].find(el=>el.dataset.classToggle===key);
-   if(next)next.focus();
- });
- app.querySelectorAll('[data-student]').forEach(b=>b.onclick=()=>{S.selected=b.dataset.student;render()});
- if($('refreshBtn'))$('refreshBtn').onclick=()=>withBusy($('refreshBtn'),reload);
- if(!p)return;
- app.querySelectorAll('[data-score]').forEach(el=>el.onchange=()=>{g[el.dataset.score][Number(el.dataset.idx)]=el.value===''?null:Number(el.value);const total=gradeTotal(g);app.querySelector('.score-number').firstChild.textContent=fmt(total)+' ';for(const key of ['na','act'])app.querySelector(`[data-sum="${key}"]`).textContent=fmt(score(g[key]))+' / 25'});
- $('noteInput').oninput=e=>g.note=e.target.value;
- $('draftBtn').onclick=()=>saveGrade(p,g,'draft',$('draftBtn'));
- $('submitBtn').onclick=()=>saveGrade(p,g,'submitted',$('submitBtn'));
+  // RUN273: The existing R04 owner renders the real authenticated teacher workspace.
+  // No new callable, browser database read, role override, or client-side permission bypass.
+  if(!preview&&S.role==='teacher'&&!S.r04TeacherReady){
+    app.innerHTML=prefix()+'<section class="center-state"><h1>강사 평가를 불러오고 있습니다</h1><p>인증된 R04 평가 명단을 확인한 뒤 사용할 수 있습니다.</p></section>';
+    return;
+  }
+  const list=S.roster.filter(x=>x.group===S.group);
+  const active=list.filter(x=>x.participationStatus!=='archived');
+  const savedState=x=>{const grade=myGrade(x);return grade&&grade.status==='submitted'?'submitted':grade&&grade.status==='draft'?'draft':'pending';};
+  const unsaved=x=>{
+    const edit=S.edit[participantKey(x)];if(!edit)return false;
+    const old=myGrade(x),empty=[null,null,null,null,null];
+    const prior={na:old&&Array.isArray(old.na)?old.na:empty,act:old&&Array.isArray(old.act)?old.act:empty,note:str(old&&old.note)};
+    return JSON.stringify(edit.na)!==JSON.stringify(prior.na)||JSON.stringify(edit.act)!==JSON.stringify(prior.act)||str(edit.note)!==prior.note;
+  };
+  const mark=x=>{
+    if(x.participationStatus==='archived')return '보관';
+    if(unsaved(x))return '입력 중·미저장';
+    const st=savedState(x);
+    return st==='submitted'?'완료':st==='draft'?'임시저장':'미평가';
+  };
+  if(S.selected&&!list.some(x=>participantKey(x)===S.selected))S.selected=null;
+  if(!S.selected&&active.length){
+    const first=active.find(x=>savedState(x)!=='submitted')||active[0];
+    S.selected=participantKey(first);
+    const chosen=teacherClasses(list).find(c=>c.students.some(x=>participantKey(x)===S.selected));
+    if(chosen){const opened=S.expandedClasses[S.group]||[];if(!opened.includes(chosen.key))S.expandedClasses[S.group]=[...opened,chosen.key];}
+  }
+  const p=list.find(x=>participantKey(x)===S.selected)||null;
+  const g=p?draft(p):null;
+  const classes=teacherClasses(list);
+  const opened=S.expandedClasses[S.group]||[];
+  const completed=active.filter(x=>savedState(x)==='submitted').length;
+  const temporary=active.filter(x=>savedState(x)==='draft').length;
+  const pending=active.length-completed-temporary;
+  const currentIndex=p?list.findIndex(x=>participantKey(x)===S.selected):-1;
+  const classMarkup=classes.map((c,i)=>{
+    const isOpen=opened.includes(c.key);
+    const done=c.students.filter(x=>x.participationStatus!=='archived'&&savedState(x)==='submitted').length;
+    const eligible=c.students.filter(x=>x.participationStatus!=='archived').length;
+    return `<section class="class-accordion"><button type="button" class="class-toggle ${isOpen?'open':''}" data-class-toggle="${esc(c.key)}" aria-expanded="${isOpen?'true':'false'}" aria-controls="exam-class-${i}"><span class="class-title"><span class="class-chevron" aria-hidden="true">${isOpen?'▾':'▸'}</span><span><strong>${esc(c.name)}</strong>${preview&&c.id?`<small>${esc(c.id)}</small>`:''}</span></span><span class="class-count">${eligible}명 <small>완료 ${done}/${eligible}</small></span></button><div class="class-students" id="exam-class-${i}" ${isOpen?'':'hidden'}>${c.students.map(student=>{const label=mark(student),key=participantKey(student);return `<button type="button" class="student-choice ${S.selected===key?'active':''}" data-student="${esc(key)}" ${S.selected===key?'aria-current="true"':''}><b>${esc(student.name)}</b><span class="chip ${label==='완료'?'ok':'wait'}">${label}</span></button>`;}).join('')}</div></section>`;
+  }).join('');
+  const editAllowed=!!p&&(preview||S.r04TeacherGradingOpen&&!S.archived&&p.participationStatus==='active');
+  const inputDisabled=!preview&&(!S.r04TeacherGradingOpen||S.archived||!p||p.participationStatus==='archived');
+  const saveDisabled=S.archived||S.published||!preview&&(!S.r04TeacherGradingOpen||!p||p.participationStatus==='archived'||S.r04TeacherSavePending);
+  const navigation=p?`<div class="action-row" aria-label="평가 학생 이동"><span class="muted" style="margin-right:auto;align-self:center">${currentIndex+1} / ${list.length} 평가 대상 · ${mark(p)}</span><button type="button" class="btn line small" id="prevExamStudent" ${currentIndex<1?'disabled':''}>◀ 이전 학생</button><button type="button" class="btn line small" id="nextExamStudent" ${currentIndex>=list.length-1?'disabled':''}>다음 학생 ▶</button><button type="button" class="btn subtle small" id="nextPendingExamStudent" ${active.some(x=>savedState(x)!=='submitted'&&participantKey(x)!==S.selected)?'':'disabled'}>다음 미완료 학생</button></div>`:'';
+  app.innerHTML=prefix()+`<div class="heading-row"><div><h1>강사 평가 입력</h1><p>NA 25점 + 독백 25점 = 총 50점 · ${!preview?(S.r04TeacherGradingOpen?'현재 채점 ON':'현재 채점 OFF · 읽기 전용'):'미리보기'}</p></div><button class="btn line" id="refreshBtn" ${preview?'hidden':''}>새로고침</button></div><section class="stat-grid" aria-label="현재 그룹 평가 현황"><div class="stat"><small>평가 대상</small><strong>${active.length}</strong></div><div class="stat"><small>평가 완료</small><strong>${completed}</strong></div><div class="stat"><small>임시저장</small><strong>${temporary}</strong></div><div class="stat"><small>미평가</small><strong>${pending}</strong></div></section><div class="tabs"><button class="seg ${S.group==='청소년'?'active':''}" data-group="청소년">청소년반</button><button class="seg ${S.group==='성인'?'active':''}" data-group="성인">성인반</button></div><div class="layout"><aside class="panel"><div class="panel-title">평가 대상 <span class="hint">${classes.length}개 반 · ${active.length}명</span></div><p class="hint class-help">반을 열어 학생을 선택하세요. 완료·임시저장·미평가 상태를 표시합니다.</p><div class="student-list">${classMarkup||'<p class="muted">이 그룹에는 평가 대상이 없습니다. 다른 그룹을 선택하거나 R04 명단 연결을 확인해주세요.</p>'}</div></aside><article class="panel">${p?hero(p,gradeTotal(g),'작성 중 · 50점 만점')+navigation+media(p)+rubric(g,editAllowed,p.group)+`<div class="field"><label>강사 한줄평 · 최종 제출 시 필수</label><textarea id="noteInput" maxlength="300" ${inputDisabled?'disabled':''} placeholder="학생의 강점과 개선점을 구체적으로 작성해주세요.">${esc(g.note)}</textarea></div><p class="hint" id="r04SaveHelp">임시저장은 미완료 상태입니다. 최종 제출은 10항목 점수와 한줄평을 모두 입력해야 합니다. 저장 전 입력은 이 화면을 새로고침하면 사라질 수 있습니다.</p><div class="action-row"><button id="draftBtn" class="btn line" ${saveDisabled?'disabled':''}>임시저장</button><button id="submitBtn" class="btn" ${saveDisabled?'disabled':''}>평가 완료 · 저장</button></div>`:'<div class="empty-evaluation"><h2>평가 학생 선택</h2><p>왼쪽에서 반을 펼쳐 평가할 학생을 선택해주세요.</p></div>'}</article></div>`;
+  app.querySelectorAll('[data-group]').forEach(b=>b.onclick=()=>{S.group=b.dataset.group;S.selected=null;render();});
+  app.querySelectorAll('[data-class-toggle]').forEach(b=>b.onclick=()=>{
+    const group=S.group,key=b.dataset.classToggle,currently=S.expandedClasses[group]||[];
+    S.expandedClasses[group]=currently.includes(key)?currently.filter(x=>x!==key):[...currently,key];
+    render();const next=[...app.querySelectorAll('[data-class-toggle]')].find(el=>el.dataset.classToggle===key);if(next)next.focus();
+  });
+  app.querySelectorAll('[data-student]').forEach(b=>b.onclick=()=>{S.selected=b.dataset.student;render();});
+  if($('refreshBtn'))$('refreshBtn').onclick=()=>withBusy($('refreshBtn'),reload);
+  if(!p)return;
+  const jump=idx=>{if(idx<0||idx>=list.length)return;S.selected=participantKey(list[idx]);render();};
+  if($('prevExamStudent'))$('prevExamStudent').onclick=()=>jump(currentIndex-1);
+  if($('nextExamStudent'))$('nextExamStudent').onclick=()=>jump(currentIndex+1);
+  if($('nextPendingExamStudent'))$('nextPendingExamStudent').onclick=()=>{
+    for(let step=1;step<list.length;step++){
+      const idx=(currentIndex+step)%list.length;
+      if(list[idx].participationStatus!=='archived'&&savedState(list[idx])!=='submitted'){jump(idx);return;}
+    }
+  };
+  app.querySelectorAll('[data-score]').forEach(el=>el.onchange=()=>{
+    if(!editAllowed)return;
+    g[el.dataset.score][Number(el.dataset.idx)]=el.value===''?null:Number(el.value);
+    const total=gradeTotal(g);const heroNum=app.querySelector('.score-number');if(heroNum)heroNum.firstChild.textContent=fmt(total)+' ';
+    for(const key of ['na','act']){const cell=app.querySelector(`[data-sum="${key}"]`);if(cell)cell.textContent=fmt(score(g[key]))+' / 25';}
+  });
+  if($('noteInput'))$('noteInput').oninput=e=>{if(editAllowed)g.note=e.target.value;};
+  if($('draftBtn'))$('draftBtn').onclick=()=>saveGrade(p,g,'draft',$('draftBtn'));
+  if($('submitBtn'))$('submitBtn').onclick=()=>saveGrade(p,g,'submitted',$('submitBtn'));
 }
-
 // Only server-issued participation IDs are used for live R04 teacher writes.
 // expectedRevision comes from this authenticated teacher's own grade document.
 async function saveR04TeacherGrade(p,g,status,btn){
@@ -755,7 +1045,7 @@ function studentView(){const mine=S.roster.filter(p=>p.studentUid===S.auth.stude
  app.querySelectorAll('[data-own-class]').forEach(b=>b.onclick=()=>{S.selected=b.dataset.ownClass;S.judgePage=0;render()});
  if($('prevJudge')){$('prevJudge').disabled=S.judgePage===0;$('prevJudge').onclick=()=>{S.judgePage--;render()}}if($('nextJudge')){$('nextJudge').disabled=S.judgePage>=S.judges.length-1;$('nextJudge').onclick=()=>{S.judgePage++;render()}}}
 function render(){badge();if(!S.auth){loginView();return;}if(!preview&&S.role==='student'){renderR04StudentHistory();return;}if(S.role==='admin'&&S.rosterPreviewOnly){renderCanonicalAdminRosterR04();return;}if(S.role==='teacher')teacherView();else if(S.role==='admin')adminView();else studentView();bindSessionPicker();if(preview){app.querySelectorAll('[data-preview-role]').forEach(b=>b.onclick=()=>setPreviewRole(b.dataset.previewRole));const pb=$('togglePreviewPublished');if(pb)pb.onclick=()=>{S.published=!S.published;const meta=S.sessions.find(x=>x.examId===S.examId);if(meta)meta.published=S.published;S.previewData[S.examId]=currentSnapshot();render()}}}
-logoutBtn.onclick=()=>withBusy(logoutBtn,async()=>{const rt=await runtime();await rt.sdk.signOut(rt.auth);S={...S,role:null,auth:null,rt,roster:[],grades:[],judges:[],folders:{},edit:{},examId:'',sessions:[],rosterPreviewOnly:false,rosterDate:'',rosterReview:[],rosterReviewSummary:{},r04SessionState:null,r04StateMutationPending:false,r04ReleasePreview:null,r04ReleasePending:false,r04ReleasePreviewPending:false,r04MediaRoster:[],r04MediaRosterExamId:'',r04MediaRosterState:'',r04MediaResultsReleased:false,r04MediaRosterPending:false,r04MediaSelection:'',r04MediaRecord:null,r04MediaReadPending:false,r04MediaSavePending:false,r04MediaUnsafe:false,r04TeacherReady:false,r04TeacherGradingOpen:false,r04TeacherSavePending:false,r04StudentHistoryRecords:[],r04StudentHistoryReady:false,r04StudentHistoryError:'',r04StudentHistorySelection:'',r04StudentEvaluationPage:0};render()});
+logoutBtn.onclick=()=>withBusy(logoutBtn,async()=>{const rt=await runtime();await rt.sdk.signOut(rt.auth);clearR04PersistedView();S={...S,role:null,auth:null,rt,roster:[],grades:[],judges:[],folders:{},edit:{},examId:'',sessions:[],rosterPreviewOnly:false,rosterDate:'',rosterReview:[],rosterReviewSummary:{},r04SessionState:null,r04StateMutationPending:false,r04ReleasePreview:null,r04ReleasePending:false,r04ReleasePreviewPending:false,r04MediaRoster:[],r04MediaRosterExamId:'',r04MediaRosterState:'',r04MediaResultsReleased:false,r04MediaRosterPending:false,r04MediaSelection:'',r04MediaRecord:null,r04MediaReadPending:false,r04MediaSavePending:false,r04MediaUnsafe:false,r04TeacherReady:false,r04TeacherGradingOpen:false,r04TeacherSavePending:false,r04StudentHistoryRecords:[],r04StudentHistoryReady:false,r04StudentHistoryError:'',r04StudentHistorySelection:'',r04StudentEvaluationPage:0};render()});
 async function start(){if(preview){initPreview();return}render();try{const rt=await runtime();await new Promise(resolve=>{let settled=false;let stop=()=>{};const timer=setTimeout(()=>{if(!settled){settled=true;stop();resolve()}},4500);stop=rt.sdk.onAuthStateChanged(rt.auth,()=>{if(!settled){settled=true;clearTimeout(timer);resolve()}},()=>{if(!settled){settled=true;clearTimeout(timer);resolve()}})});if(rt.auth.currentUser)await bindSession();else loginView()}catch(e){app.innerHTML=`<section class="center-state"><h1>평가 서비스 연결을 확인해주세요.</h1><p>${esc(errorMessage(e))}</p><div class="action-row"><button id="retryBtn" class="btn">다시 시도</button></div></section>`;$('retryBtn').onclick=start}}
 start();
 })();
