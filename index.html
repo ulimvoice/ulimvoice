@@ -16371,17 +16371,28 @@ ${ruleSummary}`, isFallback ? "success" : "success");
         vocalCalendarActivityLogs73551014_ = Array.from(map.values());
     }
 
+    // RUN040: classify only the three practice categories already held by the staff journal.
+    function vocalActivityType040_(log) {
+        const task = String(log && (log.taskType || log.category) || '').trim().toLowerCase();
+        const legacy = String([log && log.recordType, log && log.vocalId].join(' '));
+        if (task === 'past_question' || /기출|past|PAST_/i.test(legacy)) return 'past';
+        if (task === 'standard_pronunciation' || /표준발음|PRON_/i.test(legacy)) return 'pron';
+        return 'vocal';
+    }
+
     function vocalCalendarActivityForDate73551014_(dateKey) {
         const logs = vocalCalendarActivityLogs73551014_.filter(function(log) {
             return practiceDate73551014_(log) === dateKey;
         });
+        const byType = { vocal:0, past:0, pron:0 };
         let pending = 0;
         let evaluated = 0;
         logs.forEach(function(log) {
+            byType[vocalActivityType040_(log)]++;
             if (practiceHasFinal73551014_(log)) evaluated++;
             else pending++;
         });
-        return { total:logs.length, pending:pending, evaluated:evaluated };
+        return { total:logs.length, pending:pending, evaluated:evaluated, byType:byType };
     }
 
     function vocalCalendarActivityKey73551014_(fromKey, instructor, keyword) {
@@ -16620,17 +16631,26 @@ ${ruleSummary}`, isFallback ? "success" : "success");
                     weekRangeActive && !dayActive ? 'week-active' : ''
                 ].filter(Boolean).join(' ');
                 const activity73551014 = vocalCalendarActivityForDate73551014_(key);
-                const activityHtml73551014 = activity73551014.total
-                    ? `<span class="vocal-calendar-activity73551014">${activity73551014.pending ? '<span class="pending">새 ' + activity73551014.pending + '</span>' : ''}${activity73551014.evaluated ? '<span class="evaluated">✓ ' + activity73551014.evaluated + '</span>' : ''}</span>`
-                    : '';
+                // RUN040: badges are typed uploads; a practice day is counted only once per student below.
+                const activityParts040 = [
+                    ['vocal', '발성', 'vocal040'],
+                    ['past', '기출', 'past040'],
+                    ['pron', '발음', 'pron040']
+                ].filter(function(entry) { return activity73551014.byType[entry[0]] > 0; });
+                const activityHtml73551014 = activityParts040.length
+                    ? '<span class="vocal-calendar-activity73551014">' + activityParts040.map(function(entry) {
+                        return '<span class="' + entry[2] + '">' + entry[1] + ' ' + activity73551014.byType[entry[0]] + '</span>';
+                    }).join('') + '</span>' : '';
                 const activityTitle73551014 = activity73551014.total
-                    ? ` · 업로드 ${activity73551014.total}건${activity73551014.pending ? ' · 새 연습 ' + activity73551014.pending + '건' : ''}${activity73551014.evaluated ? ' · 평가완료 ' + activity73551014.evaluated + '건' : ''}`
+                    ? ' · ' + activityParts040.map(function(entry) { return entry[1] + ' ' + activity73551014.byType[entry[0]] + '건'; }).join(' · ')
+                        + (activity73551014.pending ? ' · 평가대기 ' + activity73551014.pending + '건' : '')
+                        + (activity73551014.evaluated ? ' · 평가완료 ' + activity73551014.evaluated + '건' : '')
                     : '';
                 html += `<div class="${classes}" data-vocal-day="${key}" title="${key} 하루 조회${activityTitle73551014}"><span class="vocal-calendar-day-number73551014">${day.getDate()}</span>${activityHtml73551014}</div>`;
             }
         }
 
-        html += `</div><div class="vocal-calendar-range-label" id="adminVocalPracticeRangeLabel">조회 범위: ${ulimAdminEsc_(vocalRangeState.label || '')}</div><div class="vocal-calendar-legend73551014"><span class="pending">새 연습 = 아직 평가하지 않은 업로드</span><span class="evaluated">✓ = 평가완료 업로드</span></div>`;
+        html += `</div><div class="vocal-calendar-range-label" id="adminVocalPracticeRangeLabel">조회 범위: ${ulimAdminEsc_(vocalRangeState.label || '')}</div><div class="vocal-calendar-legend73551014"><span class="vocal040">● 발성훈련</span><span class="past040">● 기출문제</span><span class="pron040">● 발음연습(표준발음)</span><span>표시 숫자는 유형별 업로드 건수</span></div>`;
         box.innerHTML = html;
 
         box.querySelector('[data-vocal-cal-prev]')?.addEventListener('click', function(){
@@ -16710,6 +16730,10 @@ ${ruleSummary}`, isFallback ? "success" : "success");
                 if(characterApi73551015&&typeof characterApi73551015.hydratePracticeRecords==='function')adminVocalPracticeLogs=await characterApi73551015.hydratePracticeRecords(adminVocalPracticeLogs);
             } catch (_characterHydrate73551015) {}
             mergeVocalCalendarActivity73551014_(adminVocalPracticeLogs, false);
+            // RUN040: expose the last *successfully fetched* range to the existing student detail viewer.
+            window.__ULIM_STAFF_PRACTICE_RANGE_040__ = {
+                scope:range.scope, dateFrom:range.dateFrom, dateTo:range.dateTo, label:range.label
+            };
             adminRenderVocalPracticeLogs();
             renderVocalPracticeCalendar_();
             const visibleMonthFrom73551014 = monthFirstKey_(vocalCalendarViewYear, vocalCalendarViewMonth);
@@ -16723,11 +16747,7 @@ ${ruleSummary}`, isFallback ? "success" : "success");
             } else {
                 refreshVocalCalendarActivity73551014_(true).catch(function(){});
             }
-            const summary = document.getElementById('adminVocalPracticeSummary');
-            if (summary) {
-                const studentKeys706 = new Set(adminVocalPracticeLogs.map(function(log){const name=String(log&&log.studentName||'').trim();const identity=String(log&&(log.studentIdentityKey||log.studentUid||log.studentNo||log.phoneLast4)||'').trim();return identity?identity+'|'+name:'NAME|'+name;}));
-                summary.textContent = (range.label || '선택 범위') + ' · 학생 ' + studentKeys706.size + '명 · 업로드 ' + adminVocalPracticeLogs.length + '건';
-            }
+            // RUN040: adminRenderVocalPracticeLogs now owns the practice-day summary.
         } catch (err) {
             if (showOverlay) hideLoading();
             alert(err.message || err);
@@ -17789,7 +17809,37 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
         min-width:92px;
         padding:10px;
     }
-}</style>
+}
+/* RUN040: per-type practice counts and monthly O/X grid. */
+.vocal-calendar-activity73551014 span.vocal040, .ulim-practice-typecount040.vocal040 { background:#dbeafe; color:#1d4ed8; }
+.vocal-calendar-activity73551014 span.past040, .ulim-practice-typecount040.past040 { background:#ffedd5; color:#c2410c; }
+.vocal-calendar-activity73551014 span.pron040, .ulim-practice-typecount040.pron040 { background:#dcfce7; color:#15803d; }
+.vocal-calendar-activity73551014 { flex-wrap:wrap; white-space:normal; }
+.vocal-calendar-activity73551014 span { height:auto; min-height:13px; padding:2px 3px; font-size:9px; }
+.vocal-calendar-legend73551014 .vocal040 { color:#1d4ed8; }
+.vocal-calendar-legend73551014 .past040 { color:#c2410c; }
+.vocal-calendar-legend73551014 .pron040 { color:#15803d; }
+.ulim-practice-typecount040 { display:inline-block; border-radius:999px; padding:3px 7px; margin:3px 4px 0 0; font-size:11px; font-weight:850; }
+.ulim-practice-student-types040 { display:block; margin-top:4px; }
+.ulim-practice-summary-types040 { display:inline-block; margin-left:8px; vertical-align:middle; }
+.ulim-practice-month040 { background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:13px; margin-bottom:13px; }
+.ulim-practice-month-head040 { display:flex; justify-content:space-between; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px; font-size:14px; }
+.ulim-practice-month-head040 span { font-size:12px; color:#475569; font-weight:750; }
+.ulim-practice-month-grid040 { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:4px; }
+.ulim-practice-dow040 { text-align:center; padding:4px 0; font-size:11px; font-weight:850; color:#64748b; }
+.ulim-practice-cell040 { min-width:0; box-sizing:border-box; border:1px solid #e5e7eb; border-radius:9px; min-height:49px; padding:5px 2px; display:flex; align-items:center; flex-direction:column; justify-content:space-between; background:#fff; font-family:inherit; }
+.ulim-practice-cell040 span { color:#64748b; font-size:10px; font-weight:800; }
+.ulim-practice-cell040 b { font-size:21px; line-height:1.1; font-weight:950; }
+button.ulim-practice-cell040 { cursor:pointer; }
+button.ulim-practice-cell040:hover { background:#f8fafc; border-color:#64748b; }
+.ulim-practice-cell040.vocal040 b, .ulim-practice-month-legend040 .vocal040 { color:#2563eb; }
+.ulim-practice-cell040.past040 b, .ulim-practice-month-legend040 .past040 { color:#ea580c; }
+.ulim-practice-cell040.pron040 b, .ulim-practice-month-legend040 .pron040 { color:#16a34a; }
+.ulim-practice-cell040.multi040 b, .ulim-practice-month-legend040 .multi040 { color:#111827; }
+.ulim-practice-cell040.miss040 b, .ulim-practice-month-legend040 .miss040 { color:#94a3b8; }
+.ulim-practice-month-legend040 { margin-top:10px; display:flex; flex-wrap:wrap; gap:5px 12px; font-size:11px; font-weight:850; }
+.ulim-practice-month040 small { display:block; margin-top:9px; color:#64748b; font-size:11px; line-height:1.45; }
+</style>
 
 <script id="ulim-ai-learning-eval-runtime-595">
 (function(){
@@ -18347,6 +18397,95 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
     );
   }
 
+  // RUN040: source is the already-loaded staff practice records. No additional DB reads.
+  function practiceMonth040_() {
+    const range = window.__ULIM_STAFF_PRACTICE_RANGE_040__ || {};
+    const from = String(range.dateFrom || '');
+    return range.scope === 'month' && /^\d{4}-\d{2}-01$/.test(from) ? from.slice(0,7) : '';
+  }
+
+  function practiceDayKey040_(log) {
+    const raw = String(practiceDate706(log) || '').trim();
+    const m = /^(20\d{2})-(\d{2})-(\d{2})$/.exec(raw);
+    if (!m) return '';
+    const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
+    const date = new Date(y,mo - 1,d);
+    return date.getFullYear() === y && date.getMonth() === mo - 1 && date.getDate() === d ? raw : '';
+  }
+
+  function practiceKind040_(log) {
+    const t = taskType(log);
+    return t === 'past_question' ? 'past' : (t === 'standard_pronunciation' ? 'pron' : 'vocal');
+  }
+
+  function practiceCounts040_(logs,monthKey) {
+    const days = new Set();
+    const counts = { vocal:0, past:0, pron:0 };
+    (logs || []).forEach(function(log) {
+      const day = practiceDayKey040_(log);
+      if (monthKey && (!day || day.slice(0,7) !== monthKey)) return;
+      counts[practiceKind040_(log)]++;
+      if (day) days.add(day);
+    });
+    return { days:days.size, vocal:counts.vocal, past:counts.past, pron:counts.pron, total:counts.vocal+counts.past+counts.pron };
+  }
+
+  function practiceTypeBadges040_(totals) {
+    return [
+      ['vocal','발성훈련','vocal040'],
+      ['past','기출문제','past040'],
+      ['pron','발음연습','pron040']
+    ].filter(function(entry){ return totals[entry[0]] > 0; }).map(function(entry){
+      return '<span class="ulim-practice-typecount040 ' + entry[2] + '">' + entry[1] + ' ' + totals[entry[0]] + '건</span>';
+    }).join('');
+  }
+
+  function renderPracticeMonthCalendar040_(group,monthKey) {
+    if (!/^20\d{2}-\d{2}$/.test(monthKey)) return '';
+    const parts = monthKey.split('-');
+    const year = Number(parts[0]), month = Number(parts[1]);
+    if (month < 1 || month > 12) return '';
+    const totalDays = new Date(year,month,0).getDate();
+    const offset = (new Date(year,month-1,1).getDay()+6)%7; // Monday-first
+    const byDay = new Map();
+    group.records.forEach(function(item){
+      const day = practiceDayKey040_(item.log);
+      if (!day || day.slice(0,7) !== monthKey) return;
+      if (!byDay.has(day)) byDay.set(day,{types:new Set(), counts:{vocal:0,past:0,pron:0}});
+      const state = byDay.get(day);
+      const kind = practiceKind040_(item.log);
+      state.types.add(kind);
+      state.counts[kind]++;
+    });
+    const labels = ['월','화','수','목','금','토','일'];
+    const header = labels.map(function(day){return '<div class="ulim-practice-dow040">'+day+'</div>';}).join('');
+    const spaces = Array(offset).fill('<div class="ulim-practice-empty040" aria-hidden="true"></div>').join('');
+    let cells = '';
+    for(let day=1;day<=totalDays;day++){
+      const key = monthKey + '-' + String(day).padStart(2,'0');
+      const entry = byDay.get(key);
+      const kinds = entry ? Array.from(entry.types) : [];
+      const color = !kinds.length ? 'miss040' : (kinds.length > 1 ? 'multi040' : kinds[0] + '040');
+      const symbol = kinds.length ? 'O' : 'X';
+      const note = !entry ? '연습 없음' : [
+        entry.counts.vocal && '발성훈련 '+entry.counts.vocal+'건',
+        entry.counts.past && '기출문제 '+entry.counts.past+'건',
+        entry.counts.pron && '발음연습 '+entry.counts.pron+'건'
+      ].filter(Boolean).join(', ');
+      const label = key+' '+note;
+      cells += kinds.length
+        ? '<button type="button" class="ulim-practice-cell040 '+color+'" data-practice-day040="'+key+'" title="'+esc(label)+'" aria-label="'+esc(label)+'" onclick="ulimOpenPracticeMonthDay040(this.dataset.practiceDay040)"><span>'+day+'</span><b>O</b></button>'
+        : '<div class="ulim-practice-cell040 '+color+'" title="'+esc(label)+'" aria-label="'+esc(label)+'"><span>'+day+'</span><b>X</b></div>';
+    }
+    const stat = practiceCounts040_(group.records.map(function(item){return item.log;}),monthKey);
+    return '<section class="ulim-practice-month040" aria-label="월간 연습 달력">'
+      +'<div class="ulim-practice-month-head040"><strong>'+year+'년 '+month+'월 연습 현황</strong><span>연습 '+stat.days+'일 / '+totalDays+'일</span></div>'
+      +'<div class="ulim-practice-month-grid040">'+header+spaces+cells+'</div>'
+      +'<div class="ulim-practice-month-legend040"><span class="vocal040">● 발성훈련 O</span><span class="past040">● 기출문제 O</span><span class="pron040">● 발음연습 O</span><span class="multi040">● 복합 연습 O</span><span class="miss040">X 연습 없음</span></div>'
+      +'<small>같은 날 여러 번 업로드해도 연습일은 1일입니다. O를 누르면 해당 날짜의 연습기록으로 이동합니다.</small>'
+      +'</section>';
+  }
+
   function buildPracticeStudentGroups706(logs) {
     const map = new Map();
 
@@ -18488,14 +18627,17 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
     const bodyEl = document.getElementById('ulimPracticeModalBody706');
 
     if (nameEl) nameEl.textContent = studentName;
+    const monthKey040 = practiceMonth040_();
+    const totals040 = practiceCounts040_(group.records.map(function(item){return item.log;}), monthKey040);
     if (subEl) {
-      subEl.textContent = group.records.length > 1
-        ? `업로드 ${group.records.length}건 · 날짜별 카드 넘김`
-        : '업로드 1건';
+      const kinds040 = [['발성훈련',totals040.vocal],['기출문제',totals040.past],['발음연습',totals040.pron]]
+        .filter(function(part){return part[1]>0;}).map(function(part){return part[0]+' '+part[1]+'건';});
+      subEl.textContent = (monthKey040 ? '연습 '+totals040.days+'일 · ' : '') + kinds040.join(' · ');
     }
 
     if (bodyEl) {
       bodyEl.innerHTML = `
+        ${monthKey040 ? renderPracticeMonthCalendar040_(group,monthKey040) : ''}
         ${characterHtml73551015}
         <div class="ulim-practice-record-meta706">
           <div class="ulim-practice-record-meta-item706">
@@ -18558,6 +18700,14 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
 
   window.ulimOpenPracticeViewer706 = function(groupKey) {
     renderPracticeViewer706(String(groupKey || ''),0,'');
+  };
+
+  // RUN040: clicking a monthly O opens an existing record on that day; X is not clickable.
+  window.ulimOpenPracticeMonthDay040 = function(dayKey) {
+    const group = findPracticeViewerGroup706(practiceViewerGroupKey706);
+    if (!group) return;
+    const position = group.records.findIndex(function(item){return practiceDayKey040_(item.log) === String(dayKey || '');});
+    if (position >= 0) renderPracticeViewer706(group.key,position,'');
   };
 
   window.ulimOpenPracticeRecordById706 = function(recordId) {
@@ -18638,9 +18788,10 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
     const summary=document.getElementById('adminVocalPracticeSummary');
     if(!list)return;
 
+    const monthKey040 = practiceMonth040_();
     if(!adminVocalPracticeLogs.length){
       practiceStudentGroups706=[];
-      if(summary)summary.textContent='연습기록 0건';
+      if(summary) summary.textContent=(monthKey040 ? monthKey040+' · ' : '')+'연습학생 0명 · 연습 0일';
       list.innerHTML='<div class="admin-message-preview">조회된 연습기록이 없습니다.</div>';
       window.ulimClosePracticeViewer706();
       return;
@@ -18649,20 +18800,27 @@ body.ulim-practice-modal-open706 { overflow:hidden !important; }
     adminVocalPracticeLogs=adminVocalPracticeLogs.map(mergeDraft);
     practiceStudentGroups706=buildPracticeStudentGroups706(adminVocalPracticeLogs);
 
+    const globalTotals040 = practiceCounts040_(adminVocalPracticeLogs,monthKey040);
+    const sumStudentDays040 = practiceStudentGroups706.reduce(function(sum,group){
+      return sum+practiceCounts040_(group.records.map(function(item){return item.log;}),monthKey040).days;
+    },0);
     if(summary){
-      summary.textContent=`학생 ${practiceStudentGroups706.length}명 · 업로드 ${adminVocalPracticeLogs.length}건`;
+      const period = monthKey040 ? monthKey040+' · ' : '';
+      summary.innerHTML='<strong>'+period+'연습학생 '+practiceStudentGroups706.length+'명 · 학생별 연습일 합계 '+sumStudentDays040+'일</strong>'
+        + '<span class="ulim-practice-summary-types040">'+practiceTypeBadges040_(globalTotals040)+'</span>';
     }
 
     list.innerHTML=`
       <div class="ulim-practice-student-grid706">
         ${practiceStudentGroups706.map(function(group){
           const stateClass = group.pendingCount > 0 ? 'has-pending' : (group.hasEvaluation ? 'all-evaluated' : '');
-          const stateText = group.pendingCount > 0 ? '새 연습 ' + group.pendingCount + '건' : (group.hasEvaluation ? '평가완료' : '연습기록');
-          const stateDetail = (group.latestDate ? group.latestDate.slice(5).replace('-', '/') + ' · ' : '') + '업로드 ' + group.records.length + '건';
+          const totals = practiceCounts040_(group.records.map(function(item){return item.log;}),monthKey040);
+          const stateText = monthKey040 ? '연습 '+totals.days+'일' : (group.pendingCount > 0 ? '평가대기 '+group.pendingCount+'건' : '평가완료');
+          const lastDate = group.latestDate ? group.latestDate.slice(5).replace('-', '/')+' · ' : '';
           return `<button type="button"
                           class="ulim-practice-student-btn706 ${stateClass}"
                           data-practice-student-key706="${esc(group.key)}"
-                          onclick="ulimOpenPracticeViewer706(this.dataset.practiceStudentKey706)"><span class="ulim-practice-student-name73551014">${esc(group.name)}</span><span class="ulim-practice-student-state73551014 ${group.pendingCount > 0 ? 'pending' : 'evaluated'}">${esc(stateText)}</span><span class="ulim-practice-student-meta73551014">${esc(stateDetail)}</span></button>`;
+                          onclick="ulimOpenPracticeViewer706(this.dataset.practiceStudentKey706)"><span class="ulim-practice-student-name73551014">${esc(group.name)}</span><span class="ulim-practice-student-state73551014 ${group.pendingCount > 0 ? 'pending' : 'evaluated'}">${esc(stateText)}</span><span class="ulim-practice-student-types040">${practiceTypeBadges040_(totals)}</span><span class="ulim-practice-student-meta73551014">${esc(lastDate + (group.pendingCount ? '평가대기 '+group.pendingCount+'건' : '평가완료'))}</span></button>`;
         }).join('')}
       </div>
     `;
