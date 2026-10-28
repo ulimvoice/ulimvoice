@@ -2767,6 +2767,7 @@ body.ulim-attendance-modal-open73545{overflow:hidden}
                 <label for="adminClassroomUsageInstructor">배정 강사</label>
                 <!-- RUN036: 선택 전용 강사 드롭다운. 기존 관리자/강사 데이터 API 재사용. -->
                 <select id="adminClassroomUsageInstructor" aria-label="배정 강사 선택"><option value="">강사 선택</option></select>
+                <small id="adminClassroomStaffDirectoryStatus037" aria-live="polite" style="display:block;font-size:11px;margin-top:4px;color:#64748b;"></small>
               </div>
               <div class="admin-field">
                 <label for="adminClassroomUsageStart">시작</label>
@@ -6249,6 +6250,20 @@ async function adminApi(action, params = {}) {
         const records=await room.readClassroomRecords(date);
         if(typeof room.subscribeClassroom==='function')Promise.resolve(room.subscribeClassroom(date)).catch(function(){});
         return {status:'success',records:Array.isArray(records)?records:[],source:'operational'};
+    }
+    // RUN037: exact same read-only staff-directory callable as Staff Account Admin (no syncing, no writes).
+    if(name==='adminGetClassroomStaffDirectory037'){
+        const data = await call('listStaffAccountsAdmin', {});
+        if (!data || !Array.isArray(data.accounts)) throw new Error('교직원 계정 목록 응답이 올바르지 않습니다.');
+        const names = new Set();
+        for (const account of data.accounts) {
+            if (!account || account.active !== true) continue;
+            const role = String(account.role || '').trim().toLowerCase();
+            if (!['teacher', 'admin', 'superadmin'].includes(role)) continue;
+            const name = String(account.name || account.displayName || account.teacherName || account.adminName || '').trim();
+            if (name) names.add(name);
+        }
+        return {status:'success',instructors:Array.from(names).sort((a,b)=>a.localeCompare(b,'ko')),source:'staff-accounts-active'};
     }
     if(name==='adminGetClassroomUsageOptions'){
         const rooms=['2강의실','3강의실','녹음실','4강의실','5강의실','신체훈련실'];
@@ -12625,6 +12640,7 @@ async function adminSaveAttendanceRecords_(records, silent = false) {
 
 let ADMIN_CLASSROOM_USAGE_ROOMS = ["2강의실", "3강의실", "녹음실", "4강의실", "5강의실", "신체훈련실"];
 let ADMIN_CLASSROOM_USAGE_INSTRUCTORS = [];
+let adminClassroomStaffDirectoryState037 = 'unloaded';
 let adminClassroomUsageOptionsLoadedDate = '';
 
 var adminClassroomUsageRows = [];
@@ -12749,23 +12765,48 @@ function adminRenderClassroomUsageOptionControls_() {
         else if (mine && !adminIsFullAdmin() && names.includes(mine)) instructorEl.value = mine;
         else instructorEl.value = '';
     }
+    const directoryStatusEl = document.getElementById('adminClassroomStaffDirectoryStatus037');
+    if (directoryStatusEl) {
+        if (adminIsFullAdmin() && adminClassroomStaffDirectoryState037 === 'loaded') {
+            directoryStatusEl.textContent = '교직원 관리에 등록된 활성 교직원 ' + ADMIN_CLASSROOM_USAGE_INSTRUCTORS.length + '명';
+            directoryStatusEl.style.color = '#64748b';
+        } else if (adminIsFullAdmin() && adminClassroomStaffDirectoryState037 === 'error') {
+            directoryStatusEl.textContent = '교직원 전체 명단 조회 실패: 현재 일부 강사만 표시됩니다. 새로고침 후 다시 확인해주세요.';
+            directoryStatusEl.style.color = '#b45309';
+        } else directoryStatusEl.textContent = '';
+    }
 }
 
 async function adminLoadClassroomUsageOptions(force = false) {
     await adminEnsureClassroomRuntime_();
     const date = adminClassroomUsageDate_();
-    if (!force && adminClassroomUsageOptionsLoadedDate === date && ADMIN_CLASSROOM_USAGE_INSTRUCTORS.length && ADMIN_CLASSROOM_USAGE_ROOMS.length) return;
+    if (!force && adminClassroomUsageOptionsLoadedDate === date && ADMIN_CLASSROOM_USAGE_ROOMS.length &&
+        (!adminIsFullAdmin() ? ADMIN_CLASSROOM_USAGE_INSTRUCTORS.length : adminClassroomStaffDirectoryState037 === 'loaded')) return;
 
+    // The classroom API supplies room choices. Its teacher list is derived from currently listed classes,
+    // so it is NOT the authority for all registered staff accounts.
     try {
         const data = await adminApi('adminGetClassroomUsageOptions', { date, noCache: 1 });
         if (Array.isArray(data.rooms) && data.rooms.length) ADMIN_CLASSROOM_USAGE_ROOMS = data.rooms;
-        if (Array.isArray(data.instructors)) ADMIN_CLASSROOM_USAGE_INSTRUCTORS = data.instructors;
-        adminClassroomUsageOptionsLoadedDate = date;
-        adminRenderClassroomUsageOptionControls_();
+        if (Array.isArray(data.instructors)) ADMIN_CLASSROOM_USAGE_INSTRUCTORS = data.instructors; // fallback only; canonical staff list replaces this for admins
     } catch (e) {
-        if (!(e && e.silent)) void ('[adminLoadClassroomUsageOptions] failed:', e);
-        adminRenderClassroomUsageOptionControls_();
+        if (!(e && e.silent)) void ('[adminLoadClassroomUsageOptions] classroom options failed:', e);
     }
+
+    if (adminIsFullAdmin()) {
+        try {
+            // Read-only canonical source also used by the registered-staff management panel.
+            const staff = await adminApi('adminGetClassroomStaffDirectory037', {});
+            if (!staff || staff.status !== 'success' || !Array.isArray(staff.instructors)) throw new Error('교직원 목록 응답 오류');
+            ADMIN_CLASSROOM_USAGE_INSTRUCTORS = staff.instructors;
+            adminClassroomStaffDirectoryState037 = 'loaded';
+        } catch (e) {
+            adminClassroomStaffDirectoryState037 = 'error';
+            // Do not silently describe a partial class-derived list as all registered instructors.
+        }
+    }
+    adminClassroomUsageOptionsLoadedDate = date;
+    adminRenderClassroomUsageOptionControls_();
 }
 
 function adminInitClassroomUsagePanel() {
