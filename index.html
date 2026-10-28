@@ -2438,7 +2438,7 @@ body.ulim-attendance-modal-open73545{overflow:hidden}
       <div class="room-status-row">
         <span class="room-status-chip">가능: 예약 가능</span>
         <span class="room-status-chip">이미 예약됨: 다른 사람 예약</span>
-        <span class="room-status-chip">내 예약: 내가 예약한 시간</span>
+        <span class="room-status-chip">예약확인중: 내 신청 대기 / 예약완료: 관리자 확정</span>
         <span class="room-status-chip">수업중: 예약 불가</span>
       </div>
 
@@ -9679,17 +9679,19 @@ function renderRoomTimeTable(dateObj) {
                 const isMine = reservation.mine === true;
 
                 const statusText = normalizeStatusForMatch(reservation.status);
+                // RUN034: status label only. Never change reservation ownership, click or cancellation behavior.
                 const displayText = statusText === "관리자차단" ? "사용불가" :
                                     statusText === "사용완료" ? "사용완료" :
                                     statusText === "수업중" ? "수업중" :
-                                    isMine ? "내 예약" : "이미 예약됨";
+                                    isMine && (statusText === "예약확정" || statusText === "변경확정") ? "예약완료" :
+                                    isMine ? "예약확인중" : "이미 예약됨";
 
                 const canCancel = isMine && reservation.id && !reservation.pending;
 
                 html += `
                     <td class="room-slot reserved ${isMine ? "mine" : ""}"
                         ${canCancel ? `data-cancel-id="${reservation.id}"` : ""}
-                        title="${canCancel ? "내 예약 - 클릭하면 취소" : (isMine ? "내 예약 - 최신 정보 반영 중" : displayText)}">
+                        title="${canCancel ? displayText + " - 클릭하면 취소" : (isMine ? displayText + " - 최신 정보 반영 중" : displayText)}">
                         ${isMine && reservation.pending ? "예약 반영중" : displayText}
                     </td>
                 `;
@@ -12540,6 +12542,55 @@ async function adminEnsureClassroomRuntime_() {
     return { owner, rt };
 }
 
+
+/* RUN034 UI ONLY: confirmed student reservations in staff classroom table.
+ * No room/student/admin fetch or decision owner is replaced.
+ * Read failure never changes an existing classroom record or student/admin page. */
+const ULIM_RUN034_COMMON_ROOMS = new Set(['2강의실','3강의실','4강의실','5강의실','신체훈련실']);
+const ulimRun034Overlay = { date:'', loaded:false, rows:[], seq:0, error:'' };
+function ulimRun034ReservationAt(date, room, hour) {
+    const state = ulimRun034Overlay;
+    if (!state.loaded || state.date !== date) return null;
+    const normalizedRoom = String(room || '').replace(/\s+/g,'');
+    if (!ULIM_RUN034_COMMON_ROOMS.has(normalizedRoom)) return null;
+    const slot = Number(hour);
+    return state.rows.find(row => {
+        if (!row || String(row.date || '') !== date || String(row.room || '').replace(/\s+/g,'') !== normalizedRoom) return false;
+        const status = String(row.status || '').normalize('NFKC').replace(/\s+/g,'');
+        if (status !== '예약확정' && status !== '변경확정') return false;
+        const start = Number(row.startHour);
+        const end = Number(row.endHour);
+        return Number.isInteger(start) && start <= slot && slot < (Number.isInteger(end) ? end : start + 1);
+    }) || null;
+}
+async function ulimRun034RefreshConfirmed(date) {
+    date = String(date || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+    const seq = ++ulimRun034Overlay.seq;
+    ulimRun034Overlay.date = date;
+    ulimRun034Overlay.loaded = false;
+    ulimRun034Overlay.rows = [];
+    ulimRun034Overlay.error = '';
+    try {
+        const api = window.__ULIM_PRACTICE_ROOM_FIRESTORE_PRIMARY_7355033__;
+        if (!api || typeof api.getMonth !== 'function') throw Error('예약 조회 모듈 없음');
+        const data = await api.getMonth(Number(date.slice(0,4)), Number(date.slice(5,7)));
+        if (!data || data.status !== 'success' || !Array.isArray(data.reservations)) throw Error('예약 조회 실패');
+        if (seq !== ulimRun034Overlay.seq || adminClassroomUsageDate_() !== date) return;
+        ulimRun034Overlay.rows = data.reservations.filter(row => row && String(row.date || '') === date);
+        ulimRun034Overlay.loaded = true;
+    } catch (_e) {
+        if (seq !== ulimRun034Overlay.seq || adminClassroomUsageDate_() !== date) return;
+        ulimRun034Overlay.error = '학생 예약 현황 조회 실패 · 새로고침으로 다시 확인';
+    }
+    if (seq !== ulimRun034Overlay.seq || adminClassroomUsageDate_() !== date) return;
+    try { adminRenderClassroomUsageTable(); } catch (_e2) {}
+    if (ulimRun034Overlay.error) {
+        const summary = document.getElementById('adminClassroomUsageSummary');
+        if (summary) summary.textContent = (summary.textContent || date) + ' · ' + ulimRun034Overlay.error;
+    }
+}
+
 async function adminClassroomUsageDateChanged718_() {
     await adminLoadClassroomUsage(true);
 }
@@ -12642,6 +12693,8 @@ async function adminLoadClassroomUsage(showOverlay = true) {
         adminClassroomUsageLoadedDate = date;
         adminRenderClassroomUsageTable();
         if (summary) summary.textContent = `${date} 사용중 ${adminClassroomUsageRows.length}건`;
+        // RUN034: nonblocking overlay fetch AFTER the original table and summary have rendered.
+        void ulimRun034RefreshConfirmed(date);
         return data;
     } catch (e) {
         if (summary) summary.textContent = '강의실 현황을 불러오지 못했습니다.';
@@ -12782,6 +12835,18 @@ function adminRenderClassroomUsageTable() {
                 return;
             }
 
+
+            // RUN034: render only confirmed/changed student reservations, no synthetic editable row.
+            const ulimRun034Booking = ulimRun034ReservationAt(date, room, hour);
+            if (ulimRun034Booking) {
+                tableHtml += '<td class="classroom-usage-cell-used" style="background:#fff0cf;color:#805009;text-align:center;">' +
+                    '<div class="ulim-classroom-card-instructor-729">연습실 예약</div>' +
+                    '<div class="ulim-classroom-card-purpose-729">사용중</div>' +
+                    '<div class="ulim-classroom-card-time-729">' +
+                    adminFormatClassroomHour_(hour) + '~' + adminFormatClassroomHour_(hour + 1) +
+                    '</div></td>';
+                return;
+            }
             const saving =
                 typeof window.ulimIsClassroomSlotSaving729_ === 'function' &&
                 window.ulimIsClassroomSlotSaving729_(date, room, hour);
