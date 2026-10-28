@@ -12734,7 +12734,22 @@ function adminRenderClassroomUsageOptionControls_() {
     // RUN036: names come from the existing classroom options API; no parallel directory.
     const instructorEl = document.getElementById('adminClassroomUsageInstructor');
     if (instructorEl) {
-        const previous = String(instructorEl.value || '').trim();
+        // RUN039: hide incomplete staff choices during first full-admin directory load.
+        if (adminIsFullAdmin() && adminClassroomStaffDirectoryState037 !== 'loaded' && adminClassroomStaffDirectoryState037 !== 'error') {
+            const pendingName = String(instructorEl.value || '').trim();
+            if (pendingName) instructorEl.dataset.pendingInstructor039 = pendingName;
+            if (instructorEl.options.length !== 1 || instructorEl.options[0].textContent !== '강사 목록 불러오는 중...') {
+                const loadingOption = document.createElement('option');
+                loadingOption.value = '';
+                loadingOption.textContent = '강사 목록 불러오는 중...';
+                instructorEl.replaceChildren(loadingOption);
+            }
+            instructorEl.value = '';
+            instructorEl.disabled = true;
+        } else {
+            instructorEl.disabled = false;
+            const previous = String(instructorEl.value || instructorEl.dataset.pendingInstructor039 || '').trim();
+            delete instructorEl.dataset.pendingInstructor039;
         const mine = String((adminInfo && (adminInfo.name || adminInfo.id)) || '').trim();
         const rawNames = [
             ...(Array.isArray(ADMIN_CLASSROOM_USAGE_INSTRUCTORS) ? ADMIN_CLASSROOM_USAGE_INSTRUCTORS : []),
@@ -12764,6 +12779,7 @@ function adminRenderClassroomUsageOptionControls_() {
         if (previous) instructorEl.value = previous;
         else if (mine && !adminIsFullAdmin() && names.includes(mine)) instructorEl.value = mine;
         else instructorEl.value = '';
+        }
     }
     // RUN038: keep routine staff counts out of the grid; show only errors below it.
     const directoryStatusEl = document.getElementById('adminClassroomStaffDirectoryStatus037');
@@ -20252,6 +20268,7 @@ body {
       if (typeof adminClassroomUsageRows !== 'undefined') adminClassroomUsageRows = [];
       if (typeof adminClassroomUsageOptionsLoadedDate !== 'undefined') adminClassroomUsageOptionsLoadedDate = '';
       if (typeof ADMIN_CLASSROOM_USAGE_INSTRUCTORS !== 'undefined') ADMIN_CLASSROOM_USAGE_INSTRUCTORS = [];
+      if (typeof adminClassroomStaffDirectoryState037 !== 'undefined') adminClassroomStaffDirectoryState037 = 'unloaded';
       if (typeof adminStudentsLoaded !== 'undefined') adminStudentsLoaded = false;
       if (typeof adminDailyEvalTemplateLoaded !== 'undefined') adminDailyEvalTemplateLoaded = false;
       if (typeof adminClassListLoadedKey !== 'undefined') adminClassListLoadedKey = '';
