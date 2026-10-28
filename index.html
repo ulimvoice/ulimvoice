@@ -2765,8 +2765,8 @@ body.ulim-attendance-modal-open73545{overflow:hidden}
               </div>
               <div class="admin-field">
                 <label for="adminClassroomUsageInstructor">배정 강사</label>
-                <input type="text" id="adminClassroomUsageInstructor" list="adminClassroomUsageInstructorList" placeholder="예: 이용우 / 김하은 / 상담">
-                <datalist id="adminClassroomUsageInstructorList"></datalist>
+                <!-- RUN036: 선택 전용 강사 드롭다운. 기존 관리자/강사 데이터 API 재사용. -->
+                <select id="adminClassroomUsageInstructor" aria-label="배정 강사 선택"><option value="">강사 선택</option></select>
               </div>
               <div class="admin-field">
                 <label for="adminClassroomUsageStart">시작</label>
@@ -12715,13 +12715,39 @@ function adminRenderClassroomUsageOptionControls_() {
         if (current && (ADMIN_CLASSROOM_USAGE_ROOMS || []).includes(current)) roomEl.value = current;
     }
 
-    const instructorListEl = document.getElementById('adminClassroomUsageInstructorList');
-    if (instructorListEl) {
-        const names = Array.from(new Set([
-            ...(ADMIN_CLASSROOM_USAGE_INSTRUCTORS || []),
-            (adminInfo && (adminInfo.name || adminInfo.id)) || ''
-        ].filter(Boolean)));
-        instructorListEl.innerHTML = names.map(n => `<option value="${escapeHtml(n)}"></option>`).join('');
+    // RUN036: names come from the existing classroom options API; no parallel directory.
+    const instructorEl = document.getElementById('adminClassroomUsageInstructor');
+    if (instructorEl) {
+        const previous = String(instructorEl.value || '').trim();
+        const mine = String((adminInfo && (adminInfo.name || adminInfo.id)) || '').trim();
+        const rawNames = [
+            ...(Array.isArray(ADMIN_CLASSROOM_USAGE_INSTRUCTORS) ? ADMIN_CLASSROOM_USAGE_INSTRUCTORS : []),
+            mine,
+            '상담' // Existing non-classroom use case was allowed in the prior text placeholder.
+        ];
+        const names = [];
+        const seen = new Set();
+        rawNames.forEach(raw => {
+            const name = String(raw || '').trim();
+            if (name && !seen.has(name)) { seen.add(name); names.push(name); }
+        });
+        // Preserve a selected instructor on refresh, including legacy staff not in current API.
+        if (previous && !seen.has(previous)) names.push(previous);
+        const fragment = document.createDocumentFragment();
+        const empty = document.createElement('option');
+        empty.value = '';
+        empty.textContent = '강사 선택';
+        fragment.appendChild(empty);
+        names.forEach(name => {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            fragment.appendChild(option);
+        });
+        instructorEl.replaceChildren(fragment);
+        if (previous) instructorEl.value = previous;
+        else if (mine && !adminIsFullAdmin() && names.includes(mine)) instructorEl.value = mine;
+        else instructorEl.value = '';
     }
 }
 
@@ -12983,7 +13009,17 @@ function adminSelectClassroomUsageRecord(recordId) {
     if (roomEl) roomEl.value = used.room || '';
     if (startEl) startEl.value = String(used.startHour || 10);
     if (endEl) endEl.value = String(used.endHour || (Number(used.startHour || 10) + 1));
-    if (instructorEl) instructorEl.value = used.instructor || '';
+    if (instructorEl) {
+        const existingInstructor = String(used.instructor || '').trim();
+        if (existingInstructor && !Array.from(instructorEl.options).some(opt => opt.value === existingInstructor)) {
+            // RUN036: historical instructors must remain editable, never silently erased.
+            const legacyOption = document.createElement('option');
+            legacyOption.value = existingInstructor;
+            legacyOption.textContent = existingInstructor + ' (기존 기록)';
+            instructorEl.appendChild(legacyOption);
+        }
+        instructorEl.value = existingInstructor;
+    }
     if (classEl) classEl.value = used.className || used.purpose || '';
     if (memoEl) memoEl.value = used.memo || '';
     const summary = document.getElementById('adminClassroomUsageSummary');
