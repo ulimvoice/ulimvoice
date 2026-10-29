@@ -1049,12 +1049,15 @@ function validateR04StudentHistory(out){
     throw Error('학생 평가 기록의 형식을 확인할 수 없습니다.');
  const expected=['examId','examDate','round','participationId','classId','group',
    'participationStatus','sessionState','resultsReleased','evaluations'];
+ const optionalMedia='media';
  const gradeFields=['evaluatorLabel','na','act','note','total'];
  const ids=new Set();
  const validPoints=v=>typeof v==='number'&&Number.isFinite(v)&&v>=0&&v<=5&&Number.isInteger(v*2);
  const rows=[];
  for(const raw of out.records){
-  if(!raw||typeof raw!=='object'||Array.isArray(raw)||Object.keys(raw).length!==expected.length||
+  if(!raw||typeof raw!=='object'||Array.isArray(raw)||
+    Object.keys(raw).length!==expected.length+(Object.prototype.hasOwnProperty.call(raw,optionalMedia)?1:0)||
+    Object.keys(raw).some(k=>!expected.includes(k)&&k!==optionalMedia)||
     expected.some(k=>!Object.prototype.hasOwnProperty.call(raw,k))||
     !/^r04_20\d{4}_r0[1-9]$/u.test(raw.examId)||
     typeof raw.examDate!=='string'||!/^20\d{2}-\d{2}-\d{2}$/u.test(raw.examDate)||
@@ -1069,6 +1072,17 @@ function validateR04StudentHistory(out){
     (!raw.resultsReleased&&raw.evaluations.length!==0))
       throw Error('학생 평가 참가 기록의 무결성을 확인할 수 없습니다.');
   ids.add(raw.participationId);
+  let media={audioUrl:'',videoUrl:''};
+  if(Object.prototype.hasOwnProperty.call(raw,optionalMedia)){
+   const m=raw.media;
+   if(!m||typeof m!=='object'||Array.isArray(m)||Object.keys(m).length!==2||
+     !Object.prototype.hasOwnProperty.call(m,'audioUrl')||
+     !Object.prototype.hasOwnProperty.call(m,'videoUrl')||
+     !validR04MediaUrl(m.audioUrl)||!validR04MediaUrl(m.videoUrl)||
+     (raw.participationStatus==='archived'&&(m.audioUrl||m.videoUrl)))
+      throw Error('학생 미디어 자료의 형식을 확인할 수 없습니다.');
+   media={audioUrl:m.audioUrl,videoUrl:m.videoUrl};
+  }
   const evaluations=[];
   for(let i=0;i<raw.evaluations.length;i++){
    const g=raw.evaluations[i];
@@ -1086,7 +1100,7 @@ function validateR04StudentHistory(out){
   rows.push({examId:raw.examId,examDate:raw.examDate,round:raw.round,
     participationId:raw.participationId,classId:raw.classId,group:raw.group,
     participationStatus:raw.participationStatus,sessionState:raw.sessionState,
-    resultsReleased:raw.resultsReleased,evaluations});
+    resultsReleased:raw.resultsReleased,media,evaluations});
  }
  return rows;
 }
@@ -1151,6 +1165,11 @@ function renderR04StudentHistory(){
  const isReleased=selected.resultsReleased===true&&closed&&!archived;
  const statusLabel=archived?'이전 수강 기록':!isReleased?'결과 공개 대기':summary?'결과 공개됨':'공개된 평가 없음';
  const status=`<section class="panel"><div class="flex"><strong>${esc(selected.examDate)} · ${selected.round}회차 · ${esc(selected.group)} · 수강반 ${classIndex+1}</strong><span class="chip ${summary?'ok':'wait'}">${statusLabel}</span></div><p class="hint top-gap">수강반마다 별도 평가 기록으로 관리합니다. 학생과 평가위원의 개인 식별정보는 이 화면에 표시되지 않습니다.</p></section>`;
+ // RUN308: Students may access only their own saved media before grades are released.
+ // The existing score/comment release conditions remain unchanged.
+ const ownMedia=selected.media||{audioUrl:'',videoUrl:''};
+ const audio=driveLink(ownMedia.audioUrl),video=driveLink(ownMedia.videoUrl);
+ const mediaPanel=selected.participationStatus==='active'?`<section class="panel"><h2 class="panel-title">내 음성·영상</h2><div class="media-links">${audio?`<a target="_blank" rel="noopener noreferrer" href="${esc(audio)}">▶ 내 음성 녹음 열기</a>`:'<span>음성 링크 미등록</span>'}${video?`<a target="_blank" rel="noopener noreferrer" href="${esc(video)}">▶ 내 영상 열기</a>`:'<span>영상 링크 미등록</span>'}</div><p class="hint">녹음 자료는 본인의 해당 수강반 참가 기록에 저장된 링크만 표시됩니다. 평가 점수와 한줄평 공개는 별도로 관리됩니다.</p></section>`:'';
  let body='';
  if(archived){
   body='<section class="panel"><h2>이전 수강 기록</h2><p class="muted">보관된 참가 기록은 열람할 수 있으나 점수와 평가 내용은 표시되지 않습니다.</p></section>';
@@ -1167,7 +1186,7 @@ function renderR04StudentHistory(){
   const cards=`<div class="stat-grid"><div class="stat"><small>전체 평균 · 50점 만점</small><strong>${fmt(summary.total)}</strong></div><div class="stat"><small>NA 평균 · 25점 만점</small><strong>${fmt(summary.na)}</strong></div><div class="stat"><small>독백 평균 · 25점 만점</small><strong>${fmt(summary.act)}</strong></div><div class="stat"><small>제출된 평가표</small><strong>${summary.count}건</strong></div></div>`;
   body=`<section class="panel"><h2 class="panel-title">평가 결과 요약</h2>${cards}<p class="hint">최종 제출된 평가표만 평균에 포함합니다. NA·독백 각 25점, 전체 50점 만점입니다.</p></section><section class="panel"><div class="heading-row"><div><h2>${esc(grade.evaluatorLabel)} 평가표</h2><p class="muted">${page+1} / ${vals.length} · 평가위원 실명 비공개</p></div><strong>${fmt(grade.total)} / 50점</strong></div>${section('NA · 나레이션','na')}${section('독백 · 연기','act')}<div class="field"><label>평가위원 한줄평</label><div class="note">${esc(grade.note)}</div></div><div class="pager"><button class="btn line" type="button" id="r04StudentPrev" ${page===0?'disabled':''}>◀ 이전 평가표</button><span>${page+1} / ${vals.length}</span><button class="btn line" type="button" id="r04StudentNext" ${page===vals.length-1?'disabled':''}>다음 평가표 ▶</button></div></section>`;
  }
- app.innerHTML=head+`<section class="session-bar"><div><strong>평가 회차</strong><small>실제 저장된 참가 회차만 조회합니다.</small></div><div class="session-picker"><select id="r04StudentExamSelect" aria-label="평가 회차 선택">${options}</select><button class="btn line" type="button" id="r04StudentRefresh">새로고침</button></div></section>`+(sameExam.length>1?`<div class="tabs" role="group" aria-label="내 수강반 선택">${classButtons}</div>`:'')+status+body;
+ app.innerHTML=head+`<section class="session-bar"><div><strong>평가 회차</strong><small>실제 저장된 참가 회차만 조회합니다.</small></div><div class="session-picker"><select id="r04StudentExamSelect" aria-label="평가 회차 선택">${options}</select><button class="btn line" type="button" id="r04StudentRefresh">새로고침</button></div></section>`+(sameExam.length>1?`<div class="tabs" role="group" aria-label="내 수강반 선택">${classButtons}</div>`:'')+status+mediaPanel+body;
  $('r04StudentRefresh').onclick=()=>refreshR04StudentHistory();
  $('r04StudentExamSelect').onchange=e=>{
   const next=rows.find(p=>p.examId===e.target.value);
