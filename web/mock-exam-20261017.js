@@ -239,6 +239,66 @@ async function loadR04AdminScoreboard(){
 // RUN294: compact admin settings, per-round persisted criteria and independently owned admin grading.
 const R04_RUBRIC_ADMIN={examId:'',version:0,rubrics:defaultRubrics(),locked:true,loading:false,saving:false,error:'',group:'청소년'};
 const R04_ADMIN_GRADE={examId:'',participationId:'',grade:null,edit:null,loading:false,saving:false,gradingOpen:false,error:'',rubrics:defaultRubrics()};
+// RUN310: Administrator evaluation panel inline recordings. Read-only, per participation ID.
+// No student UID, class-name inference, media save or teacher-grade mutation here.
+const R04_ADMIN_INLINE_MEDIA={key:'',record:null,error:'',loading:false,seq:0};
+function r04AdminInlineMediaTarget(selected,exact){
+ const id=str(S.r04SessionId),uid=str(S.auth&&S.auth.uid);
+ if(preview||S.role!=='admin'||!uid||!selected||!exact||
+    R04_EDITOR.examId!==id||R04_PERSISTED_VIEW.examId!==id||
+    R04_EDITOR.stateVersion!==R04_PERSISTED_VIEW.stateVersion||
+    exact.participationId!==selected.participationId||
+    exact.classId!==selected.classId||exact.group!==selected.group||
+    exact.status!=='active'||selected.status!=='active'||selected.classStatus==='archived'||
+    R04_EDITOR.rows.filter(p=>p.participationId===exact.participationId).length!==1)
+   return null;
+ return {key:uid+'|'+id+'|'+exact.participationId,examId:id,
+   participationId:exact.participationId,uid};
+}
+function paintR04AdminInlineMedia(target){
+ const host=$('r04AdminInlineMediaHost'),state=R04_ADMIN_INLINE_MEDIA;
+ if(!host||!target||state.key!==target.key||host.dataset.mediaKey!==target.key)return;
+ const rec=state.record;
+ const files=rec?['audioUrl','videoUrl'].map((k,i)=>{
+  const label=i===0?'음성 녹음 열기':'영상 열기',url=rec[k];
+  return url&&validR04MediaUrl(url)?`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">▶ ${label}</a>`:
+   `<span>${i===0?'음성':'영상'} 링크 미등록</span>`;
+ }).join(''):'';
+ host.innerHTML=`<div class="r04-setting-heading"><h3>음성·영상</h3><button type="button" class="btn line small" id="r04InlineMediaReload" ${state.loading?'disabled':''}>${state.loading?'조회 중':'링크 새로고침'}</button></div>
+ ${state.error?`<p class="warn">${esc(state.error)} · 수동 재조회가 필요합니다.</p>`:''}
+ ${state.loading?'<p class="hint">선택한 학생의 음성·영상 링크를 조회하고 있습니다.</p>':
+  rec?`<div class="media-links">${files}</div>`:'<p class="hint">음성·영상 링크 조회 전입니다.</p>'}`;
+ const button=$('r04InlineMediaReload');if(button&&!state.loading)button.onclick=()=>loadR04AdminInlineMedia(target);
+}
+async function loadR04AdminInlineMedia(target){
+ const state=R04_ADMIN_INLINE_MEDIA;
+ if(!target||state.key!==target.key||state.loading||
+    S.role!=='admin'||str(S.auth&&S.auth.uid)!==target.uid)return;
+ state.loading=true;state.error='';state.record=null;
+ const seq=++state.seq;paintR04AdminInlineMedia(target);
+ try{
+  const raw=await call(FN.r04AdminMedia,{action:'read',examId:target.examId,participationId:target.participationId});
+  const record=validateR04MediaAdminRecord(raw,target.examId,target.participationId);
+  if(seq!==state.seq||state.key!==target.key||S.role!=='admin'||
+     str(S.auth&&S.auth.uid)!==target.uid||str(S.r04SessionId)!==target.examId)return;
+  state.record=record;
+ }catch(e){
+  if(seq===state.seq&&state.key===target.key&&S.role==='admin'&&
+     str(S.auth&&S.auth.uid)===target.uid)state.error=errorMessage(e);
+ }finally{
+  if(seq===state.seq&&state.key===target.key){state.loading=false;paintR04AdminInlineMedia(target);}
+ }
+}
+function renderR04AdminInlineMedia(selected,exact){
+ const host=$('r04AdminInlineMediaHost');if(!host)return;
+ const target=r04AdminInlineMediaTarget(selected,exact),state=R04_ADMIN_INLINE_MEDIA;
+ if(!target){host.innerHTML='<p class="hint">저장된 평가 참가 ID를 확인한 후 음성·영상 링크를 조회할 수 있습니다.</p>';return;}
+ if(state.key!==target.key){state.seq++;state.key=target.key;state.record=null;state.error='';state.loading=false;}
+ host.dataset.mediaKey=target.key;
+ paintR04AdminInlineMedia(target);
+ if(!state.loading&&!state.record&&!state.error)void loadR04AdminInlineMedia(target);
+}
+
 function renderR04SettingsVisibility(){
  const overlay=$('r04AdminSettingsOverlay');if(!overlay)return;
  overlay.querySelectorAll('[data-r04-setting-section]').forEach(e=>e.hidden=e.dataset.r04SettingSection!==R04_ADMIN_CORE.settingsTab);
@@ -407,7 +467,7 @@ const teacherModal=modalTeacher&&exact&&R04_ADMIN_CORE.teacherModalParticipation
    '<p class="hint">최종 제출된 평가표가 없어 아직 순위를 계산할 수 없습니다.</p>';
  const teacherTable=teacherStatuses.length?`<div class="scroll-table"><table class="wide-table r04-teacher-status-table"><thead><tr><th>강사</th><th>평가 상태</th></tr></thead><tbody>${teacherStatuses.map(t=>`<tr><td><button type="button" class="r04-teacher-name-button" data-r04-teacher-popup-index="${t.index}" aria-label="${esc(t.name)} 평가표 팝업 열기">${esc(t.name)}</button></td><td><span class="chip ${t.status==='submitted'?'ok':'wait'}">${t.status==='submitted'?'완료':t.status==='draft'?'임시저장':'미평가'}</span></td></tr>`).join('')}</tbody></table></div>`:'<p class="hint">평가표 조회 전이거나 참가 ID의 정확한 연결을 확인할 수 없습니다. 다른 학생의 채점 기록은 추측하여 표시하지 않습니다.</p>';
  const teacherSummary=teacherStatuses.length?`${teacherStatuses.filter(t=>t.status==='submitted').length}명 완료 · ${teacherStatuses.filter(t=>t.status==='draft').length}명 임시저장 · ${teacherStatuses.filter(t=>t.status==='missing').length}명 미평가`:'조회 전';
- const chosen=selected?`<div class="score-hero"><div><h2>${esc(selected.name)}</h2><p>${esc(selected.className)} · ${esc(selected.group)}</p></div><div style="text-align:right;font-size:12px">${esc(matchLabel)}</div></div><details id="r04TeacherStatusAccordion" class="r04-teacher-status-accordion" ${R04_ADMIN_CORE.teacherStatusOpen?'open':''}><summary><span>강사별 채점 현황</span><small>${teacherSummary}</small></summary><p class="hint">강사명을 선택하면 해당 강사의 평가표를 팝업으로 확인할 수 있습니다.</p>${teacherTable}</details><div id="r04AdminGradeHost" class="r04-admin-grading"></div><div class="r04-core-score"><h3 class="panel-title">평가 점수 · 총합 · 평균 · 순위</h3>${scoresReady?scoreInfo:`<p class="hint">${esc(scores.error||'아직 점수 조회 전입니다. 명단·채점 현황 조회를 눌러주세요.')}</p>`}</div>`:'<p class="hint">등록된 학생이 없습니다.</p>';
+ const chosen=selected?`<div class="score-hero"><div><h2>${esc(selected.name)}</h2><p>${esc(selected.className)} · ${esc(selected.group)}</p></div><div style="text-align:right;font-size:12px">${esc(matchLabel)}</div></div><details id="r04TeacherStatusAccordion" class="r04-teacher-status-accordion" ${R04_ADMIN_CORE.teacherStatusOpen?'open':''}><summary><span>강사별 채점 현황</span><small>${teacherSummary}</small></summary><p class="hint">강사명을 선택하면 해당 강사의 평가표를 팝업으로 확인할 수 있습니다.</p>${teacherTable}</details><div id="r04AdminInlineMediaHost" class="r04-admin-inline-media"></div><div id="r04AdminGradeHost" class="r04-admin-grading"></div><div class="r04-core-score"><h3 class="panel-title">평가 점수 · 총합 · 평균 · 순위</h3>${scoresReady?scoreInfo:`<p class="hint">${esc(scores.error||'아직 점수 조회 전입니다. 명단·채점 현황 조회를 눌러주세요.')}</p>`}</div>`:'<p class="hint">등록된 학생이 없습니다.</p>';
  const main=`<section id="r04OperationalDashboard" class="r04-core"><div class="heading-row"><div><h1>모의고사 평가 관리</h1><p>반별 학생 · 강사별 평가 현황 · 총점/평균 관리</p></div><button type="button" id="r04OpenSettings" class="btn line" aria-label="모의고사 설정 열기">⚙ 설정</button></div>${stats}<div class="panel"><div class="flex"><button class="btn" type="button" id="r04CoreReload">평가 명단 · 채점 현황 조회</button><span class="hint">현재 수강 명단 기준 · ${esc(S.rosterDate)} 조회</span></div><p class="hint top-gap">평가용 명단은 실제 수강반과 별도로 관리됩니다.</p></div><div class="panel"><div class="flex"><div class="r04-admin-group-tabs" role="group" aria-label="평가 대상 구분"><button type="button" class="seg ${R04_ADMIN_CORE.group==='청소년'?'active':''}" data-admin-group="청소년" aria-pressed="${R04_ADMIN_CORE.group==='청소년'}">청소년반</button><button type="button" class="seg ${R04_ADMIN_CORE.group==='성인'?'active':''}" data-admin-group="성인" aria-pressed="${R04_ADMIN_CORE.group==='성인'}">성인반</button></div><label>학생·수강반 검색 <input id="r04CoreSearch" type="search" maxlength="100" placeholder="학생 또는 반 이름" value="${esc(R04_ADMIN_CORE.search)}"></label><span class="muted">${shown.length}건 표시</span></div></div><div class="layout r04-core-grid"><aside class="panel"><h2 class="panel-title">전체 평가 반목록</h2><div class="student-list r04-admin-class-list">${sidebar||'<p class="hint">해당 조건의 반 또는 학생이 없습니다.</p>'}</div></aside><article class="panel">${chosen}</article></div><section class="panel"><div class="heading-row"><div><h2>총점 · 평균 · 순위</h2><p class="muted">최종 제출된 강사별 평가표를 기준으로 계산</p></div></div><p class="hint">최종 제출 평가만 합산합니다. 제출 강사 수가 다른 학생의 평균·순위는 잠정 비교이며 전체 강사 제출 후 확정됩니다.</p>${scoresReady?scoreLeaderboard:`<p class="hint">${esc(scores.error||'점수·순위 조회 전입니다.')}</p>`}</section></section>`;
  const settings=`<div id="r04AdminSettingsOverlay" class="modal-wrap r04-settings-overlay" role="dialog" aria-modal="true" aria-label="모의고사 관리자 설정" style="display:${R04_ADMIN_CORE.settingsOpen?'flex':'none'}"><div class="modal r04-settings-modal"><div class="modal-head"><div><h2>⚙ 모의고사 설정</h2><p class="hint">평가용 반·학생·평가기준·회차 운영</p></div><button type="button" class="btn line" id="r04CloseSettings">닫기 ✕</button></div><nav class="r04-settings-tabs" role="tablist" aria-label="모의고사 설정 분류">${[['classes','반 관리'],['students','학생 관리'],['rubric','평가항목'],['sessions','회차·공개'],['media','음성·영상']].map(([id,label])=>`<button type="button" class="seg ${R04_ADMIN_CORE.settingsTab===id?'active':''}" data-r04-setting-tab="${id}" role="tab" aria-selected="${R04_ADMIN_CORE.settingsTab===id}">${label}</button>`).join('')}</nav><section class="panel r04-setting-panel" data-r04-setting-section="classes" id="r04EditorClassHost"></section><section class="panel r04-setting-panel" data-r04-setting-section="students" id="r04EditorStudentHost"></section><section class="panel r04-setting-panel" data-r04-setting-section="rubric" id="r04RubricHost"></section><div class="r04-settings-live" id="r04SettingsLive"></div><details class="r04-core-advanced"><summary>고급 조회 · 현재 수강 명단 및 데이터 대조</summary><div id="r04SettingsAdvanced"></div></details></div></div>`;
  app.insertAdjacentHTML('afterbegin',main);
@@ -447,7 +507,7 @@ const teacherModal=modalTeacher&&exact&&R04_ADMIN_CORE.teacherModalParticipation
    teacherPopup.onkeydown=e=>{if(e.key==='Escape'){e.preventDefault();close();}};
  }
  renderR04EditorSettings();
- renderR04RubricSettings();renderR04SettingsVisibility();renderR04AdminGradeForm();
+ renderR04RubricSettings();renderR04SettingsVisibility();renderR04AdminGradeForm();renderR04AdminInlineMedia(selected,exact);
  app.querySelectorAll('[data-r04-setting-tab]').forEach(btn=>btn.onclick=()=>{R04_ADMIN_CORE.settingsTab=btn.dataset.r04SettingTab;renderR04SettingsVisibility();if(R04_ADMIN_CORE.settingsTab==='rubric')loadR04RubricAdmin();});
 }
 
