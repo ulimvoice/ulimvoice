@@ -166,7 +166,7 @@ function renderR04EditorSettings(){
 }
 
 const R04_TEACHER_LIST_SCROLL={'청소년':0,'성인':0};
-const R04_ADMIN_CORE={group:'청소년',search:'',expanded:[],selected:-1,settingsOpen:false,settingsTab:'classes',autoExpanded:false,scrollY:0};
+const R04_ADMIN_CORE={group:'청소년',search:'',expanded:[],selected:-1,settingsOpen:false,settingsTab:'classes',autoExpanded:false,scrollY:0,teacherStatusOpen:false,teacherModalIndex:-1,teacherModalParticipationId:''};
 // RUN287: Admin-only scoring detail projection from a new authenticated read-only callable.
 const R04_SCOREBOARD={examId:'',callerUid:'',stateVersion:-1,rows:[],loading:false,error:'',teacherCount:0,provisional:true};
 function validateR04Scoreboard(raw,id){
@@ -368,9 +368,9 @@ function renderR04AdminCore(){
  // RUN298: keep all admin class accordions closed on initial page render.
  const match=selected&&hasPersisted?persisted.rows.filter(p=>selected.participationId?p.participationId===selected.participationId:(p.classLabel===selected.className&&p.studentLabel===selected.name)):[];
  const exact=match&&match.length===1?match[0]:null;
- const teacherStatuses=hasMatrix&&exact?matrix.evaluators.map(t=>{
+ const teacherStatuses=hasMatrix&&exact?matrix.evaluators.map((t,index)=>{
    const grade=t.grades.find(g=>g.participationId===exact.participationId);
-   return {name:t.teacherName,status:grade?grade.status:'missing'};
+   return {index,name:t.teacherName,status:grade?grade.status:'missing'};
  }):[];
  const matchLabel=hasPersisted&&!exact?'저장 참가 ID와 자동 연결 미확인':!hasPersisted?'저장 참가 명단 조회 전':'저장 참가 ID 확인';
  const classMap=new Map();
@@ -388,21 +388,35 @@ function renderR04AdminCore(){
  const chosenScore=scoresReady&&exact?scores.rows.find(r=>r.participationId===exact.participationId):null;
  const scoreInfo=chosenScore&&chosenScore.submittedCount?`<div class="stat-grid"><div class="stat"><small>최종 제출 점수 합계</small><strong>${fmt(chosenScore.sum)}</strong></div><div class="stat"><small>강사 평균 / 50</small><strong>${fmt(chosenScore.average)}</strong></div><div class="stat"><small>잠정 순위</small><strong>${chosenScore.rank}위</strong></div><div class="stat"><small>완료 평가</small><strong>${chosenScore.submittedCount} / ${scores.teacherCount}</strong></div></div>`:
    '<p class="hint">현재 이 학생의 최종 제출된 평가표가 없습니다.</p>';
- const detailCriteria=(S.rubrics[selected?.group]||defaultRubrics()[selected?.group]||defaultRubrics().youth);
- const gradeDetails=chosenScore&&chosenScore.grades.length?chosenScore.grades.map(g=>`<details class="r04-grade-detail"><summary><b>${esc(g.teacherName)}</b> · ${g.status==='submitted'?'최종제출 '+fmt(g.total)+' / 50':'임시저장'}</summary><div class="grid2"><div><strong>NA · 나레이션 / 25</strong><ol>${detailCriteria.na.map((t,i)=>`<li>${esc(t.title)}: ${g.na[i]===null?'미입력':g.na[i]}</li>`).join('')}</ol></div><div><strong>독백 · 연기 / 25</strong><ol>${detailCriteria.act.map((t,i)=>`<li>${esc(t.title)}: ${g.act[i]===null?'미입력':g.act[i]}</li>`).join('')}</ol></div></div><p class="note">${esc(g.note||'한줄평 없음')}</p></details>`).join(''):'<p class="hint">저장된 강사별 평가표가 없습니다.</p>';
+const detailCriteria=(R04_ADMIN_GRADE.examId===id&&R04_ADMIN_GRADE.participationId===selected?.participationId?R04_ADMIN_GRADE.rubrics[selected?.group]:null)||
+  (R04_RUBRIC_ADMIN.examId===id?R04_RUBRIC_ADMIN.rubrics[selected?.group]:null)||
+  (S.rubrics[selected?.group]||defaultRubrics()[selected?.group]||defaultRubrics().youth);
+// RUN301 — display exactly one verified grade in a modal; never inline below admin grading.
+const modalTeacher=teacherStatuses.find(t=>t.index===R04_ADMIN_CORE.teacherModalIndex)||null;
+const modalMatches=modalTeacher&&chosenScore?chosenScore.grades.filter(g=>g.teacherName===modalTeacher.name):[];
+const uniqueTeacher=!!modalTeacher&&teacherStatuses.filter(t=>t.name===modalTeacher.name).length===1;
+const modalGrade=uniqueTeacher&&modalMatches.length===1&&modalMatches[0].status===modalTeacher.status?modalMatches[0]:null;
+const modalItems=(arr,key)=>`<div class="r04-teacher-popup-section"><h3>${key==='na'?'NA · 나레이션':'독백 · 연기'} · 25점</h3><div class="r04-teacher-popup-scores">${detailCriteria[key].map((item,i)=>`<div class="r04-teacher-popup-score"><span>${esc(item.title)}</span><strong>${arr[i]===null?'미입력':fmt(arr[i])+'점'} / 5</strong></div>`).join('')}</div></div>`;
+const modalContent=!modalTeacher?'':modalTeacher.status==='missing'?'<p class="hint">아직 저장된 평가표가 없습니다.</p>':
+  !scoresReady?'<p class="warn">평가 점수 조회가 완료되지 않아 평가표를 표시할 수 없습니다. 명단·채점 현황 조회 후 다시 확인하세요.</p>':
+  !uniqueTeacher||modalMatches.length!==1||!modalGrade?'<p class="warn">강사 식별 또는 평가 상태가 일치하지 않아 평가표를 안전하게 연결할 수 없습니다. 점수는 표시하지 않습니다.</p>':
+  `<div class="r04-teacher-popup-summary"><span class="chip ${modalGrade.status==='submitted'?'ok':'wait'}">${modalGrade.status==='submitted'?'최종제출':'임시저장'}</span><strong>${modalGrade.status==='submitted'?fmt(modalGrade.total)+' / 50점':'임시저장 · 총점 집계 제외'}</strong></div><div class="r04-teacher-popup-grid">${modalItems(modalGrade.na,'na')}${modalItems(modalGrade.act,'act')}</div><div class="r04-teacher-popup-note"><h3>한줄평</h3><p class="note">${esc(modalGrade.note||'작성된 한줄평 없음')}</p></div>`;
+const teacherModal=modalTeacher&&exact&&R04_ADMIN_CORE.teacherModalParticipationId===exact.participationId?`<div id="r04TeacherGradeOverlay" class="modal-wrap r04-teacher-grade-overlay" role="dialog" aria-modal="true" aria-labelledby="r04TeacherGradeModalTitle"><div class="modal r04-teacher-grade-modal" role="document"><div class="modal-head"><div><h2 id="r04TeacherGradeModalTitle">${esc(modalTeacher.name)} 평가표</h2><p class="muted">${esc(selected.name)} · ${esc(selected.className)} · 읽기 전용</p></div><button type="button" class="btn line" id="r04CloseTeacherGradePopup" aria-label="평가표 팝업 닫기">닫기 ✕</button></div>${modalContent}</div></div>`:'';
  const scoreRows=scoresReady?scores.rows.filter(x=>x.submittedCount>0).sort((a,b)=>a.rank-b.rank||b.average-a.average):[];
  const scoreLeaderboard=scoreRows.length?`<div class="scroll-table"><table class="wide-table"><thead><tr><th>순위</th><th>학생</th><th>수강반</th><th>합계</th><th>평균/50</th><th>제출 강사</th></tr></thead><tbody>${scoreRows.map(r=>{const p=persisted.rows.find(x=>x.participationId===r.participationId);return `<tr><td>${r.rank}위 ${r.complete?'':'· 잠정'}</td><td>${esc(p&&p.studentLabel||'확인 필요')}</td><td>${esc(p&&p.classLabel||'확인 필요')}</td><td>${fmt(r.sum)}</td><td>${fmt(r.average)}</td><td>${r.submittedCount}/${scores.teacherCount}</td></tr>`;}).join('')}</tbody></table></div>`:
    '<p class="hint">최종 제출된 평가표가 없어 아직 순위를 계산할 수 없습니다.</p>';
- const teacherTable=teacherStatuses.length?`<div class="scroll-table"><table class="wide-table"><thead><tr><th>강사</th><th>평가 상태</th><th>총점 / 50</th></tr></thead><tbody>${teacherStatuses.map(t=>`<tr><td>${esc(t.name)}</td><td><span class="chip ${t.status==='submitted'?'ok':'wait'}">${t.status==='submitted'?'완료':t.status==='draft'?'임시저장':'미평가'}</span></td><td>—</td></tr>`).join('')}</tbody></table></div>`:'<p class="hint">평가표 조회 전이거나 참가 ID의 정확한 연결을 확인할 수 없습니다. 다른 학생의 채점 기록은 추측하여 표시하지 않습니다.</p>';
- const chosen=selected?`<div class="score-hero"><div><h2>${esc(selected.name)}</h2><p>${esc(selected.className)} · ${esc(selected.group)}</p></div><div style="text-align:right;font-size:12px">${esc(matchLabel)}</div></div><h3 class="panel-title">강사별 채점 현황</h3>${teacherTable}<div id="r04AdminGradeHost" class="r04-admin-grading"></div><div class="r04-core-score"><h3 class="panel-title">평가 점수 · 총합 · 평균 · 순위</h3>${scoresReady?scoreInfo:`<p class="hint">${esc(scores.error||'아직 점수 조회 전입니다. 명단·채점 현황 조회를 눌러주세요.')}</p>`}<h3 class="panel-title top-gap">강사·관리자 평가 상세</h3>${scoresReady?gradeDetails:'<p class="hint">조회 전입니다.</p>'}</div>`:'<p class="hint">등록된 학생이 없습니다.</p>';
+ const teacherTable=teacherStatuses.length?`<div class="scroll-table"><table class="wide-table r04-teacher-status-table"><thead><tr><th>강사</th><th>평가 상태</th></tr></thead><tbody>${teacherStatuses.map(t=>`<tr><td><button type="button" class="r04-teacher-name-button" data-r04-teacher-popup-index="${t.index}" aria-label="${esc(t.name)} 평가표 팝업 열기">${esc(t.name)}</button></td><td><span class="chip ${t.status==='submitted'?'ok':'wait'}">${t.status==='submitted'?'완료':t.status==='draft'?'임시저장':'미평가'}</span></td></tr>`).join('')}</tbody></table></div>`:'<p class="hint">평가표 조회 전이거나 참가 ID의 정확한 연결을 확인할 수 없습니다. 다른 학생의 채점 기록은 추측하여 표시하지 않습니다.</p>';
+ const teacherSummary=teacherStatuses.length?`${teacherStatuses.filter(t=>t.status==='submitted').length}명 완료 · ${teacherStatuses.filter(t=>t.status==='draft').length}명 임시저장 · ${teacherStatuses.filter(t=>t.status==='missing').length}명 미평가`:'조회 전';
+ const chosen=selected?`<div class="score-hero"><div><h2>${esc(selected.name)}</h2><p>${esc(selected.className)} · ${esc(selected.group)}</p></div><div style="text-align:right;font-size:12px">${esc(matchLabel)}</div></div><details id="r04TeacherStatusAccordion" class="r04-teacher-status-accordion" ${R04_ADMIN_CORE.teacherStatusOpen?'open':''}><summary><span>강사별 채점 현황</span><small>${teacherSummary}</small></summary><p class="hint">강사명을 선택하면 해당 강사의 평가표를 팝업으로 확인할 수 있습니다.</p>${teacherTable}</details><div id="r04AdminGradeHost" class="r04-admin-grading"></div><div class="r04-core-score"><h3 class="panel-title">평가 점수 · 총합 · 평균 · 순위</h3>${scoresReady?scoreInfo:`<p class="hint">${esc(scores.error||'아직 점수 조회 전입니다. 명단·채점 현황 조회를 눌러주세요.')}</p>`}</div>`:'<p class="hint">등록된 학생이 없습니다.</p>';
  const main=`<section id="r04OperationalDashboard" class="r04-core"><div class="heading-row"><div><h1>모의고사 평가 관리</h1><p>반별 학생 · 강사별 평가 현황 · 총점/평균 관리</p></div><button type="button" id="r04OpenSettings" class="btn line" aria-label="모의고사 설정 열기">⚙ 설정</button></div>${stats}<div class="panel"><div class="flex"><button class="btn" type="button" id="r04CoreReload">평가 명단 · 채점 현황 조회</button><span class="hint">현재 수강 명단 기준 · ${esc(S.rosterDate)} 조회</span></div><p class="hint top-gap">평가용 명단은 실제 수강반과 별도로 관리됩니다.</p></div><div class="panel"><div class="flex"><div class="r04-admin-group-tabs" role="group" aria-label="평가 대상 구분"><button type="button" class="seg ${R04_ADMIN_CORE.group==='청소년'?'active':''}" data-admin-group="청소년" aria-pressed="${R04_ADMIN_CORE.group==='청소년'}">청소년반</button><button type="button" class="seg ${R04_ADMIN_CORE.group==='성인'?'active':''}" data-admin-group="성인" aria-pressed="${R04_ADMIN_CORE.group==='성인'}">성인반</button></div><label>학생·수강반 검색 <input id="r04CoreSearch" type="search" maxlength="100" placeholder="학생 또는 반 이름" value="${esc(R04_ADMIN_CORE.search)}"></label><span class="muted">${shown.length}건 표시</span></div></div><div class="layout r04-core-grid"><aside class="panel"><h2 class="panel-title">전체 평가 반목록</h2><div class="student-list r04-admin-class-list">${sidebar||'<p class="hint">해당 조건의 반 또는 학생이 없습니다.</p>'}</div></aside><article class="panel">${chosen}</article></div><section class="panel"><div class="heading-row"><div><h2>총점 · 평균 · 순위</h2><p class="muted">최종 제출된 강사별 평가표를 기준으로 계산</p></div></div><p class="hint">최종 제출 평가만 합산합니다. 제출 강사 수가 다른 학생의 평균·순위는 잠정 비교이며 전체 강사 제출 후 확정됩니다.</p>${scoresReady?scoreLeaderboard:`<p class="hint">${esc(scores.error||'점수·순위 조회 전입니다.')}</p>`}</section></section>`;
  const settings=`<div id="r04AdminSettingsOverlay" class="modal-wrap r04-settings-overlay" role="dialog" aria-modal="true" aria-label="모의고사 관리자 설정" style="display:${R04_ADMIN_CORE.settingsOpen?'flex':'none'}"><div class="modal r04-settings-modal"><div class="modal-head"><div><h2>⚙ 모의고사 설정</h2><p class="hint">평가용 반·학생·평가기준·회차 운영</p></div><button type="button" class="btn line" id="r04CloseSettings">닫기 ✕</button></div><nav class="r04-settings-tabs" role="tablist" aria-label="모의고사 설정 분류">${[['classes','반 관리'],['students','학생 관리'],['rubric','평가항목'],['sessions','회차·공개'],['media','음성·영상']].map(([id,label])=>`<button type="button" class="seg ${R04_ADMIN_CORE.settingsTab===id?'active':''}" data-r04-setting-tab="${id}" role="tab" aria-selected="${R04_ADMIN_CORE.settingsTab===id}">${label}</button>`).join('')}</nav><section class="panel r04-setting-panel" data-r04-setting-section="classes" id="r04EditorClassHost"></section><section class="panel r04-setting-panel" data-r04-setting-section="students" id="r04EditorStudentHost"></section><section class="panel r04-setting-panel" data-r04-setting-section="rubric" id="r04RubricHost"></section><div class="r04-settings-live" id="r04SettingsLive"></div><details class="r04-core-advanced"><summary>고급 조회 · 현재 수강 명단 및 데이터 대조</summary><div id="r04SettingsAdvanced"></div></details></div></div>`;
  app.insertAdjacentHTML('afterbegin',main);
  app.insertAdjacentHTML('beforeend',settings);
+ if(teacherModal)app.insertAdjacentHTML('beforeend',teacherModal);
  const live=$('r04SettingsLive'),advanced=$('r04SettingsAdvanced');
  // Existing operational controls remain functional; only their placement changes.
  for(const child of [...app.children]){
-   if(child.id==='r04OperationalDashboard'||child.id==='r04AdminSettingsOverlay'||child.classList.contains('session-bar'))continue;
+   if(child.id==='r04OperationalDashboard'||child.id==='r04AdminSettingsOverlay'||child.id==='r04TeacherGradeOverlay'||child.classList.contains('session-bar'))continue;
    if(['r04AdminStatePanel','r04AdminReleasePanel','r04AdminMediaPanel'].includes(child.id)){child.dataset.r04SettingSection=child.id==='r04AdminMediaPanel'?'media':'sessions';child.classList.add('r04-setting-panel');live.appendChild(child);}
    else advanced.appendChild(child);
  }
@@ -410,13 +424,28 @@ function renderR04AdminCore(){
  $('r04OpenSettings').onclick=()=>{R04_ADMIN_CORE.settingsOpen=true;overlay.style.display='flex';renderR04SettingsVisibility();if(R04_ADMIN_CORE.settingsTab==='rubric')loadR04RubricAdmin();};
  $('r04CloseSettings').onclick=()=>{R04_ADMIN_CORE.settingsOpen=false;overlay.style.display='none';};
  overlay.onclick=e=>{if(e.target===overlay){R04_ADMIN_CORE.settingsOpen=false;overlay.style.display='none';}};
- $('r04CoreReload').onclick=()=>withBusy($('r04CoreReload'),async()=>{R04_ADMIN_CORE.expanded=[];R04_ADMIN_CORE.scrollY=0;await loadR04PersistedRosterView();await loadR04EvaluatorMatrix();await loadR04AdminScoreboard();});
+ $('r04CoreReload').onclick=()=>withBusy($('r04CoreReload'),async()=>{R04_ADMIN_CORE.expanded=[];R04_ADMIN_CORE.scrollY=0;R04_ADMIN_CORE.teacherStatusOpen=false;R04_ADMIN_CORE.teacherModalIndex=-1;await loadR04PersistedRosterView();await loadR04EvaluatorMatrix();await loadR04AdminScoreboard();});
  const adminList=app.querySelector('.r04-admin-class-list');
  if(adminList){adminList.scrollTop=R04_ADMIN_CORE.scrollY;adminList.addEventListener('scroll',()=>{R04_ADMIN_CORE.scrollY=adminList.scrollTop;},{passive:true});}
- app.querySelectorAll('[data-admin-group]').forEach(b=>b.onclick=()=>{R04_ADMIN_CORE.group=b.dataset.adminGroup;R04_ADMIN_CORE.selected=-1;R04_ADMIN_CORE.autoExpanded=false;R04_ADMIN_CORE.expanded=[];R04_ADMIN_CORE.scrollY=0;render();});
+ app.querySelectorAll('[data-admin-group]').forEach(b=>b.onclick=()=>{R04_ADMIN_CORE.group=b.dataset.adminGroup;R04_ADMIN_CORE.selected=-1;R04_ADMIN_CORE.autoExpanded=false;R04_ADMIN_CORE.expanded=[];R04_ADMIN_CORE.scrollY=0;R04_ADMIN_CORE.teacherStatusOpen=false;R04_ADMIN_CORE.teacherModalIndex=-1;render();});
  $('r04CoreSearch').onchange=e=>{R04_ADMIN_CORE.search=str(e.target.value);render();};
  app.querySelectorAll('[data-admin-class]').forEach(btn=>btn.onclick=()=>{const key=btn.dataset.adminClass;R04_ADMIN_CORE.expanded=R04_ADMIN_CORE.expanded.includes(key)?R04_ADMIN_CORE.expanded.filter(x=>x!==key):[...R04_ADMIN_CORE.expanded,key];render();});
- app.querySelectorAll('[data-admin-student]').forEach(btn=>btn.onclick=()=>{R04_ADMIN_CORE.selected=Number(btn.dataset.adminStudent);render();loadR04AdminGrade();});
+ app.querySelectorAll('[data-admin-student]').forEach(btn=>btn.onclick=()=>{R04_ADMIN_CORE.selected=Number(btn.dataset.adminStudent);R04_ADMIN_CORE.teacherStatusOpen=false;R04_ADMIN_CORE.teacherModalIndex=-1;render();loadR04AdminGrade();});
+ const teacherAccordion=$('r04TeacherStatusAccordion');if(teacherAccordion)teacherAccordion.addEventListener('toggle',()=>{R04_ADMIN_CORE.teacherStatusOpen=teacherAccordion.open;});
+ app.querySelectorAll('[data-r04-teacher-popup-index]').forEach(btn=>btn.onclick=()=>{
+   const index=Number(btn.dataset.r04TeacherPopupIndex);
+   if(!exact||!Number.isSafeInteger(index)||index<0||index>=teacherStatuses.length)return;
+   R04_ADMIN_CORE.teacherModalIndex=index;R04_ADMIN_CORE.teacherModalParticipationId=exact.participationId;
+   render();$('r04CloseTeacherGradePopup')?.focus();
+ });
+ const teacherPopup=$('r04TeacherGradeOverlay');
+ if(teacherPopup){
+   const focusIndex=R04_ADMIN_CORE.teacherModalIndex;
+   const close=()=>{R04_ADMIN_CORE.teacherModalIndex=-1;R04_ADMIN_CORE.teacherModalParticipationId='';render();app.querySelector(`[data-r04-teacher-popup-index="${focusIndex}"]`)?.focus();};
+   $('r04CloseTeacherGradePopup').onclick=close;
+   teacherPopup.onclick=e=>{if(e.target===teacherPopup)close();};
+   teacherPopup.onkeydown=e=>{if(e.key==='Escape'){e.preventDefault();close();}};
+ }
  renderR04EditorSettings();
  renderR04RubricSettings();renderR04SettingsVisibility();renderR04AdminGradeForm();
  app.querySelectorAll('[data-r04-setting-tab]').forEach(btn=>btn.onclick=()=>{R04_ADMIN_CORE.settingsTab=btn.dataset.r04SettingTab;renderR04SettingsVisibility();if(R04_ADMIN_CORE.settingsTab==='rubric')loadR04RubricAdmin();});

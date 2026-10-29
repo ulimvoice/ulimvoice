@@ -110,3 +110,32 @@
 .r04-teacher-class-list .student-choice b{display:block;flex:1 1 auto;min-width:0;overflow-wrap:anywhere;word-break:keep-all;white-space:normal;line-height:1.45}
 .r04-teacher-class-list .student-choice .chip{flex:0 0 auto}
 @media(max-width:800px){.layout:not(.r04-core-grid)>aside.panel>.r04-teacher-class-list.student-list{max-height:none;overflow:visible}}
+
+/* RUN301 — admin student: collapsible evaluator status and read-only grade modal. */
+.r04-teacher-status-accordion{margin:12px 0 16px;padding:0 13px;border:1px solid #dae9de;border-radius:12px;background:#f9fcfa;min-width:0}
+.r04-teacher-status-accordion>summary{cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:55px;padding:10px 2px;font-size:15px;font-weight:850;list-style:none}
+.r04-teacher-status-accordion>summary::-webkit-details-marker{display:none}
+.r04-teacher-status-accordion>summary:before{content:'▸';font-size:15px;color:#18744b;flex:0 0 auto}
+.r04-teacher-status-accordion[open]>summary:before{content:'▾'}
+.r04-teacher-status-accordion>summary span{flex:1 1 auto;min-width:0}
+.r04-teacher-status-accordion>summary small{font-size:12px;font-weight:650;color:#607c6b;line-height:1.45;text-align:right}
+.r04-teacher-status-accordion>.hint{padding:0 2px 10px}
+.r04-teacher-status-accordion .scroll-table{margin-bottom:12px}
+.r04-teacher-name-button{border:0;background:none;color:#136e48;font-weight:850;padding:8px 3px;text-align:left;text-decoration:underline;text-underline-offset:3px;max-width:100%;overflow-wrap:anywhere}
+.r04-teacher-name-button:hover,.r04-teacher-name-button:focus-visible{color:#0b5235;outline-offset:2px}
+.r04-teacher-grade-overlay{z-index:45}
+.r04-teacher-grade-modal{width:min(860px,100%);max-height:min(90dvh,850px);overflow:auto;padding:22px}
+.r04-teacher-grade-modal .modal-head{gap:12px;align-items:flex-start}
+.r04-teacher-grade-modal .modal-head h2{font-size:20px;overflow-wrap:anywhere}
+.r04-teacher-grade-modal .modal-head .muted{margin-top:7px}
+.r04-teacher-popup-summary{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:6px 0 18px}
+.r04-teacher-popup-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.r04-teacher-popup-section{border:1px solid #e1ece4;border-radius:12px;padding:14px;min-width:0}
+.r04-teacher-popup-section h3,.r04-teacher-popup-note h3{font-size:15px;margin-bottom:10px}
+.r04-teacher-popup-scores{display:grid;gap:0}
+.r04-teacher-popup-score{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid #e8eee9;line-height:1.45;font-size:13px}
+.r04-teacher-popup-score span{flex:1;min-width:0;overflow-wrap:anywhere}
+.r04-teacher-popup-score strong{flex:0 0 auto;white-space:nowrap}
+.r04-teacher-popup-note{margin-top:18px}
+.r04-teacher-popup-note .note{max-height:230px;overflow:auto;overflow-wrap:anywhere}
+@media(max-width:680px){.r04-teacher-popup-grid{grid-template-columns:1fr}.r04-teacher-grade-modal{padding:14px}.r04-teacher-status-accordion>summary{align-items:flex-start;flex-wrap:wrap}.r04-teacher-status-accordion>summary small{width:100%;text-align:left;padding-left:25px}}
