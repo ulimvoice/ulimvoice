@@ -365,7 +365,7 @@ function renderR04AdminCore(){
    (!R04_ADMIN_CORE.search||[p.className,p.name,p.group].some(v=>str(v).toLocaleLowerCase('ko').includes(R04_ADMIN_CORE.search.toLocaleLowerCase('ko')))));
  const selected=shown.find(p=>p.__index===R04_ADMIN_CORE.selected)||shown[0]||null;
  R04_ADMIN_CORE.selected=selected?selected.__index:-1;
- if(selected&&!R04_ADMIN_CORE.autoExpanded){R04_ADMIN_CORE.expanded=[str(selected.group)+'|'+str(selected.classId||selected.className)];R04_ADMIN_CORE.autoExpanded=true;}
+ // RUN298: keep all admin class accordions closed on initial page render.
  const match=selected&&hasPersisted?persisted.rows.filter(p=>selected.participationId?p.participationId===selected.participationId:(p.classLabel===selected.className&&p.studentLabel===selected.name)):[];
  const exact=match&&match.length===1?match[0]:null;
  const teacherStatuses=hasMatrix&&exact?matrix.evaluators.map(t=>{
@@ -410,7 +410,7 @@ function renderR04AdminCore(){
  $('r04OpenSettings').onclick=()=>{R04_ADMIN_CORE.settingsOpen=true;overlay.style.display='flex';renderR04SettingsVisibility();if(R04_ADMIN_CORE.settingsTab==='rubric')loadR04RubricAdmin();};
  $('r04CloseSettings').onclick=()=>{R04_ADMIN_CORE.settingsOpen=false;overlay.style.display='none';};
  overlay.onclick=e=>{if(e.target===overlay){R04_ADMIN_CORE.settingsOpen=false;overlay.style.display='none';}};
- $('r04CoreReload').onclick=()=>withBusy($('r04CoreReload'),async()=>{await loadR04PersistedRosterView();await loadR04EvaluatorMatrix();await loadR04AdminScoreboard();});
+ $('r04CoreReload').onclick=()=>withBusy($('r04CoreReload'),async()=>{R04_ADMIN_CORE.expanded=[];R04_ADMIN_CORE.scrollY=0;await loadR04PersistedRosterView();await loadR04EvaluatorMatrix();await loadR04AdminScoreboard();});
  const adminList=app.querySelector('.r04-admin-class-list');
  if(adminList){adminList.scrollTop=R04_ADMIN_CORE.scrollY;adminList.addEventListener('scroll',()=>{R04_ADMIN_CORE.scrollY=adminList.scrollTop;},{passive:true});}
  app.querySelectorAll('[data-admin-group]').forEach(b=>b.onclick=()=>{R04_ADMIN_CORE.group=b.dataset.adminGroup;R04_ADMIN_CORE.selected=-1;R04_ADMIN_CORE.autoExpanded=false;R04_ADMIN_CORE.expanded=[];R04_ADMIN_CORE.scrollY=0;render();});
@@ -1233,8 +1233,7 @@ function teacherView(){
   if(!S.selected&&active.length){
     const first=active.find(x=>savedState(x)!=='submitted')||active[0];
     S.selected=participantKey(first);
-    const chosen=teacherClasses(list).find(c=>c.students.some(x=>participantKey(x)===S.selected));
-    if(chosen){const opened=S.expandedClasses[S.group]||[];if(!opened.includes(chosen.key))S.expandedClasses[S.group]=[...opened,chosen.key];}
+    // RUN298: keep the selected student's grade panel, but never auto-open a class.
   }
   const p=list.find(x=>participantKey(x)===S.selected)||null;
   const g=p?draft(p):null;
@@ -1254,7 +1253,7 @@ function teacherView(){
   const inputDisabled=!preview&&(!S.r04TeacherGradingOpen||S.archived||!p||p.participationStatus==='archived');
   const saveDisabled=S.archived||S.published||!preview&&(!S.r04TeacherGradingOpen||!p||p.participationStatus==='archived'||S.r04TeacherSavePending);
   const navigation=p?`<div class="action-row" aria-label="평가 학생 이동"><span class="muted" style="margin-right:auto;align-self:center">${currentIndex+1} / ${list.length} 평가 대상 · ${mark(p)}</span><button type="button" class="btn line small" id="prevExamStudent" ${currentIndex<1?'disabled':''}>◀ 이전 학생</button><button type="button" class="btn line small" id="nextExamStudent" ${currentIndex>=list.length-1?'disabled':''}>다음 학생 ▶</button><button type="button" class="btn subtle small" id="nextPendingExamStudent" ${active.some(x=>savedState(x)!=='submitted'&&participantKey(x)!==S.selected)?'':'disabled'}>다음 미완료 학생</button></div>`:'';
-  app.innerHTML=prefix()+`<div class="heading-row"><div><h1>강사 평가 입력</h1><p>NA 25점 + 독백 25점 = 총 50점 · ${!preview?(S.r04TeacherGradingOpen?'현재 채점 ON':'현재 채점 OFF · 읽기 전용'):'미리보기'}</p></div><button class="btn line" id="refreshBtn" ${preview?'hidden':''}>새로고침</button></div><section class="stat-grid" aria-label="현재 그룹 평가 현황"><div class="stat"><small>평가 대상</small><strong>${active.length}</strong></div><div class="stat"><small>평가 완료</small><strong>${completed}</strong></div><div class="stat"><small>임시저장</small><strong>${temporary}</strong></div><div class="stat"><small>미평가</small><strong>${pending}</strong></div></section><div class="tabs"><button class="seg ${S.group==='청소년'?'active':''}" data-group="청소년">청소년반</button><button class="seg ${S.group==='성인'?'active':''}" data-group="성인">성인반</button></div><div class="layout"><aside class="panel"><div class="panel-title">평가 대상 <span class="hint">${classes.length}개 반 · ${active.length}명</span></div><p class="hint class-help">반을 열어 학생을 선택하세요. 완료·임시저장·미평가 상태를 표시합니다.</p><div class="student-list">${classMarkup||'<p class="muted">이 그룹에는 평가 대상이 없습니다. 다른 그룹을 선택하거나 R04 명단 연결을 확인해주세요.</p>'}</div></aside><article class="panel">${p?hero(p,gradeTotal(g),'작성 중 · 50점 만점')+navigation+media(p)+rubric(g,editAllowed,p.group)+`<div class="field"><label>강사 한줄평 · 최종 제출 시 필수</label><textarea id="noteInput" maxlength="300" ${inputDisabled?'disabled':''} placeholder="학생의 강점과 개선점을 구체적으로 작성해주세요.">${esc(g.note)}</textarea></div><p class="hint" id="r04SaveHelp">임시저장은 미완료 상태입니다. 최종 제출은 10항목 점수와 한줄평을 모두 입력해야 합니다. 저장 전 입력은 이 화면을 새로고침하면 사라질 수 있습니다.</p><div class="action-row"><button id="draftBtn" class="btn line" ${saveDisabled?'disabled':''}>임시저장</button><button id="submitBtn" class="btn" ${saveDisabled?'disabled':''}>평가 완료 · 저장</button></div>`:'<div class="empty-evaluation"><h2>평가 학생 선택</h2><p>왼쪽에서 반을 펼쳐 평가할 학생을 선택해주세요.</p></div>'}</article></div>`;
+  app.innerHTML=prefix()+`<div class="heading-row"><div><h1>강사 평가 입력</h1><p>NA 25점 + 독백 25점 = 총 50점 · ${!preview?(S.r04TeacherGradingOpen?'현재 채점 ON':'현재 채점 OFF · 읽기 전용'):'미리보기'}</p></div><button class="btn line" id="refreshBtn" ${preview?'hidden':''}>새로고침</button></div><section class="stat-grid" aria-label="현재 그룹 평가 현황"><div class="stat"><small>평가 대상</small><strong>${active.length}</strong></div><div class="stat"><small>평가 완료</small><strong>${completed}</strong></div><div class="stat"><small>임시저장</small><strong>${temporary}</strong></div><div class="stat"><small>미평가</small><strong>${pending}</strong></div></section><div class="tabs"><button class="seg ${S.group==='청소년'?'active':''}" data-group="청소년">청소년반</button><button class="seg ${S.group==='성인'?'active':''}" data-group="성인">성인반</button></div><div class="layout"><aside class="panel"><div class="panel-title">평가 대상 <span class="hint">${classes.length}개 반 · ${active.length}명</span></div><p class="hint class-help">반을 열어 학생을 선택하세요. 완료·임시저장·미평가 상태를 표시합니다.</p><div class="student-list r04-teacher-class-list">${classMarkup||'<p class="muted">이 그룹에는 평가 대상이 없습니다. 다른 그룹을 선택하거나 R04 명단 연결을 확인해주세요.</p>'}</div></aside><article class="panel">${p?hero(p,gradeTotal(g),'작성 중 · 50점 만점')+navigation+media(p)+rubric(g,editAllowed,p.group)+`<div class="field"><label>강사 한줄평 · 최종 제출 시 필수</label><textarea id="noteInput" maxlength="300" ${inputDisabled?'disabled':''} placeholder="학생의 강점과 개선점을 구체적으로 작성해주세요.">${esc(g.note)}</textarea></div><p class="hint" id="r04SaveHelp">임시저장은 미완료 상태입니다. 최종 제출은 10항목 점수와 한줄평을 모두 입력해야 합니다. 저장 전 입력은 이 화면을 새로고침하면 사라질 수 있습니다.</p><div class="action-row"><button id="draftBtn" class="btn line" ${saveDisabled?'disabled':''}>임시저장</button><button id="submitBtn" class="btn" ${saveDisabled?'disabled':''}>평가 완료 · 저장</button></div>`:'<div class="empty-evaluation"><h2>평가 학생 선택</h2><p>왼쪽에서 반을 펼쳐 평가할 학생을 선택해주세요.</p></div>'}</article></div>`;
   const sideList=app.querySelector('.student-list');
   if(sideList){sideList.scrollTop=R04_TEACHER_LIST_SCROLL[S.group]||0;sideList.addEventListener('scroll',()=>{R04_TEACHER_LIST_SCROLL[S.group]=sideList.scrollTop;},{passive:true});}
   app.querySelectorAll('[data-group]').forEach(b=>b.onclick=()=>{S.group=b.dataset.group;S.selected=null;render();});
@@ -1264,7 +1263,7 @@ function teacherView(){
     render();const next=[...app.querySelectorAll('[data-class-toggle]')].find(el=>el.dataset.classToggle===key);if(next)next.focus();
   });
   app.querySelectorAll('[data-student]').forEach(b=>b.onclick=()=>{S.selected=b.dataset.student;render();});
-  if($('refreshBtn'))$('refreshBtn').onclick=()=>withBusy($('refreshBtn'),reload);
+  if($('refreshBtn'))$('refreshBtn').onclick=()=>withBusy($('refreshBtn'),async()=>{S.expandedClasses={'청소년':[],'성인':[]};R04_TEACHER_LIST_SCROLL['청소년']=0;R04_TEACHER_LIST_SCROLL['성인']=0;await reload();});
   if(!p)return;
   const jump=idx=>{if(idx<0||idx>=list.length)return;S.selected=participantKey(list[idx]);render();};
   if($('prevExamStudent'))$('prevExamStudent').onclick=()=>jump(currentIndex-1);

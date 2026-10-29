@@ -94,3 +94,19 @@
 
 /* RUN297: hidden class student lists must stay hidden despite the RUN294 flex layout. */
 .r04-admin-class-list .class-students[hidden]{display:none!important}
+
+
+/* RUN298: teacher-only accordion geometry; do not change the fixed RUN297 admin styles. */
+.r04-teacher-class-list.student-list{display:flex;flex-direction:column;align-items:stretch;gap:8px;min-width:0;overflow-x:hidden}
+.r04-teacher-class-list .class-accordion{display:block;flex:0 0 auto;min-height:max-content;height:auto;width:100%;overflow:hidden}
+.r04-teacher-class-list .class-toggle{height:auto;min-height:53px;align-items:center;flex-shrink:0}
+.r04-teacher-class-list .class-title{flex:1 1 auto;min-width:0}
+.r04-teacher-class-list .class-title>span:last-child{flex:1 1 auto;min-width:0}
+.r04-teacher-class-list .class-title strong{white-space:normal;line-height:1.45;overflow-wrap:anywhere;word-break:keep-all}
+.r04-teacher-class-list .class-count{flex:0 0 auto;align-self:center}
+.r04-teacher-class-list .class-students{display:grid;grid-auto-rows:minmax(44px,auto);gap:6px;min-width:0;min-height:0;overflow:visible}
+.r04-teacher-class-list .class-students[hidden]{display:none!important}
+.r04-teacher-class-list .student-choice{display:flex;align-items:center;justify-content:space-between;gap:8px;flex:0 0 auto;min-height:44px;height:auto;width:100%;max-width:100%;white-space:normal}
+.r04-teacher-class-list .student-choice b{display:block;flex:1 1 auto;min-width:0;overflow-wrap:anywhere;word-break:keep-all;white-space:normal;line-height:1.45}
+.r04-teacher-class-list .student-choice .chip{flex:0 0 auto}
+@media(max-width:800px){.layout:not(.r04-core-grid)>aside.panel>.r04-teacher-class-list.student-list{max-height:none;overflow:visible}}
