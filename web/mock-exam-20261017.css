@@ -13,3 +13,40 @@
 .session-picker{display:flex;align-items:center;gap:10px;max-width:65%}.session-picker select{border:1px solid #bfd8c8;background:#f7fcf9;border-radius:9px;min-width:240px;max-width:100%;padding:9px 11px;color:#24503d;font-weight:800}
 .session-form-grid{display:grid;grid-template-columns:1fr 1.4fr 1.3fr;gap:12px}.session-form-grid .field{margin:6px 0 12px}
 @media(max-width:700px){.session-bar{flex-direction:column;align-items:stretch}.session-picker{max-width:none;width:100%}.session-picker select{flex:1;min-width:0}.session-form-grid{grid-template-columns:1fr}}
+
+/* RUN286-ULIM-R04-USABLE-SIDEBAR: expanded class rows remain accessible. */
+@media (min-width:801px){
+ .layout{grid-template-columns:minmax(285px,325px) minmax(0,1fr);align-items:start}
+ .layout>aside.panel{position:sticky;top:82px;max-height:calc(100dvh - 100px);min-height:320px;display:flex;flex-direction:column;min-width:0}
+ .layout>aside.panel>.student-list{flex:1 1 auto;min-height:0;max-height:none;overflow-y:auto;overflow-x:hidden;padding-right:6px;scrollbar-gutter:stable;overscroll-behavior:contain}
+}
+@media (max-width:800px){
+ .layout>aside.panel{position:static;max-height:none;display:block}
+ .layout>aside.panel>.student-list{max-height:none;overflow:visible}
+}
+.class-accordion{min-width:0}
+.class-toggle,.student-choice{min-height:45px}
+.class-title{flex:1;min-width:0}
+.class-count{flex-shrink:0}
+.class-students{min-width:0}
+.student-choice b{min-width:0;overflow-wrap:anywhere}
+.r04-core-grid article{min-width:0}
+.r04-settings-modal{width:min(1080px,100%);max-height:92dvh}
+.r04-settings-overlay .panel{box-shadow:none}
+.r04-settings-live>.panel{margin-bottom:12px}
+.r04-core-score-pending{border-top:1px solid #e6eee7;margin-top:22px;padding-top:14px}
+.r04-core-score-pending h3{font-size:15px;margin-bottom:8px}
+.r04-core-advanced{padding:12px;background:#f7faf8;border-radius:10px}
+.r04-core-advanced>summary{cursor:pointer;font-weight:750;color:#415e4c}
+.r04-core-grid .student-list{padding-bottom:12px}
+
+/* RUN288: styles are intentionally scoped to the preexisting R04 admin settings overlay. */
+#r04AdminSettingsOverlay .r04-edit-form{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:8px 0 14px}
+#r04AdminSettingsOverlay .r04-edit-form label{min-width:120px;flex:1 1 150px}
+#r04AdminSettingsOverlay .r04-edit-form input,#r04AdminSettingsOverlay .r04-edit-form select{width:100%;box-sizing:border-box}
+#r04AdminSettingsOverlay .r04-edit-form button{flex:0 0 auto}
+#r04AdminSettingsOverlay .r04-editor-status{margin:8px 0;padding:8px;border-radius:6px;background:var(--surface,#f1f6f5)}
+#r04AdminSettingsOverlay .r04-editor-status.error{color:#a32323}
+#r04AdminSettingsOverlay .r04-edit-section{margin:12px 0;border-top:1px solid #dbe5df;padding-top:12px}
+#r04AdminSettingsOverlay .r04-edit-section .hint{display:block;margin:4px 0}
+#r04AdminSettingsOverlay .r04-editor-narrow{max-width:360px}
