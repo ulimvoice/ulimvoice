@@ -260,12 +260,17 @@ function validateR04EvaluatorMatrix(raw,id){
    !integer(raw.stateVersion)||!integer(raw.participantCount)||raw.participantCount<1||raw.participantCount>150||
    !integer(raw.activeParticipantCount)||!integer(raw.archivedParticipantCount)||
    raw.activeParticipantCount+raw.archivedParticipantCount!==raw.participantCount||
-   !integer(raw.evaluatorCount)||raw.evaluatorCount>60||
+   !integer(raw.activeTeacherCount)||raw.activeTeacherCount>60||
+ !integer(raw.evaluatorCount)||raw.evaluatorCount>60||
+ raw.activeTeacherCount>raw.evaluatorCount||
    !Array.isArray(raw.evaluators)||raw.evaluators.length!==raw.evaluatorCount)
    throw Error('R04 평가 강사별 완료 현황의 형식이 올바르지 않습니다.');
  const allIds=new Set(),labels=new Set();
  const evaluators=raw.evaluators.map((entry,i)=>{
    if(!entry||entry.evaluatorLabel!==`평가강사 ${i+1}`||labels.has(entry.evaluatorLabel)||
+     typeof entry.teacherName!=='string'||!entry.teacherName.trim()||
+     entry.teacherName.length>100||
+     !['active','historical'].includes(entry.directoryStatus)||
      !integer(entry.submittedCount)||!integer(entry.draftCount)||!integer(entry.missingCount)||
      entry.submittedCount+entry.draftCount+entry.missingCount!==raw.activeParticipantCount||
      !Array.isArray(entry.grades)||entry.grades.length!==entry.submittedCount+entry.draftCount)
@@ -282,11 +287,15 @@ function validateR04EvaluatorMatrix(raw,id){
    });
    if(submitted!==entry.submittedCount||draft!==entry.draftCount)
      throw Error('강사별 최종 제출·임시저장 집계가 일치하지 않습니다.');
-   return {evaluatorLabel:entry.evaluatorLabel,submittedCount:submitted,draftCount:draft,
+   return {evaluatorLabel:entry.evaluatorLabel,teacherName:entry.teacherName,
+     directoryStatus:entry.directoryStatus,submittedCount:submitted,draftCount:draft,
      missingCount:entry.missingCount,grades};
  });
+ if(evaluators.filter(x=>x.directoryStatus==='active').length!==raw.activeTeacherCount)
+   throw Error('활성 강사 명단 건수가 일치하지 않습니다.');
  return {examId:id,participantCount:raw.participantCount,activeCount:raw.activeParticipantCount,
-   archivedCount:raw.archivedParticipantCount,stateVersion:raw.stateVersion,evaluators,allIds:[...allIds]};
+   archivedCount:raw.archivedParticipantCount,activeTeacherCount:raw.activeTeacherCount,
+   stateVersion:raw.stateVersion,evaluators,allIds:[...allIds]};
 }
 async function loadR04EvaluatorMatrix(){
  if(preview||S.role!=='admin'||!S.auth||R04_EVALUATOR_VIEW.loading||S.r04StateMutationPending)return;
@@ -330,7 +339,7 @@ function renderR04AdminEvaluatorMatrix(){
  // Fail closed when another roster has replaced the displayed participants.
  const linked=v.evaluators.every(e=>e.grades.every(g=>activeIds.has(g.participationId)));
  const ready=current&&v.activeCount===active.length&&linked;
- const buttons=ready?v.evaluators.map((g,i)=>`<button type="button" class="seg ${v.selected===i?'active':''}" data-r04-evaluator-index="${i}">${esc(g.evaluatorLabel)} · 완료 ${g.submittedCount}</button>`).join(''):'';
+ const buttons=ready?v.evaluators.map((g,i)=>`<button type="button" class="seg ${v.selected===i?'active':''}" data-r04-evaluator-index="${i}">${esc(g.teacherName)}${g.directoryStatus==='historical'?' · 이전 계정':''} · 완료 ${g.submittedCount}</button>`).join(''):'';
  const selected=ready?v.evaluators[v.selected]||null:null;
  const byPart=selected?new Map(selected.grades.map(x=>[x.participationId,x.status])):new Map();
  const statusName={submitted:'완료',draft:'임시저장',missing:'미평가'};
@@ -345,14 +354,14 @@ function renderR04AdminEvaluatorMatrix(){
      (!query||[x.studentLabel,x.classLabel,x.group].some(z=>str(z).toLocaleLowerCase('ko').includes(query)))):[];
  // Missing and draft cases go first only within the filtered list; never change server counts.
  const rows=items.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.group)}</td><td>${esc(x.classLabel||'현재 명단 외 수강반')}</td><td>${esc(x.studentLabel||'현재 명단 외 학생')}</td><td><span class="chip ${x.gradeStatus==='submitted'?'ok':'wait'}">${statusName[x.gradeStatus]}</span></td></tr>`).join('');
- const cards=selected?`<div class="stat-grid"><div class="stat"><small>현재 평가자</small><strong>${esc(selected.evaluatorLabel)}</strong></div><div class="stat"><small>최종 제출</small><strong>${selected.submittedCount}</strong></div><div class="stat"><small>임시저장</small><strong>${selected.draftCount}</strong></div><div class="stat"><small>미평가</small><strong>${selected.missingCount}</strong></div></div>`:'';
+ const cards=selected?`<div class="stat-grid"><div class="stat"><small>현재 평가자</small><strong>${esc(selected.teacherName)}</strong></div><div class="stat"><small>최종 제출</small><strong>${selected.submittedCount}</strong></div><div class="stat"><small>임시저장</small><strong>${selected.draftCount}</strong></div><div class="stat"><small>미평가</small><strong>${selected.missingCount}</strong></div></div>`:'';
  const filters=selected?`<div class="flex top-gap"><label>구분 <select id="r04EvalGroupFilter" aria-label="평가 구분">${groupOptions}</select></label><label>채점 상태 <select id="r04EvalStatusFilter" aria-label="평가 채점 상태">${statusOptions}</select></label><label>학생·수강반 검색 <input id="r04EvalSearch" type="search" maxlength="100" value="${esc(v.search)}" placeholder="학생 또는 수강반"></label><span class="muted">표시 ${items.length} / ${active.length}건</span></div>`:'';
  const note=v.loading?'<p class="hint">평가 강사별 상태를 조회하고 있습니다.</p>':
    v.error?`<p class="warn">${esc(v.error)}</p>`:
-   ready&&!v.evaluators.length?'<p class="hint">저장된 평가표가 아직 없습니다. 채점 기록이 없는 강사는 서버에서 식별할 수 없습니다.</p>':
+   ready&&!v.evaluators.length?'<p class="hint">현재 활성 강사 계정이 없으며 저장된 평가표도 없습니다.</p>':
    !ready?'<p class="hint">먼저 [저장된 평가 참가 명단 조회]를 누른 뒤, [강사별 채점 현황 조회]를 실행하세요.</p>':'';
  const table=selected?`<div class="scroll-table top-gap"><table class="wide-table"><thead><tr><th>번호</th><th>구분</th><th>수강반</th><th>학생</th><th>채점 상태</th></tr></thead><tbody>${rows||'<tr><td colspan="5">현재 필터에 해당하는 학생이 없습니다.</td></tr>'}</tbody></table></div>`:'';
- const html=`<section id="r04AdminEvaluatorMatrix" class="panel"><div class="heading-row"><div><h2>R04 강사별 · 학생별 채점 현황</h2><p class="muted">관리자 전용 · 실제 최종 제출·임시저장·미평가 · 점수/한줄평 미조회</p></div><span class="chip wait">읽기 전용</span></div><button id="r04AdminEvaluatorRefresh" type="button" class="btn line" ${v.loading||roster.examId!==id||!roster.rows.length?'disabled':''}>${v.loading?'조회 중':'강사별 채점 현황 조회'}</button>${note}${buttons?`<div class="tabs">${buttons}</div>`:''}${cards}${filters}${table}<p class="hint">강사 번호는 제출 기록 기준이며 현재 평가표가 없는 강사는 목록에 표시되지 않습니다. 전체 등록 강사 명단과 다를 수 있습니다.</p></section>`;
+ const html=`<section id="r04AdminEvaluatorMatrix" class="panel"><div class="heading-row"><div><h2>R04 강사별 · 학생별 채점 현황</h2><p class="muted">관리자 전용 · 실제 최종 제출·임시저장·미평가 · 점수/한줄평 미조회</p></div><span class="chip wait">읽기 전용</span></div><button id="r04AdminEvaluatorRefresh" type="button" class="btn line" ${v.loading||roster.examId!==id||!roster.rows.length?'disabled':''}>${v.loading?'조회 중':'강사별 채점 현황 조회'}</button>${note}${buttons?`<div class="tabs">${buttons}</div>`:''}${cards}${filters}${table}<p class="hint">Firestore 활성 강사 계정을 모두 표시합니다(평가 0건 포함). 기존 평가표가 남아 있는 비활성 계정은 실명 없이 ‘과거 평가강사’로 별도 표시합니다. 회차 채점 기준: 활성 참가 기록 ${ready?active.length:'조회 전'}건.</p></section>`;
  const anchor=$('r04AdminCompletionDashboard')||$('r04PersistedRosterPanel')||$('r04AdminReleasePanel');
  if(!anchor)return;
  anchor.insertAdjacentHTML('afterend',html);
@@ -802,7 +811,7 @@ function renderR04StudentHistory(){
 
 async function refreshSessions(){if(preview)return;if(S.role==='student')return refreshR04StudentHistory();if(S.role==='teacher'){S.examId='r04_202610_r01';S.sessions=[{examId:S.examId,date:'2026-10-30',month:'2026-10',title:'R04 모의고사 1회차',published:false,archived:false}];return reloadR04Teacher();}if(S.role==='admin')return refreshCanonicalAdminRosterR04();const out=await call(FN.sessions,{});if(out.ok!==true)throw Error('평가 회차 목록을 불러오지 못했습니다.');S.sessions=Array.isArray(out.sessions)?out.sessions:[];if(!S.sessions.some(x=>x.examId===S.examId))S.examId=S.sessions.length?S.sessions[0].examId:'';if(S.examId)await reload();else{applySnapshot({});S.sessionTitle='';render();}}
 async function switchExam(id){if(!S.sessions.some(x=>x.examId===id))return toast('해당 회차를 열람할 수 없습니다.');if(preview){switchPreviewExam(id);return;}S.examId=id;S.edit={};S.selected=null;S.judgePage=0;S.expandedClasses={'청소년':[],'성인':[]};await reload();}
-function sessionBar(){const m=S.sessions.find(x=>x.examId===S.examId);return `<section class="session-bar"><div><strong>평가 회차</strong><small>${m?esc(m.date+' · '+m.title):'생성 또는 선택된 회차 없음'}</small></div><div class="session-picker"><select aria-label="평가 회차 선택" id="sessionSelect"><option value="" ${!S.examId?'selected':''} disabled>회차를 선택하세요</option>${S.sessions.map(x=>`<option value="${esc(x.examId)}" ${S.examId===x.examId?'selected':''}>${esc(x.month+' · '+x.title)}${x.archived?' · 보관':x.published?' · 공개':''}</option>`).join('')}</select><span class="chip ${S.archived?'wait':S.published?'ok':'wait'}">${S.archived?'보관됨':S.published?'공개됨':'작성 중'}</span></div></section>`;}
+function sessionBar(){if(!preview&&S.role==='admin'&&S.rosterPreviewOnly){const m=S.r04SessionState;const id=str(S.r04SessionId);return `<section class="session-bar"><div><strong>평가 회차</strong><small>R04 · ${esc(id)}${m&&m.examId===id?' · '+(m.gradingOpen?'평가 ON':'평가 대기 또는 종료'):''}</small></div><span class="chip wait">관리자 회차</span></section>`;}const m=S.sessions.find(x=>x.examId===S.examId);return `<section class="session-bar"><div><strong>평가 회차</strong><small>${m?esc(m.date+' · '+m.title):'생성 또는 선택된 회차 없음'}</small></div><div class="session-picker"><select aria-label="평가 회차 선택" id="sessionSelect"><option value="" ${!S.examId?'selected':''} disabled>회차를 선택하세요</option>${S.sessions.map(x=>`<option value="${esc(x.examId)}" ${S.examId===x.examId?'selected':''}>${esc(x.month+' · '+x.title)}${x.archived?' · 보관':x.published?' · 공개':''}</option>`).join('')}</select><span class="chip ${S.archived?'wait':S.published?'ok':'wait'}">${S.archived?'보관됨':S.published?'공개됨':'작성 중'}</span></div></section>`;}
 function prefix(){return (preview?previewBar():'')+sessionBar();}
 function bindSessionPicker(){const el=$('sessionSelect');if(el)el.onchange=e=>withBusy(el,()=>switchExam(e.target.value));}
 
