@@ -374,6 +374,59 @@ function renderR04AdminInlineMedia(selected,exact){
  if(!state.loading&&!state.record&&!state.error)void loadR04AdminInlineMedia(target);
 }
 
+/* RUN333_MODAL_ROUTING: modal ESC / mobile back; auth bootstrap without login flash.
+ * Browser history entries are transient UI state, not authentication state.
+ */
+let r333ModalHistory=false;
+function r333ActiveModal(){
+ const custom=document.getElementById('r04ManualMediaOverlay');
+ if(custom&&custom.style.display!=='none')return 'media';
+ const teacher=document.getElementById('r04TeacherGradeOverlay');
+ if(teacher&&teacher.style.display!=='none')return 'teacher';
+ const settings=document.getElementById('r04AdminSettingsOverlay');
+ if(settings&&settings.style.display!=='none')return 'settings';
+ return '';
+}
+function r333CloseModal(){
+ const kind=r333ActiveModal();
+ if(!kind)return false;
+ if(kind==='media'){
+  if(typeof R04_MANUAL_MEDIA!=='undefined'&&R04_MANUAL_MEDIA.saving)return true;
+  closeR04ManualMedia();
+ }else if(kind==='teacher'){
+  R04_ADMIN_CORE.teacherModalIndex=-1;
+  R04_ADMIN_CORE.teacherModalParticipationId='';
+  render();
+ }else{
+  R04_ADMIN_CORE.settingsOpen=false;
+  const layer=document.getElementById('r04AdminSettingsOverlay');
+  if(layer)layer.style.display='none';
+ }
+ return true;
+}
+function r333RegisterModalHistory(){
+ if(r333ModalHistory||!r333ActiveModal())return;
+ history.pushState({ulimExamModal:true},'',location.href);
+ r333ModalHistory=true;
+}
+window.addEventListener('popstate',()=>{
+ if(r333ActiveModal()){r333ModalHistory=false;r333CloseModal();}
+ else r333ModalHistory=false;
+});
+document.addEventListener('keydown',e=>{
+ if(e.key!=='Escape'||!r333ActiveModal())return;
+ e.preventDefault();
+ if(r333ModalHistory){history.back();return;}
+ r333CloseModal();
+},true);
+document.addEventListener('click',e=>{
+ const b=e.target.closest('button');
+ if(!b)return;
+ if(['r04OpenClassManager','r04OpenStudentManager','r04OpenSettings','r04InlineMediaAttach'].includes(b.id)||b.hasAttribute('data-r04-teacher-popup-index')){
+  setTimeout(()=>r333RegisterModalHistory(),0);
+ }
+},true);
+
 function renderR04SettingsVisibility(){
  const overlay=$('r04AdminSettingsOverlay');if(!overlay)return;
  const standalone=['classes','students'].includes(R04_ADMIN_CORE.settingsTab);
@@ -1598,6 +1651,16 @@ function studentView(){const mine=S.roster.filter(p=>p.studentUid===S.auth.stude
  if($('prevJudge')){$('prevJudge').disabled=S.judgePage===0;$('prevJudge').onclick=()=>{S.judgePage--;render()}}if($('nextJudge')){$('nextJudge').disabled=S.judgePage>=S.judges.length-1;$('nextJudge').onclick=()=>{S.judgePage++;render()}}}
 function render(){badge();if(!S.auth){loginView();return;}if(!preview&&S.role==='student'){renderR04StudentHistory();return;}if(S.role==='admin'&&S.rosterPreviewOnly){renderCanonicalAdminRosterR04();return;}if(S.role==='teacher')teacherView();else if(S.role==='admin')adminView();else studentView();bindSessionPicker();if(preview){app.querySelectorAll('[data-preview-role]').forEach(b=>b.onclick=()=>setPreviewRole(b.dataset.previewRole));const pb=$('togglePreviewPublished');if(pb)pb.onclick=()=>{S.published=!S.published;const meta=S.sessions.find(x=>x.examId===S.examId);if(meta)meta.published=S.published;S.previewData[S.examId]=currentSnapshot();render()}}}
 logoutBtn.onclick=()=>withBusy(logoutBtn,async()=>{const rt=await runtime();await rt.sdk.signOut(rt.auth);clearR04PersistedView();S={...S,role:null,auth:null,rt,roster:[],grades:[],judges:[],folders:{},edit:{},examId:'',sessions:[],rosterPreviewOnly:false,rosterDate:'',rosterReview:[],rosterReviewSummary:{},r04SessionState:null,r04StateMutationPending:false,r04ReleasePreview:null,r04ReleasePending:false,r04ReleasePreviewPending:false,r04MediaRoster:[],r04MediaRosterExamId:'',r04MediaRosterState:'',r04MediaResultsReleased:false,r04MediaRosterPending:false,r04MediaSelection:'',r04MediaRecord:null,r04MediaReadPending:false,r04MediaSavePending:false,r04MediaUnsafe:false,r04TeacherReady:false,r04TeacherGradingOpen:false,r04TeacherSavePending:false,r04StudentHistoryRecords:[],r04StudentHistoryReady:false,r04StudentHistoryError:'',r04StudentHistorySelection:'',r04StudentEvaluationPage:0};render()});
-async function start(){if(preview){initPreview();return}render();try{const rt=await runtime();await new Promise(resolve=>{let settled=false;let stop=()=>{};const timer=setTimeout(()=>{if(!settled){settled=true;stop();resolve()}},4500);stop=rt.sdk.onAuthStateChanged(rt.auth,()=>{if(!settled){settled=true;clearTimeout(timer);resolve()}},()=>{if(!settled){settled=true;clearTimeout(timer);resolve()}})});if(rt.auth.currentUser)await bindSession();else loginView()}catch(e){app.innerHTML=`<section class="center-state"><h1>평가 서비스 연결을 확인해주세요.</h1><p>${esc(errorMessage(e))}</p><div class="action-row"><button id="retryBtn" class="btn">다시 시도</button></div></section>`;$('retryBtn').onclick=start}}
+async function start(){if(preview){initPreview();return}
+ app.innerHTML='<section class="center-state"><h1>로그인 상태 확인 중</h1><p>기존 울림앱 인증 상태를 확인하고 있습니다.</p></section>';
+ try{
+  const rt=await runtime();
+  await new Promise((resolve,reject)=>{let done=false,unsubscribe=()=>{},timeout=setTimeout(()=>{if(done)return;done=true;unsubscribe();reject(Error('인증 상태 확인 시간이 초과됐습니다. 다시 시도해주세요.'));},12000);
+   unsubscribe=rt.sdk.onAuthStateChanged(rt.auth,()=>{if(done)return;done=true;clearTimeout(timeout);resolve();unsubscribe();},e=>{if(done)return;done=true;clearTimeout(timeout);reject(e);unsubscribe();});
+  });
+  if(rt.auth.currentUser)await bindSession();
+  else loginView();
+ }catch(e){app.innerHTML=`<section class="center-state"><h1>로그인 상태 확인 실패</h1><p>${esc(errorMessage(e))}</p><div class="action-row"><button id="retryBtn" class="btn">다시 시도</button></div></section>`;$('retryBtn').onclick=start}
+}
 start();
 })();
