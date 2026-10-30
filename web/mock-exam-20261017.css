@@ -172,3 +172,27 @@
 #r04AdminSettingsOverlay .r04-edit-form label{min-width:0;flex:none}
 #r04AdminSettingsOverlay .r04-edit-form button{min-height:42px}
 @media(max-width:700px){#r04AdminSettingsOverlay #r04CreateClass,#r04AdminSettingsOverlay #r04AddStudent,#r04AdminSettingsOverlay #r04AddManual,#r04AdminSettingsOverlay .r04-edit-section .r04-edit-form{grid-template-columns:minmax(0,1fr)}#r04AdminSettingsOverlay .r04-edit-section{padding:16px 12px}}
+
+/* RUN332_CLEAN_MANAGEMENT */
+#r04AdminSettingsOverlay.r332-standalone .r04-settings-tabs,#r04AdminSettingsOverlay.r332-standalone .r04-settings-live,#r04AdminSettingsOverlay.r332-standalone .r04-core-advanced,#r04AdminSettingsOverlay.r332-standalone #r04SettingsAdvanced{display:none!important}
+#r04AdminSettingsOverlay.r332-standalone .r04-settings-modal{max-width:850px;width:min(850px,calc(100vw - 24px));max-height:calc(100vh - 32px);overflow:auto}
+#r04AdminSettingsOverlay.r332-standalone .r04-setting-panel{padding:0!important;border:0!important;box-shadow:none!important}
+#r04AdminSettingsOverlay.r332-standalone .modal-head{padding:14px 0 18px;border-bottom:1px solid #d9e6de}
+#r04AdminSettingsOverlay.r332-standalone .modal-head .hint{display:none}
+#r04AdminSettingsOverlay.r332-standalone .r332-manager{font-size:16px;line-height:1.5}
+#r04AdminSettingsOverlay.r332-standalone .r332-manager-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:12px 0}
+#r04AdminSettingsOverlay.r332-standalone .r332-manager-toolbar h3{font-size:20px;margin:0}
+#r04AdminSettingsOverlay.r332-standalone .r332-meta{font-size:14px;color:#62766c;margin:8px 0 12px}
+#r04AdminSettingsOverlay.r332-standalone .r332-section{padding:19px 0;border-bottom:1px solid #d9e6de}
+#r04AdminSettingsOverlay.r332-standalone .r332-section h4{font-size:19px;font-weight:700;margin:0 0 14px}
+#r04AdminSettingsOverlay.r332-standalone .r332-field-row{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:12px;align-items:end;margin:0}
+#r04AdminSettingsOverlay.r332-standalone .r332-field-row>label{display:flex;min-width:0;flex-direction:column;gap:5px;font-size:15px;font-weight:600}
+#r04AdminSettingsOverlay.r332-standalone .r332-field-row input,#r04AdminSettingsOverlay.r332-standalone .r332-field-row select,#r04AdminSettingsOverlay.r332-standalone .r332-advanced input,#r04AdminSettingsOverlay.r332-standalone .r332-advanced select{display:block;width:100%;max-width:none;min-width:0;box-sizing:border-box;min-height:44px;font-size:16px;padding:8px 10px}
+#r04AdminSettingsOverlay.r332-standalone .r332-field-row .btn{min-height:44px;min-width:105px;font-size:15px;white-space:nowrap}
+#r04AdminSettingsOverlay.r332-standalone .r332-advanced{margin:20px 0 8px;padding:12px 16px;border:1px solid #d9e6de;border-radius:10px}
+#r04AdminSettingsOverlay.r332-standalone .r332-advanced summary{cursor:pointer;font-weight:600;font-size:16px}
+#r04AdminSettingsOverlay.r332-standalone .r332-advanced[open]>label{display:block;margin:12px 0}
+#r04AdminSettingsOverlay.r332-standalone .r332-advanced .r332-field-row{margin-top:14px}
+#r04AdminSettingsOverlay.r332-standalone .r332-footnote{font-size:13px;color:#698075;margin:16px 0 4px}
+#r04AdminSettingsOverlay.r332-standalone .r332-add-student>label:first-child input{margin-bottom:6px}
+@media(max-width:700px){#r04AdminSettingsOverlay.r332-standalone .r332-field-row{grid-template-columns:1fr!important}#r04AdminSettingsOverlay.r332-standalone .r332-field-row .btn{width:100%}}
