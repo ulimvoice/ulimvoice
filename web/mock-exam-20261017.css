@@ -139,3 +139,36 @@
 .r04-teacher-popup-note{margin-top:18px}
 .r04-teacher-popup-note .note{max-height:230px;overflow:auto;overflow-wrap:anywhere}
 @media(max-width:680px){.r04-teacher-popup-grid{grid-template-columns:1fr}.r04-teacher-grade-modal{padding:14px}.r04-teacher-status-accordion>summary{align-items:flex-start;flex-wrap:wrap}.r04-teacher-status-accordion>summary small{width:100%;text-align:left;padding-left:25px}}
+
+/* RUN331_UI_CLEAN_LAYOUT: roomy, consistent editor-only modals */
+
+#r04AdminSettingsOverlay:has([data-r04-setting-section="classes"]:not([hidden])) .r04-settings-modal,
+#r04AdminSettingsOverlay:has([data-r04-setting-section="students"]:not([hidden])) .r04-settings-modal { width:min(920px,calc(100vw - 32px));max-width:920px;max-height:calc(100vh - 48px);overflow-y:auto;box-sizing:border-box;padding:clamp(18px,3vw,32px) }
+#r04EditorClassHost,#r04EditorStudentHost { background:transparent;border:0;box-shadow:none;padding:0;margin:0;min-width:0 }
+#r04AdminSettingsOverlay .r331-manager-head {padding:2px 0 16px;border-bottom:1px solid #dce9e2;margin:4px 0 18px}
+#r04AdminSettingsOverlay .r331-manager-head h3{font-size:21px;margin:0 0 6px;color:#193c32}
+#r04AdminSettingsOverlay .r331-manager-head p{margin:0;color:#63796e;font-size:13px}
+#r04AdminSettingsOverlay .r331-card {border:1px solid #dde8e2;border-radius:14px;background:#fff;padding:22px 24px;margin:16px 0;box-shadow:0 3px 15px rgba(27,62,45,.035)}
+#r04AdminSettingsOverlay .r331-card.r04-edit-section{border-top:1px solid #dde8e2}
+#r04AdminSettingsOverlay .r330-section-title{font-size:17px;line-height:1.4;color:#1a4033;margin:0 0 6px;font-weight:700}
+#r04AdminSettingsOverlay .r331-help{font-size:13px;color:#667d72;margin:0 0 20px;line-height:1.6}
+#r04AdminSettingsOverlay .r331-card .r04-edit-form{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;align-items:end;gap:14px;margin:14px 0}
+#r04AdminSettingsOverlay .r331-card label{min-width:0!important;display:flex;flex-direction:column;gap:7px;font-size:13px;color:#344f42}
+#r04AdminSettingsOverlay .r331-card input,#r04AdminSettingsOverlay .r331-card select,#r04AdminSettingsOverlay .r04-editor-narrow{min-width:0;max-width:none;width:100%;box-sizing:border-box;height:42px;padding:7px 11px;font-size:14px;border:1px solid #cddfd5;border-radius:9px;background:#fff}
+#r04AdminSettingsOverlay .r331-card .btn{min-height:42px;white-space:normal;line-height:1.35;padding:9px 15px;border-radius:9px}
+#r04AdminSettingsOverlay .r331-card>label{display:block;margin:8px 0 16px}
+#r04AdminSettingsOverlay .r331-card>label select{margin-top:8px}
+#r04AdminSettingsOverlay .r331-card .hint{margin:12px 0 0;line-height:1.6}
+#r04AdminSettingsOverlay #r04EditorRefresh{margin:12px 0 4px}
+#r04AdminSettingsOverlay .r04-editor-status{padding:12px 14px;border-radius:9px;font-size:13px}
+#r04AdminSettingsOverlay #r04EditorFindStudent{margin:6px 0 7px}
+@media(max-width:700px){#r04AdminSettingsOverlay .r331-card{padding:17px 14px;margin:12px 0}#r04AdminSettingsOverlay .r331-card .r04-edit-form{grid-template-columns:minmax(0,1fr);gap:12px}#r04AdminSettingsOverlay .r331-card button{width:100%}}
+
+#r04AdminSettingsOverlay #r04CreateClass,#r04AdminSettingsOverlay #r04AddStudent,#r04AdminSettingsOverlay #r04AddManual,#r04AdminSettingsOverlay .r04-edit-section{background:#fff;border:1px solid #dce8e0!important;border-radius:14px;padding:20px 22px;margin:18px 0;box-shadow:0 3px 14px rgba(12,48,34,.04)}
+#r04AdminSettingsOverlay #r04CreateClass,#r04AdminSettingsOverlay #r04AddStudent,#r04AdminSettingsOverlay #r04AddManual,#r04AdminSettingsOverlay .r04-edit-section .r04-edit-form{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:14px;align-items:end}
+#r04AdminSettingsOverlay .r04-edit-section>label{display:block;margin:10px 0 18px}
+#r04AdminSettingsOverlay .r04-edit-section>label select{margin-top:8px}
+#r04AdminSettingsOverlay #r04EditorClassHost>h4,#r04AdminSettingsOverlay #r04EditorStudentHost>h4{font-size:17px;font-weight:700;color:#174333;margin:24px 0 12px}
+#r04AdminSettingsOverlay .r04-edit-form label{min-width:0;flex:none}
+#r04AdminSettingsOverlay .r04-edit-form button{min-height:42px}
+@media(max-width:700px){#r04AdminSettingsOverlay #r04CreateClass,#r04AdminSettingsOverlay #r04AddStudent,#r04AdminSettingsOverlay #r04AddManual,#r04AdminSettingsOverlay .r04-edit-section .r04-edit-form{grid-template-columns:minmax(0,1fr)}#r04AdminSettingsOverlay .r04-edit-section{padding:16px 12px}}
