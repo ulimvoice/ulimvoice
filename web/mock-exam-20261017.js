@@ -2,7 +2,7 @@
 'use strict';
 // Single owner: this file is the only UI/controller owner for the standalone mock examination.
 const EXAM_ID='2026-10-17';
-const FN={sessions:'listMockExamSessions20261017',overview:'getMockExamOverview20261017',save:'saveMockExamGrade20261017',admin:'manageMockExam20261017',r04RosterPreview:'getMockExamCanonicalRosterAdminR04',r04Persisted:'getMockExamPersistedSessionAdminR04',r04State:'setMockExamSessionGradingAdminR04',r04TeacherWorkspace:'getMockExamTeacherWorkspaceR04',r04TeacherSave:'saveMockExamTeacherGradeR04',r04StudentHistory:'getMockExamStudentHistoryR04',r04AdminRelease:'manageMockExamResultReleaseAdminR04',r04AdminMedia:'manageMockExamParticipationMediaAdminR04',r04GradingMatrix:'getMockExamAdminGradingMatrixR04',r04AdminRosterEdit:'manageMockExamAdminRosterEditR04',r04Scoreboard:'getMockExamAdminScoreboardR04',r04RubricAdmin:'manageMockExamRubricAdminR04',r04GradeAdmin:'manageMockExamAdminGradeR04'};
+const FN={sessions:'listMockExamSessions20261017',overview:'getMockExamOverview20261017',save:'saveMockExamGrade20261017',admin:'manageMockExam20261017',r04RosterPreview:'getMockExamCanonicalRosterAdminR04',r04Persisted:'getMockExamPersistedSessionAdminR04',r04State:'setMockExamSessionGradingAdminR04',r04TeacherWorkspace:'getMockExamTeacherWorkspaceR04',r04TeacherSave:'saveMockExamTeacherGradeR04',r04StudentHistory:'getMockExamStudentHistoryR04',r04AdminRelease:'manageMockExamResultReleaseAdminR04',r04AdminMedia:'manageMockExamParticipationMediaAdminR04',r04GradingMatrix:'getMockExamAdminGradingMatrixR04',r04AdminRosterEdit:'manageMockExamAdminRosterEditR04',r04Scoreboard:'getMockExamAdminScoreboardR04',r04RubricAdmin:'manageMockExamRubricAdminR04',r04GradeAdmin:'manageMockExamAdminGradeR04',r04TeacherGradeDelete:'deleteMockExamTeacherGradeAdminR04'};
 const NA=['발음의 정확성','발성의 안정성','호흡과 문장 처리','정보 전달력','다큐멘터리 톤과 리듬'];
 const ACT=['인물 및 상황 이해','감정·의도 표현','발성·발음','호흡·대사 흐름','몰입도와 전달력'];
 const GROUPS=['청소년','성인'];
@@ -564,7 +564,7 @@ function renderR04AdminCore(){
  const exact=match&&match.length===1?match[0]:null;
  const teacherStatuses=hasMatrix&&exact?matrix.evaluators.map((t,index)=>{
    const grade=t.grades.find(g=>g.participationId===exact.participationId);
-   return {index,name:t.teacherName,status:grade?grade.status:'missing'};
+   return {index,name:t.teacherName,directoryStatus:t.directoryStatus,status:grade?grade.status:'missing'};
  }):[];
  const matchLabel=hasPersisted&&!exact?'저장 참가 ID와 자동 연결 미확인':!hasPersisted?'저장 참가 명단 조회 전':'저장 참가 ID 확인';
  const classMap=new Map();
@@ -595,7 +595,7 @@ const modalContent=!modalTeacher?'':modalTeacher.status==='missing'?'<p class="h
   !scoresReady?'<p class="warn">평가 점수 조회가 완료되지 않아 평가표를 표시할 수 없습니다. 명단·채점 현황 조회 후 다시 확인하세요.</p>':
   !uniqueTeacher||modalMatches.length!==1||!modalGrade?'<p class="warn">강사 식별 또는 평가 상태가 일치하지 않아 평가표를 안전하게 연결할 수 없습니다. 점수는 표시하지 않습니다.</p>':
   `<div class="r04-teacher-popup-summary"><span class="chip ${modalGrade.status==='submitted'?'ok':'wait'}">${modalGrade.status==='submitted'?'최종제출':'임시저장'}</span><strong>${modalGrade.status==='submitted'?fmt(modalGrade.total)+' / 50점':'임시저장 · 총점 집계 제외'}</strong></div><div class="r04-teacher-popup-grid">${modalItems(modalGrade.na,'na')}${modalItems(modalGrade.act,'act')}</div><div class="r04-teacher-popup-note"><h3>한줄평</h3><p class="note">${esc(modalGrade.note||'작성된 한줄평 없음')}</p></div>`;
-const teacherModal=modalTeacher&&exact&&R04_ADMIN_CORE.teacherModalParticipationId===exact.participationId?`<div id="r04TeacherGradeOverlay" class="modal-wrap r04-teacher-grade-overlay" role="dialog" aria-modal="true" aria-labelledby="r04TeacherGradeModalTitle"><div class="modal r04-teacher-grade-modal" role="document"><div class="modal-head"><div><h2 id="r04TeacherGradeModalTitle">${esc(modalTeacher.name)} 평가표</h2><p class="muted">${esc(selected.name)} · ${esc(selected.className)} · 읽기 전용</p></div><button type="button" class="btn line" id="r04CloseTeacherGradePopup" aria-label="평가표 팝업 닫기">닫기 ✕</button></div>${modalContent}</div></div>`:'';
+const teacherModal=modalTeacher&&exact&&R04_ADMIN_CORE.teacherModalParticipationId===exact.participationId?`<div id="r04TeacherGradeOverlay" class="modal-wrap r04-teacher-grade-overlay" role="dialog" aria-modal="true" aria-labelledby="r04TeacherGradeModalTitle"><div class="modal r04-teacher-grade-modal" role="document"><div class="modal-head"><div><h2 id="r04TeacherGradeModalTitle">${esc(modalTeacher.name)} 평가표</h2><p class="muted">${esc(selected.name)} · ${esc(selected.className)} · 읽기 전용</p></div><button type="button" class="btn line" id="r04CloseTeacherGradePopup" aria-label="평가표 팝업 닫기">닫기 ✕</button></div>${modalContent}${modalGrade&&modalTeacher&&modalTeacher.directoryStatus==='active'&&modalGrade.revision>0?`<div class="r338-delete-controls"><button type="button" class="btn line" id="r338DeleteTeacherGrade" style="color:#ad2727;border-color:#cf9a9a">이 강사의 평가 삭제</button><p class="hint">현재 회차에서 해당 학생에 대한 이 강사의 평가 1건만 삭제합니다. 서버에서 관리자 권한과 평가 버전을 재확인합니다.</p></div>`:''}</div></div>`:'';
  const scoreRows=scoresReady?scores.rows.filter(x=>x.submittedCount>0).sort((a,b)=>a.rank-b.rank||b.average-a.average):[];
  const scoreLeaderboard=scoreRows.length?`<div class="scroll-table"><table class="wide-table"><thead><tr><th>순위</th><th>학생</th><th>수강반</th><th>합계</th><th>평균/50</th><th>제출 강사</th></tr></thead><tbody>${scoreRows.map(r=>{const p=persisted.rows.find(x=>x.participationId===r.participationId);return `<tr><td>${r.rank}위 ${r.complete?'':'· 잠정'}</td><td>${esc(p&&p.studentLabel||'확인 필요')}</td><td>${esc(p&&p.classLabel||'확인 필요')}</td><td>${fmt(r.sum)}</td><td>${fmt(r.average)}</td><td>${r.submittedCount}/${scores.teacherCount}</td></tr>`;}).join('')}</tbody></table></div>`:
    '<p class="hint">최종 제출된 평가표가 없어 아직 순위를 계산할 수 없습니다.</p>';
@@ -641,6 +641,31 @@ const teacherModal=modalTeacher&&exact&&R04_ADMIN_CORE.teacherModalParticipation
    const focusIndex=R04_ADMIN_CORE.teacherModalIndex;
    const close=()=>{R04_ADMIN_CORE.teacherModalIndex=-1;R04_ADMIN_CORE.teacherModalParticipationId='';render();app.querySelector(`[data-r04-teacher-popup-index="${focusIndex}"]`)?.focus();};
    $('r04CloseTeacherGradePopup').onclick=close;
+   // RUN338_ADMIN_TEACHER_GRADE_DELETE — one exact teacher/participant/revision per request.
+   const deleteGrade=$('r338DeleteTeacherGrade');
+   if(deleteGrade&&exact&&modalTeacher&&modalGrade){
+    deleteGrade.onclick=async()=>{
+     const examId=str(S.r04SessionId),participationId=str(exact.participationId);
+     const teacherName=str(modalTeacher.name),expectedRevision=modalGrade.revision;
+     if(S.role!=='admin'||!S.auth||!r04EditEligible()||!Number.isSafeInteger(expectedRevision)||expectedRevision<1){toast('현재 평가 삭제가 허용되지 않습니다.');return;}
+     const message='[평가 삭제 확인]\n회차: '+examId+'\n학생: '+str(selected.name)+'\n반: '+str(selected.className)+'\n강사: '+teacherName+'\n\n이 강사의 현재 평가 기록 1건을 삭제하고 감사 기록에 보관합니다. 진행하시겠습니까?';
+     if(!window.confirm(message))return;
+     deleteGrade.disabled=true;deleteGrade.textContent='삭제 확인 중...';
+     const authUid=str(S.auth.uid);
+     try{
+      const res=await call(FN.r04TeacherGradeDelete,{examId,participationId,teacherName,expectedRevision});
+      if(!res||res.ok!==true||res.mode!=='admin-r04-teacher-grade-deleted'||res.examId!==examId||res.participationId!==participationId||res.deletedRevision!==expectedRevision)
+       throw Error('삭제 결과를 확정할 수 없습니다. 다시 조회하세요.');
+      R04_ADMIN_CORE.teacherModalIndex=-1;R04_ADMIN_CORE.teacherModalParticipationId='';
+      toast('강사 평가 삭제 완료. 강사별 현황과 점수를 새로 조회합니다.');
+      if(S.role==='admin'&&str(S.auth&&S.auth.uid)===authUid&&str(S.r04SessionId)===examId){
+       await loadR04EvaluatorMatrix();await loadR04AdminScoreboard();
+      }
+     }catch(e){toast('삭제 실패 또는 재조회 필요: '+errorMessage(e));}
+     finally{deleteGrade.disabled=false;deleteGrade.textContent='이 강사의 평가 삭제';}
+    };
+   }
+
    teacherPopup.onclick=e=>{if(e.target===teacherPopup)close();};
    teacherPopup.onkeydown=e=>{if(e.key==='Escape'){e.preventDefault();close();}};
  }
