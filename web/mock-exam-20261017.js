@@ -280,10 +280,11 @@ function paintR04AdminInlineMedia(target){
   return url&&validR04MediaUrl(url)?`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">▶ ${label}</a>`:
    `<span>${i===0?'음성':'영상'} 링크 미등록</span>`;
  }).join(''):'';
- host.innerHTML=`<div class="r04-setting-heading"><h3>음성·영상</h3><button type="button" class="btn line small" id="r04InlineMediaReload" ${state.loading?'disabled':''}>${state.loading?'조회 중':'링크 새로고침'}</button></div>
+ host.innerHTML=`<div class="r04-setting-heading"><h3>음성·영상</h3><button type="button" class="btn line small" id="r04InlineMediaAttach" ${!rec||state.loading?'disabled':''}>링크첨부</button><button type="button" class="btn line small" id="r04InlineMediaReload" ${state.loading?'disabled':''}>${state.loading?'조회 중':'링크 새로고침'}</button></div>
  ${state.error?`<p class="warn">${esc(state.error)} · 수동 재조회가 필요합니다.</p>`:''}
  ${state.loading?'<p class="hint">선택한 학생의 음성·영상 링크를 조회하고 있습니다.</p>':
   rec?`<div class="media-links">${files}</div>`:'<p class="hint">음성·영상 링크 조회 전입니다.</p>'}`;
+ const attach=$('r04InlineMediaAttach');if(attach&&!state.loading)attach.onclick=()=>openR04ManualMedia(target);
  const button=$('r04InlineMediaReload');if(button&&!state.loading)button.onclick=()=>loadR04AdminInlineMedia(target);
 }
 async function loadR04AdminInlineMedia(target){
@@ -304,6 +305,50 @@ async function loadR04AdminInlineMedia(target){
  }finally{
   if(seq===state.seq&&state.key===target.key){state.loading=false;paintR04AdminInlineMedia(target);}
  }
+}
+
+/* RUN329_PHASE2_MANUAL_MEDIA_MODAL: scoped manual Drive links, never edits original ULIM enrollment. */
+const R04_MANUAL_MEDIA={open:false,examId:'',partId:'',uid:'',saving:false,error:''};
+function closeR04ManualMedia(){R04_MANUAL_MEDIA.open=false;R04_MANUAL_MEDIA.error='';document.getElementById('r04ManualMediaOverlay')?.remove();}
+async function openR04ManualMedia(target){
+ if(!target||S.role!=='admin'||R04_ADMIN_INLINE_MEDIA.loading)return;
+ const rec=R04_ADMIN_INLINE_MEDIA.record;
+ if(!rec||rec.participationId!==target.participationId||rec.examId!==target.examId){
+  toast('먼저 학생의 현재 링크를 조회해주세요.');return;
+ }
+ closeR04ManualMedia();
+ Object.assign(R04_MANUAL_MEDIA,{open:true,examId:target.examId,partId:target.participationId,uid:target.uid,saving:false,error:''});
+ const modal=document.createElement('div');modal.id='r04ManualMediaOverlay';modal.className='modal-wrap';modal.style.display='flex';
+ modal.innerHTML=`<div class="modal" style="max-width:620px;width:calc(100% - 32px)"><div class="modal-head"><h2>음성·영상 링크첨부</h2><button type="button" id="r04ManualMediaClose" class="btn line">닫기</button></div>
+ <p class="hint">선택된 모의고사 회차와 학생 참가 기록에만 저장됩니다.</p>
+ <form id="r04ManualMediaForm"><div class="field"><label>음성 Google Drive 링크</label><input name="audio" type="url" maxlength="2048" value="${esc(rec.audioUrl)}" placeholder="https://drive.google.com/file/d/..." /></div>
+ <div class="field"><label>영상 Google Drive 링크</label><input name="video" type="url" maxlength="2048" value="${esc(rec.videoUrl)}" placeholder="https://drive.google.com/file/d/..." /></div>
+ <p class="hint">현재 등록된 링크를 변경하지 않을 경우 그대로 두세요.</p><button type="submit" class="btn">링크 저장</button><span id="r04ManualMediaStatus" class="hint"></span></form></div>`;
+ document.body.appendChild(modal);
+ document.getElementById('r04ManualMediaClose').onclick=closeR04ManualMedia;
+ modal.onclick=e=>{if(e.target===modal&&!R04_MANUAL_MEDIA.saving)closeR04ManualMedia();};
+ document.getElementById('r04ManualMediaForm').onsubmit=async e=>{
+  e.preventDefault();
+  if(R04_MANUAL_MEDIA.saving)return;
+  const form=e.currentTarget,values=new FormData(form),audioUrl=str(values.get('audio')),videoUrl=str(values.get('video'));
+  if(!validR04MediaUrl(audioUrl)||!validR04MediaUrl(videoUrl)){toast('Google Drive HTTPS 링크만 입력 가능합니다.');return;}
+  if(audioUrl===rec.audioUrl&&videoUrl===rec.videoUrl){toast('변경된 링크가 없습니다.');return;}
+  if(!window.confirm('현재 학생의 이 회차 참가 기록에만 링크를 저장하시겠습니까?'))return;
+  if(S.role!=='admin'||str(S.auth&&S.auth.uid)!==target.uid||str(S.r04SessionId)!==target.examId||
+    R04_ADMIN_INLINE_MEDIA.key!==target.key||R04_ADMIN_INLINE_MEDIA.record!==rec)return toast('선택 기록이 변경됐습니다. 다시 조회하세요.');
+  R04_MANUAL_MEDIA.saving=true;const btn=form.querySelector('button[type=submit]');btn.disabled=true;
+  try{
+   const out=await call(FN.r04AdminMedia,{action:'save',examId:target.examId,participationId:target.participationId,expectedRevision:rec.revision,audioUrl,videoUrl});
+   if(!out||out.ok!==true||out.examId!==target.examId||out.participationId!==target.participationId||
+      out.changed!==true||out.revision!==rec.revision+1)throw Error('저장 응답 불확실 — 재저장하지 말고 재조회하세요.');
+   closeR04ManualMedia();R04_ADMIN_INLINE_MEDIA.record=null;await loadR04AdminInlineMedia(target);
+   if(R04_ADMIN_INLINE_MEDIA.record?.revision===out.revision&&
+      R04_ADMIN_INLINE_MEDIA.record.audioUrl===audioUrl&&R04_ADMIN_INLINE_MEDIA.record.videoUrl===videoUrl)
+      toast('링크 저장 및 서버 재조회 PASS');
+   else toast('저장 후 재조회 결과가 일치하는지 확인해주세요.');
+  }catch(err){document.getElementById('r04ManualMediaStatus').textContent='저장 상태 불확실: '+errorMessage(err)+' (중복 저장하지 마세요)';}
+  finally{R04_MANUAL_MEDIA.saving=false;if(document.body.contains(btn))btn.disabled=false;}
+ };
 }
 function renderR04AdminInlineMedia(selected,exact){
  const host=$('r04AdminInlineMediaHost');if(!host)return;
