@@ -196,3 +196,40 @@
 #r04AdminSettingsOverlay.r332-standalone .r332-footnote{font-size:13px;color:#698075;margin:16px 0 4px}
 #r04AdminSettingsOverlay.r332-standalone .r332-add-student>label:first-child input{margin-bottom:6px}
 @media(max-width:700px){#r04AdminSettingsOverlay.r332-standalone .r332-field-row{grid-template-columns:1fr!important}#r04AdminSettingsOverlay.r332-standalone .r332-field-row .btn{width:100%}}
+
+/* RUN354: teacher media player and mobile evaluation dialog; deploy with anonymous-media backend only. */
+.r354-media-player{margin:15px 0;padding:14px;border:1px solid var(--line,#ddd);border-radius:12px}
+.r354-media-player h3{margin:0 0 10px}
+.r354-player-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.r354-player-cell{min-width:0}
+.r354-player-cell strong{display:block;margin-bottom:6px}
+.r354-player-cell iframe{width:100%;height:190px;border:1px solid #d4d8e0;border-radius:8px;background:#f6f7f9}
+.r354-mobile-close{display:none}
+@media(max-width:800px){
+ .r354-teacher-layout>.r354-evaluation-panel{display:none}
+ .r354-teacher-layout>.r354-evaluation-panel.r354-open{display:block;position:fixed;inset:0;z-index:1200;overflow-y:auto;overscroll-behavior:contain;background:var(--surface,#fff);padding:15px 14px 60px;max-height:100dvh;border-radius:0}
+ .r354-teacher-layout>.r354-evaluation-panel.r354-open .r354-mobile-close{display:inline-flex;margin-bottom:12px}
+ .r354-player-grid{grid-template-columns:1fr}
+ .r354-player-cell iframe{height:220px}
+}
+
+.r354-score-buttons{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-width:235px}
+.r354-score-btn{border:1px solid #bac2d0;background:var(--surface,#fff);border-radius:9px;padding:11px 9px;min-width:44px;min-height:44px;font-weight:700;color:inherit;cursor:pointer}
+.r354-score-btn.active,.r354-score-btn[aria-pressed="true"]{border-color:#3368ca;background:#dbeafe;color:#12386b}
+.r354-score-btn:focus-visible{outline:3px solid #5887e2;outline-offset:2px}
+.r354-legacy-score{font-size:12px;white-space:nowrap}
+@media(max-width:800px){.r354-score-buttons{min-width:0;gap:5px}.r354-score-btn{flex:1 1 44px}}
+
+/* RUN355 anonymous media admin */
+.r355-anonymous{margin-top:20px;padding-top:16px;border-top:1px solid #bcc3cf}.r355-anonymous .field{margin-top:12px}.r355-anonymous input{width:100%;min-width:0}
+
+/* RUN364 teacher-only integrated scoring; does not touch media playback. */
+.r364-criteria{display:grid;gap:10px;margin-top:14px}
+.r364-criterion{display:grid;grid-template-columns:minmax(120px,1fr) auto;gap:16px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line,#ddd)}
+.r364-criterion .rubric-detail{margin:4px 0 0}
+.r364-points{display:flex;gap:5px;white-space:nowrap}
+.r364-point{min-width:42px;min-height:42px;border:1px solid #a1a1aa;border-radius:9px;background:transparent;color:inherit;font-weight:700;cursor:pointer}
+.r364-point.selected{background:#214e8f;color:#fff;border-color:#214e8f}
+.r364-point:disabled{cursor:default;opacity:.55}
+.r364-point:focus-visible{outline:3px solid #57a9ff;outline-offset:2px}
+@media(max-width:800px){.r364-criterion{grid-template-columns:1fr;gap:8px}.r364-points{display:grid;grid-template-columns:repeat(5,minmax(0,1fr))}.r364-point{min-width:0;width:100%}}

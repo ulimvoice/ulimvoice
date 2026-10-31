@@ -183,6 +183,52 @@ const R04_TEACHER_LIST_SCROLL={'청소년':0,'성인':0};
 const R04_ADMIN_CORE={group:'청소년',search:'',expanded:[],selected:-1,settingsOpen:false,settingsTab:'rubric',autoExpanded:false,scrollY:0,teacherStatusOpen:false,teacherModalIndex:-1,teacherModalParticipationId:''};
 // RUN287: Admin-only scoring detail projection from a new authenticated read-only callable.
 const R04_SCOREBOARD={examId:'',callerUid:'',stateVersion:-1,rows:[],loading:false,error:'',teacherCount:0,provisional:true};
+// RUN369_SCOREBOARD_UI_V2
+// RUN369_SCOREBOARD_UI_V2: server-owned admin scoreboard, unified rubric snapshot checks.
+function r369Rubric(r){
+ if(!r||typeof r!=='object'||Array.isArray(r)||r.schemaVersion!==2||
+   !Number.isSafeInteger(r.maxTotal)||r.maxTotal<1||r.maxTotal>1000||
+   !Array.isArray(r.criteria)||r.criteria.length<1||r.criteria.length>30)return false;
+ const seen=new Set();let enabled=0;
+ for(const c of r.criteria){
+   if(!c||typeof c!=='object'||Array.isArray(c)||typeof c.title!=='string'||
+     c.title.length<1||c.title.length>70||c.title.trim()!==c.title||
+     typeof c.description!=='string'||c.description.length>500||
+     typeof c.enabled!=='boolean')return false;
+   const name=c.title.normalize('NFKC').replace(/\s+/gu,'').toLowerCase();
+   if(seen.has(name))return false;
+   seen.add(name);if(c.enabled)enabled++;
+ }
+ return enabled>0;
+}
+function r369Grade(raw){
+ if(!raw||typeof raw!=='object'||Array.isArray(raw)||
+   raw.gradingSchema!=='configurable-v2'||
+   typeof raw.teacherName!=='string'||!raw.teacherName.trim()||raw.teacherName.length>100||
+   !['draft','submitted'].includes(raw.status)||
+   !Number.isSafeInteger(raw.revision)||raw.revision<1||
+   !Number.isSafeInteger(raw.rubricVersion)||raw.rubricVersion<1||
+   typeof raw.note!=='string'||raw.note.length>1000||raw.note.trim()!==raw.note||
+   (raw.status==='submitted'&&!raw.note)||!r369Rubric(raw.rubricSnapshot))
+   throw Error('통합 평가표의 형식이 올바르지 않습니다.');
+ const rubric=raw.rubricSnapshot,scores=raw.scores;
+ if(!Array.isArray(scores)||scores.length!==rubric.criteria.length)
+   throw Error('평가 점수의 항목 수가 일치하지 않습니다.');
+ let sum=0,count=0;
+ for(let i=0;i<rubric.criteria.length;i++){
+   const c=rubric.criteria[i],v=scores[i];
+   if(!c.enabled){if(v!==null)throw Error('비활성 평가항목에 점수가 있습니다.');continue;}
+   count++;
+   if(v===null){if(raw.status==='submitted')throw Error('제출 평가표에 미입력 점수가 있습니다.');continue;}
+   if(!Number.isInteger(v)||v<1||v>5)throw Error('평가 점수는 1~5 정수여야 합니다.');
+   sum+=v;
+ }
+ const total=raw.status==='submitted'?Math.round(sum*rubric.maxTotal*100/(count*5))/100:null;
+ if(raw.total!==total)throw Error('통합 평가표의 환산 점수가 일치하지 않습니다.');
+ return {teacherName:raw.teacherName,status:raw.status,gradingSchema:'configurable-v2',
+   scores:[...scores],rubricSnapshot:rubric,rubricVersion:raw.rubricVersion,
+   note:raw.note,total,revision:raw.revision};
+}
 function validateR04Scoreboard(raw,id){
  const integer=v=>Number.isSafeInteger(v)&&v>=0;
  if(!raw||raw.ok!==true||raw.mode!=='admin-scoreboard-read-only'||raw.examId!==id||
@@ -193,44 +239,44 @@ function validateR04Scoreboard(raw,id){
    !integer(raw.submittedGradeCount)||!integer(raw.draftGradeCount)||
    typeof raw.rankingIsProvisional!=='boolean'||!Array.isArray(raw.rows)||
    raw.rows.length!==raw.activeParticipantCount)throw Error('관리자 평가 점수 응답이 올바르지 않습니다.');
- const ids=new Set();let submitted=0,draft=0;
+ const ids=new Set(),scales=new Set(),versions=new Set();let submitted=0,draft=0,visibleScale=null;
  const rows=raw.rows.map(x=>{
    if(!x||typeof x.participationId!=='string'||!x.participationId||ids.has(x.participationId)||
      !['adult','youth'].includes(x.audience)||!Array.isArray(x.grades)||
      !integer(x.submittedCount)||!integer(x.draftCount)||
      x.submittedCount+x.draftCount!==x.grades.length||
      typeof x.sum!=='number'||!Number.isFinite(x.sum)||x.sum<0||
-     (x.average!==null&&(!Number.isFinite(x.average)||x.average<0||x.average>50))||
+     (x.average!==null&&(!Number.isFinite(x.average)||x.average<0||x.average>1000))||
      (x.rank!==null&&(!integer(x.rank)||x.rank<1))||typeof x.complete!=='boolean')
      throw Error('관리자 평가 점수 집계가 손상됐습니다.');
    ids.add(x.participationId);let sum=0,n=0,m=0;
-   const grades=x.grades.map(g=>{
-     if(!g||typeof g.teacherName!=='string'||!g.teacherName.trim()||g.teacherName.length>100||
-       !['draft','submitted'].includes(g.status)||!integer(g.revision)||g.revision<1||
-       typeof g.note!=='string'||g.note.length>1000||
-       !Array.isArray(g.na)||g.na.length!==5||!Array.isArray(g.act)||g.act.length!==5||
-       [...g.na,...g.act].some(v=>v!==null&&(!Number.isFinite(v)||v<0||v>5||!Number.isInteger(v*2))))
-       throw Error('강사별 평가표 내용이 손상됐습니다.');
+   const grades=x.grades.map(rawGrade=>{
+     const g=r369Grade(rawGrade);
+     if(visibleScale===null)visibleScale=g.rubricSnapshot.maxTotal;
      if(g.status==='submitted'){
-       if([...g.na,...g.act].some(v=>v===null)||g.total===null||!Number.isFinite(g.total)||
-         Math.abs(g.total-[...g.na,...g.act].reduce((a,b)=>a+b,0))>0.0001||!g.note.trim())
-         throw Error('최종 제출 평가표 점수를 확인할 수 없습니다.');
+       scales.add(g.rubricSnapshot.maxTotal);versions.add(g.rubricVersion);
        n++;sum+=g.total;
-     }else{if(g.total!==null)throw Error('임시저장 평가표는 집계 대상이 아닙니다.');m++;}
-     return {teacherName:g.teacherName,status:g.status,na:g.na,act:g.act,note:g.note,total:g.total,revision:g.revision};
+     }else m++;
+     return g;
    });
    if(n!==x.submittedCount||m!==x.draftCount||Math.abs(sum-x.sum)>0.0001||
      (n===0?(x.average!==null||x.rank!==null):
        (x.average===null||x.rank===null||Math.abs(Math.round(sum*100/n)/100-x.average)>0.001)))
-       throw Error('최종 제출·평균·순위 집계가 일치하지 않습니다.');
+     throw Error('최종 제출·평균·순위 집계가 일치하지 않습니다.');
    submitted+=n;draft+=m;
    return {...x,grades};
  });
+ if(scales.size>1||versions.size>1)throw Error('서로 다른 평가항목 설정의 점수가 혼합됐습니다.');
  if(submitted!==raw.submittedGradeCount||draft!==raw.draftGradeCount)
    throw Error('전체 평가표 건수와 강사별 건수가 다릅니다.');
+ const maxTotal=scales.size===1?[...scales][0]:visibleScale;
+ if(maxTotal!==null&&rows.some(x=>x.average!==null&&x.average>maxTotal))
+   throw Error('설정 만점을 초과하는 평균 점수입니다.');
  return {examId:id,stateVersion:raw.stateVersion,activeCount:raw.activeParticipantCount,
-   teacherCount:raw.activeTeacherCount+(raw.adminEvaluatorCount||0),provisional:raw.rankingIsProvisional,rows};
+   teacherCount:raw.activeTeacherCount+(raw.adminEvaluatorCount||0),
+   provisional:raw.rankingIsProvisional,maxTotal,rows};
 }
+
 async function loadR04AdminScoreboard(){
  if(preview||S.role!=='admin'||!S.auth||R04_SCOREBOARD.loading)return;
  const id=str(S.r04SessionId),uid=str(S.auth.uid),p=R04_PERSISTED_VIEW;
@@ -452,33 +498,84 @@ async function loadR04RubricAdmin(){
  }catch(e){R04_RUBRIC_ADMIN.error=errorMessage(e);R04_RUBRIC_ADMIN.examId='';}
  finally{R04_RUBRIC_ADMIN.loading=false;if(S.role==='admin')renderR04RubricSettings();}
 }
-function renderR04RubricSettings(){
- const host=$('r04RubricHost');if(!host)return;
- const state=R04_RUBRIC_ADMIN,ready=state.examId===str(S.r04SessionId),locked=!ready||state.locked||state.saving;
- const data=ready?state.rubrics:defaultRubrics(),group=state.group;
- host.innerHTML=`<div class="r04-setting-heading"><h3>평가항목 수정</h3><button type="button" class="btn line small" id="r04RubricRefresh" ${state.loading?'disabled':''}>서버 조회</button></div>
- <p class="hint">성인·청소년 별도 기준 · NA 25점 + 독백 25점 · 항목당 5점</p>
- ${state.error?`<p class="warn">${esc(state.error)}</p>`:''}
- <p class="hint">${ready?`기준 v${state.version} · ${state.locked?'채점 시작으로 수정 잠금':'수정 가능'}`:'먼저 서버 평가항목을 조회하세요.'}</p>
- <div class="tabs" role="group" aria-label="평가기준 구분"><button class="seg ${group==='청소년'?'active':''}" type="button" data-rubric-group="청소년">청소년반</button><button class="seg ${group==='성인'?'active':''}" type="button" data-rubric-group="성인">성인반</button></div>
- <form id="r04RubricForm">${[['na','NA'],['act','독백']].map(([key,label])=>`<div class="r04-criteria-section"><h4>${label} · 25점</h4>${data[group][key].map((item,i)=>`<div class="r04-criterion-row"><span>${i+1}</span><label>항목명<input name="${key}-${i}-title" maxlength="70" required value="${esc(item.title)}" ${locked?'disabled':''}></label><label>평가 기준 (선택)<input name="${key}-${i}-description" maxlength="160" value="${esc(item.description)}" ${locked?'disabled':''}></label><small>5점</small></div>`).join('')}</div>`).join('')}
- <div class="action-row"><button type="submit" class="btn" ${locked?'disabled':''}>평가항목 저장</button></div></form>
- ${state.locked?'<p class="hint">평가표가 한 건이라도 저장된 회차의 항목은 변경할 수 없습니다. 기존 평가표는 보존됩니다.</p>':''}`;
- const reload=$('r04RubricRefresh');if(reload)reload.onclick=()=>loadR04RubricAdmin();
- host.querySelectorAll('[data-rubric-group]').forEach(b=>b.onclick=()=>{state.group=b.dataset.rubricGroup;renderR04RubricSettings();});
- const form=$('r04RubricForm');if(form&&!locked)form.onsubmit=async ev=>{
-  ev.preventDefault();if(state.saving)return;
-  let next;try{next=clone(state.rubrics);const f=new FormData(form);for(const key of ['na','act'])next[group][key]=Array.from({length:5},(_,i)=>({title:str(f.get(`${key}-${i}-title`)),description:str(f.get(`${key}-${i}-description`))}));checkRubrics(next);}
-  catch(e){return toast(errorMessage(e));}
-  if(!confirm('이 회차의 평가 기준을 저장하시겠습니까? 기존 채점이 있으면 서버가 거부합니다.'))return;
-  state.saving=true;renderR04RubricSettings();
-  try{const out=await call(FN.r04RubricAdmin,{examId:state.examId,action:'save',rubrics:{adult:next['성인'],youth:next['청소년']},expectedVersion:state.version});
-    if(!out||out.ok!==true||out.mode!=='admin-r04-rubric-saved'||out.examId!==state.examId||out.version!==state.version+1)
-      throw Error('평가기준 저장 응답이 올바르지 않습니다. 서버를 재조회하세요.');
-    toast('평가항목 저장 성공. 서버 설정을 다시 확인합니다.');
-  }catch(e){toast('저장 여부를 서버에서 재조회하세요. '+errorMessage(e));}
-  finally{state.saving=false;await loadR04RubricAdmin();}
+// RUN360_CONFIGURABLE_RUBRIC_UI
+const R360={examId:'',version:0,config:null,loading:false,saving:false,error:''};
+function r360Default(){
+ const labels=['발음의 정확성','발성과 호흡','대본 이해','감정 표현','전달력'];
+ return {schemaVersion:2,maxTotal:50,criteria:labels.map(title=>({title,description:'',enabled:true}))};
+}
+async function r360Load(){
+ if(preview||S.role!=='admin'||R360.loading||R360.saving)return;
+ const examId=str(S.r04SessionId);
+ R360.loading=true;R360.error='';renderR04RubricSettings();
+ try{
+  const x=await call(FN.r04RubricAdmin,{examId,action:'readConfig'});
+  if(x.ok!==true||x.mode!=='admin-r04-configurable-rubric'||x.examId!==examId||
+   !Number.isSafeInteger(x.version)||x.version<0)throw Error('통합 평가 설정 조회 응답을 확인할 수 없습니다.');
+  if(S.r04SessionId===examId){
+   R360.examId=examId;R360.version=x.version;
+   R360.config=x.config===null?r360Default():x.config;
+  }
+ }catch(e){R360.error=errorMessage(e);}
+ finally{R360.loading=false;if(S.role==='admin')renderR04RubricSettings();}
+}
+function r360RenderConfigEditor(host){
+ if(preview)return;
+ const ready=R360.examId===str(S.r04SessionId)&&!!R360.config;
+ const c=ready?R360.config:null,locked=!ready||R360.loading||R360.saving;
+ const html=`<div class="r360-editor"><div class="heading-row"><h3>통합 평가항목 · 활성화 및 만점 설정</h3><button type="button" class="btn line" id="r360Load" ${R360.loading?'disabled':''}>통합 평가 설정 조회</button></div>
+ <p class="hint">기존 평가항목 관리 화면을 이용합니다. 활성 항목만 채점하며, 1~5점을 설정 만점으로 환산합니다. 이 설정은 강사·관리자 통합 채점에 적용됩니다. 설정 변경 뒤에는 평가표를 다시 조회해야 합니다.</p>
+ ${R360.error?`<p class="warn">${esc(R360.error)}</p>`:''}
+ ${c?`<form id="r360Form"><div class="field"><label>전체 만점<input type="number" id="r360Max" min="1" max="1000" step="1" value="${c.maxTotal}" ${locked?'disabled':''} required></label></div>
+ ${c.criteria.map((x,i)=>`<div class="rubric-edit-row"><span class="rubric-edit-number">${i+1}</span><div class="rubric-edit-fields">
+ <label>평가 제목<input data-r360-title="${i}" value="${esc(x.title)}" maxlength="70" ${locked?'disabled':''} required></label>
+ <label>평가 내용<input data-r360-description="${i}" value="${esc(x.description)}" maxlength="500" ${locked?'disabled':''}></label>
+ <label><input type="checkbox" data-r360-enabled="${i}" ${x.enabled?'checked':''} ${locked?'disabled':''}> 평가 활성화</label></div><span class="rubric-points">1~5점</span></div>`).join('')}
+ <div class="action-row"><button type="button" class="btn line" id="r360Add" ${locked||c.criteria.length>=30?'disabled':''}>항목 추가</button><button type="submit" class="btn" ${locked?'disabled':''}>통합 평가 설정 저장</button></div><p class="hint">설정 v${R360.version} · 활성 항목 ${c.criteria.filter(x=>x.enabled).length}개 · ${c.maxTotal}점 만점</p></form>`:'<p class="muted">통합 평가 설정 조회를 눌러 현재 설정을 불러오세요.</p>'}</div>`;
+ host.insertAdjacentHTML('beforeend',html);
+ const reload=$('r360Load');if(reload)reload.onclick=r360Load;
+ const add=$('r360Add');if(add)add.onclick=()=>{
+  const form=$('r360Form'),next=r360ReadForm(form);
+  if(next.criteria.length>=30)return toast('최대 30개까지 추가할 수 있습니다.');
+  next.criteria.push({title:'새 평가항목 '+(next.criteria.length+1),description:'',enabled:true});
+  R360.config=next;renderR04RubricSettings();
  };
+ const form=$('r360Form');
+ if(form)form.onsubmit=async e=>{
+  e.preventDefault();if(locked||R360.saving)return;
+  let next;
+  try{next=r360ReadForm(form);}catch(err){return toast(errorMessage(err));}
+  if(!confirm('통합 평가항목과 전체 만점을 저장하시겠습니까? 평가 설정을 변경하면 채점 중인 평가표는 다시 조회해야 합니다.'))return;
+  const examId=R360.examId,version=R360.version;
+  R360.saving=true;renderR04RubricSettings();
+  try{
+   const out=await call(FN.r04RubricAdmin,{examId,action:'saveConfig',config:next,expectedVersion:version});
+   if(out.ok!==true||out.mode!=='admin-r04-configurable-rubric-saved'||out.examId!==examId||
+    out.version!==version+1)throw Error('저장 응답 검증 실패. 재조회 후 확인하세요.');
+   R360.config=null;R360.examId='';toast('서버 저장 응답 확인. 설정을 다시 조회하세요.');
+  }catch(err){toast('저장 상태가 불확실합니다. 재조회하세요. '+errorMessage(err));}
+  finally{R360.saving=false;renderR04RubricSettings();}
+ };
+}
+function r360ReadForm(form){
+ const criteria=R360.config.criteria.map((x,i)=>({
+  title:form.querySelector(`[data-r360-title="${i}"]`).value.trim(),
+  description:form.querySelector(`[data-r360-description="${i}"]`).value.trim(),
+  enabled:form.querySelector(`[data-r360-enabled="${i}"]`).checked
+ }));
+ const maxTotal=Number(form.querySelector('#r360Max').value);
+ if(!Number.isSafeInteger(maxTotal)||maxTotal<1||maxTotal>1000)throw Error('만점은 1~1000 사이 정수로 설정해 주세요.');
+ if(!criteria.some(x=>x.enabled))throw Error('최소 한 개 평가항목을 활성화해 주세요.');
+ if(criteria.some(x=>!x.title||x.title.length>70))throw Error('평가 제목을 확인해 주세요.');
+ return {schemaVersion:2,maxTotal,criteria};
+}
+
+function renderR04RubricSettings(){
+ // RUN373_SINGLE_RUBRIC_EDITOR: existing settings pane, exactly one active rubric editor.
+ const host=$('r04RubricHost');if(!host)return;
+ // Remove obsolete 5xNA + 5xacting editor (its save endpoint is fenced by RUN372).
+ host.innerHTML='';
+ r360RenderConfigEditor(host);
 }
 function selectedR04AdminGradeParticipant(){
  if(R04_EDITOR.examId!==str(S.r04SessionId))return null;
@@ -487,21 +584,71 @@ function selectedR04AdminGradeParticipant(){
  const roster=R04_EDITOR.rows.filter(x=>x.status==='active'&&x.classStatus!=='archived').map((p,i)=>({...p,__index:i}));
  return roster.find(p=>p.__index===R04_ADMIN_CORE.selected)||null;
 }
+// RUN366_UNIFIED_ADMIN_GRADE_UI: single existing administrator grade panel, no new endpoint.
+function r366Config(x){
+ if(!x||typeof x!=='object'||Array.isArray(x)||x.schemaVersion!==2||
+  !Number.isSafeInteger(x.maxTotal)||x.maxTotal<1||x.maxTotal>1000||
+  !Array.isArray(x.criteria)||x.criteria.length<1||x.criteria.length>30)return null;
+ const names=new Set();let active=0;
+ for(const i of x.criteria){
+  if(!i||typeof i!=='object'||typeof i.title!=='string'||!i.title||i.title.trim()!==i.title||
+   i.title.length>70||typeof i.description!=='string'||i.description.length>500||
+   typeof i.enabled!=='boolean')return null;
+  const name=i.title.normalize('NFKC').replace(/\s+/gu,'').toLowerCase();
+  if(names.has(name))return null;names.add(name);
+  if(i.enabled)active++;
+ }
+ return active?x:null;
+}
+function r366ValidateScores(c,scores,status){
+ if(!c||!['draft','submitted'].includes(status)||!Array.isArray(scores)||
+  scores.length!==c.criteria.length)return false;
+ return c.criteria.every((x,i)=>{
+  const v=scores[i];
+  return !x.enabled?v===null:(v===null?status==='draft':Number.isInteger(v)&&v>=1&&v<=5);
+ });
+}
+function r366Total(c,scores,status){
+ if(!r366ValidateScores(c,scores,status)||status==='draft')return null;
+ let sum=0,n=0;
+ c.criteria.forEach((x,i)=>{if(x.enabled){n++;sum+=scores[i];}});
+ return Math.round(sum*c.maxTotal*100/(5*n))/100;
+}
+function r366ValidateGrade(g){
+ if(!g||typeof g!=='object'||g.gradingSchema!=='configurable-v2'||
+  !['draft','submitted'].includes(g.status)||!Number.isSafeInteger(g.revision)||g.revision<1||
+  !Number.isSafeInteger(g.rubricVersion)||g.rubricVersion<1||
+  typeof g.note!=='string'||g.note.length>1000||g.note.trim()!==g.note||
+  (g.status==='submitted'&&!g.note)||!r366Config(g.rubricSnapshot))return false;
+ const c=r366Config(g.rubricSnapshot);
+ return r366ValidateScores(c,g.scores,g.status)&&r366Total(c,g.scores,g.status)===g.total;
+}
 async function loadR04AdminGrade(){
  if(preview||S.role!=='admin'||!S.auth||R04_ADMIN_GRADE.loading||R04_ADMIN_GRADE.saving)return;
  const p=selectedR04AdminGradeParticipant();if(!p)return;
  const examId=str(S.r04SessionId),uid=str(S.auth.uid),pid=p.participationId;
  R04_ADMIN_GRADE.loading=true;R04_ADMIN_GRADE.error='';renderR04AdminGradeForm();
- try{const x=await call(FN.r04GradeAdmin,{action:'read',examId,participationId:pid});
-  if(!x||x.ok!==true||x.mode!=='admin-r04-grade-read'||x.examId!==examId||x.participationId!==pid||
-     typeof x.gradingOpen!=='boolean'||!Number.isSafeInteger(x.rubricVersion))throw Error('관리자 평가표 조회 응답이 올바르지 않습니다.');
-  if(str(S.auth&&S.auth.uid)!==uid||str(S.r04SessionId)!==examId||selectedR04AdminGradeParticipant()?.participationId!==pid)return;
+ try{
+  const x=await call(FN.r04GradeAdmin,{action:'read',examId,participationId:pid});
+  if(!x||x.ok!==true||x.mode!=='admin-r04-grade-read'||x.examId!==examId||
+    x.participationId!==pid||typeof x.gradingOpen!=='boolean'||
+    !Number.isSafeInteger(x.configurableRubricVersion)||x.configurableRubricVersion<0)
+   throw Error('관리자 통합 평가 조회 응답을 확인할 수 없습니다.');
+  const config=x.configurableRubric===null?null:r366Config(x.configurableRubric);
+  if(x.configurableRubric!==null&&!config)throw Error('관리자 평가항목 설정이 유효하지 않습니다.');
+  if((config===null)!==(x.configurableRubricVersion===0))
+   throw Error('관리자 평가항목 설정 버전이 일치하지 않습니다.');
+  if(str(S.auth&&S.auth.uid)!==uid||str(S.r04SessionId)!==examId||
+    selectedR04AdminGradeParticipant()?.participationId!==pid)return;
   const g=x.grade;
-  if(g&&(!validR04GradeScores(g.na,g.status)||!validR04GradeScores(g.act,g.status)||
-    !Number.isSafeInteger(g.revision)||g.revision<1||!['draft','submitted'].includes(g.status)))throw Error('관리자 평가표 형식 오류');
-  Object.assign(R04_ADMIN_GRADE,{examId,participationId:pid,grade:g,edit:{na:g?g.na.slice():Array(5).fill(null),
-    act:g?g.act.slice():Array(5).fill(null),note:str(g&&g.note)},gradingOpen:x.gradingOpen,
-    rubrics:checkRubrics(normalizeRubrics({청소년:x.rubrics&&x.rubrics.youth,성인:x.rubrics&&x.rubrics.adult})),error:''});
+  if(g&&!r366ValidateGrade(g))throw Error('저장된 관리자 통합 평가 기록이 올바르지 않습니다.');
+  const stale=!!g&&(!config||g.rubricVersion!==x.configurableRubricVersion||
+    JSON.stringify(g.rubricSnapshot)!==JSON.stringify(config));
+  const empty=config?config.criteria.map(()=>null):[];
+  const scores=g&&config&&g.scores.length===config.criteria.length?g.scores.slice():empty;
+  Object.assign(R04_ADMIN_GRADE,{examId,participationId:pid,grade:g,
+   edit:{scores,note:str(g&&g.note)},gradingOpen:x.gradingOpen,
+   config,configVersion:x.configurableRubricVersion,stale,error:''});
  }catch(e){R04_ADMIN_GRADE.error=errorMessage(e);R04_ADMIN_GRADE.examId='';}
  finally{R04_ADMIN_GRADE.loading=false;renderR04AdminGradeForm();}
 }
@@ -509,44 +656,71 @@ function renderR04AdminGradeForm(){
  const host=$('r04AdminGradeHost');if(!host)return;
  const p=selectedR04AdminGradeParticipant(),a=R04_ADMIN_GRADE;
  if(!p){host.innerHTML='<p class="hint">관리자 평가를 진행할 학생을 선택하세요.</p>';return;}
- const valid=a.examId===str(S.r04SessionId)&&a.participationId===p.participationId&&a.edit;
+ const valid=a.examId===str(S.r04SessionId)&&a.participationId===p.participationId&&!!a.edit;
  const busy=a.loading||a.saving;
- const allowed=valid&&a.gradingOpen&&!busy;
- const vals=valid?a.edit:{na:Array(5).fill(null),act:Array(5).fill(null),note:''};
- const rub=valid?a.rubrics:defaultRubrics(),items=rub[p.group]||defaultRubrics()[p.group];
- host.innerHTML=`<div class="r04-setting-heading"><h3>관리자 직접 평가</h3><button id="r04AdminGradeRead" class="btn line small" type="button" ${busy?'disabled':''}>${busy?'조회 중':'평가표 불러오기'}</button></div>
- ${a.error?`<p class="warn">${esc(a.error)}</p>`:''}<p class="hint">${valid?`관리자 별도 평가 · ${a.grade?a.grade.status==='submitted'?'제출 완료':'임시저장':'미평가'} · ${a.gradingOpen?'평가 ON':'평가 OFF'}`:'선택 학생의 관리자 평가표를 불러오세요.'}</p>
- ${valid?`<form id="r04AdminGradeForm">${[['na','NA'],['act','독백']].map(([key,name])=>`<div class="r04-criteria-section"><h4>${name} · 25점</h4>${items[key].map((item,i)=>`<label class="r04-admin-grade-row"><span>${esc(item.title)}</span><select data-r04-grade-section="${key}" data-index="${i}" ${allowed?'':'disabled'}><option value="">미입력</option>${Array.from({length:11},(_,v)=>v/2).map(v=>`<option value="${v}" ${vals[key][i]===v?'selected':''}>${v}점</option>`).join('')}</select></label>`).join('')}</div>`).join('')}
+ const c=valid?r366Config(a.config):null;
+ const allowed=!!(valid&&c&&a.configVersion>=1&&!a.stale&&a.gradingOpen&&!busy);
+ const vals=valid?a.edit:{scores:[],note:''};
+ const total=c?r366Total(c,vals.scores,'submitted'):null;
+ const active=c?c.criteria.map((item,i)=>({item,i})).filter(x=>x.item.enabled):[];
+ host.innerHTML=`<div class="r04-setting-heading"><h3>관리자 직접 평가 · 통합 평가표</h3><button id="r04AdminGradeRead" class="btn line small" type="button" ${busy?'disabled':''}>${busy?'조회 중':'평가표 불러오기'}</button></div>
+ ${a.error?`<p class="warn">${esc(a.error)}</p>`:''}
+ <p class="hint">${valid?`관리자 별도 평가 · ${a.grade?a.grade.status==='submitted'?'제출 완료':'임시저장':'미평가'} · ${a.gradingOpen?'평가 ON':'평가 OFF'}`:'선택 학생의 관리자 평가표를 불러오세요.'}</p>
+ ${valid&&!c?'<p class="warn">관리자 메뉴에서 통합 평가항목과 전체 만점을 저장한 후 평가표를 다시 불러오세요.</p>':''}
+ ${valid&&a.stale?'<p class="warn">이 평가 기록은 현재 설정과 다릅니다. 잘못된 환산을 막기 위해 수정이 차단됐습니다. 관리자 설정과 기존 평가 기록을 확인하세요.</p>':''}
+ ${valid&&c?`<form id="r04AdminGradeForm"><div class="r04-criteria-section r366-admin-score"><h4>통합 평가 · ${c.maxTotal}점 만점</h4><p class="hint">활성 ${active.length}개 항목 · 각 항목 1~5점 · 설정 v${a.configVersion}</p>
+ ${active.map(({item,i})=>`<div class="r04-admin-grade-row r366-admin-point-row"><span><strong>${esc(item.title)}</strong>${item.description?`<small class="rubric-detail">${esc(item.description)}</small>`:''}</span><span class="r366-admin-points" role="group" aria-label="${esc(item.title)} 점수">${[1,2,3,4,5].map(point=>`<button type="button" class="r364-point ${vals.scores[i]===point?'selected':''}" data-r366-index="${i}" data-r366-point="${point}" aria-pressed="${vals.scores[i]===point?'true':'false'}" ${allowed?'':'disabled'}>${point}</button>`).join('')}</span></div>`).join('')}
+ <p class="hint" id="r366AdminTotal">${total===null?'모든 항목을 선택하면 총점이 표시됩니다.':`예상 총점 ${String(total)} / ${c.maxTotal}점`}</p></div>
  <label class="r04-admin-grade-note">관리자 한줄평<textarea id="r04AdminGradeNote" maxlength="1000" ${allowed?'':'disabled'}>${esc(vals.note)}</textarea></label>
  <div class="action-row"><button type="button" id="r04AdminGradeDraft" class="btn line" ${allowed?'':'disabled'}>임시저장</button><button type="button" id="r04AdminGradeSubmit" class="btn" ${allowed?'':'disabled'}>평가 완료 · 제출</button></div></form>`:''}`;
  const read=$('r04AdminGradeRead');if(read)read.onclick=()=>loadR04AdminGrade();
- if(!valid)return;
- host.querySelectorAll('[data-r04-grade-section]').forEach(sel=>sel.onchange=()=>{a.edit[sel.dataset.r04GradeSection][Number(sel.dataset.index)]=sel.value===''?null:Number(sel.value);});
+ if(!valid||!c)return;
+ host.querySelectorAll('[data-r366-index]').forEach(btn=>btn.onclick=()=>{
+  if(!allowed)return;
+  const i=Number(btn.dataset.r366Index),point=Number(btn.dataset.r366Point);
+  if(!Number.isSafeInteger(i)||!c.criteria[i]?.enabled||!Number.isInteger(point)||point<1||point>5)return;
+  // Clicking the selected point again clears it for a draft; final submit still requires all.
+  vals.scores[i]=vals.scores[i]===point?null:point;
+  host.querySelectorAll('[data-r366-index="'+i+'"]').forEach(el=>{
+   const selected=Number(el.dataset.r366Point)===vals.scores[i];
+   el.classList.toggle('selected',selected);el.setAttribute('aria-pressed',String(selected));
+  });
+  const out=$('r366AdminTotal'),updated=r366Total(c,vals.scores,'submitted');
+  if(out)out.textContent=updated===null?'모든 항목을 선택하면 총점이 표시됩니다.':`예상 총점 ${String(updated)} / ${c.maxTotal}점`;
+ });
  const note=$('r04AdminGradeNote');if(note)note.oninput=()=>{a.edit.note=note.value;};
  if($('r04AdminGradeDraft'))$('r04AdminGradeDraft').onclick=()=>saveR04AdminGrade('draft');
  if($('r04AdminGradeSubmit'))$('r04AdminGradeSubmit').onclick=()=>saveR04AdminGrade('submitted');
 }
 async function saveR04AdminGrade(status){
  const a=R04_ADMIN_GRADE,p=selectedR04AdminGradeParticipant();
- if(!p||a.saving||!a.gradingOpen||a.participationId!==p.participationId||a.examId!==str(S.r04SessionId))return;
- const g=a.edit;
- if(!validR04GradeScores(g.na,status)||!validR04GradeScores(g.act,status)||
-    status==='submitted'&&!str(g.note))return toast('10개 항목 점수와 한줄평을 확인하세요.');
+ if(!p||a.saving||!a.gradingOpen||a.stale||a.participationId!==p.participationId||
+   a.examId!==str(S.r04SessionId)||!Number.isSafeInteger(a.configVersion)||a.configVersion<1)return;
+ const config=r366Config(a.config),g=a.edit;
+ if(!config||!g||!r366ValidateScores(config,g.scores,status)||
+   typeof g.note!=='string'||g.note.trim().length>1000||
+   status==='submitted'&&!str(g.note))return toast('활성 평가항목 1~5점 점수와 한줄평을 확인하세요.');
  const expectedRevision=a.grade?a.grade.revision:0;
  if(!Number.isSafeInteger(expectedRevision)||expectedRevision<0)return toast('평가표 버전 오류');
- const payload={action:'save',examId:a.examId,participationId:a.participationId,expectedRevision,
-  na:g.na.slice(),act:g.act.slice(),note:str(g.note),status};
+ const payload={action:'save',examId:a.examId,participationId:a.participationId,
+  gradingSchema:'configurable-v2',rubricVersion:a.configVersion,expectedRevision,
+  scores:g.scores.slice(),note:str(g.note),status};
  a.saving=true;renderR04AdminGradeForm();
- try{const out=await call(FN.r04GradeAdmin,payload);
+ try{
+  const out=await call(FN.r04GradeAdmin,payload),expectedTotal=r366Total(config,payload.scores,status);
   if(!out||out.ok!==true||out.mode!=='admin-r04-grade-saved'||out.examId!==payload.examId||
-    out.participationId!==payload.participationId||out.status!==status||out.revision!==expectedRevision+1)
-    throw Error('관리자 채점 결과가 불확실합니다. 서버 재조회가 필요합니다.');
-  toast('관리자 평가 저장 성공. 저장된 평가표를 다시 확인합니다.');
+    out.participationId!==payload.participationId||out.status!==status||
+    out.revision!==expectedRevision+1||out.gradingSchema!=='configurable-v2'||
+    out.rubricVersion!==a.configVersion||out.total!==expectedTotal)
+   throw Error('관리자 통합 평가 저장 응답이 올바르지 않습니다. 반드시 서버에서 재조회하세요.');
+  toast('관리자 통합 평가 저장 응답을 확인했습니다.');
  }catch(e){toast('저장 결과를 재조회하세요. '+errorMessage(e));}
  finally{a.saving=false;await loadR04AdminGrade();}
- // Re-query summary projections, not student/client supplied point values.
- if(R04_PERSISTED_VIEW.examId===str(S.r04SessionId)){await loadR04EvaluatorMatrix();await loadR04AdminScoreboard();}
+ if(R04_PERSISTED_VIEW.examId===str(S.r04SessionId)){
+  await loadR04EvaluatorMatrix();await loadR04AdminScoreboard();
+ }
 }
+
 function renderR04AdminCore(){
  if(preview||S.role!=='admin'||!S.rosterPreviewOnly)return;
  const roster=(R04_EDITOR.examId===str(S.r04SessionId)?R04_EDITOR.rows.filter(p=>p.status==='active'&&p.classStatus!=='archived'):(S.roster||[])).map((p,i)=>({...p,__index:i}));
@@ -580,24 +754,25 @@ function renderR04AdminCore(){
  const scoresReady=hasPersisted&&scores.examId===id&&scores.callerUid===str(S.auth&&S.auth.uid)&&
    scores.stateVersion===persisted.stateVersion&&scores.rows.length===persisted.rows.filter(r=>r.status==='active').length;
  const chosenScore=scoresReady&&exact?scores.rows.find(r=>r.participationId===exact.participationId):null;
- const scoreInfo=chosenScore&&chosenScore.submittedCount?`<div class="stat-grid"><div class="stat"><small>최종 제출 점수 합계</small><strong>${fmt(chosenScore.sum)}</strong></div><div class="stat"><small>강사 평균 / 50</small><strong>${fmt(chosenScore.average)}</strong></div><div class="stat"><small>잠정 순위</small><strong>${chosenScore.rank}위</strong></div><div class="stat"><small>완료 평가</small><strong>${chosenScore.submittedCount} / ${scores.teacherCount}</strong></div></div>`:
+// RUN369_SCOREBOARD_UNIFIED_DISPLAY: existing administrator panel and modal, no duplicate owner.
+ const scoreScale=Number.isSafeInteger(scores.maxTotal)?scores.maxTotal:null;
+ const maxLabel=scoreScale===null?'설정 만점 미확인':`${scoreScale}점 만점`;
+ const scoreInfo=chosenScore&&chosenScore.submittedCount?`<div class="stat-grid"><div class="stat"><small>최종 제출 점수 합계</small><strong>${fmt(chosenScore.sum)}</strong></div><div class="stat"><small>강사 평균 / ${esc(maxLabel)}</small><strong>${fmt(chosenScore.average)}</strong></div><div class="stat"><small>잠정 순위</small><strong>${chosenScore.rank}위</strong></div><div class="stat"><small>완료 평가</small><strong>${chosenScore.submittedCount} / ${scores.teacherCount}</strong></div></div>`:
    '<p class="hint">현재 이 학생의 최종 제출된 평가표가 없습니다.</p>';
-const detailCriteria=(R04_ADMIN_GRADE.examId===id&&R04_ADMIN_GRADE.participationId===selected?.participationId?R04_ADMIN_GRADE.rubrics[selected?.group]:null)||
-  (R04_RUBRIC_ADMIN.examId===id?R04_RUBRIC_ADMIN.rubrics[selected?.group]:null)||
-  (S.rubrics[selected?.group]||defaultRubrics()[selected?.group]||defaultRubrics().youth);
-// RUN301 — display exactly one verified grade in a modal; never inline below admin grading.
-const modalTeacher=teacherStatuses.find(t=>t.index===R04_ADMIN_CORE.teacherModalIndex)||null;
-const modalMatches=modalTeacher&&chosenScore?chosenScore.grades.filter(g=>g.teacherName===modalTeacher.name):[];
-const uniqueTeacher=!!modalTeacher&&teacherStatuses.filter(t=>t.name===modalTeacher.name).length===1;
-const modalGrade=uniqueTeacher&&modalMatches.length===1&&modalMatches[0].status===modalTeacher.status?modalMatches[0]:null;
-const modalItems=(arr,key)=>`<div class="r04-teacher-popup-section"><h3>${key==='na'?'NA · 나레이션':'독백 · 연기'} · 25점</h3><div class="r04-teacher-popup-scores">${detailCriteria[key].map((item,i)=>`<div class="r04-teacher-popup-score"><span>${esc(item.title)}</span><strong>${arr[i]===null?'미입력':fmt(arr[i])+'점'} / 5</strong></div>`).join('')}</div></div>`;
-const modalContent=!modalTeacher?'':modalTeacher.status==='missing'?'<p class="hint">아직 저장된 평가표가 없습니다.</p>':
+ // RUN301: Only display exactly one verified grade in an isolated modal.
+ const modalTeacher=teacherStatuses.find(t=>t.index===R04_ADMIN_CORE.teacherModalIndex)||null;
+ const modalMatches=modalTeacher&&chosenScore?chosenScore.grades.filter(g=>g.teacherName===modalTeacher.name):[];
+ const uniqueTeacher=!!modalTeacher&&teacherStatuses.filter(t=>t.name===modalTeacher.name).length===1;
+ const modalGrade=uniqueTeacher&&modalMatches.length===1&&modalMatches[0].status===modalTeacher.status?modalMatches[0]:null;
+ const modalItems=g=>`<div class="r04-teacher-popup-section"><h3>통합 평가 · ${g.rubricSnapshot.maxTotal}점 만점</h3><div class="r04-teacher-popup-scores">${g.rubricSnapshot.criteria.map((item,i)=>({item,i})).filter(x=>x.item.enabled).map(({item,i})=>`<div class="r04-teacher-popup-score"><span>${esc(item.title)}${item.description?`<small class="rubric-detail">${esc(item.description)}</small>`:''}</span><strong>${g.scores[i]===null?'미입력':g.scores[i]+'점'} / 5</strong></div>`).join('')}</div></div>`;
+ const modalContent=!modalTeacher?'':modalTeacher.status==='missing'?'<p class="hint">아직 저장된 평가표가 없습니다.</p>':
   !scoresReady?'<p class="warn">평가 점수 조회가 완료되지 않아 평가표를 표시할 수 없습니다. 명단·채점 현황 조회 후 다시 확인하세요.</p>':
   !uniqueTeacher||modalMatches.length!==1||!modalGrade?'<p class="warn">강사 식별 또는 평가 상태가 일치하지 않아 평가표를 안전하게 연결할 수 없습니다. 점수는 표시하지 않습니다.</p>':
-  `<div class="r04-teacher-popup-summary"><span class="chip ${modalGrade.status==='submitted'?'ok':'wait'}">${modalGrade.status==='submitted'?'최종제출':'임시저장'}</span><strong>${modalGrade.status==='submitted'?fmt(modalGrade.total)+' / 50점':'임시저장 · 총점 집계 제외'}</strong></div><div class="r04-teacher-popup-grid">${modalItems(modalGrade.na,'na')}${modalItems(modalGrade.act,'act')}</div><div class="r04-teacher-popup-note"><h3>한줄평</h3><p class="note">${esc(modalGrade.note||'작성된 한줄평 없음')}</p></div>`;
+  `<div class="r04-teacher-popup-summary"><span class="chip ${modalGrade.status==='submitted'?'ok':'wait'}">${modalGrade.status==='submitted'?'최종제출':'임시저장'}</span><strong>${modalGrade.status==='submitted'?fmt(modalGrade.total)+' / '+modalGrade.rubricSnapshot.maxTotal+'점':'임시저장 · 총점 집계 제외'}</strong></div><div class="r04-teacher-popup-grid">${modalItems(modalGrade)}</div><div class="r04-teacher-popup-note"><h3>한줄평</h3><p class="note">${esc(modalGrade.note||'작성된 한줄평 없음')}</p></div>`;
+
 const teacherModal=modalTeacher&&exact&&R04_ADMIN_CORE.teacherModalParticipationId===exact.participationId?`<div id="r04TeacherGradeOverlay" class="modal-wrap r04-teacher-grade-overlay" role="dialog" aria-modal="true" aria-labelledby="r04TeacherGradeModalTitle"><div class="modal r04-teacher-grade-modal" role="document"><div class="modal-head"><div><h2 id="r04TeacherGradeModalTitle">${esc(modalTeacher.name)} 평가표</h2><p class="muted">${esc(selected.name)} · ${esc(selected.className)} · 읽기 전용</p></div><button type="button" class="btn line" id="r04CloseTeacherGradePopup" aria-label="평가표 팝업 닫기">닫기 ✕</button></div>${modalContent}${modalGrade&&modalTeacher&&modalTeacher.directoryStatus==='active'&&modalGrade.revision>0?`<div class="r338-delete-controls"><button type="button" class="btn line" id="r338DeleteTeacherGrade" style="color:#ad2727;border-color:#cf9a9a">이 강사의 평가 삭제</button><p class="hint">현재 회차에서 해당 학생에 대한 이 강사의 평가 1건만 삭제합니다. 서버에서 관리자 권한과 평가 버전을 재확인합니다.</p></div>`:''}</div></div>`:'';
  const scoreRows=scoresReady?scores.rows.filter(x=>x.submittedCount>0).sort((a,b)=>a.rank-b.rank||b.average-a.average):[];
- const scoreLeaderboard=scoreRows.length?`<div class="scroll-table"><table class="wide-table"><thead><tr><th>순위</th><th>학생</th><th>수강반</th><th>합계</th><th>평균/50</th><th>제출 강사</th></tr></thead><tbody>${scoreRows.map(r=>{const p=persisted.rows.find(x=>x.participationId===r.participationId);return `<tr><td>${r.rank}위 ${r.complete?'':'· 잠정'}</td><td>${esc(p&&p.studentLabel||'확인 필요')}</td><td>${esc(p&&p.classLabel||'확인 필요')}</td><td>${fmt(r.sum)}</td><td>${fmt(r.average)}</td><td>${r.submittedCount}/${scores.teacherCount}</td></tr>`;}).join('')}</tbody></table></div>`:
+ const scoreLeaderboard=scoreRows.length?`<div class="scroll-table"><table class="wide-table"><thead><tr><th>순위</th><th>학생</th><th>수강반</th><th>합계</th><th>평균 / ${esc(maxLabel)}</th><th>제출 강사</th></tr></thead><tbody>${scoreRows.map(r=>{const p=persisted.rows.find(x=>x.participationId===r.participationId);return `<tr><td>${r.rank}위 ${r.complete?'':'· 잠정'}</td><td>${esc(p&&p.studentLabel||'확인 필요')}</td><td>${esc(p&&p.classLabel||'확인 필요')}</td><td>${fmt(r.sum)}</td><td>${fmt(r.average)}</td><td>${r.submittedCount}/${scores.teacherCount}</td></tr>`;}).join('')}</tbody></table></div>`:
    '<p class="hint">최종 제출된 평가표가 없어 아직 순위를 계산할 수 없습니다.</p>';
  const teacherTable=teacherStatuses.length?`<div class="scroll-table"><table class="wide-table r04-teacher-status-table"><thead><tr><th>강사</th><th>평가 상태</th></tr></thead><tbody>${teacherStatuses.map(t=>`<tr><td><button type="button" class="r04-teacher-name-button" data-r04-teacher-popup-index="${t.index}" aria-label="${esc(t.name)} 평가표 팝업 열기">${esc(t.name)}</button></td><td><span class="chip ${t.status==='submitted'?'ok':'wait'}">${t.status==='submitted'?'완료':t.status==='draft'?'임시저장':'미평가'}</span></td></tr>`).join('')}</tbody></table></div>`:'<p class="hint">평가표 조회 전이거나 참가 ID의 정확한 연결을 확인할 수 없습니다. 다른 학생의 채점 기록은 추측하여 표시하지 않습니다.</p>';
  const teacherSummary=teacherStatuses.length?`${teacherStatuses.filter(t=>t.status==='submitted').length}명 완료 · ${teacherStatuses.filter(t=>t.status==='draft').length}명 임시저장 · ${teacherStatuses.filter(t=>t.status==='missing').length}명 미평가`:'조회 전';
@@ -986,6 +1161,7 @@ function validateR04AdminReleasePreview(raw,id){
     (raw.sessionState!=='open'&&raw.sessionState!=='closed')||
     typeof raw.gradingOpen!=='boolean'||typeof raw.resultsReleased!=='boolean'||
     typeof raw.canRelease!=='boolean'||typeof raw.requiresIncompleteAcknowledgement!=='boolean'||
+    typeof raw.requiresRubricRegrade!=='boolean'||
     !isInt(raw.stateVersion)||!isInt(raw.participantCount)||raw.participantCount<1||raw.participantCount>150||
     !isInt(raw.gradeDocumentCount)||raw.gradeDocumentCount>9000||
     !isInt(raw.submittedCount)||!isInt(raw.draftCount)||
@@ -996,14 +1172,15 @@ function validateR04AdminReleasePreview(raw,id){
     (raw.resultsReleased&&raw.sessionState!=='closed')||
     raw.requiresIncompleteAcknowledgement!==(raw.unassessedParticipants>0)||
     raw.canRelease!==(raw.sessionState==='closed'&&!raw.gradingOpen&&
-      !raw.resultsReleased&&raw.submittedCount>0))
+      !raw.resultsReleased&&raw.submittedCount>0&&!raw.requiresRubricRegrade))
    throw Error('R04 결과 공개 집계의 무결성이 확인되지 않았습니다. 공개를 차단합니다.');
  return {examId:id,sessionState:raw.sessionState,gradingOpen:raw.gradingOpen,
    resultsReleased:raw.resultsReleased,stateVersion:raw.stateVersion,
    participantCount:raw.participantCount,gradeDocumentCount:raw.gradeDocumentCount,
    submittedCount:raw.submittedCount,draftCount:raw.draftCount,
    assessedParticipants:raw.assessedParticipants,unassessedParticipants:raw.unassessedParticipants,
-   canRelease:raw.canRelease,requiresIncompleteAcknowledgement:raw.requiresIncompleteAcknowledgement};
+   canRelease:raw.canRelease,requiresIncompleteAcknowledgement:raw.requiresIncompleteAcknowledgement,
+   requiresRubricRegrade:raw.requiresRubricRegrade};
 }
 async function loadR04AdminReleasePreview(id){
  if(preview||S.role!=='admin'||!R04_EXAM_ID_PATTERN.test(id)||S.r04ReleasePending)return;
@@ -1060,8 +1237,9 @@ function renderR04AdminReleaseControls(){
  const status=current?`<div class="stat-grid"><div class="stat"><small>참가 기록</small><strong>${current.participantCount}건</strong></div><div class="stat"><small>평가 완료 참가 기록</small><strong>${current.assessedParticipants}건</strong></div><div class="stat"><small>미평가 참가 기록</small><strong>${current.unassessedParticipants}건</strong></div><div class="stat"><small>최종 제출 평가표</small><strong>${current.submittedCount}건</strong></div></div><p class="hint">임시저장 ${current.draftCount}건 · 평가 문서 ${current.gradeDocumentCount}건 · 상태 버전 ${current.stateVersion}. 완료 인원은 강사 1명 이상이 최종 제출한 참가 기록 기준입니다.</p>`:
   '<p class="hint">[공개 현황 조회]를 누르면 점수·학생명 없이 완료 현황을 조회합니다. 이 작업은 데이터를 수정하지 않습니다.</p>';
  const note=current&&current.requiresIncompleteAcknowledgement?'<p class="warn">미평가 기록이 존재합니다. 공개할 경우 별도 확인이 필요합니다.</p>':'';
+ const regradeNotice=current&&current.requiresRubricRegrade?'<p class="warn">현재 평가기준과 다른 제출 평가표가 있습니다. 모든 이전 기준 평가를 현재 기준으로 재채점해야 공개할 수 있습니다.</p>':'';
  const busy=S.r04ReleasePreviewPending||S.r04ReleasePending||S.r04StateMutationPending;
- const html=`<section class="panel" id="r04AdminReleasePanel"><div class="heading-row"><div><h2>R04 결과 공개 관리</h2><p class="muted">관리자 전용 · 공개 전 현황 조회 · 평가 최종 종료 후에만 공개</p></div><span class="chip ${current&&current.resultsReleased?'ok':'wait'}">${esc(label)}</span></div><div class="flex"><button id="r04LoadReleasePreview" class="btn line" type="button" ${busy?'disabled':''}>${S.r04ReleasePreviewPending?'조회 중':'결과 공개 현황 조회'}</button><button id="r04ConfirmResultsRelease" class="btn" type="button" ${ready?'':'disabled'}>평가 결과 최종 공개</button></div>${status}${note}<p class="warn">공개 전에는 점수·한줄평이 학생에게 표시되지 않습니다. 공개는 관리자만 최종 확인 후 실행할 수 있으며, 취소할 수 없습니다.</p></section>`;
+ const html=`<section class="panel" id="r04AdminReleasePanel"><div class="heading-row"><div><h2>R04 결과 공개 관리</h2><p class="muted">관리자 전용 · 공개 전 현황 조회 · 평가 최종 종료 후에만 공개</p></div><span class="chip ${current&&current.resultsReleased?'ok':'wait'}">${esc(label)}</span></div><div class="flex"><button id="r04LoadReleasePreview" class="btn line" type="button" ${busy?'disabled':''}>${S.r04ReleasePreviewPending?'조회 중':'결과 공개 현황 조회'}</button><button id="r04ConfirmResultsRelease" class="btn" type="button" ${ready?'':'disabled'}>평가 결과 최종 공개</button></div>${status}${note}${regradeNotice}<p class="warn">공개 전에는 점수·한줄평이 학생에게 표시되지 않습니다. 공개는 관리자만 최종 확인 후 실행할 수 있으며, 취소할 수 없습니다.</p></section>`;
  const anchor=$('r04AdminStatePanel');if(!anchor)return;
  anchor.insertAdjacentHTML('afterend',html);
  const read=$('r04LoadReleasePreview');if(read&&!busy)read.onclick=()=>loadR04AdminReleasePreview(S.r04SessionId);
@@ -1184,6 +1362,53 @@ async function saveR04MediaAdminRecord(){
  }catch(e){toast('저장 결과가 불확실합니다. 반복 저장하지 말고 링크를 다시 조회하세요. '+errorMessage(e));}
  finally{S.r04MediaSavePending=false;S.r04MediaUnsafe=true;if(S.role==='admin'&&S.r04SessionId===id)render();}
 }
+// RUN355_ADMIN_ANONYMOUS: administrator-only anonymous copy editor. Original media is untouched.
+const R355={record:null,loading:false,saving:false,key:''};
+function r355Key(){const p=selectedR04MediaParticipation();return p?S.r04SessionId+'|'+p.participationId:'';}
+async function r355Read(){
+ const p=selectedR04MediaParticipation(),key=r355Key();
+ if(!p||R355.loading||R355.saving)return;
+ R355.loading=true;R355.record=null;R355.key=key;
+ try{
+  const x=await call(FN.r04AdminMedia,{action:'readAnonymous',examId:S.r04SessionId,participationId:p.participationId});
+  if(x.ok!==true||x.mode!=='admin-r04-anonymous-media-read'||x.examId!==S.r04SessionId||x.participationId!==p.participationId||
+    !Number.isSafeInteger(x.revision)||!validR04MediaUrl(x.audioUrl)||!validR04MediaUrl(x.videoUrl))
+    throw Error('익명 링크 조회 응답 형식이 잘못됐습니다.');
+  if(r355Key()===key)R355.record=x;
+ }catch(e){toast(errorMessage(e));}
+ finally{R355.loading=false;if(r355Key()===key)render();}
+}
+async function r355Save(){
+ const p=selectedR04MediaParticipation(),r=R355.record,key=r355Key();
+ const audio=$('r355Audio'),video=$('r355Video');
+ if(!p||!r||R355.saving||!canSaveR04MediaAdmin()||!audio||!video||R355.key!==key)return;
+ const aa=audio.value.trim(),vv=video.value.trim();
+ if(!validR04MediaUrl(aa)||!validR04MediaUrl(vv))return toast('익명 자료는 Google Drive HTTPS 링크만 입력하세요.');
+ if((aa&&aa===S.r04MediaRecord?.audioUrl)||(vv&&vv===S.r04MediaRecord?.videoUrl))
+   return toast('익명 링크와 관리자 원본 링크가 같습니다. 별도 사본을 등록하세요.');
+ if(!window.confirm('학생 이름·소유자 정보가 없는 별도 익명 사본을 확인했습니까? 확인 전에는 저장하지 마세요.'))return;
+ R355.saving=true;
+ try{
+  const x=await call(FN.r04AdminMedia,{action:'saveAnonymous',examId:S.r04SessionId,participationId:p.participationId,expectedRevision:r.revision,audioUrl:aa,videoUrl:vv});
+  if(x.ok!==true||x.mode!=='admin-r04-anonymous-media-saved'||x.examId!==S.r04SessionId||x.participationId!==p.participationId)
+    throw Error('익명 링크 저장 결과를 확인하지 못했습니다.');
+  R355.record=null;toast('익명 링크가 저장됐습니다. 다시 조회해 확인하세요.');
+ }catch(e){toast('저장 상태가 불확실합니다. 중복 저장 전에 재조회하세요. '+errorMessage(e));}
+ finally{R355.saving=false;if(r355Key()===key)render();}
+}
+function r355RenderAdmin(){
+ const host=$('r355AnonymousHost');if(!host)return;
+ const p=selectedR04MediaParticipation(),key=r355Key(),r=R355.key===key?R355.record:null;
+ const can=!!r&&canSaveR04MediaAdmin()&&!R355.saving;
+ host.innerHTML=`<h3>강사용 익명 자료 (원본과 별도)</h3>
+ <p class="hint">Drive에서 파일명·소유자·공유 계정·영상 화면의 신원 정보를 확인한 익명 사본만 등록하세요. 원본 링크와 동일한 주소는 허용하지 않습니다.</p>
+ <button type="button" class="btn line" id="r355Read" ${!p||R355.loading?'disabled':''}>익명 링크 조회</button>
+ ${r?`<div class="field"><label>익명 음성 Drive URL<input id="r355Audio" type="url" value="${esc(r.audioUrl)}" maxlength="2048" ${can?'':'disabled'}></label></div>
+ <div class="field"><label>익명 영상 Drive URL<input id="r355Video" type="url" value="${esc(r.videoUrl)}" maxlength="2048" ${can?'':'disabled'}></label></div>
+ <div class="action-row"><button class="btn" id="r355Save" ${can?'':'disabled'}>강사용 익명 자료 저장</button><small>수정 버전 ${r.revision}</small></div>`:'<p class="hint">익명 자료를 조회한 후 등록할 수 있습니다.</p>'}`;
+ const read=$('r355Read');if(read)read.onclick=r355Read;
+ const save=$('r355Save');if(save)save.onclick=r355Save;
+}
 function renderR04AdminMediaControls(){
  if(preview||S.role!=='admin')return;
  const ready=S.r04MediaRosterExamId===S.r04SessionId&&S.r04MediaRoster.length>0;
@@ -1203,6 +1428,7 @@ function renderR04AdminMediaControls(){
  const html=`<section class="panel" id="r04AdminMediaPanel"><div class="heading-row"><div><h2>R04 음성·영상 링크 관리</h2><p class="muted">관리자 전용 · 서버 참가 ID 기준 · Google Drive HTTPS만 허용</p></div><span class="chip wait">수동 관리</span></div><div class="flex"><button id="r04MediaRosterLoad" type="button" class="btn line" ${busy?'disabled':''}>저장된 참가 기록 조회</button></div><p class="hint">${esc(status)}</p>${details}${fields}${blockNote}<p class="hint">Google Drive 파일 접근 권한은 Drive에서 별도로 관리해야 합니다. 폴더 자동매칭은 아직 제공하지 않습니다.</p></section>`;
  const anchor=$('r04AdminReleasePanel')||$('r04AdminStatePanel');if(!anchor)return;
  anchor.insertAdjacentHTML('afterend',html);
+ const r355host=$('r04AdminMediaPanel');if(r355host){r355host.insertAdjacentHTML('beforeend','<div id="r355AnonymousHost" class="r355-anonymous"></div>');r355RenderAdmin();}
  const reload=$('r04MediaRosterLoad');if(reload&&!busy)reload.onclick=()=>loadR04MediaAdminRoster();
  const picker=$('r04MediaParticipationPicker');if(picker&&!busy)picker.onchange=e=>{
   if(!S.r04MediaRoster.some(p=>p.participationId===e.target.value))return;
@@ -1214,6 +1440,48 @@ function renderR04AdminMediaControls(){
 
 // RUN178 R04 teacher workspace uses only the deployed authenticated R04 API.
 // The legacy grading overview and save endpoints are never invoked by a live teacher.
+// RUN363_CONFIGURABLE_GRADE_READ: client validation, no direct database access.
+function r363ValidateConfig(raw){
+ if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.schemaVersion!==2||
+    !Number.isSafeInteger(raw.maxTotal)||raw.maxTotal<1||raw.maxTotal>1000||
+    !Array.isArray(raw.criteria)||raw.criteria.length<1||raw.criteria.length>30)
+  throw Error('통합 평가항목 설정 형식이 올바르지 않습니다.');
+ const keys=new Set(),criteria=raw.criteria.map(x=>{
+  if(!x||typeof x!=='object'||Array.isArray(x)||typeof x.title!=='string'||
+     !x.title.trim()||x.title.length>70||x.title.trim()!==x.title||
+     typeof x.description!=='string'||x.description.length>500||typeof x.enabled!=='boolean')
+   throw Error('통합 평가항목 형식이 잘못됐습니다.');
+  const key=x.title.normalize('NFKC').replace(/\s+/g,'').toLowerCase();
+  if(keys.has(key))throw Error('통합 평가항목의 제목이 중복됩니다.');keys.add(key);
+  return {title:x.title,description:x.description,enabled:x.enabled};
+ });
+ if(!criteria.some(x=>x.enabled))throw Error('활성화된 통합 평가항목이 없습니다.');
+ return {schemaVersion:2,maxTotal:raw.maxTotal,criteria};
+}
+function r363ValidateGrade(g){
+ if(g.gradingSchema!=='configurable-v2'||!['draft','submitted'].includes(g.status)||
+    !Number.isSafeInteger(g.revision)||g.revision<1||
+    !Number.isSafeInteger(g.rubricVersion)||g.rubricVersion<1||
+    typeof g.note!=='string'||g.note.length>1000||g.note.trim()!==g.note||
+    (g.status==='submitted'&&!g.note))
+  throw Error('통합 평가표의 저장 상태가 유효하지 않습니다.');
+ const rubric=r363ValidateConfig(g.rubricSnapshot);
+ if(!Array.isArray(g.scores)||g.scores.length!==rubric.criteria.length)
+  throw Error('통합 평가 점수 개수가 일치하지 않습니다.');
+ let sum=0,count=0;
+ for(let i=0;i<g.scores.length;i++){
+  const x=g.scores[i];
+  if(!rubric.criteria[i].enabled){if(x!==null)throw Error('비활성 항목에 점수가 있습니다.');continue;}
+  count++;
+  if(x===null){if(g.status==='submitted')throw Error('미채점 항목이 있습니다.');continue;}
+  if(!Number.isInteger(x)||x<1||x>5)throw Error('평가 점수는 1~5점이어야 합니다.');
+  sum+=x;
+ }
+ const total=g.status==='draft'?null:Math.round(sum*rubric.maxTotal*100/(count*5))/100;
+ if(g.total!==total)throw Error('저장된 통합 평가 환산점수가 일치하지 않습니다.');
+ return true;
+}
+
 function validateR04TeacherRow(row){
  if(!row||typeof row!=='object'||Array.isArray(row)||typeof row.participationId!=='string'||
    !/^[^/\\\x00-\x1f\x7f]{1,180}$/u.test(row.participationId)||
@@ -1222,7 +1490,9 @@ function validateR04TeacherRow(row){
    !/^(성인|청소년) [가나다라마바사아자차카타파하]\d*반$/u.test(row.classLabel)||
    !/^[가나다라마바사아자차카타파하]\d*$/u.test(row.studentLabel))throw Error('강사 익명 평가 명단의 형식이 올바르지 않습니다.');
  const g=row.grade;
- if(g!==null){
+ if(g&&g.gradingSchema==='configurable-v2'){
+  r363ValidateGrade(g);
+ }else if(g!==null){
   if(!g||typeof g!=='object'||!['draft','submitted'].includes(g.status)||
     !Number.isSafeInteger(g.revision)||g.revision<1||!validR04GradeScores(g.na,g.status)||
     !validR04GradeScores(g.act,g.status)||typeof g.note!=='string'||g.note.length>1000||
@@ -1260,6 +1530,12 @@ async function reloadR04Teacher(){
   if(row.grade)grades.push({...row.grade,participationId:row.participationId,teacherUid:S.auth.teacherUid});
  }
  if(examId!==S.examId||S.role!=='teacher')return;
+ const config=out.configurableRubric===null?null:r363ValidateConfig(out.configurableRubric);
+ if(!Number.isSafeInteger(out.configurableRubricVersion)||out.configurableRubricVersion<0)
+  throw Error('통합 평가항목 버전이 올바르지 않습니다.');
+ S.r04ConfigurableRubric=config;
+ S.r04ConfigurableRubricVersion=out.configurableRubricVersion;
+
  S.roster=rows;S.grades=grades;S.judges=[];S.folders={};S.archived=out.sessionState==='closed';
  S.rubrics=normalizeRubrics({청소년:out.rubrics&&out.rubrics.youth,성인:out.rubrics&&out.rubrics.adult});S.rubricVersion=Number(out.rubricVersion)||0;
  S.published=false;S.r04TeacherReady=true;S.r04TeacherGradingOpen=out.gradingOpen===true&&out.sessionState==='open';
@@ -1268,25 +1544,24 @@ async function reloadR04Teacher(){
 }
 // RUN185: student R04 display is exclusively sourced from the server-verified own-history API.
 // Never send a student UID, a participation ID, or an exam ID as a callable argument.
+// RUN371_STUDENT_HISTORY_CONFIG_V2: strict projection of student-owned, released results.
 function validateR04StudentHistory(out){
  if(!out||typeof out!=='object'||Array.isArray(out)||out.ok!==true||
    out.mode!=='student-own-history-read-only'||!Number.isSafeInteger(out.historyCount)||
    out.historyCount<0||out.historyCount>400||!Array.isArray(out.records)||
    out.records.length!==out.historyCount||
    Object.keys(out).some(k=>!['ok','mode','historyCount','records'].includes(k)))
-    throw Error('학생 평가 기록의 형식을 확인할 수 없습니다.');
+   throw Error('학생 평가 기록의 형식을 확인할 수 없습니다.');
  const expected=['examId','examDate','round','participationId','classId','group',
    'participationStatus','sessionState','resultsReleased','evaluations'];
- const optionalMedia='media';
- const gradeFields=['evaluatorLabel','na','act','note','total'];
- const ids=new Set();
- const validPoints=v=>typeof v==='number'&&Number.isFinite(v)&&v>=0&&v<=5&&Number.isInteger(v*2);
- const rows=[];
+ const fields=['evaluatorLabel','gradingSchema','rubricVersion','rubricSnapshot','scores','note','total'];
+ const ids=new Set(),rows=[];
  for(const raw of out.records){
+  const hasMedia=Object.prototype.hasOwnProperty.call(raw||{},'media');
   if(!raw||typeof raw!=='object'||Array.isArray(raw)||
-    Object.keys(raw).length!==expected.length+(Object.prototype.hasOwnProperty.call(raw,optionalMedia)?1:0)||
-    Object.keys(raw).some(k=>!expected.includes(k)&&k!==optionalMedia)||
+    Object.keys(raw).length!==expected.length+(hasMedia?1:0)||
     expected.some(k=>!Object.prototype.hasOwnProperty.call(raw,k))||
+    Object.keys(raw).some(k=>!expected.includes(k)&&k!=='media')||
     !/^r04_20\d{4}_r0[1-9]$/u.test(raw.examId)||
     typeof raw.examDate!=='string'||!/^20\d{2}-\d{2}-\d{2}$/u.test(raw.examDate)||
     !Number.isSafeInteger(raw.round)||raw.round<1||
@@ -1294,37 +1569,61 @@ function validateR04StudentHistory(out){
     typeof raw.classId!=='string'||!raw.classId||raw.classId.length>180||
     !['성인','청소년'].includes(raw.group)||!['active','archived'].includes(raw.participationStatus)||
     !['open','closed'].includes(raw.sessionState)||typeof raw.resultsReleased!=='boolean'||
-    !Array.isArray(raw.evaluations)||raw.evaluations.length>60||
-    ids.has(raw.participationId)||
+    !Array.isArray(raw.evaluations)||raw.evaluations.length>60||ids.has(raw.participationId)||
     (raw.resultsReleased&&raw.sessionState!=='closed')||
-    (!raw.resultsReleased&&raw.evaluations.length!==0))
-      throw Error('학생 평가 참가 기록의 무결성을 확인할 수 없습니다.');
+    (!raw.resultsReleased&&raw.evaluations.length!==0)||
+    (raw.participationStatus==='archived'&&raw.evaluations.length!==0))
+     throw Error('학생 평가 참가 기록의 무결성을 확인할 수 없습니다.');
   ids.add(raw.participationId);
   let media={audioUrl:'',videoUrl:''};
-  if(Object.prototype.hasOwnProperty.call(raw,optionalMedia)){
-   const m=raw.media;
-   if(!m||typeof m!=='object'||Array.isArray(m)||Object.keys(m).length!==2||
-     !Object.prototype.hasOwnProperty.call(m,'audioUrl')||
-     !Object.prototype.hasOwnProperty.call(m,'videoUrl')||
-     !validR04MediaUrl(m.audioUrl)||!validR04MediaUrl(m.videoUrl)||
-     (raw.participationStatus==='archived'&&(m.audioUrl||m.videoUrl)))
-      throw Error('학생 미디어 자료의 형식을 확인할 수 없습니다.');
-   media={audioUrl:m.audioUrl,videoUrl:m.videoUrl};
+  if(hasMedia){
+    const m=raw.media;
+    if(!m||typeof m!=='object'||Array.isArray(m)||Object.keys(m).length!==2||
+      !Object.prototype.hasOwnProperty.call(m,'audioUrl')||
+      !Object.prototype.hasOwnProperty.call(m,'videoUrl')||
+      !validR04MediaUrl(m.audioUrl)||!validR04MediaUrl(m.videoUrl)||
+      (raw.participationStatus==='archived'&&(m.audioUrl||m.videoUrl)))
+       throw Error('학생 미디어 자료의 형식을 확인할 수 없습니다.');
+    media={audioUrl:m.audioUrl,videoUrl:m.videoUrl};
   }
-  const evaluations=[];
+  const evaluations=[],versions=new Set(),maxTotals=new Set();
   for(let i=0;i<raw.evaluations.length;i++){
    const g=raw.evaluations[i];
-   if(!g||typeof g!=='object'||Array.isArray(g)||Object.keys(g).length!==gradeFields.length||
-     gradeFields.some(k=>!Object.prototype.hasOwnProperty.call(g,k))||
-     g.evaluatorLabel!==`평가위원 ${i+1}`||!Array.isArray(g.na)||!Array.isArray(g.act)||
-     g.na.length!==5||g.act.length!==5||![...g.na,...g.act].every(validPoints)||
+   if(!g||typeof g!=='object'||Array.isArray(g)||Object.keys(g).length!==fields.length||
+     fields.some(k=>!Object.prototype.hasOwnProperty.call(g,k))||
+     g.evaluatorLabel!==`평가위원 ${i+1}`||g.gradingSchema!=='configurable-v2'||
+     !Number.isSafeInteger(g.rubricVersion)||g.rubricVersion<1||
+     !r369Rubric(g.rubricSnapshot)||!Array.isArray(g.scores)||
+     g.scores.length!==g.rubricSnapshot.criteria.length||
      typeof g.note!=='string'||!g.note||g.note.length>1000||g.note.trim()!==g.note||
-     typeof g.total!=='number'||Math.abs([...g.na,...g.act].reduce((a,b)=>a+b,0)-g.total)>0.000001)
-       throw Error('학생 평가 점수의 무결성을 확인할 수 없습니다.');
-   // Project only deliberately public values: never pass through unknown/private response fields.
-   evaluations.push({evaluatorLabel:g.evaluatorLabel,na:[...g.na],act:[...g.act],
-     note:g.note,total:g.total});
+     typeof g.total!=='number'||!Number.isFinite(g.total))
+       throw Error('학생 통합 평가 점수의 무결성을 확인할 수 없습니다.');
+   const rubric=g.rubricSnapshot;
+   if(Object.keys(rubric).length!==3||
+      Object.keys(rubric).some(k=>!['schemaVersion','maxTotal','criteria'].includes(k))||
+      rubric.criteria.some(c=>Object.keys(c).length!==3||
+        Object.keys(c).some(k=>!['title','description','enabled'].includes(k))))
+       throw Error('학생 평가항목에 허용되지 않는 정보가 있습니다.');
+   let active=0,sum=0;
+   for(let j=0;j<rubric.criteria.length;j++){
+    const c=rubric.criteria[j],v=g.scores[j];
+    if(!c.enabled){if(v!==null)throw Error('비활성 평가항목에 점수가 있습니다.');continue;}
+    active++;
+    if(!Number.isInteger(v)||v<1||v>5)throw Error('평가 점수는 1~5점 정수여야 합니다.');
+    sum+=v;
+   }
+   const total=Math.round(sum*rubric.maxTotal*100/(active*5))/100;
+   if(Math.abs(g.total-total)>0.000001)throw Error('환산 총점이 저장 점수와 다릅니다.');
+   versions.add(g.rubricVersion);maxTotals.add(rubric.maxTotal);
+   // Never reflect the server's raw object: only approved public fields are projected.
+   evaluations.push({evaluatorLabel:g.evaluatorLabel,gradingSchema:'configurable-v2',
+     rubricVersion:g.rubricVersion,
+     rubricSnapshot:{schemaVersion:2,maxTotal:rubric.maxTotal,
+       criteria:rubric.criteria.map(c=>({title:c.title,description:c.description,enabled:c.enabled}))},
+     scores:[...g.scores],note:g.note,total});
   }
+  if(versions.size>1||maxTotals.size>1)
+   throw Error('평가표마다 적용된 만점이나 평가항목 버전이 달라 결과를 표시할 수 없습니다.');
   rows.push({examId:raw.examId,examDate:raw.examDate,round:raw.round,
     participationId:raw.participationId,classId:raw.classId,group:raw.group,
     participationStatus:raw.participationStatus,sessionState:raw.sessionState,
@@ -1332,6 +1631,7 @@ function validateR04StudentHistory(out){
  }
  return rows;
 }
+
 async function refreshR04StudentHistory(){
  if(preview||S.role!=='student'||!S.auth)return;
  const uid=S.auth.uid;
@@ -1354,19 +1654,20 @@ async function refreshR04StudentHistory(){
 }
 // RUN276: Student-only R04 results view on the existing authenticated own-history endpoint.
 // Never infer evaluator names, rubric titles or release status; no new server requests.
+// RUN371_STUDENT_AVERAGE_V2: calculate average only from released, validated results.
 function r04StudentPublishedSummary(p){
  if(!p||p.resultsReleased!==true||p.sessionState!=='closed'||p.participationStatus!=='active'||
-    !Array.isArray(p.evaluations)||!p.evaluations.length)return null;
- const rows=p.evaluations;
- const valid=rows.every(g=>g&&typeof g==='object'&&Array.isArray(g.na)&&g.na.length===5&&
-  Array.isArray(g.act)&&g.act.length===5&&[...g.na,...g.act].every(x=>
-   typeof x==='number'&&Number.isFinite(x)&&x>=0&&x<=5&&Number.isInteger(x*2))&&
-  typeof g.total==='number'&&Number.isFinite(g.total)&&Math.abs([...g.na,...g.act].reduce((a,b)=>a+b,0)-g.total)<0.000001);
- if(!valid)return null;
- const count=rows.length,na=rows.reduce((a,g)=>a+g.na.reduce((x,y)=>x+y,0),0)/count;
- const act=rows.reduce((a,g)=>a+g.act.reduce((x,y)=>x+y,0),0)/count;
- return {count,na,act,total:na+act};
+   !Array.isArray(p.evaluations)||!p.evaluations.length)return null;
+ const rows=p.evaluations,version=rows[0].rubricVersion,maxTotal=rows[0].rubricSnapshot.maxTotal;
+ if(!Number.isSafeInteger(maxTotal)||maxTotal<1||maxTotal>1000||!rows.every(g=>
+   g.gradingSchema==='configurable-v2'&&g.rubricVersion===version&&
+   g.rubricSnapshot.maxTotal===maxTotal&&Number.isFinite(g.total)&&
+   g.total>=0&&g.total<=maxTotal))return null;
+ const count=rows.length;
+ return {count,maxTotal,total:Math.round(rows.reduce((sum,g)=>sum+g.total,0)*100/count)/100,
+   activeCriteria:rows[0].rubricSnapshot.criteria.filter(c=>c.enabled).length};
 }
+
 function renderR04StudentHistory(){
  if(preview||S.role!=='student'||!S.auth)return;
  const rows=S.r04StudentHistoryRecords||[];
@@ -1405,14 +1706,15 @@ function renderR04StudentHistory(){
   body='<section class="panel"><h2>평가 결과 공개 대기</h2><p class="muted">평가중</p></section>';
  }else if(!summary){
   body='<section class="panel"><h2>공개된 평가표가 없습니다.</h2><p class="muted">결과 공개는 완료됐지만 이 참가 기록에 최종 제출된 강사 평가표가 없습니다.</p></section>';
- }else{
+  }else{
+  // RUN371_STUDENT_UNIFIED_RESULT: only server-released, teacher-anonymous criteria.
   const vals=selected.evaluations;
   const page=Math.max(0,Math.min(S.r04StudentEvaluationPage,vals.length-1));
   S.r04StudentEvaluationPage=page;
   const grade=vals[page];
-  const section=(title,key)=>`<section class="rubric"><h3>${title}<span class="numeric">${fmt(grade[key].reduce((a,b)=>a+b,0))} / 25점</span></h3><table><thead><tr><th>평가 항목 순번</th><th>평가 점수</th></tr></thead><tbody>${grade[key].map((n,i)=>`<tr><td>${i+1}번 항목</td><td><strong>${fmt(n)} / 5점</strong></td></tr>`).join('')}</tbody></table></section>`;
-  const cards=`<div class="stat-grid"><div class="stat"><small>전체 평균 · 50점 만점</small><strong>${fmt(summary.total)}</strong></div><div class="stat"><small>NA 평균 · 25점 만점</small><strong>${fmt(summary.na)}</strong></div><div class="stat"><small>독백 평균 · 25점 만점</small><strong>${fmt(summary.act)}</strong></div><div class="stat"><small>제출된 평가표</small><strong>${summary.count}건</strong></div></div>`;
-  body=`<section class="panel"><h2 class="panel-title">평가 결과 요약</h2>${cards}<p class="hint">최종 제출된 평가표만 평균에 포함합니다. NA·독백 각 25점, 전체 50점 만점입니다.</p></section><section class="panel"><div class="heading-row"><div><h2>${esc(grade.evaluatorLabel)} 평가표</h2><p class="muted">${page+1} / ${vals.length} · 평가위원 실명 비공개</p></div><strong>${fmt(grade.total)} / 50점</strong></div>${section('NA · 나레이션','na')}${section('독백 · 연기','act')}<div class="field"><label>평가위원 한줄평</label><div class="note">${esc(grade.note)}</div></div><div class="pager"><button class="btn line" type="button" id="r04StudentPrev" ${page===0?'disabled':''}>◀ 이전 평가표</button><span>${page+1} / ${vals.length}</span><button class="btn line" type="button" id="r04StudentNext" ${page===vals.length-1?'disabled':''}>다음 평가표 ▶</button></div></section>`;
+  const section=`<section class="rubric"><h3>통합 평가항목</h3><table><thead><tr><th>평가항목</th><th>점수</th></tr></thead><tbody>${grade.rubricSnapshot.criteria.map((c,i)=>({c,i})).filter(x=>x.c.enabled).map(({c,i})=>`<tr><td><strong>${esc(c.title)}</strong>${c.description?`<div class="rubric-detail">${esc(c.description)}</div>`:''}</td><td><strong>${grade.scores[i]} / 5점</strong></td></tr>`).join('')}</tbody></table></section>`;
+  const cards=`<div class="stat-grid"><div class="stat"><small>전체 평균 · ${summary.maxTotal}점 만점</small><strong>${fmt(summary.total)}</strong></div><div class="stat"><small>평가항목</small><strong>${summary.activeCriteria}개</strong></div><div class="stat"><small>제출된 평가표</small><strong>${summary.count}건</strong></div></div>`;
+  body=`<section class="panel"><h2 class="panel-title">평가 결과 요약</h2>${cards}<p class="hint">최종 제출된 평가표만 평균에 포함합니다. 평가항목과 만점은 해당 평가표의 저장된 기준입니다.</p></section><section class="panel"><div class="heading-row"><div><h2>${esc(grade.evaluatorLabel)} 평가표</h2><p class="muted">${page+1} / ${vals.length} · 평가위원 실명 비공개</p></div><strong>${fmt(grade.total)} / ${grade.rubricSnapshot.maxTotal}점</strong></div>${section}<div class="field"><label>평가위원 한줄평</label><div class="note">${esc(grade.note)}</div></div><div class="pager"><button class="btn line" type="button" id="r04StudentPrev" ${page===0?'disabled':''}>◀ 이전 평가표</button><span>${page+1} / ${vals.length}</span><button class="btn line" type="button" id="r04StudentNext" ${page===vals.length-1?'disabled':''}>다음 평가표 ▶</button></div></section>`;
  }
  app.innerHTML=head+`<section class="session-bar"><div><strong>평가 회차</strong><small>실제 저장된 참가 회차만 조회합니다.</small></div><div class="session-picker"><select id="r04StudentExamSelect" aria-label="평가 회차 선택">${options}</select><button class="btn line" type="button" id="r04StudentRefresh">새로고침</button></div></section>`+(sameExam.length>1?`<div class="tabs" role="group" aria-label="내 수강반 선택">${classButtons}</div>`:'')+status+mediaPanel+body;
  $('r04StudentRefresh').onclick=()=>refreshR04StudentHistory();
@@ -1449,9 +1751,27 @@ try{if(S.role==='student'){const p=await call('getStudentFirebaseProfile7355030'
 badge();await refreshSessions();}
 async function reload(){if(!preview&&S.role==='student')return refreshR04StudentHistory();if(!preview&&S.role==='teacher')return reloadR04Teacher();if(!S.examId){applySnapshot({});render();return;}const requestExamId=S.examId;const a=await call(FN.overview,{examId:requestExamId});if(requestExamId!==S.examId)return;if(a.ok!==true)throw Error('평가 현황을 불러오지 못했습니다.');S.roster=rosterForView(Array.isArray(a.participants)?a.participants:[],S.role);S.grades=Array.isArray(a.grades)?a.grades:[];S.judges=Array.isArray(a.judges)?a.judges:[];S.folders=a.classFolders||{};S.rubrics=normalizeRubrics(a.rubrics);S.rubricVersion=Number(a.rubricVersion)||0;S.rubricFrozen=a.rubricFrozen===true;S.published=a.published===true;S.archived=a.archived===true;S.sessionTitle=str(a.title);S.examDate=str(a.date);S.selected=S.roster.some(p=>participantKey(p)===S.selected)?S.selected:null;render();}
 function loginView(){app.innerHTML=`<section class="login-box"><h1>모의고사 평가</h1><p class="muted">강사는 울림앱 교직원 계정, 학생은 기존 울림앱 학생 계정으로 로그인합니다.</p><div class="login-switch"><button class="seg active" data-login-mode="staff">강사 · 관리자</button><button class="seg" data-login-mode="student">학생</button></div><form id="loginForm"><div class="field"><label id="loginIdLabel">교직원 아이디</label><input name="loginId" required autocomplete="username" placeholder="울림앱 아이디"></div><div class="field"><label>비밀번호</label><input name="loginPw" required type="password" autocomplete="current-password"></div><button class="btn wide" type="submit">로그인</button></form></section>`;let mode='staff';app.querySelectorAll('[data-login-mode]').forEach(btn=>btn.onclick=()=>{mode=btn.dataset.loginMode;app.querySelectorAll('[data-login-mode]').forEach(x=>x.classList.toggle('active',x===btn));$('loginIdLabel').textContent=mode==='student'?'학생 이름':'교직원 아이디';app.querySelector('[name=loginId]').placeholder=mode==='student'?'학생 이름':'울림앱 아이디'});$('loginForm').onsubmit=e=>{e.preventDefault();const form=e.target,id=form.elements.loginId.value,pw=form.elements.loginPw.value;const btn=form.querySelector('button[type=submit]');withBusy(btn,async()=>{if(mode==='staff')await authenticateStaff(id,pw);else await authenticateStudent(id,pw);toast('로그인이 완료되었습니다.')})};}
-function rubric(g,editable,group){const sections=S.rubrics[group]||defaultRubrics()[group];const row=(items,key)=>`<section class="rubric"><h3>${key==='na'?'NA · 나레이션':'독백 · 연기'} <span class="numeric" data-sum="${key}">${fmt((g&&Array.isArray(g[key])?g[key]:[]).reduce((n,x)=>n+(typeof x==='number'?x:0),0))} / 25</span></h3><table><thead><tr><th>평가 항목</th><th>5점 만점</th></tr></thead><tbody>${items.map((item,i)=>`<tr><td><strong>${esc(item.title)}</strong>${item.description?`<div class="rubric-detail">${esc(item.description)}</div>`:''}</td><td>${editable?`<select data-score="${key}" data-idx="${i}"><option value="">선택</option>${Array.from({length:11},(_,p)=>{const x=p*.5;return `<option value="${x}" ${g&&g[key]&&g[key][i]===x?'selected':''}>${x}점</option>`}).join('')}</select>`:`<strong>${g&&typeof g[key][i]==='number'?fmt(g[key][i])+'점':'—'}</strong>`}</td></tr>`).join('')}</tbody></table></section>`;return row(sections.na,'na')+row(sections.act,'act');}
+function rubric(g,editable,group){const sections=S.rubrics[group]||defaultRubrics()[group];const row=(items,key)=>`<section class="rubric"><h3>${key==='na'?'NA · 나레이션':'독백 · 연기'} <span class="numeric" data-sum="${key}">${fmt((g&&Array.isArray(g[key])?g[key]:[]).reduce((n,x)=>n+(typeof x==='number'?x:0),0))} / 25</span></h3><table><thead><tr><th>평가 항목</th><th>5점 만점</th></tr></thead><tbody>${items.map((item,i)=>`<tr><td><strong>${esc(item.title)}</strong>${item.description?`<div class="rubric-detail">${esc(item.description)}</div>`:''}</td><td>${editable?`<div class="r354-score-buttons" role="group" aria-label="평가 점수">
+ ${[1,2,3,4,5].map(n=>`<button type="button" class="r354-score-btn ${g&&g[key]&&g[key][i]===n?'active':''}" data-score="${key}" data-idx="${i}" data-score-value="${n}" aria-pressed="${g&&g[key]&&g[key][i]===n?'true':'false'}">${n}점</button>`).join('')}
+ ${g&&typeof g[key][i]==='number'&&!Number.isInteger(g[key][i])?`<small class="r354-legacy-score">기존 ${g[key][i]}점</small>`:''}
+ </div>`:`<strong>${g&&typeof g[key][i]==='number'?fmt(g[key][i])+'점':'—'}</strong>`}</td></tr>`).join('')}</tbody></table></section>`;return row(sections.na,'na')+row(sections.act,'act');}
 
-function media(p){const a=driveLink(p.media&&p.media.audio),v=driveLink(p.media&&p.media.video);return `<div class="media-links">${a?`<a target="_blank" rel="noopener noreferrer" href="${esc(a)}">▶ 음성 녹음 열기</a>`:'<span>음성 링크 없음</span>'}${v?`<a target="_blank" rel="noopener noreferrer" href="${esc(v)}">▶ 영상 열기</a>`:'<span>영상 링크 없음</span>'}</div>`}
+function r354DrivePreview(url){
+ const u=driveLink(url);if(!u)return '';
+ try{const x=new URL(u);const m=x.pathname.match(/^\/file\/d\/([A-Za-z0-9_-]+)(?:\/|$)/);
+  if(!m)return '';
+  return 'https://drive.google.com/file/d/'+m[1]+'/preview';
+ }catch{return '';}
+}
+function media(p){
+ const a=driveLink(p.media&&p.media.audio),v=driveLink(p.media&&p.media.video);
+ const ap=r354DrivePreview(a),vp=r354DrivePreview(v);
+ return `<section class="r354-media-player" aria-label="평가자료 재생"><h3>평가자료 재생</h3>
+ <div class="r354-player-grid">
+ <div class="r354-player-cell"><strong>음성</strong>${ap?`<iframe title="익명 음성 자료" src="${esc(ap)}" loading="lazy" allow="autoplay" referrerpolicy="no-referrer"></iframe>`:'<p class="hint">재생 가능한 익명 음성 자료 없음</p>'}</div>
+ <div class="r354-player-cell"><strong>영상</strong>${vp?`<iframe title="익명 영상 자료" src="${esc(vp)}" loading="lazy" allow="autoplay; fullscreen" allowfullscreen referrerpolicy="no-referrer"></iframe>`:'<p class="hint">재생 가능한 익명 영상 자료 없음</p>'}</div>
+ </div><p class="hint">가명으로 처리된 평가 자료만 사용하세요. 원본 드라이브 파일은 연결하지 마세요.</p></section>`;
+}
 function hero(p,val,caption){return `<div class="score-hero"><div><h2>${esc(p.name)}</h2><p>${esc(p.className||'')} · ${esc(p.group||'')}</p></div><div class="score-number">${fmt(val)} <small>${esc(caption||'50점 만점')}</small></div></div>`}
 // A student can legitimately have multiple independent class participations.
 // Never associate grades using studentUid alone when there is more than one class.
@@ -1483,6 +1803,44 @@ function teacherClasses(list){
  });
  return [...map.values()];
 }
+let R354_MODAL_OPEN=false;
+// RUN364_UNIFIED_TEACHER_UI -- render integrated rubric with authenticated server configuration.
+function r364Config(){
+ const x=S.r04ConfigurableRubric;
+ return x&&x.schemaVersion===2&&Array.isArray(x.criteria)&&x.criteria.some(i=>i.enabled)?x:null;
+}
+function r364Draft(p){
+ const key=participantKey(p);
+ if(S.edit[key])return S.edit[key];
+ const old=myGrade(p),config=r364Config(),empty=config?config.criteria.map(()=>null):[];
+ if(old){
+  if(old.gradingSchema!=='configurable-v2'||!config||
+     old.rubricVersion!==S.r04ConfigurableRubricVersion||old.scores.length!==config.criteria.length)
+   return S.edit[key]={scores:empty,note:str(old.note),status:old.status,stale:true};
+  return S.edit[key]={scores:old.scores.slice(),note:str(old.note),status:old.status};
+ }
+ return S.edit[key]={scores:empty,note:'',status:'draft'};
+}
+function r364Total(g){
+ const c=r364Config();if(!c||!g||g.stale||!Array.isArray(g.scores)||g.scores.length!==c.criteria.length)return null;
+ let sum=0,n=0;
+ for(let i=0;i<c.criteria.length;i++){
+  const x=g.scores[i];if(!c.criteria[i].enabled){if(x!==null)return null;continue;}
+  n++;if(!Number.isInteger(x)||x<1||x>5)return null;sum+=x;
+ }
+ return n?Math.round(sum*c.maxTotal*100/(n*5))/100:null;
+}
+function r364Rubric(g,editable){
+ const c=r364Config();
+ if(!c)return '<section class="rubric"><h3>평가항목 설정 필요</h3><p class="warn">관리자가 통합 평가항목과 총 만점을 저장한 뒤 새로고침하세요.</p></section>';
+ if(!g||g.stale)return '<section class="rubric"><h3>평가 기록 확인 필요</h3><p class="warn">현재 채점 기록의 평가 설정이 다릅니다. 관리자에게 확인 후 채점하세요.</p></section>';
+ const active=c.criteria.map((item,i)=>({item,i})).filter(x=>x.item.enabled);
+ return `<section class="rubric r364-rubric"><h3>통합 평가 <span class="numeric" data-r364-total>${fmt(r364Total(g))} / ${c.maxTotal}점</span></h3>
+ <p class="hint">활성 ${active.length}항목 · 항목당 1~5점 · ${c.maxTotal}점 만점</p>
+ <div class="r364-criteria">${active.map(({item,i})=>`<div class="r364-criterion"><div><strong>${esc(item.title)}</strong>${item.description?`<p class="rubric-detail">${esc(item.description)}</p>`:''}</div>
+ <div class="r364-points" role="group" aria-label="${esc(item.title)} 점수">${[1,2,3,4,5].map(value=>`<button type="button" class="r364-point ${g.scores[i]===value?'selected':''}" data-r364-score="${i}" data-r364-point="${value}" aria-pressed="${g.scores[i]===value?'true':'false'}" ${editable?'':'disabled'}>${value}</button>`).join('')}</div></div>`).join('')}</div></section>`;
+}
+
 function teacherView(){
   // RUN273: The existing R04 owner renders the real authenticated teacher workspace.
   // No new callable, browser database read, role override, or client-side permission bypass.
@@ -1495,9 +1853,10 @@ function teacherView(){
   const savedState=x=>{const grade=myGrade(x);return grade&&grade.status==='submitted'?'submitted':grade&&grade.status==='draft'?'draft':'pending';};
   const unsaved=x=>{
     const edit=S.edit[participantKey(x)];if(!edit)return false;
-    const old=myGrade(x),empty=[null,null,null,null,null];
-    const prior={na:old&&Array.isArray(old.na)?old.na:empty,act:old&&Array.isArray(old.act)?old.act:empty,note:str(old&&old.note)};
-    return JSON.stringify(edit.na)!==JSON.stringify(prior.na)||JSON.stringify(edit.act)!==JSON.stringify(prior.act)||str(edit.note)!==prior.note;
+    const old=myGrade(x);
+    if(preview){const empty=[null,null,null,null,null];return JSON.stringify(edit.na)!==JSON.stringify(old?.na||empty)||JSON.stringify(edit.act)!==JSON.stringify(old?.act||empty)||str(edit.note)!==str(old?.note);}
+    const config=r364Config();if(!config||edit.stale)return true;
+    return JSON.stringify(edit.scores)!==JSON.stringify(old?.scores||config.criteria.map(()=>null))||str(edit.note)!==str(old?.note);
   };
   const mark=x=>{
     if(x.participationStatus==='archived')return '보관';
@@ -1512,7 +1871,7 @@ function teacherView(){
     // RUN298: keep the selected student's grade panel, but never auto-open a class.
   }
   const p=list.find(x=>participantKey(x)===S.selected)||null;
-  const g=p?draft(p):null;
+  const g=p?(preview?draft(p):r364Draft(p)):null;
   const classes=teacherClasses(list);
   const opened=S.expandedClasses[S.group]||[];
   const completed=active.filter(x=>savedState(x)==='submitted').length;
@@ -1525,20 +1884,25 @@ function teacherView(){
     const eligible=c.students.filter(x=>x.participationStatus!=='archived').length;
     return `<section class="class-accordion"><button type="button" class="class-toggle ${isOpen?'open':''}" data-class-toggle="${esc(c.key)}" aria-expanded="${isOpen?'true':'false'}" aria-controls="exam-class-${i}"><span class="class-title"><span class="class-chevron" aria-hidden="true">${isOpen?'▾':'▸'}</span><span><strong>${esc(c.name)}</strong>${preview&&c.id?`<small>${esc(c.id)}</small>`:''}</span></span><span class="class-count">${eligible}명 <small>완료 ${done}/${eligible}</small></span></button><div class="class-students" id="exam-class-${i}" ${isOpen?'':'hidden'}>${c.students.map(student=>{const label=mark(student),key=participantKey(student);return `<button type="button" class="student-choice ${S.selected===key?'active':''}" data-student="${esc(key)}" ${S.selected===key?'aria-current="true"':''}><b>${esc(student.name)}</b><span class="chip ${label==='완료'?'ok':'wait'}">${label}</span></button>`;}).join('')}</div></section>`;
   }).join('');
-  const editAllowed=!!p&&(preview||S.r04TeacherGradingOpen&&!S.archived&&p.participationStatus==='active');
+  const editAllowed=!!p&&(preview||S.r04TeacherGradingOpen&&!S.archived&&p.participationStatus==='active'&&!!r364Config()&&!g.stale);
   const inputDisabled=!preview&&(!S.r04TeacherGradingOpen||S.archived||!p||p.participationStatus==='archived');
-  const saveDisabled=S.archived||S.published||!preview&&(!S.r04TeacherGradingOpen||!p||p.participationStatus==='archived'||S.r04TeacherSavePending);
+  const saveDisabled=S.archived||S.published||!preview&&(!S.r04TeacherGradingOpen||!p||p.participationStatus==='archived'||S.r04TeacherSavePending||!r364Config()||g.stale);
   const navigation=p?`<div class="action-row" aria-label="평가 학생 이동"><span class="muted" style="margin-right:auto;align-self:center">${currentIndex+1} / ${list.length} 평가 대상 · ${mark(p)}</span><button type="button" class="btn line small" id="prevExamStudent" ${currentIndex<1?'disabled':''}>◀ 이전 학생</button><button type="button" class="btn line small" id="nextExamStudent" ${currentIndex>=list.length-1?'disabled':''}>다음 학생 ▶</button><button type="button" class="btn subtle small" id="nextPendingExamStudent" ${active.some(x=>savedState(x)!=='submitted'&&participantKey(x)!==S.selected)?'':'disabled'}>다음 미완료 학생</button></div>`:'';
-  app.innerHTML=prefix()+`<div class="heading-row"><div><h1>강사 평가 입력</h1><p>NA 25점 + 독백 25점 = 총 50점 · ${!preview?(S.r04TeacherGradingOpen?'현재 채점 ON':'현재 채점 OFF · 읽기 전용'):'미리보기'}</p></div><button class="btn line" id="refreshBtn" ${preview?'hidden':''}>새로고침</button></div><section class="stat-grid" aria-label="현재 그룹 평가 현황"><div class="stat"><small>평가 대상</small><strong>${active.length}</strong></div><div class="stat"><small>평가 완료</small><strong>${completed}</strong></div><div class="stat"><small>임시저장</small><strong>${temporary}</strong></div><div class="stat"><small>미평가</small><strong>${pending}</strong></div></section><div class="tabs"><button class="seg ${S.group==='청소년'?'active':''}" data-group="청소년">청소년반</button><button class="seg ${S.group==='성인'?'active':''}" data-group="성인">성인반</button></div><div class="layout"><aside class="panel"><div class="panel-title">평가 대상 <span class="hint">${classes.length}개 반 · ${active.length}명</span></div><p class="hint class-help">반을 열어 학생을 선택하세요. 완료·임시저장·미평가 상태를 표시합니다.</p><div class="student-list r04-teacher-class-list">${classMarkup||'<p class="muted">이 그룹에는 평가 대상이 없습니다. 다른 그룹을 선택하거나 R04 명단 연결을 확인해주세요.</p>'}</div></aside><article class="panel">${p?hero(p,gradeTotal(g),'작성 중 · 50점 만점')+navigation+media(p)+rubric(g,editAllowed,p.group)+`<div class="field"><label>강사 한줄평 · 최종 제출 시 필수</label><textarea id="noteInput" maxlength="300" ${inputDisabled?'disabled':''} placeholder="학생의 강점과 개선점을 구체적으로 작성해주세요.">${esc(g.note)}</textarea></div><p class="hint" id="r04SaveHelp">임시저장은 미완료 상태입니다. 최종 제출은 10항목 점수와 한줄평을 모두 입력해야 합니다. 저장 전 입력은 이 화면을 새로고침하면 사라질 수 있습니다.</p><div class="action-row"><button id="draftBtn" class="btn line" ${saveDisabled?'disabled':''}>임시저장</button><button id="submitBtn" class="btn" ${saveDisabled?'disabled':''}>평가 완료 · 저장</button></div>`:'<div class="empty-evaluation"><h2>평가 학생 선택</h2><p>왼쪽에서 반을 펼쳐 평가할 학생을 선택해주세요.</p></div>'}</article></div>`;
+  app.innerHTML=prefix()+`<div class="heading-row"><div><h1>강사 평가 입력</h1><p>${preview?'NA 25점 + 독백 25점 = 총 50점':r364Config()?'통합 평가 · '+r364Config().maxTotal+'점 만점':'통합 평가 설정 필요'} · ${!preview?(S.r04TeacherGradingOpen?'현재 채점 ON':'현재 채점 OFF · 읽기 전용'):'미리보기'}</p></div><button class="btn line" id="refreshBtn" ${preview?'hidden':''}>새로고침</button></div><section class="stat-grid" aria-label="현재 그룹 평가 현황"><div class="stat"><small>평가 대상</small><strong>${active.length}</strong></div><div class="stat"><small>평가 완료</small><strong>${completed}</strong></div><div class="stat"><small>임시저장</small><strong>${temporary}</strong></div><div class="stat"><small>미평가</small><strong>${pending}</strong></div></section><div class="tabs"><button class="seg ${S.group==='청소년'?'active':''}" data-group="청소년">청소년반</button><button class="seg ${S.group==='성인'?'active':''}" data-group="성인">성인반</button></div><div class="layout r354-teacher-layout"><aside class="panel"><div class="panel-title">평가 대상 <span class="hint">${classes.length}개 반 · ${active.length}명</span></div><p class="hint class-help">반을 열어 학생을 선택하세요. 완료·임시저장·미평가 상태를 표시합니다.</p><div class="student-list r04-teacher-class-list">${classMarkup||'<p class="muted">이 그룹에는 평가 대상이 없습니다. 다른 그룹을 선택하거나 R04 명단 연결을 확인해주세요.</p>'}</div></aside><article class="panel r354-evaluation-panel" id="r354EvaluationPanel"><button type="button" class="btn line r354-mobile-close" id="r354CloseEvaluation">← 반목록으로</button>${p?hero(p,preview?gradeTotal(g):r364Total(g),'작성 중 · '+(preview?50:(r364Config()?.maxTotal||50))+'점 만점')+navigation+media(p)+(preview?rubric(g,editAllowed,p.group):r364Rubric(g,editAllowed))+`<div class="field"><label>강사 한줄평 · 최종 제출 시 필수</label><textarea id="noteInput" maxlength="300" ${inputDisabled?'disabled':''} placeholder="학생의 강점과 개선점을 구체적으로 작성해주세요.">${esc(g.note)}</textarea></div><p class="hint" id="r04SaveHelp">임시저장은 미완료 상태입니다. 최종 제출은 활성 평가항목 모두와 한줄평을 입력해야 합니다. 저장 전 입력은 이 화면을 새로고침하면 사라질 수 있습니다.</p><div class="action-row"><button id="draftBtn" class="btn line" ${saveDisabled?'disabled':''}>임시저장</button><button id="submitBtn" class="btn" ${saveDisabled?'disabled':''}>평가 완료 · 저장</button></div>`:'<div class="empty-evaluation"><h2>평가 학생 선택</h2><p>왼쪽에서 반을 펼쳐 평가할 학생을 선택해주세요.</p></div>'}</article></div>`;
+  const modal=app.querySelector('#r354EvaluationPanel');
+  if(modal){modal.classList.toggle('r354-open',R354_MODAL_OPEN);if(R354_MODAL_OPEN)modal.setAttribute('role','dialog');
+   const close=modal.querySelector('#r354CloseEvaluation');
+   if(close)close.onclick=()=>{R354_MODAL_OPEN=false;render();};
+  }
   const sideList=app.querySelector('.student-list');
   if(sideList){sideList.scrollTop=R04_TEACHER_LIST_SCROLL[S.group]||0;sideList.addEventListener('scroll',()=>{R04_TEACHER_LIST_SCROLL[S.group]=sideList.scrollTop;},{passive:true});}
-  app.querySelectorAll('[data-group]').forEach(b=>b.onclick=()=>{S.group=b.dataset.group;S.selected=null;render();});
+  app.querySelectorAll('[data-group]').forEach(b=>b.onclick=()=>{S.group=b.dataset.group;S.selected=null;R354_MODAL_OPEN=false;render();});
   app.querySelectorAll('[data-class-toggle]').forEach(b=>b.onclick=()=>{
     const group=S.group,key=b.dataset.classToggle,currently=S.expandedClasses[group]||[];
     S.expandedClasses[group]=currently.includes(key)?currently.filter(x=>x!==key):[...currently,key];
     render();const next=[...app.querySelectorAll('[data-class-toggle]')].find(el=>el.dataset.classToggle===key);if(next)next.focus();
   });
-  app.querySelectorAll('[data-student]').forEach(b=>b.onclick=()=>{S.selected=b.dataset.student;render();});
+  app.querySelectorAll('[data-student]').forEach(b=>b.onclick=()=>{S.selected=b.dataset.student;R354_MODAL_OPEN=true;render();});
   if($('refreshBtn'))$('refreshBtn').onclick=()=>withBusy($('refreshBtn'),async()=>{S.expandedClasses={'청소년':[],'성인':[]};R04_TEACHER_LIST_SCROLL['청소년']=0;R04_TEACHER_LIST_SCROLL['성인']=0;await reload();});
   if(!p)return;
   const jump=idx=>{if(idx<0||idx>=list.length)return;S.selected=participantKey(list[idx]);render();};
@@ -1550,12 +1914,35 @@ function teacherView(){
       if(list[idx].participationStatus!=='archived'&&savedState(list[idx])!=='submitted'){jump(idx);return;}
     }
   };
-  app.querySelectorAll('[data-score]').forEach(el=>el.onchange=()=>{
-    if(!editAllowed)return;
-    g[el.dataset.score][Number(el.dataset.idx)]=el.value===''?null:Number(el.value);
-    const total=gradeTotal(g);const heroNum=app.querySelector('.score-number');if(heroNum)heroNum.firstChild.textContent=fmt(total)+' ';
-    for(const key of ['na','act']){const cell=app.querySelector(`[data-sum="${key}"]`);if(cell)cell.textContent=fmt(score(g[key]))+' / 25';}
-  });
+  if(preview){
+    app.querySelectorAll('[data-score-value]').forEach(el=>el.onclick=()=>{
+      if(!editAllowed)return;
+      g[el.dataset.score][Number(el.dataset.idx)]=Number(el.dataset.scoreValue);
+      app.querySelectorAll('[data-score-value]').forEach(b=>{
+        if(b.dataset.score===el.dataset.score&&b.dataset.idx===el.dataset.idx){
+          const active=b===el;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));
+        }
+      });
+      const legacy=el.closest('.r354-score-buttons')?.querySelector('.r354-legacy-score');
+      if(legacy)legacy.remove();
+      const total=gradeTotal(g);const heroNum=app.querySelector('.score-number');if(heroNum)heroNum.firstChild.textContent=fmt(total)+' ';
+      for(const key of ['na','act']){const cell=app.querySelector(`[data-sum="${key}"]`);if(cell)cell.textContent=fmt(score(g[key]))+' / 25';}
+    });
+  }else{
+   app.querySelectorAll('[data-r364-score]').forEach(btn=>btn.onclick=()=>{
+     if(!editAllowed||!g||g.stale)return;
+     const index=Number(btn.dataset.r364Score),point=Number(btn.dataset.r364Point),config=r364Config();
+     if(!config||!config.criteria[index]?.enabled||!Number.isInteger(point)||point<1||point>5)return;
+     g.scores[index]=point;
+     app.querySelectorAll('[data-r364-score="'+index+'"]').forEach(el=>{
+       const selected=Number(el.dataset.r364Point)===point;
+       el.classList.toggle('selected',selected);el.setAttribute('aria-pressed',String(selected));
+     });
+     const val=fmt(r364Total(g)),hero=app.querySelector('.score-number'),sum=app.querySelector('[data-r364-total]');
+     if(hero)hero.firstChild.textContent=val+' ';
+     if(sum)sum.textContent=val+' / '+config.maxTotal+'점';
+   });
+  }
   if($('noteInput'))$('noteInput').oninput=e=>{if(editAllowed)g.note=e.target.value;};
   if($('draftBtn'))$('draftBtn').onclick=()=>saveGrade(p,g,'draft',$('draftBtn'));
   if($('submitBtn'))$('submitBtn').onclick=()=>saveGrade(p,g,'submitted',$('submitBtn'));
@@ -1564,6 +1951,45 @@ function teacherView(){
 // expectedRevision comes from this authenticated teacher's own grade document.
 async function saveR04TeacherGrade(p,g,status,btn){
  if(S.r04TeacherSavePending)return;
+ // RUN364_UNIFIED_TEACHER_SAVE: rubric-version guarded configurable grading.
+ if(!preview&&g&&Array.isArray(g.scores)){
+  const config=r364Config(),rubricVersion=S.r04ConfigurableRubricVersion;
+  if(!S.r04TeacherReady||!S.r04TeacherGradingOpen||S.archived||S.published||
+    p.participationStatus!=='active'||!S.examId||!str(p.participationId)||!config||g.stale)
+   return toast('통합 평가항목 설정을 확인하고 평가표를 새로고침하세요.');
+  const old=myGrade(p),expectedRevision=old?old.revision:0;
+  if(old&&old.gradingSchema!=='configurable-v2')return toast('이전 평가기록 형식은 관리자 확인이 필요합니다.');
+  if(!Number.isSafeInteger(expectedRevision)||expectedRevision<0||
+     !Number.isSafeInteger(rubricVersion)||rubricVersion<1)
+   return toast('평가 설정 버전을 확인할 수 없습니다.');
+  const scores=g.scores.slice();
+  if(scores.length!==config.criteria.length||scores.some((x,i)=>
+    !config.criteria[i].enabled?x!==null:x!==null&&(!Number.isInteger(x)||x<1||x>5)))
+   return toast('활성 평가항목의 점수는 정수 1~5점이어야 합니다.');
+  const computed=r364Total(g);
+  if(status==='submitted'&&(computed===null||!str(g.note)))
+   return toast('활성 평가항목과 강사 한줄평을 모두 입력하세요.');
+  if(typeof g.note!=='string'||g.note.trim().length>1000)
+   return toast('한줄평은 1000자 이하로 입력하세요.');
+  const payload={examId:S.examId,participationId:p.participationId,
+   gradingSchema:'configurable-v2',rubricVersion,scores,
+   note:g.note.trim(),status,expectedRevision};
+  S.r04TeacherSavePending=true;
+  try{
+   await withBusy(btn,async()=>{
+    const result=await call(FN.r04TeacherSave,payload);
+    if(!result||result.ok!==true||result.examId!==payload.examId||
+      result.participationId!==payload.participationId||result.status!==status||
+      result.gradingSchema!=='configurable-v2'||result.rubricVersion!==rubricVersion||
+      result.revision!==expectedRevision+1||result.total!==(status==='submitted'?computed:null))
+     throw Error('저장 응답이 불확실합니다. 다시 저장하기 전에 서버 기록을 확인하세요.');
+    await reloadR04Teacher();
+    toast(status==='submitted'?'통합 평가표를 최종 제출했습니다.':'통합 평가표를 임시저장했습니다.');
+   });
+  }finally{S.r04TeacherSavePending=false;}
+  return;
+ }
+
  if(!S.r04TeacherReady||!S.r04TeacherGradingOpen||S.archived||S.published||
     p.participationStatus!=='active'||!S.examId||!str(p.participationId))
   return toast('현재 회차는 채점 또는 수정이 허용되지 않습니다.');
