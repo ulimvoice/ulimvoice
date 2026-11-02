@@ -1526,7 +1526,7 @@ async function reloadR04Teacher(){
   ids.add(row.participationId);
   rows.push({participationId:row.participationId,studentUid:'',classId:row.classLabel,
     className:row.classLabel,name:row.studentLabel,group:row.audience==='adult'?'성인':'청소년',
-    participationStatus:row.participationStatus,media:{audio:row.media.audioUrl,video:row.media.videoUrl}});
+    participationStatus:row.participationStatus,media:{audio:'',video:''}});
   if(row.grade)grades.push({...row.grade,participationId:row.participationId,teacherUid:S.auth.teacherUid});
  }
  if(examId!==S.examId||S.role!=='teacher')return;
@@ -1763,7 +1763,62 @@ function r354DrivePreview(url){
   return 'https://drive.google.com/file/d/'+m[1]+'/preview';
  }catch{return '';}
 }
+// RUN406_STAGE17: original Drive identity stays off player DOM. Only temporary proxy URLs are loaded.
+const R406_MEDIA_ORIGIN='https://asia-northeast3-ulim-7b09a.cloudfunctions.net';
+function r406TeacherMediaHtml(p){
+ if(!p||!str(p.participationId))return '<p class="hint">재생 가능한 평가 대상이 없습니다.</p>';
+ return '<section class="r406-teacher-player" id="r406TeacherMedia" aria-label="평가 음성 및 참고 영상" style="margin:12px 0 20px;padding:14px;border:1px solid var(--border,#d2ded8);border-radius:12px">'+
+ '<h3 style="margin:0 0 10px">평가자료 · 음성 우선</h3>'+
+ '<div style="display:grid;grid-template-columns:1fr;gap:14px">'+
+ '<div><div class="flex"><strong>음성 평가</strong><button id="r406LoadAudio" class="btn line small" type="button">음성 불러오기</button></div><audio id="r406Audio" aria-label="평가 음성" controls controlslist="nodownload" preload="none" style="display:none;width:100%;margin-top:9px"></audio><p id="r406AudioState" class="hint">음성을 먼저 불러와 청취하세요.</p></div>'+
+ '<div><div class="flex"><strong>참고 영상</strong><button id="r406LoadVideo" class="btn line small" type="button">필요할 때 영상 보기</button></div><video id="r406Video" aria-label="참고 영상" controls controlslist="nodownload" playsinline preload="none" style="display:none;max-height:360px;width:100%;margin-top:9px;background:#101717;border-radius:8px"></video><p id="r406VideoState" class="hint">영상은 선택한 경우에만 불러옵니다.</p></div></div>'+
+ '<p class="hint" style="margin-top:8px">가명 참가 기록에 연결된 서버 중계 재생입니다. 원본 Drive 링크·파일명은 표시하지 않습니다. 임시 주소가 만료되면 다시 불러오세요.</p></section>';
+}
+function r406ValidateTeacherTicket(t,kind){
+ if(!t||t.ok!==true||t.mode!=='r04-teacher-media-ticket'||t.kind!==kind||
+    typeof t.playbackUrl!=='string'||!Number.isSafeInteger(t.expiresAtMs)||
+    t.expiresAtMs<=Date.now()||t.expiresAtMs>Date.now()+31*60*1000)throw Error('재생권한 응답이 올바르지 않습니다.');
+ const u=new URL(t.playbackUrl);
+ if(u.origin!==R406_MEDIA_ORIGIN||u.pathname!=='/streamMockExamTeacherMediaR04'||
+    [...u.searchParams.keys()].sort().join(',')!=='k,t'||
+    !/^[a-f0-9]{64}$/u.test(u.searchParams.get('k')||'')||
+    !/^[A-Za-z0-9_-]{43}$/u.test(u.searchParams.get('t')||''))
+    throw Error('중계 재생 주소가 유효하지 않습니다.');
+ return t.playbackUrl;
+}
+function r406StopTeacherMedia(){
+ const old=$('r406TeacherMedia');if(!old)return;
+ old.querySelectorAll('audio,video').forEach(el=>{try{el.pause();el.removeAttribute('src');el.load();}catch(_){}});
+}
+function r406BindTeacherMedia(p){
+ if(preview||S.role!=='teacher'||!p||p.participationStatus==='archived')return;
+ const host=$('r406TeacherMedia'),key=participantKey(p),exam=S.examId,pid=p.participationId;
+ if(!host||!str(pid)||!S.r04TeacherReady)return;
+ const stillCurrent=()=>S.role==='teacher'&&S.examId===exam&&S.selected===key&&$('r406TeacherMedia')===host;
+ for(const [kind,cap] of [['audio','Audio'],['video','Video']]){
+  const btn=$('r406Load'+cap),player=$('r406'+cap),msg=$('r406'+cap+'State');
+  if(!btn||!player||!msg)continue;
+  let busy=false;
+  btn.onclick=async()=>{
+   if(busy||!stillCurrent())return;
+   busy=true;btn.disabled=true;msg.textContent='재생권한을 확인하고 있습니다.';
+   try{
+    const t=await call('issueMockExamTeacherMediaTicketR04',{examId:exam,participationId:pid,kind});
+    const url=r406ValidateTeacherTicket(t,kind);
+    if(!stillCurrent())return;
+    player.pause();player.removeAttribute('src');player.src=url;player.style.display='block';
+    player.load();msg.textContent='재생 준비 중입니다. 재생 버튼을 눌러주세요.';
+    btn.textContent=kind==='audio'?'음성 다시 불러오기':'영상 다시 불러오기';
+   }catch(e){if(stillCurrent())msg.textContent='재생자료를 불러올 수 없습니다. '+errorMessage(e);}
+   finally{busy=false;if(stillCurrent())btn.disabled=false;}
+  };
+  player.addEventListener('loadedmetadata',()=>{if(stillCurrent())msg.textContent='재생 준비 완료';});
+  player.addEventListener('error',()=>{if(stillCurrent())msg.textContent='재생에 실패했습니다. 다시 불러와 주세요.';});
+ }
+}
+
 function media(p){
+ if(!preview&&S.role==='teacher')return r406TeacherMediaHtml(p);
  const a=driveLink(p.media&&p.media.audio),v=driveLink(p.media&&p.media.video);
  const ap=r354DrivePreview(a),vp=r354DrivePreview(v);
  return `<section class="r354-media-player" aria-label="평가자료 재생"><h3>평가자료 재생</h3>
@@ -1842,6 +1897,7 @@ function r364Rubric(g,editable){
 }
 
 function teacherView(){
+ r406StopTeacherMedia();
   // RUN273: The existing R04 owner renders the real authenticated teacher workspace.
   // No new callable, browser database read, role override, or client-side permission bypass.
   if(!preview&&S.role==='teacher'&&!S.r04TeacherReady){
@@ -1904,7 +1960,8 @@ function teacherView(){
   });
   app.querySelectorAll('[data-student]').forEach(b=>b.onclick=()=>{S.selected=b.dataset.student;R354_MODAL_OPEN=true;render();});
   if($('refreshBtn'))$('refreshBtn').onclick=()=>withBusy($('refreshBtn'),async()=>{S.expandedClasses={'청소년':[],'성인':[]};R04_TEACHER_LIST_SCROLL['청소년']=0;R04_TEACHER_LIST_SCROLL['성인']=0;await reload();});
-  if(!p)return;
+  if(!preview&&S.role==='teacher')r406BindTeacherMedia(p);
+ if(!p)return;
   const jump=idx=>{if(idx<0||idx>=list.length)return;S.selected=participantKey(list[idx]);render();};
   if($('prevExamStudent'))$('prevExamStudent').onclick=()=>jump(currentIndex-1);
   if($('nextExamStudent'))$('nextExamStudent').onclick=()=>jump(currentIndex+1);
