@@ -315,7 +315,7 @@ const R04_RUBRIC_ADMIN={examId:'',version:0,rubrics:defaultRubrics(),locked:true
 const R04_ADMIN_GRADE={examId:'',participationId:'',grade:null,edit:null,loading:false,saving:false,gradingOpen:false,error:'',rubrics:defaultRubrics()};
 // RUN310: Administrator evaluation panel inline recordings. Read-only, per participation ID.
 // No student UID, class-name inference, media save or teacher-grade mutation here.
-const R04_ADMIN_INLINE_MEDIA={key:'',record:null,error:'',loading:false,seq:0};
+const R04_ADMIN_INLINE_MEDIA={key:'',record:null,error:'',loading:false,seq:0,activeKind:''};
 function r04AdminInlineMediaTarget(selected,exact){
  const id=str(S.r04SessionId),uid=str(S.auth&&S.auth.uid);
  // The authenticated admin EDITOR is the source of a concrete participation ID.
@@ -345,27 +345,59 @@ function r04AdminInlineMediaTarget(selected,exact){
  return {key:[uid,id,R04_EDITOR.stateVersion,row.classId,row.group,row.participationId].join('|'),
    examId:id,participationId:row.participationId,uid};
 }
+// RUN410: Administrator inline Drive preview for the already verified participation record.
+// The teacher-only playback ticket endpoint is never invoked under administrator credentials.
+function r410AdminPreviewUrl(url){
+ if(!url||!validR04MediaUrl(url))return '';
+ return r354DrivePreview(url);
+}
 function paintR04AdminInlineMedia(target){
  const host=$('r04AdminInlineMediaHost'),state=R04_ADMIN_INLINE_MEDIA;
  if(!host||!target||state.key!==target.key||host.dataset.mediaKey!==target.key)return;
  const rec=state.record;
- const files=rec?['audioUrl','videoUrl'].map((k,i)=>{
-  const label=i===0?'음성 녹음 열기':'영상 열기',url=rec[k];
-  return url&&validR04MediaUrl(url)?`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">▶ ${label}</a>`:
-   `<span>${i===0?'음성':'영상'} 링크 미등록</span>`;
- }).join(''):'';
- host.innerHTML=`<div class="r04-setting-heading"><h3>음성·영상</h3><button type="button" class="btn line small" id="r04InlineMediaAttach" ${!rec||state.loading?'disabled':''}>링크첨부</button><button type="button" class="btn line small" id="r04InlineMediaReload" ${state.loading?'disabled':''}>${state.loading?'조회 중':'링크 새로고침'}</button></div>
- ${state.error?`<p class="warn">${esc(state.error)} · 수동 재조회가 필요합니다.</p>`:''}
- ${state.loading?'<p class="hint">선택한 학생의 음성·영상 링크를 조회하고 있습니다.</p>':
-  rec?`<div class="media-links">${files}</div>`:'<p class="hint">음성·영상 링크 조회 전입니다.</p>'}`;
+ const cells=rec?[{kind:'audio',label:'음성 평가',url:rec.audioUrl},
+  {kind:'video',label:'참고 영상',url:rec.videoUrl}].map(item=>{
+   const preview=r410AdminPreviewUrl(item.url);
+   const active=!!preview&&state.activeKind===item.kind;
+   const control=item.kind==='audio'?'음성 불러오기':'필요할 때 영상 보기';
+   const h=item.kind==='audio'?'235px':'360px';
+   return '<div class="r410-admin-player-cell" style="border:1px solid #d5e3d9;border-radius:10px;padding:12px;min-width:0">'+
+    '<div class="flex" style="align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><strong>'+item.label+'</strong>'+
+    (preview?'<button type="button" class="btn line small" data-r410-play="'+item.kind+
+      '" aria-pressed="'+(active?'true':'false')+'">'+(active?'재생 화면 닫기':control)+'</button>':'')+'</div>'+
+    (active?'<iframe title="'+item.label+' 미리보기" src="'+esc(preview)+
+      '" loading="eager" allow="autoplay; fullscreen" allowfullscreen referrerpolicy="no-referrer" '+
+      'style="display:block;border:0;border-radius:8px;background:#111;width:100%;height:'+h+
+      ';max-width:100%;margin-top:10px"></iframe>':
+      '<p class="hint" style="margin:9px 0 0">'+(!item.url?'등록된 자료가 없습니다.':
+       !preview?'Drive 파일 공유 링크(/file/d/...)만 화면 안에서 미리볼 수 있습니다.':
+       item.kind==='audio'?'음성을 불러와 평가표 안에서 청취하세요.':'필요할 때만 영상을 불러옵니다.')+'</p>')+
+    '</div>';
+  }).join(''):'';
+ host.innerHTML='<div class="r04-setting-heading"><h3>평가자료 · 음성 우선</h3>'+
+  '<button type="button" class="btn line small" id="r04InlineMediaAttach" '+(!rec||state.loading?'disabled':'')+'>링크첨부</button>'+
+  '<button type="button" class="btn line small" id="r04InlineMediaReload" '+(state.loading?'disabled':'')+'>'+
+  (state.loading?'조회 중':'링크 새로고침')+'</button></div>'+
+  (state.error?'<p class="warn">'+esc(state.error)+' · 수동 재조회가 필요합니다.</p>':'')+
+  (state.loading?'<p class="hint">선택 학생의 음성·영상 자료를 조회하고 있습니다.</p>':
+   rec?'<div class="r410-admin-player-list" style="display:grid;grid-template-columns:minmax(0,1fr);gap:12px">'+
+    cells+'</div><p class="hint" style="margin-top:8px">별도 창 없이 평가표에서 재생합니다. Drive 파일 접근 권한이 있어야 하며, 재생 화면은 버튼을 눌렀을 때만 불러옵니다.</p>':
+    '<p class="hint">음성·영상 자료 조회 전입니다.</p>');
  const attach=$('r04InlineMediaAttach');if(attach&&!state.loading)attach.onclick=()=>openR04ManualMedia(target);
  const button=$('r04InlineMediaReload');if(button&&!state.loading)button.onclick=()=>loadR04AdminInlineMedia(target);
+ host.querySelectorAll('[data-r410-play]').forEach(btn=>btn.onclick=()=>{
+  const kind=btn.dataset.r410Play;
+  if(state.loading||!state.record||state.key!==target.key||!['audio','video'].includes(kind)||
+     !r410AdminPreviewUrl(kind==='audio'?state.record.audioUrl:state.record.videoUrl))return;
+  state.activeKind=state.activeKind===kind?'':kind;
+  paintR04AdminInlineMedia(target);
+ });
 }
 async function loadR04AdminInlineMedia(target){
  const state=R04_ADMIN_INLINE_MEDIA;
  if(!target||state.key!==target.key||state.loading||
     S.role!=='admin'||str(S.auth&&S.auth.uid)!==target.uid)return;
- state.loading=true;state.error='';state.record=null;
+ state.loading=true;state.error='';state.record=null;state.activeKind='';
  const seq=++state.seq;paintR04AdminInlineMedia(target);
  try{
   const raw=await call(FN.r04AdminMedia,{action:'read',examId:target.examId,participationId:target.participationId});
@@ -427,8 +459,8 @@ async function openR04ManualMedia(target){
 function renderR04AdminInlineMedia(selected,exact){
  const host=$('r04AdminInlineMediaHost');if(!host)return;
  const target=r04AdminInlineMediaTarget(selected,exact),state=R04_ADMIN_INLINE_MEDIA;
- if(!target){state.seq++;state.key='';state.record=null;state.error='';state.loading=false;host.dataset.mediaKey='';host.innerHTML='<p class="hint">관리자 평가용 참가 ID가 준비되면 음성·영상 링크를 자동 조회합니다.</p>';return;}
- if(state.key!==target.key){state.seq++;state.key=target.key;state.record=null;state.error='';state.loading=false;}
+ if(!target){state.seq++;state.key='';state.record=null;state.error='';state.loading=false;state.activeKind='';host.dataset.mediaKey='';host.innerHTML='<p class="hint">관리자 평가용 참가 ID가 준비되면 음성·영상 링크를 자동 조회합니다.</p>';return;}
+ if(state.key!==target.key){state.seq++;state.key=target.key;state.record=null;state.error='';state.loading=false;state.activeKind='';}
  host.dataset.mediaKey=target.key;
  paintR04AdminInlineMedia(target);
  if(!state.loading&&!state.record&&!state.error)void loadR04AdminInlineMedia(target);
