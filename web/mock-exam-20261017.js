@@ -1277,15 +1277,19 @@ function renderR04AdminEvaluatorMatrix(){
 
 // RUN191: independent administrator-only R04 results release owner.
 // Preview is always read-only; publication requires final closed state and two explicit confirmations.
+// RUN411: group-scoped administrator publication. The backend remains the permission source.
 function validateR04AdminReleasePreview(raw,id){
  const isInt=n=>Number.isSafeInteger(n)&&n>=0;
  if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.ok!==true||
     raw.mode!=='admin-release-preview-read-only'||raw.examId!==id||!R04_EXAM_ID_PATTERN.test(id)||
-    (raw.sessionState!=='open'&&raw.sessionState!=='closed')||
-    typeof raw.gradingOpen!=='boolean'||typeof raw.resultsReleased!=='boolean'||
-    typeof raw.canRelease!=='boolean'||typeof raw.requiresIncompleteAcknowledgement!=='boolean'||
+    !['open','closed'].includes(raw.sessionState)||typeof raw.gradingOpen!=='boolean'||
+    typeof raw.resultsReleased!=='boolean'||typeof raw.canRelease!=='boolean'||
+    typeof raw.requiresIncompleteAcknowledgement!=='boolean'||
     typeof raw.requiresRubricRegrade!=='boolean'||
     !isInt(raw.stateVersion)||!isInt(raw.participantCount)||raw.participantCount<1||raw.participantCount>150||
+    !isInt(raw.storedParticipantCount)||!isInt(raw.activeParticipantCount)||!isInt(raw.archivedParticipantCount)||
+    raw.storedParticipantCount!==raw.activeParticipantCount+raw.archivedParticipantCount||
+    raw.participantCount!==raw.activeParticipantCount||
     !isInt(raw.gradeDocumentCount)||raw.gradeDocumentCount>9000||
     !isInt(raw.submittedCount)||!isInt(raw.draftCount)||
     !isInt(raw.assessedParticipants)||!isInt(raw.unassessedParticipants)||
@@ -1295,15 +1299,42 @@ function validateR04AdminReleasePreview(raw,id){
     (raw.resultsReleased&&raw.sessionState!=='closed')||
     raw.requiresIncompleteAcknowledgement!==(raw.unassessedParticipants>0)||
     raw.canRelease!==(raw.sessionState==='closed'&&!raw.gradingOpen&&
-      !raw.resultsReleased&&raw.submittedCount>0&&!raw.requiresRubricRegrade))
+      !raw.resultsReleased&&raw.submittedCount>0&&!raw.requiresRubricRegrade)||
+    !raw.audiences||typeof raw.audiences!=='object'||Array.isArray(raw.audiences)||
+    Object.keys(raw.audiences).sort().join(',')!=='adult,youth')
    throw Error('R04 결과 공개 집계의 무결성이 확인되지 않았습니다. 공개를 차단합니다.');
+ const checkGroup=audience=>{
+  const x=raw.audiences[audience];
+  if(!x||typeof x!=='object'||Array.isArray(x)||
+     typeof x.resultsReleased!=='boolean'||typeof x.canRelease!=='boolean'||
+     typeof x.requiresRubricRegrade!=='boolean'||
+     typeof x.requiresIncompleteAcknowledgement!=='boolean'||
+     !isInt(x.participantCount)||!isInt(x.gradeDocumentCount)||!isInt(x.submittedCount)||
+     !isInt(x.draftCount)||!isInt(x.assessedParticipants)||!isInt(x.unassessedParticipants)||
+     x.gradeDocumentCount!==x.submittedCount+x.draftCount||
+     x.assessedParticipants+x.unassessedParticipants!==x.participantCount||
+     x.requiresIncompleteAcknowledgement!==(x.unassessedParticipants>0)||
+     x.canRelease!==(raw.sessionState==='closed'&&!raw.gradingOpen&&
+        !x.resultsReleased&&x.submittedCount>0&&!x.requiresRubricRegrade)||
+     (x.resultsReleased&&raw.sessionState!=='closed'))
+   throw Error('R04 '+(audience==='adult'?'성인':'청소년')+' 공개 현황이 일치하지 않습니다.');
+  return x;
+ };
+ const adult=checkGroup('adult'),youth=checkGroup('youth');
+ for(const k of ['participantCount','gradeDocumentCount','submittedCount','draftCount','assessedParticipants','unassessedParticipants']){
+  if(adult[k]+youth[k]!==raw[k])throw Error('그룹별 집계의 합계가 일치하지 않습니다.');
+ }
+ if(raw.resultsReleased!==(adult.resultsReleased&&youth.resultsReleased))
+  throw Error('전체 공개 상태와 집단 공개 상태가 일치하지 않습니다.');
  return {examId:id,sessionState:raw.sessionState,gradingOpen:raw.gradingOpen,
    resultsReleased:raw.resultsReleased,stateVersion:raw.stateVersion,
+   storedParticipantCount:raw.storedParticipantCount,activeParticipantCount:raw.activeParticipantCount,
+   archivedParticipantCount:raw.archivedParticipantCount,
    participantCount:raw.participantCount,gradeDocumentCount:raw.gradeDocumentCount,
    submittedCount:raw.submittedCount,draftCount:raw.draftCount,
    assessedParticipants:raw.assessedParticipants,unassessedParticipants:raw.unassessedParticipants,
    canRelease:raw.canRelease,requiresIncompleteAcknowledgement:raw.requiresIncompleteAcknowledgement,
-   requiresRubricRegrade:raw.requiresRubricRegrade};
+   requiresRubricRegrade:raw.requiresRubricRegrade,audiences:{adult,youth}};
 }
 async function loadR04AdminReleasePreview(id){
  if(preview||S.role!=='admin'||!R04_EXAM_ID_PATTERN.test(id)||S.r04ReleasePending)return;
@@ -1316,57 +1347,87 @@ async function loadR04AdminReleasePreview(id){
  }catch(e){S.r04ReleasePreview=null;render();toast(errorMessage(e));}
  finally{S.r04ReleasePreviewPending=false; if(S.r04SessionId===id&&S.role==='admin')render();}
 }
-function canR04AdminRelease(p,m){
+function canR04AdminRelease(p,m,audience){
+ const group=p?.audiences?.[audience];
  return !!(!preview&&S.role==='admin'&&!S.r04ReleasePending&&!S.r04ReleasePreviewPending&&
-   !S.r04StateMutationPending&&p&&m&&p.examId===S.r04SessionId&&m.examId===p.examId&&
+   !S.r04StateMutationPending&&p&&m&&['adult','youth'].includes(audience)&&group&&
+   p.examId===S.r04SessionId&&m.examId===p.examId&&
    p.sessionState==='closed'&&m.sessionState==='closed'&&
    p.gradingOpen===false&&m.gradingOpen===false&&
-   p.resultsReleased===false&&m.resultsReleased===false&&p.canRelease===true&&
-   p.submittedCount>0&&p.stateVersion===m.stateVersion&&p.participantCount===m.participantCount);
+   group.resultsReleased===false&&group.canRelease===true&&group.submittedCount>0&&
+   p.stateVersion===m.stateVersion&&p.storedParticipantCount===m.participantCount);
 }
-async function releaseR04AdminResults(){
+async function releaseR04AdminResults(audience){
  const p=S.r04ReleasePreview,m=S.r04SessionState;
- if(!canR04AdminRelease(p,m))return;
- const phrase='RELEASE R04 RESULTS';
- if(window.prompt('학생 평가 결과 공개는 되돌릴 수 없습니다.\n회차: '+p.examId+
-   '\n참가 '+p.participantCount+'건 / 최종 제출 '+p.submittedCount+'건 / 미평가 '+p.unassessedParticipants+
-   '건\n계속하려면 아래 문구를 정확히 입력하세요: '+phrase,'')!==phrase)return;
+ if(!canR04AdminRelease(p,m,audience))return;
+ const group=p.audiences[audience];
+ const label=audience==='youth'?'청소년반':'성인반';
+ const phrase=audience==='youth'?'RELEASE R04 YOUTH RESULTS':'RELEASE R04 ADULT RESULTS';
+ if(window.prompt(label+' 결과 공개는 취소할 수 없습니다.\n회차: '+p.examId+
+   '\n'+label+' 참가 '+group.participantCount+'건 / 최종 제출 '+group.submittedCount+
+   '건 / 미평가 '+group.unassessedParticipants+'건\n계속하려면 정확히 입력: '+phrase,'')!==phrase)return;
  let allowIncomplete=false;
- if(p.requiresIncompleteAcknowledgement){
-  if(!window.confirm('미평가 참가 기록 '+p.unassessedParticipants+
-    '건이 존재합니다. 해당 참가 기록에는 평가표가 없을 수 있습니다. 공개를 허용합니까?'))return;
+ if(group.requiresIncompleteAcknowledgement){
+  if(!window.confirm(label+'에 미평가 참가 기록 '+group.unassessedParticipants+
+    '건이 존재합니다. 해당 학생에게 평가표가 없을 수 있습니다. 그래도 공개하시겠습니까?'))return;
   allowIncomplete=true;
  }
- if(!window.confirm('최종 승인: '+p.examId+' 회차의 채점 결과를 학생들에게 공개하시겠습니까? 이 작업은 취소할 수 없습니다.'))return;
- if(!canR04AdminRelease(p,m)||S.r04ReleasePreview!==p)return;
+ if(!window.confirm('최종 승인: '+label+'만 학생들에게 공개합니다. 다른 집단은 자동 공개되지 않습니다. 계속합니까?'))return;
+ if(!canR04AdminRelease(p,m,audience)||S.r04ReleasePreview!==p)return;
  S.r04ReleasePending=true;S.r04ReleasePreview=null;S.r04SessionState=null;render();
  try{
-  const response=await call(FN.r04AdminRelease,{examId:p.examId,action:'release',
-    expectedVersion:p.stateVersion,expectedSubmittedCount:p.submittedCount,
-    expectedParticipantCount:p.participantCount,allowIncomplete,confirmation:phrase});
-  if(!response||response.ok!==true||response.mode!=='admin-results-released'||
-    response.examId!==p.examId||response.changed!==true||response.resultsReleased!==true||
-    response.stateVersion!==p.stateVersion+1)throw Error('결과 공개 응답을 확인할 수 없습니다. 재요청하지 말고 서버 상태를 조회하세요.');
-  toast('공개 요청 성공 응답을 확인했습니다. 현재 상태를 읽기 전용으로 다시 조회하세요.');
- }catch(e){toast('결과 불확실: 공개를 다시 누르지 말고 현재 상태와 공개 현황을 재조회하세요. '+errorMessage(e));}
+  const response=await call(FN.r04AdminRelease,{examId:p.examId,action:'release',audience,
+    expectedVersion:p.stateVersion,expectedSubmittedCount:group.submittedCount,
+    expectedParticipantCount:group.participantCount,allowIncomplete,confirmation:phrase});
+  const other=audience==='adult'?'youth':'adult';
+  const expectedAll=p.audiences[other].resultsReleased;
+  if(!response||response.ok!==true||response.mode!=='admin-audience-results-released'||
+    response.examId!==p.examId||response.audience!==audience||response.changed!==true||
+    response.resultsReleased!==expectedAll||response.releasedByAudience?.[audience]!==true||
+    response.releasedByAudience?.[other]!==p.audiences[other].resultsReleased||
+    response.stateVersion!==p.stateVersion+1)
+   throw Error('결과 공개 응답을 확인할 수 없습니다. 재요청하지 말고 서버 현황을 조회하세요.');
+  toast(label+' 공개 요청 성공 응답을 확인했습니다. 공개 현황을 다시 조회하세요.');
+ }catch(e){toast('결과 불확실: 공개 버튼을 다시 누르지 말고 서버 현황을 재조회하세요. '+errorMessage(e));}
  finally{S.r04ReleasePending=false;S.r04ReleasePreview=null;S.r04SessionState=null;render();}
 }
 function renderR04AdminReleaseControls(){
  if(preview||S.role!=='admin')return;
  const m=S.r04SessionState,p=S.r04ReleasePreview;
  const current=p&&p.examId===S.r04SessionId?p:null;
- const ready=!!canR04AdminRelease(current,m);
- const label=current?(current.resultsReleased?'이미 공개됨':current.sessionState==='closed'?'평가 종료 · 미공개':'평가 진행 중 · 공개 불가'):'현황 미조회';
- const status=current?`<div class="stat-grid"><div class="stat"><small>참가 기록</small><strong>${current.participantCount}건</strong></div><div class="stat"><small>평가 완료 참가 기록</small><strong>${current.assessedParticipants}건</strong></div><div class="stat"><small>미평가 참가 기록</small><strong>${current.unassessedParticipants}건</strong></div><div class="stat"><small>최종 제출 평가표</small><strong>${current.submittedCount}건</strong></div></div><p class="hint">임시저장 ${current.draftCount}건 · 평가 문서 ${current.gradeDocumentCount}건 · 상태 버전 ${current.stateVersion}. 완료 인원은 강사 1명 이상이 최종 제출한 참가 기록 기준입니다.</p>`:
-  '<p class="hint">[공개 현황 조회]를 누르면 점수·학생명 없이 완료 현황을 조회합니다. 이 작업은 데이터를 수정하지 않습니다.</p>';
- const note=current&&current.requiresIncompleteAcknowledgement?'<p class="warn">미평가 기록이 존재합니다. 공개할 경우 별도 확인이 필요합니다.</p>':'';
- const regradeNotice=current&&current.requiresRubricRegrade?'<p class="warn">현재 평가기준과 다른 제출 평가표가 있습니다. 모든 이전 기준 평가를 현재 기준으로 재채점해야 공개할 수 있습니다.</p>':'';
  const busy=S.r04ReleasePreviewPending||S.r04ReleasePending||S.r04StateMutationPending;
- const html=`<section class="panel" id="r04AdminReleasePanel"><div class="heading-row"><div><h2>R04 결과 공개 관리</h2><p class="muted">관리자 전용 · 공개 전 현황 조회 · 평가 최종 종료 후에만 공개</p></div><span class="chip ${current&&current.resultsReleased?'ok':'wait'}">${esc(label)}</span></div><div class="flex"><button id="r04LoadReleasePreview" class="btn line" type="button" ${busy?'disabled':''}>${S.r04ReleasePreviewPending?'조회 중':'결과 공개 현황 조회'}</button><button id="r04ConfirmResultsRelease" class="btn" type="button" ${ready?'':'disabled'}>평가 결과 최종 공개</button></div>${status}${note}${regradeNotice}<p class="warn">공개 전에는 점수·한줄평이 학생에게 표시되지 않습니다. 공개는 관리자만 최종 확인 후 실행할 수 있으며, 취소할 수 없습니다.</p></section>`;
+ const label=current?(current.resultsReleased?'양쪽 모두 공개됨':current.sessionState==='closed'?'평가 종료 · 집단별 공개 설정':'평가 진행 중 · 공개 불가'):'현황 미조회';
+ const groupUi=(audience,title)=>{
+  const x=current?.audiences[audience];
+  const ready=!!canR04AdminRelease(current,m,audience);
+  const state=x?(x.resultsReleased?'공개 완료':current.sessionState==='closed'?'미공개':'평가 진행 중'):'조회 필요';
+  const note=x?.requiresRubricRegrade?'<p class="warn">평가기준 불일치: 재채점 확인 필요</p>':
+   x?.requiresIncompleteAcknowledgement?'<p class="warn">미평가 학생이 존재합니다. 공개 시 확인이 필요합니다.</p>':'';
+  return '<div style="padding:12px;border:1px solid #cfe3d9;border-radius:10px;margin-top:12px">'+
+   '<div class="flex" style="align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">'+
+   '<strong>'+title+' · '+esc(state)+'</strong><button type="button" class="btn" data-r411-release="'+audience+'" '+
+   (ready?'':'disabled')+'>'+title+' 결과 공개</button></div>'+
+   (x?'<p class="hint">참가 '+x.participantCount+'건 · 최종 제출 '+x.submittedCount+
+    '건 · 평가 완료 참가 '+x.assessedParticipants+'건 · 미평가 '+x.unassessedParticipants+'건</p>':
+    '<p class="hint">[결과 공개 현황 조회]를 눌러 확인하세요.</p>')+note+'</div>';
+ };
+ const status=current?'<p class="hint">전체 참가 '+current.participantCount+'건 · 최종 제출 '+current.submittedCount+
+  '건 · 회차 상태 버전 '+current.stateVersion+' · 이미 공개한 집단은 취소할 수 없습니다.</p>':
+  '<p class="hint">전체 회차 채점이 종료되면 두 집단을 각각 공개할 수 있습니다.</p>';
+ const html='<section class="panel" id="r04AdminReleasePanel"><div class="heading-row"><div><h2>R04 결과 공개 관리</h2>'+
+  '<p class="muted">관리자 전용 · 청소년반/성인반 독립 공개 · 채점 최종 종료 후 가능</p></div>'+
+  '<span class="chip '+(current&&current.resultsReleased?'ok':'wait')+'">'+esc(label)+'</span></div>'+
+  '<div class="flex"><button id="r04LoadReleasePreview" class="btn line" type="button" '+(busy?'disabled':'')+'>'+
+  (S.r04ReleasePreviewPending?'조회 중':'결과 공개 현황 조회')+'</button></div>'+status+
+  groupUi('youth','청소년반')+groupUi('adult','성인반')+
+  '<p class="warn">각 집단별 공개는 취소할 수 없습니다. 미공개 집단의 점수와 한줄평은 학생에게 전달되지 않습니다.</p></section>';
  const anchor=$('r04AdminStatePanel');if(!anchor)return;
  anchor.insertAdjacentHTML('afterend',html);
  const read=$('r04LoadReleasePreview');if(read&&!busy)read.onclick=()=>loadR04AdminReleasePreview(S.r04SessionId);
- const release=$('r04ConfirmResultsRelease');if(release&&ready)release.onclick=()=>releaseR04AdminResults();
+ app.querySelectorAll('[data-r411-release]').forEach(b=>{
+  const a=b.dataset.r411Release;
+  if(!b.disabled&&canR04AdminRelease(current,m,a))b.onclick=()=>releaseR04AdminResults(a);
+ });
 }
 
 // RUN197: verified per-participation media admin UI. Never match by student UID alone.
@@ -1678,6 +1739,7 @@ function validateR04StudentHistory(out){
  const expected=['examId','examDate','round','participationId','classId','group',
    'participationStatus','sessionState','resultsReleased','evaluations'];
  const fields=['evaluatorLabel','gradingSchema','rubricVersion','rubricSnapshot','scores','note','total'];
+  const legacyFields=['evaluatorLabel','gradingSchema','na','act','note','total'];
  const ids=new Set(),rows=[];
  for(const raw of out.records){
   const hasMedia=Object.prototype.hasOwnProperty.call(raw||{},'media');
@@ -1712,6 +1774,19 @@ function validateR04StudentHistory(out){
   const evaluations=[],versions=new Set(),maxTotals=new Set();
   for(let i=0;i<raw.evaluations.length;i++){
    const g=raw.evaluations[i];
+   if(g&&typeof g==='object'&&!Array.isArray(g)&&g.gradingSchema==='legacy-v1'){
+      if(Object.keys(g).length!==legacyFields.length||
+        legacyFields.some(k=>!Object.prototype.hasOwnProperty.call(g,k))||
+        g.evaluatorLabel!==`평가위원 ${i+1}`||
+        !Array.isArray(g.na)||!Array.isArray(g.act)||g.na.length!==5||g.act.length!==5||
+        ![...g.na,...g.act].every(n=>typeof n==='number'&&Number.isFinite(n)&&n>=0&&n<=5&&Number.isInteger(n*2))||
+        typeof g.note!=='string'||g.note.length<1||g.note.length>1000||g.note.trim()!==g.note||
+        typeof g.total!=='number'||g.total!==[...g.na,...g.act].reduce((a,b)=>a+b,0))
+        throw Error('기존 평가표의 점수 무결성을 확인할 수 없습니다.');
+      evaluations.push({evaluatorLabel:g.evaluatorLabel,gradingSchema:'legacy-v1',
+        na:[...g.na],act:[...g.act],note:g.note,total:g.total});
+      continue;
+    }
    if(!g||typeof g!=='object'||Array.isArray(g)||Object.keys(g).length!==fields.length||
      fields.some(k=>!Object.prototype.hasOwnProperty.call(g,k))||
      g.evaluatorLabel!==`평가위원 ${i+1}`||g.gradingSchema!=='configurable-v2'||
@@ -1781,6 +1856,7 @@ async function refreshR04StudentHistory(){
 function r04StudentPublishedSummary(p){
  if(!p||p.resultsReleased!==true||p.sessionState!=='closed'||p.participationStatus!=='active'||
    !Array.isArray(p.evaluations)||!p.evaluations.length)return null;
+  if(p.evaluations.some(g=>g.gradingSchema!=='configurable-v2'))return null;
  const rows=p.evaluations,version=rows[0].rubricVersion,maxTotal=rows[0].rubricSnapshot.maxTotal;
  if(!Number.isSafeInteger(maxTotal)||maxTotal<1||maxTotal>1000||!rows.every(g=>
    g.gradingSchema==='configurable-v2'&&g.rubricVersion===version&&
@@ -1815,8 +1891,8 @@ function renderR04StudentHistory(){
  const archived=selected.participationStatus==='archived',closed=selected.sessionState==='closed';
  const summary=r04StudentPublishedSummary(selected);
  const isReleased=selected.resultsReleased===true&&closed&&!archived;
- const statusLabel=archived?'이전 수강 기록':!isReleased?'결과 공개 대기':summary?'결과 공개됨':'공개된 평가 없음';
- const status=`<section class="panel"><div class="flex"><strong>${esc(selected.examDate)} · ${selected.round}회차 · ${esc(selected.group)} · 수강반 ${classIndex+1}</strong><span class="chip ${summary?'ok':'wait'}">${statusLabel}</span></div></section>`;
+ const statusLabel=archived?'이전 수강 기록':!isReleased?'결과 공개 대기':selected.evaluations.length?'결과 공개됨':'공개된 평가 없음';
+ const status=`<section class="panel"><div class="flex"><strong>${esc(selected.examDate)} · ${selected.round}회차 · ${esc(selected.group)} · 수강반 ${classIndex+1}</strong><span class="chip ${isReleased&&selected.evaluations.length?'ok':'wait'}">${statusLabel}</span></div></section>`;
  // RUN308: Students may access only their own saved media before grades are released.
  // The existing score/comment release conditions remain unchanged.
  const ownMedia=selected.media||{audioUrl:'',videoUrl:''};
@@ -1827,7 +1903,7 @@ function renderR04StudentHistory(){
   body='<section class="panel"><h2>이전 수강 기록</h2><p class="muted">보관된 참가 기록은 열람할 수 있으나 점수와 평가 내용은 표시되지 않습니다.</p></section>';
  }else if(!isReleased){
   body='<section class="panel"><h2>평가 결과 공개 대기</h2><p class="muted">평가중</p></section>';
- }else if(!summary){
+ }else if(!selected.evaluations.length){
   body='<section class="panel"><h2>공개된 평가표가 없습니다.</h2><p class="muted">결과 공개는 완료됐지만 이 참가 기록에 최종 제출된 강사 평가표가 없습니다.</p></section>';
   }else{
   // RUN371_STUDENT_UNIFIED_RESULT: only server-released, teacher-anonymous criteria.
@@ -1835,9 +1911,12 @@ function renderR04StudentHistory(){
   const page=Math.max(0,Math.min(S.r04StudentEvaluationPage,vals.length-1));
   S.r04StudentEvaluationPage=page;
   const grade=vals[page];
-  const section=`<section class="rubric"><h3>통합 평가항목</h3><table><thead><tr><th>평가항목</th><th>점수</th></tr></thead><tbody>${grade.rubricSnapshot.criteria.map((c,i)=>({c,i})).filter(x=>x.c.enabled).map(({c,i})=>`<tr><td><strong>${esc(c.title)}</strong>${c.description?`<div class="rubric-detail">${esc(c.description)}</div>`:''}</td><td><strong>${grade.scores[i]} / 5점</strong></td></tr>`).join('')}</tbody></table></section>`;
-  const cards=`<div class="stat-grid"><div class="stat"><small>전체 평균 · ${summary.maxTotal}점 만점</small><strong>${fmt(summary.total)}</strong></div><div class="stat"><small>평가항목</small><strong>${summary.activeCriteria}개</strong></div><div class="stat"><small>제출된 평가표</small><strong>${summary.count}건</strong></div></div>`;
-  body=`<section class="panel"><h2 class="panel-title">평가 결과 요약</h2>${cards}<p class="hint">최종 제출된 평가표만 평균에 포함합니다. 평가항목과 만점은 해당 평가표의 저장된 기준입니다.</p></section><section class="panel"><div class="heading-row"><div><h2>${esc(grade.evaluatorLabel)} 평가표</h2><p class="muted">${page+1} / ${vals.length} · 평가위원 실명 비공개</p></div><strong>${fmt(grade.total)} / ${grade.rubricSnapshot.maxTotal}점</strong></div>${section}<div class="field"><label>평가위원 한줄평</label><div class="note">${esc(grade.note)}</div></div><div class="pager"><button class="btn line" type="button" id="r04StudentPrev" ${page===0?'disabled':''}>◀ 이전 평가표</button><span>${page+1} / ${vals.length}</span><button class="btn line" type="button" id="r04StudentNext" ${page===vals.length-1?'disabled':''}>다음 평가표 ▶</button></div></section>`;
+  const isLegacy=grade.gradingSchema==='legacy-v1';
+   const section=isLegacy?`<section class="rubric"><h3>기존 평가표 · 나레이션 / 독백</h3><table><thead><tr><th>평가항목</th><th>점수</th></tr></thead><tbody>${[...grade.na,...grade.act].map((v,i)=>`<tr><td>${i<5?'나레이션':'독백'} ${i%5+1}</td><td>${v} / 5점</td></tr>`).join('')}</tbody></table></section>`:
+     `<section class="rubric"><h3>통합 평가항목</h3><table><thead><tr><th>평가항목</th><th>점수</th></tr></thead><tbody>${grade.rubricSnapshot.criteria.map((c,i)=>({c,i})).filter(x=>x.c.enabled).map(({c,i})=>`<tr><td><strong>${esc(c.title)}</strong>${c.description?`<div class="rubric-detail">${esc(c.description)}</div>`:''}</td><td><strong>${grade.scores[i]} / 5점</strong></td></tr>`).join('')}</tbody></table></section>`;
+  const cards=summary?`<div class="stat-grid"><div class="stat"><small>전체 평균 · ${summary.maxTotal}점 만점</small><strong>${fmt(summary.total)}</strong></div><div class="stat"><small>평가항목</small><strong>${summary.activeCriteria}개</strong></div><div class="stat"><small>제출된 평가표</small><strong>${summary.count}건</strong></div></div>`:
+     `<p class="hint">기존 평가와 통합평가는 점수체계가 달라 전체 평균을 합산하지 않습니다. 각 평가표의 원래 점수와 만점을 별도로 표시합니다.</p><div class="stat-grid"><div class="stat"><small>제출된 평가표</small><strong>${selected.evaluations.length}건</strong></div></div>`;
+  body=`<section class="panel"><h2 class="panel-title">평가 결과 요약</h2>${cards}<p class="hint">최종 제출된 평가표만 평균에 포함합니다. 평가항목과 만점은 해당 평가표의 저장된 기준입니다.</p></section><section class="panel"><div class="heading-row"><div><h2>${esc(grade.evaluatorLabel)} 평가표</h2><p class="muted">${page+1} / ${vals.length} · 평가위원 실명 비공개</p></div><strong>${fmt(grade.total)} / ${isLegacy?50:grade.rubricSnapshot.maxTotal}점</strong></div>${section}<div class="field"><label>평가위원 한줄평</label><div class="note">${esc(grade.note)}</div></div><div class="pager"><button class="btn line" type="button" id="r04StudentPrev" ${page===0?'disabled':''}>◀ 이전 평가표</button><span>${page+1} / ${vals.length}</span><button class="btn line" type="button" id="r04StudentNext" ${page===vals.length-1?'disabled':''}>다음 평가표 ▶</button></div></section>`;
  }
  app.innerHTML=head+`<section class="session-bar"><div><strong>평가 회차</strong><small>실제 저장된 참가 회차만 조회합니다.</small></div><div class="session-picker"><select id="r04StudentExamSelect" aria-label="평가 회차 선택">${options}</select><button class="btn line" type="button" id="r04StudentRefresh">새로고침</button></div></section>`+(sameExam.length>1?`<div class="tabs" role="group" aria-label="내 수강반 선택">${classButtons}</div>`:'')+status+mediaPanel+body;
  $('r04StudentRefresh').onclick=()=>refreshR04StudentHistory();
