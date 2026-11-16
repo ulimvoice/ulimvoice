@@ -948,7 +948,7 @@ const teacherModal=modalTeacher&&exact&&R04_ADMIN_CORE.teacherModalParticipation
     deleteGrade.onclick=async()=>{
      const examId=str(S.r04SessionId),participationId=str(exact.participationId);
      const teacherName=str(modalTeacher.name),expectedRevision=modalGrade.revision;
-     if(S.role!=='admin'||!S.auth||!r04EditEligible()||!Number.isSafeInteger(expectedRevision)||expectedRevision<1){toast('현재 평가 삭제가 허용되지 않습니다.');return;}
+     if(preview||S.role!=='admin'||!S.auth||!R04_EXAM_ID_PATTERN.test(examId)||!participationId||!teacherName||!Number.isSafeInteger(expectedRevision)||expectedRevision<1){toast('현재 평가 삭제가 허용되지 않습니다.');return;}
      const message='[평가 삭제 확인]\n회차: '+examId+'\n학생: '+str(selected.name)+'\n반: '+str(selected.className)+'\n강사: '+teacherName+'\n\n이 강사의 현재 평가 기록 1건을 삭제하고 감사 기록에 보관합니다. 진행하시겠습니까?';
      if(!window.confirm(message))return;
      deleteGrade.disabled=true;deleteGrade.textContent='삭제 확인 중...';
