@@ -791,7 +791,7 @@ function renderR04AdminGradeForm(){
  ${active.map(({item,i})=>`<div class="r04-admin-grade-row r366-admin-point-row"><span><strong>${esc(item.title)}</strong>${item.description?`<small class="rubric-detail">${esc(item.description)}</small>`:''}</span><span class="r366-admin-points" role="group" aria-label="${esc(item.title)} 점수">${[1,2,3,4,5].map(point=>`<button type="button" class="r364-point ${vals.scores[i]===point?'selected':''}" data-r366-index="${i}" data-r366-point="${point}" aria-pressed="${vals.scores[i]===point?'true':'false'}" ${allowed?'':'disabled'}>${point}</button>`).join('')}</span></div>`).join('')}
  <p class="hint" id="r366AdminTotal">${total===null?'모든 항목을 선택하면 총점이 표시됩니다.':`예상 총점 ${String(total)} / ${c.maxTotal}점`}</p></div>
  <label class="r04-admin-grade-note">관리자 한줄평<textarea id="r04AdminGradeNote" maxlength="1000" ${allowed?'':'disabled'}>${esc(vals.note)}</textarea></label>
- <div class="action-row"><button type="button" id="r04AdminGradeDraft" class="btn line" ${allowed?'':'disabled'}>임시저장</button><button type="button" id="r04AdminGradeSubmit" class="btn" ${allowed?'':'disabled'}>평가 완료 · 제출</button></div></form>`:''}`;
+ <div class="action-row"><button type="button" id="r04AdminGradeDraft" class="btn line" ${allowed?'':'disabled'}>임시저장</button><button type="button" id="r04AdminGradeSubmit" class="btn" ${allowed?'':'disabled'}>평가 완료 · 제출</button><button type="button" id="r04AdminGradeDelete" class="btn line" style="color:#ad2727;border-color:#cf9a9a" ${valid&&a.grade&&a.gradingOpen&&!busy?'':'disabled'}>관리자 평가 삭제</button></div></form>`:''}`;
  const read=$('r04AdminGradeRead');if(read)read.onclick=()=>loadR04AdminGrade();
  if(!valid||!c)return;
  host.querySelectorAll('[data-r366-index]').forEach(btn=>btn.onclick=()=>{
@@ -810,7 +810,36 @@ function renderR04AdminGradeForm(){
  const note=$('r04AdminGradeNote');if(note)note.oninput=()=>{a.edit.note=note.value;};
  if($('r04AdminGradeDraft'))$('r04AdminGradeDraft').onclick=()=>saveR04AdminGrade('draft');
  if($('r04AdminGradeSubmit'))$('r04AdminGradeSubmit').onclick=()=>saveR04AdminGrade('submitted');
+  if($('r04AdminGradeDelete'))$('r04AdminGradeDelete').onclick=()=>deleteR04AdminGrade();
 }
+ async function deleteR04AdminGrade(){
+  const a=R04_ADMIN_GRADE,p=selectedR04AdminGradeParticipant();
+  if(preview||S.role!=='admin'||!S.auth||!p||!a.grade||a.loading||a.saving||!a.gradingOpen||
+    a.examId!==str(S.r04SessionId)||a.participationId!==p.participationId||
+    !Number.isSafeInteger(a.grade.revision)||a.grade.revision<1)
+   return toast('현재 이 관리자 평가표를 삭제할 수 없습니다.');
+  const examId=a.examId,participationId=p.participationId,expectedRevision=a.grade.revision;
+  const authUid=str(S.auth.uid);
+  if(!window.confirm('[관리자 평가 삭제 확인]\n학생: '+str(p.name)+'\n반: '+str(p.className)+
+   '\n\n관리자 본인이 작성한 평가 1건만 삭제하고 원본을 감사 기록에 보관합니다. 삭제하시겠습니까?'))return;
+  a.saving=true;renderR04AdminGradeForm();let deleted=false;
+  try{
+   const out=await call(FN.r04GradeAdmin,{action:'delete',examId,participationId,expectedRevision});
+   if(!out||out.ok!==true||out.mode!=='admin-r04-grade-deleted'||
+     out.examId!==examId||out.participationId!==participationId||out.deletedRevision!==expectedRevision)
+    throw Error('삭제 응답이 불확실합니다. 재삭제하지 말고 서버에서 조회하세요.');
+   deleted=true;toast('관리자 평가 1건 삭제 완료. 평가표를 다시 조회합니다.');
+  }catch(e){toast('관리자 평가 삭제 실패 또는 재조회 필요: '+errorMessage(e));}
+  finally{
+   a.saving=false;
+   if(S.role==='admin'&&S.auth&&str(S.auth.uid)===authUid&&str(S.r04SessionId)===examId)
+    await loadR04AdminGrade();
+  }
+  if(deleted&&S.role==='admin'&&S.auth&&str(S.auth.uid)===authUid&&
+     str(S.r04SessionId)===examId&&R04_PERSISTED_VIEW.examId===examId){
+   await loadR04EvaluatorMatrix();await loadR04AdminScoreboard();
+  }
+ }
 async function saveR04AdminGrade(status){
  const a=R04_ADMIN_GRADE,p=selectedR04AdminGradeParticipant();
  if(!p||a.saving||!a.gradingOpen||a.stale||a.participationId!==p.participationId||
