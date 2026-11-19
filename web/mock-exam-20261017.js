@@ -1062,12 +1062,11 @@ async function changeR04SessionState(action,audience){
  const before=phases[audience];
  if((action==='open'&&before!=='pending')||(action==='close'&&before!=='open'))return;
  const label=audience==='youth'?'청소년반':'성인반';
- const phrase=(action==='open'?'ON 시작 ':'OFF 최종 종료 ')+label+' '+m.examId;
- const msg=action==='close'?
-  label+' 평가 OFF는 최종 잠금이며 이 집단은 다시 열 수 없습니다. 다른 집단의 평가에는 영향을 주지 않습니다.':
-  label+' 평가 ON 후에는 이 집단 학생의 채점을 시작할 수 있습니다.';
- if(window.prompt(msg+'\n승인하려면 정확하게 입력하세요: '+phrase,'')!==phrase)return;
- if(!window.confirm('최종 확인: '+phrase+'을(를) 실행할까요?'))return;
+ const command=action==='open'?'회차시작':'회차종료';
+ const msg=action==='open'?
+  label+' 평가를 시작할까요?\n회차: '+m.examId:
+  label+' 평가를 최종 종료할까요?\n회차: '+m.examId+'\n종료 후에는 이 집단의 평가를 다시 시작하거나 수정할 수 없습니다.';
+ if(!window.confirm(command+' 확인\n\n'+msg))return;
  S.r04StateMutationPending=true;S.r04SessionState=null;S.r04ReleasePreview=null;render();
  try{
   const result=await call(FN.r04State,{examId:m.examId,action,audience,expectedVersion:m.stateVersion});
@@ -1098,7 +1097,7 @@ function renderR04AdminSessionControls(){
   return '<div style="padding:12px;border:1px solid #cfe3d9;border-radius:10px;margin-top:10px">'+
    '<div class="flex" style="align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">'+
    '<strong>'+title+' · '+esc(state)+'</strong><button class="btn" type="button" data-r412-state="'+audience+'" '+
-   (ready?'':'disabled')+'>'+esc(action==='close'?'평가 OFF · 최종 종료':action==='open'?'평가 ON 시작':'변경 불가')+'</button></div></div>';
+   (ready?'':'disabled')+'>'+esc(action==='close'?'회차종료':action==='open'?'회차시작':'변경 불가')+'</button></div></div>';
  };
  const status=!valid?'회차 상태 조회 전':m.sessionState==='closed'?'전체 회차 종료':'회차 운영 중';
  app.insertAdjacentHTML('afterbegin',`<section class="panel" id="r04AdminStatePanel"><div class="heading-row"><div><h2>R04 집단별 평가 운영</h2><p class="muted">성인반·청소년반 각각 ON/OFF · OFF 이후 최종 잠금 · 별도 결과 공개</p></div><span class="chip wait">${esc(status)}</span></div><div class="flex"><label>회차 ID <input id="r04StateExamId" maxlength="20" value="${esc(S.r04SessionId)}" aria-label="R04 평가 회차 ID"></label><button id="r04LoadState" class="btn line" type="button">현재 상태 조회</button></div>${groupUi('youth','청소년반')}${groupUi('adult','성인반')}<p class="hint">${valid?'참가자 '+m.participantCount+'건 · 상태 버전 '+m.stateVersion:'조회 후에만 각 집단의 상태를 바꿀 수 있습니다.'}</p><p class="warn">OFF는 해당 집단에서 취소할 수 없습니다. 성적 공개는 별도 승인 절차입니다.</p></section>`);
