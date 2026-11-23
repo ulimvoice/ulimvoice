@@ -2,7 +2,7 @@
 'use strict';
 // Single owner: this file is the only UI/controller owner for the standalone mock examination.
 const EXAM_ID='2026-10-17';
-const FN={sessions:'listMockExamSessions20261017',overview:'getMockExamOverview20261017',save:'saveMockExamGrade20261017',admin:'manageMockExam20261017',r04RosterPreview:'getMockExamCanonicalRosterAdminR04',r04Persisted:'getMockExamPersistedSessionAdminR04',r04State:'setMockExamSessionGradingAdminR04',r04TeacherWorkspace:'getMockExamTeacherWorkspaceR04',r04TeacherSave:'saveMockExamTeacherGradeR04',r04StudentHistory:'getMockExamStudentHistoryR04',r04AdminRelease:'manageMockExamResultReleaseAdminR04',r04AdminMedia:'manageMockExamParticipationMediaAdminR04',r04GradingMatrix:'getMockExamAdminGradingMatrixR04',r04AdminRosterEdit:'manageMockExamAdminRosterEditR04',r04Scoreboard:'getMockExamAdminScoreboardR04',r04RubricAdmin:'manageMockExamRubricAdminR04',r04GradeAdmin:'manageMockExamAdminGradeR04',r04TeacherGradeDelete:'deleteMockExamTeacherGradeAdminR04'};
+const FN={sessions:'listMockExamSessions20261017',overview:'getMockExamOverview20261017',save:'saveMockExamGrade20261017',admin:'manageMockExam20261017',r04RosterPreview:'getMockExamCanonicalRosterAdminR04',r04Persisted:'getMockExamPersistedSessionAdminR04',r04State:'setMockExamSessionGradingAdminR04',r04TeacherWorkspace:'getMockExamTeacherWorkspaceR04',r04TeacherSave:'saveMockExamTeacherGradeR04',r04StudentHistory:'getMockExamStudentHistoryR04',r04AdminRelease:'manageMockExamResultReleaseAdminR04',r04AdminMedia:'manageMockExamParticipationMediaAdminR04',r04GradingMatrix:'getMockExamAdminGradingMatrixR04',r04AdminRosterEdit:'manageMockExamAdminRosterEditR04',r04Scoreboard:'getMockExamAdminScoreboardR04',r04RubricAdmin:'manageMockExamRubricAdminR04',r04GradeAdmin:'manageMockExamAdminGradeR04',r04TeacherGradeDelete:'deleteMockExamTeacherGradeAdminR04',r04Catalog:'getMockExamRoundCatalogR04',r04RoundCreate:'createMockExamSessionAdminR04'};
 const NA=['발음의 정확성','발성의 안정성','호흡과 문장 처리','정보 전달력','다큐멘터리 톤과 리듬'];
 const ACT=['인물 및 상황 이해','감정·의도 표현','발성·발음','호흡·대사 흐름','몰입도와 전달력'];
 const GROUPS=['청소년','성인'];
@@ -72,8 +72,9 @@ function renderCanonicalAdminRosterR04(){
  const rows=S.roster||[],checks=S.rosterReview||[],summary=S.rosterReviewSummary||{};
  const visible=rows.filter(p=>(S.rosterGroup==='전체'||p.group===S.rosterGroup)&&(!S.rosterSearch||[p.name,p.className,p.classId].some(x=>str(x).toLowerCase().includes(S.rosterSearch.toLowerCase()))));
  const classes=new Set(rows.map(p=>str(p.classId))).size;
- app.innerHTML=prefix()+`<div class="heading-row"><div><h1>울림앱 현재 수강생 · R04 평가 대상</h1><p class="muted">기존 울림앱 수강 명단 연결 확인 · 관리자 전용 조회 · 이 표는 현재 수강 명단의 미리보기이며 회차 상태와 별도입니다</p></div><span class="chip wait">읽기 전용</span></div><div class="panel"><div class="flex"><strong>${esc(S.rosterDate)} 기준 · ${classes}개 반 · 준비 대상 ${rows.length}건</strong><label>조회 날짜 <input id="r04PreviewDate" type="date" value="${esc(S.rosterDate)}"></label><button id="r04PreviewRefresh" class="btn line">새로고침</button></div><div class="flex top-gap"><label>구분 <select id="r04PreviewGroup"><option value="전체">전체</option>${GROUPS.map(g=>`<option value="${g}" ${g===S.rosterGroup?'selected':''}>${g}</option>`).join('')}</select></label><label>학생 · 반 검색 <input id="r04PreviewSearch" maxlength="100" value="${esc(S.rosterSearch)}" placeholder="학생 또는 반"></label></div><div class="scroll-table top-gap"><table class="wide-table"><thead><tr><th>구분</th><th>반</th><th>학생</th><th>상태</th></tr></thead><tbody>${visible.map(p=>`<tr><td>${esc(p.group)}</td><td>${esc(p.className)}</td><td>${esc(p.name)}</td><td><span class="chip wait">현재 수강 명단</span></td></tr>`).join('')||'<tr><td colspan="4">조회 결과가 없습니다.</td></tr>'}</tbody></table></div></div><div class="panel"><h2 class="panel-title">관리자 확인 필요 · ${checks.length}건</h2><p class="hint">담당 강사를 확인할 수 없는 반 등은 평가 대상 발급 전 관리자가 확인해야 합니다. 이 화면에서 자동으로 청소년반에 배정하지 않습니다.</p>${checks.length?`<div class="scroll-table"><table class="wide-table"><thead><tr><th>학생</th><th>사유</th><th>수강 반</th></tr></thead><tbody>${checks.map(x=>`<tr><td>${esc(x.studentName)}</td><td>${esc(x.reason)}</td><td>${esc((x.classes||[]).map(c=>c.className).join(', '))}</td></tr>`).join('')}</tbody></table></div>`:'<p>현재 관리자 확인 대상으로 분류된 명단이 없습니다.</p>'}<p class="hint">이 목록은 서버의 실제 수강 명단을 읽어 표시한 것입니다. 아직 회차 생성, 참가 ID 저장, 강사 채점·학생 공개, 관리자 이동/삭제 기능은 연결되지 않았습니다.</p></div>`;
+ app.innerHTML=prefix()+`<div class="heading-row"><div><h1>새 회차 시작 전 · 울림앱 명단 미리보기</h1><p class="muted">기존 울림앱 수강 명단 연결 확인 · 관리자 전용 조회 · 시작 전 새 회차 명단 준비용 조회입니다. 이미 시작한 회차의 학생·반 정보에는 반영되지 않습니다</p></div><span class="chip wait">읽기 전용</span></div><div class="panel"><div class="flex"><strong>${esc(S.rosterDate)} 기준 · ${classes}개 반 · 준비 대상 ${rows.length}건</strong><label>조회 날짜 <input id="r04PreviewDate" type="date" value="${esc(S.rosterDate)}"></label><button id="r04PreviewRefresh" class="btn line">새로고침</button></div><div class="flex top-gap"><label>구분 <select id="r04PreviewGroup"><option value="전체">전체</option>${GROUPS.map(g=>`<option value="${g}" ${g===S.rosterGroup?'selected':''}>${g}</option>`).join('')}</select></label><label>학생 · 반 검색 <input id="r04PreviewSearch" maxlength="100" value="${esc(S.rosterSearch)}" placeholder="학생 또는 반"></label></div><div class="scroll-table top-gap"><table class="wide-table"><thead><tr><th>구분</th><th>반</th><th>학생</th><th>상태</th></tr></thead><tbody>${visible.map(p=>`<tr><td>${esc(p.group)}</td><td>${esc(p.className)}</td><td>${esc(p.name)}</td><td><span class="chip wait">현재 수강 명단</span></td></tr>`).join('')||'<tr><td colspan="4">조회 결과가 없습니다.</td></tr>'}</tbody></table></div></div><div class="panel"><h2 class="panel-title">관리자 확인 필요 · ${checks.length}건</h2><p class="hint">담당 강사를 확인할 수 없는 반 등은 평가 대상 발급 전 관리자가 확인해야 합니다. 이 화면에서 자동으로 청소년반에 배정하지 않습니다.</p>${checks.length?`<div class="scroll-table"><table class="wide-table"><thead><tr><th>학생</th><th>사유</th><th>수강 반</th></tr></thead><tbody>${checks.map(x=>`<tr><td>${esc(x.studentName)}</td><td>${esc(x.reason)}</td><td>${esc((x.classes||[]).map(c=>c.className).join(', '))}</td></tr>`).join('')}</tbody></table></div>`:'<p>현재 관리자 확인 대상으로 분류된 명단이 없습니다.</p>'}<p class="hint">이 목록은 서버의 실제 수강 명단을 읽어 표시한 것입니다. 아직 회차 생성, 참가 ID 저장, 강사 채점·학생 공개, 관리자 이동/삭제 기능은 연결되지 않았습니다.</p></div>`;
  renderR04AdminSessionControls();
+ renderR04AdminRoundPanel();
  $('r04PreviewDate').onchange=()=>{};
  $('r04PreviewRefresh').onclick=()=>withBusy($('r04PreviewRefresh'),()=>refreshCanonicalAdminRosterR04($('r04PreviewDate').value));
  $('r04PreviewGroup').onchange=e=>{S.rosterGroup=e.target.value;renderCanonicalAdminRosterR04();};
@@ -871,7 +872,9 @@ async function saveR04AdminGrade(status){
 
 function renderR04AdminCore(){
  if(preview||S.role!=='admin'||!S.rosterPreviewOnly)return;
- const roster=(R04_EDITOR.examId===str(S.r04SessionId)?R04_EDITOR.rows.filter(p=>p.status==='active'&&p.classStatus!=='archived'):(S.roster||[])).map((p,i)=>({...p,__index:i}));
+ const savedRosterReady=R04_EDITOR.examId===str(S.r04SessionId);
+ const roster=(savedRosterReady?R04_EDITOR.rows.filter(p=>p.status==='active'&&p.classStatus!=='archived'):[]).map((p,i)=>({...p,__index:i}));
+ const savedRosterWarning=savedRosterReady?'':`<p class="warn">모의고사에 저장된 명단을 확인할 수 없습니다. 현재 울림앱 명단을 대신 표시하지 않습니다. ${esc(R04_EDITOR.error||'저장 명단 조회가 필요합니다.')}</p>`;
  const id=str(S.r04SessionId),persisted=R04_PERSISTED_VIEW;
  const hasPersisted=persisted.examId===id&&persisted.rows.length>0;
  const matrix=R04_EVALUATOR_VIEW;
@@ -897,7 +900,7 @@ function renderR04AdminCore(){
    const open=R04_ADMIN_CORE.expanded.includes(c.key);
    return `<section class="class-accordion"><button type="button" class="class-toggle ${open?'open':''}" data-admin-class="${esc(c.key)}" aria-expanded="${open?'true':'false'}"><span class="class-title"><span class="class-chevron">${open?'▾':'▸'}</span><span><strong>${esc(c.name)}</strong><small>${esc(c.group)} · 평가용 반 목록</small></span></span><span class="class-count">${c.students.length}명</span></button><div class="class-students" ${open?'':'hidden'}>${c.students.map(p=>`<button type="button" data-admin-student="${p.__index}" class="student-choice ${R04_ADMIN_CORE.selected===p.__index?'active':''}"><b class="r04-student-name">${esc(p.name)}</b><span class="chip ${p.group==='성인'?'ok':'wait'}">${esc(p.group)}</span></button>`).join('')}</div></section>`;
  }).join('');
- const stats=`<div class="stat-grid"><div class="stat"><small>현재 수강 명단</small><strong>${roster.length}건</strong></div><div class="stat"><small>수강반</small><strong>${new Set(roster.map(p=>p.classId||p.className)).size}개</strong></div><div class="stat"><small>저장 참가 기록</small><strong>${hasPersisted?persisted.rows.length+'건':'미조회'}</strong></div><div class="stat"><small>평가 강사</small><strong>${hasMatrix?matrix.evaluators.length+'명':'미조회'}</strong></div></div>`;
+ const stats=`<div class="stat-grid"><div class="stat"><small>저장된 모의고사 명단</small><strong>${roster.length}건</strong></div><div class="stat"><small>수강반</small><strong>${new Set(roster.map(p=>p.classId||p.className)).size}개</strong></div><div class="stat"><small>저장 참가 기록</small><strong>${hasPersisted?persisted.rows.length+'건':'미조회'}</strong></div><div class="stat"><small>평가 강사</small><strong>${hasMatrix?matrix.evaluators.length+'명':'미조회'}</strong></div></div>`;
  const scores=R04_SCOREBOARD;
  const scoresReady=hasPersisted&&scores.examId===id&&scores.callerUid===str(S.auth&&S.auth.uid)&&
    scores.stateVersion===persisted.stateVersion&&scores.rows.length===persisted.rows.filter(r=>r.status==='active').length;
@@ -923,13 +926,37 @@ function renderR04AdminCore(){
 
 const teacherModal=modalTeacher&&exact&&R04_ADMIN_CORE.teacherModalParticipationId===exact.participationId?`<div id="r04TeacherGradeOverlay" class="modal-wrap r04-teacher-grade-overlay" role="dialog" aria-modal="true" aria-labelledby="r04TeacherGradeModalTitle"><div class="modal r04-teacher-grade-modal" role="document"><div class="modal-head"><div><h2 id="r04TeacherGradeModalTitle">${esc(modalTeacher.name)} 평가표</h2><p class="muted">${esc(selected.name)} · ${esc(selected.className)} · 읽기 전용</p></div><button type="button" class="btn line" id="r04CloseTeacherGradePopup" aria-label="평가표 팝업 닫기">닫기 ✕</button></div>${modalContent}${modalGrade&&modalTeacher&&modalTeacher.directoryStatus==='active'&&modalGrade.revision>0?`<div class="r338-delete-controls"><button type="button" class="btn line" id="r338DeleteTeacherGrade" style="color:#ad2727;border-color:#cf9a9a">이 강사의 평가 삭제</button><p class="hint">현재 회차에서 해당 학생에 대한 이 강사의 평가 1건만 삭제합니다. 서버에서 관리자 권한과 평가 버전을 재확인합니다.</p></div>`:''}</div></div>`:'';
  const scoreRows=scoresReady?r409RankRows(scores.rows,R04_ADMIN_CORE.rankGroup):[];
- const scoreLeaderboard=scoreRows.length?`<div class="scroll-table"><table class="wide-table"><thead><tr><th>순위</th><th>구분</th><th>학생</th><th>수강반</th><th>합계</th><th>평균 / ${esc(maxLabel)}</th><th>제출 강사</th></tr></thead><tbody>${scoreRows.map(r=>{const p=persisted.rows.find(x=>x.participationId===r.participationId);return `<tr><td>${r.displayRank}위 ${r.complete?'':'· 잠정'}</td><td>${r.audience==='adult'?'성인':'청소년'}</td><td>${esc(p&&p.studentLabel||'확인 필요')}</td><td>${esc(p&&p.classLabel||'확인 필요')}</td><td>${fmt(r.sum)}</td><td>${fmt(r.average)}</td><td>${r.submittedCount}/${scores.teacherCount}</td></tr>`;}).join('')}</tbody></table></div>`:
+ // RUN412_STAGE67_RESUME07_RANK_LABEL_SAFE_JOIN
+function r67VerifiedRankLabels(p,r,persisted,score,id){
+ const strLabel=v=>typeof v==='string'?v.trim():'';
+ const missingLabel=v=>!strLabel(v)||['확인 필요','이름 확인 필요','학생 확인 필요','학생명 확인 필요','반명 확인 필요','수강반 확인 필요','반 확인 필요'].includes(strLabel(v));
+ let name=p?strLabel(p.studentLabel):'',className=p?strLabel(p.classLabel):'';
+ // Fail closed: no use of current enrollment names, no name-only match, no cross-version join.
+ if(!p||!r||!R04_EDITOR||R04_EDITOR.examId!==id||persisted.examId!==id||score.examId!==id||
+    R04_EDITOR.stateVersion!==persisted.stateVersion||score.stateVersion!==persisted.stateVersion||
+    !Array.isArray(R04_EDITOR.rows)||!Array.isArray(persisted.rows)||
+    R04_EDITOR.rows.length!==persisted.rows.length ||
+    p.participationId!==r.participationId||p.status!=='active'||
+    p.group!==(r.audience==='adult'?'성인':r.audience==='youth'?'청소년':'') ||
+    typeof p.classId!=='string'||!p.classId)
+    return {name:missingLabel(name)?'확인 필요':name,className:missingLabel(className)?'확인 필요':className};
+ const candidates=R04_EDITOR.rows.filter(e=>e&&e.participationId===p.participationId);
+ const ed=candidates.length===1?candidates[0]:null;
+ if(ed&&ed.status==='active'&&ed.classId===p.classId&&ed.group===p.group&&
+    ed.participationId===r.participationId){
+   if(missingLabel(name)&&!missingLabel(ed.name))name=strLabel(ed.name);
+   if(missingLabel(className)&&!missingLabel(ed.className))className=strLabel(ed.className);
+ }
+ return {name:missingLabel(name)?'확인 필요':name,className:missingLabel(className)?'확인 필요':className};
+}
+// END_RUN412_STAGE67_RESUME07_RANK_LABEL_SAFE_JOIN
+ const scoreLeaderboard=scoreRows.length?`<div class="scroll-table"><table class="wide-table"><thead><tr><th>순위</th><th>구분</th><th>학생</th><th>수강반</th><th>합계</th><th>평균 / ${esc(maxLabel)}</th><th>제출 강사</th></tr></thead><tbody>${scoreRows.map(r=>{const p=persisted.rows.find(x=>x.participationId===r.participationId);const labels=r67VerifiedRankLabels(p,r,persisted,scores,id);return `<tr><td>${r.displayRank}위 ${r.complete?'':'· 잠정'}</td><td>${r.audience==='adult'?'성인':'청소년'}</td><td>${esc(labels.name)}</td><td>${esc(labels.className)}</td><td>${fmt(r.sum)}</td><td>${fmt(r.average)}</td><td>${r.submittedCount}/${scores.teacherCount}</td></tr>`;}).join('')}</tbody></table></div>`:
    '<p class="hint">이 구분에 최종 제출된 평가표가 없어 아직 순위를 계산할 수 없습니다.</p>';
  const teacherTable=teacherStatuses.length?`<div class="scroll-table"><table class="wide-table r04-teacher-status-table"><thead><tr><th>강사</th><th>평가 상태</th></tr></thead><tbody>${teacherStatuses.map(t=>`<tr><td><button type="button" class="r04-teacher-name-button" data-r04-teacher-popup-index="${t.index}" aria-label="${esc(t.name)} 평가표 팝업 열기">${esc(t.name)}</button></td><td><span class="chip ${t.status==='submitted'?'ok':'wait'}">${t.status==='submitted'?'완료':t.status==='draft'?'임시저장':'미평가'}</span></td></tr>`).join('')}</tbody></table></div>`:'<p class="hint">평가표 조회 전이거나 참가 ID의 정확한 연결을 확인할 수 없습니다. 다른 학생의 채점 기록은 추측하여 표시하지 않습니다.</p>';
  const teacherSummary=teacherStatuses.length?`${teacherStatuses.filter(t=>t.status==='submitted').length}명 완료 · ${teacherStatuses.filter(t=>t.status==='draft').length}명 임시저장 · ${teacherStatuses.filter(t=>t.status==='missing').length}명 미평가`:'조회 전';
  const chosen=selected?`<div class="r407-mobile-close"><h2 id="r407AdminEvaluationTitle">${esc(selected.name)} · 평가표</h2><button type="button" class="btn line" id="r407AdminEvaluationClose">닫기 ✕</button></div><div class="score-hero"><div><h2>${esc(selected.name)}</h2><p>${esc(selected.className)} · ${esc(selected.group)}</p></div><div class="r04-selected-actions"><button type="button" id="r04RemoveSelectedStudent" class="btn line" ${R04_EDITOR.sessionState==='open'?'':'disabled'}>해당학생제거</button></div></div><div id="r04AdminInlineMediaHost" class="r04-admin-inline-media"></div><details id="r04TeacherStatusAccordion" class="r04-teacher-status-accordion" ${R04_ADMIN_CORE.teacherStatusOpen?'open':''}><summary><span>강사별 채점 현황</span><small>${teacherSummary}</small></summary><p class="hint">강사명을 선택하면 해당 강사의 평가표를 팝업으로 확인할 수 있습니다.</p>${teacherTable}</details><div id="r04AdminGradeHost" class="r04-admin-grading"></div><div class="r04-core-score"><h3 class="panel-title">평가 점수 · 총합 · 평균 · 순위</h3>${scoresReady?scoreInfo:`<p class="hint">${esc(scores.error||'아직 점수 조회 전입니다. 명단·채점 현황 조회를 눌러주세요.')}</p>`}</div>`:'<p class="hint">등록된 학생이 없습니다.</p>';
  // RUN329_UI_ALIGN_V1: actions share group selection row, no unverified roster label.
- const main=`<section id="r04OperationalDashboard" class="r04-core"><div class="heading-row"><div><h1>모의고사 평가 관리</h1><p>반별 학생 · 강사별 평가 현황 · 총점/평균 관리</p></div><div class="r04-top-actions"><button type="button" id="r04OpenSettings" class="btn line" aria-label="모의고사 설정 열기">⚙ 설정</button></div></div>${stats}<div class="panel"><div class="flex"><button class="btn" type="button" id="r04CoreReload">평가 명단 · 채점 현황 조회</button><span class="hint">현재 수강 명단 기준 · ${esc(S.rosterDate)} 조회</span></div><p class="hint top-gap">평가용 명단은 실제 수강반과 별도로 관리됩니다.</p></div><div class="panel"><div class="flex"><div class="r04-admin-group-tabs" role="group" aria-label="평가 대상 구분"><button type="button" class="seg ${R04_ADMIN_CORE.group==='청소년'?'active':''}" data-admin-group="청소년" aria-pressed="${R04_ADMIN_CORE.group==='청소년'}">청소년반</button><button type="button" class="seg ${R04_ADMIN_CORE.group==='성인'?'active':''}" data-admin-group="성인" aria-pressed="${R04_ADMIN_CORE.group==='성인'}">성인반</button></div><label>학생·수강반 검색 <input id="r04CoreSearch" type="search" maxlength="100" placeholder="학생 또는 반 이름" value="${esc(R04_ADMIN_CORE.search)}"></label><span class="muted">${shown.length}건 표시</span><div class="r04-inline-manage-buttons" style="display:flex;align-items:center;gap:8px;margin-left:auto"><button type="button" id="r04OpenClassManager" class="btn line">반추가</button><button type="button" id="r04OpenStudentManager" class="btn line">학생추가</button></div></div></div><div class="layout r04-core-grid"><aside class="panel"><h2 class="panel-title">전체 평가 반목록</h2><div class="student-list r04-admin-class-list">${sidebar||'<p class="hint">해당 조건의 반 또는 학생이 없습니다.</p>'}</div></aside><article class="panel r407-admin-evaluation-panel" id="r407AdminEvaluationPanel">${chosen}</article></div><section class="panel"><div class="heading-row"><div><h2>총점 · 평균 · 순위</h2><p class="muted">최종 제출된 강사별 평가표를 기준으로 계산</p></div></div><div class="r04-admin-group-tabs" role="group" aria-label="순위표 구분">${[['성인','성인반'],['청소년','청소년반'],['전체','전체 통합']].map(([scope,label])=>`<button type="button" style="padding:9px 12px" class="seg ${R04_ADMIN_CORE.rankGroup===scope?'active':''}" data-r409-rank-scope="${scope}" aria-pressed="${R04_ADMIN_CORE.rankGroup===scope}">${label}</button>`).join('')}</div><p class="hint">최종 제출 평가만 합산합니다. 제출 강사 수가 다른 학생의 평균·순위는 잠정 비교이며 전체 강사 제출 후 확정됩니다.</p>${scoresReady?scoreLeaderboard:`<p class="hint">${esc(scores.error||'점수·순위 조회 전입니다.')}</p>`}</section></section>`;
+ const main=`<section id="r04OperationalDashboard" class="r04-core"><div class="heading-row"><div><h1>모의고사 평가 관리</h1><p>반별 학생 · 강사별 평가 현황 · 총점/평균 관리</p></div><div class="r04-top-actions"><button type="button" id="r04OpenSettings" class="btn line" aria-label="모의고사 설정 열기">⚙ 설정</button></div></div>${savedRosterWarning}${stats}<div class="panel"><div class="flex"><button class="btn" type="button" id="r04CoreReload">평가 명단 · 채점 현황 조회</button><span class="hint">모의고사 회차별 저장 명단 기준</span></div><p class="hint top-gap">평가용 명단은 실제 수강반과 별도로 관리됩니다.</p></div><div class="panel"><div class="flex"><div class="r04-admin-group-tabs" role="group" aria-label="평가 대상 구분"><button type="button" class="seg ${R04_ADMIN_CORE.group==='청소년'?'active':''}" data-admin-group="청소년" aria-pressed="${R04_ADMIN_CORE.group==='청소년'}">청소년반</button><button type="button" class="seg ${R04_ADMIN_CORE.group==='성인'?'active':''}" data-admin-group="성인" aria-pressed="${R04_ADMIN_CORE.group==='성인'}">성인반</button></div><label>학생·수강반 검색 <input id="r04CoreSearch" type="search" maxlength="100" placeholder="학생 또는 반 이름" value="${esc(R04_ADMIN_CORE.search)}"></label><span class="muted">${shown.length}건 표시</span><div class="r04-inline-manage-buttons" style="display:flex;align-items:center;gap:8px;margin-left:auto"><button type="button" id="r04OpenClassManager" class="btn line">반추가</button><button type="button" id="r04OpenStudentManager" class="btn line">학생추가</button></div></div></div><div class="layout r04-core-grid"><aside class="panel"><h2 class="panel-title">전체 평가 반목록</h2><div class="student-list r04-admin-class-list">${sidebar||'<p class="hint">해당 조건의 반 또는 학생이 없습니다.</p>'}</div></aside><article class="panel r407-admin-evaluation-panel" id="r407AdminEvaluationPanel">${chosen}</article></div><section class="panel"><div class="heading-row"><div><h2>총점 · 평균 · 순위</h2><p class="muted">최종 제출된 강사별 평가표를 기준으로 계산</p></div></div><div class="r04-admin-group-tabs" role="group" aria-label="순위표 구분">${[['성인','성인반'],['청소년','청소년반'],['전체','전체 통합']].map(([scope,label])=>`<button type="button" style="padding:9px 12px" class="seg ${R04_ADMIN_CORE.rankGroup===scope?'active':''}" data-r409-rank-scope="${scope}" aria-pressed="${R04_ADMIN_CORE.rankGroup===scope}">${label}</button>`).join('')}</div><p class="hint">최종 제출 평가만 합산합니다. 제출 강사 수가 다른 학생의 평균·순위는 잠정 비교이며 전체 강사 제출 후 확정됩니다.</p>${scoresReady?scoreLeaderboard:`<p class="hint">${esc(scores.error||'점수·순위 조회 전입니다.')}</p>`}</section></section>`;
  const settings=`<div id="r04AdminSettingsOverlay" class="modal-wrap r04-settings-overlay" role="dialog" aria-modal="true" aria-label="모의고사 관리자 설정" style="display:${R04_ADMIN_CORE.settingsOpen?'flex':'none'}"><div class="modal r04-settings-modal"><div class="modal-head"><div><h2 id="r04SettingsTitle">⚙ 모의고사 설정</h2><p class="hint" id="r04SettingsSubtitle">평가기준·회차 운영</p></div><button type="button" class="btn line" id="r04CloseSettings">닫기 ✕</button></div><nav class="r04-settings-tabs" role="tablist" aria-label="모의고사 설정 분류">${[['rubric','평가항목'],['sessions','회차·공개'],['media','음성·영상']].map(([id,label])=>`<button type="button" class="seg ${R04_ADMIN_CORE.settingsTab===id?'active':''}" data-r04-setting-tab="${id}" role="tab" aria-selected="${R04_ADMIN_CORE.settingsTab===id}">${label}</button>`).join('')}</nav><section class="panel r04-setting-panel" data-r04-setting-section="classes" id="r04EditorClassHost"></section><section class="panel r04-setting-panel" data-r04-setting-section="students" id="r04EditorStudentHost"></section><section class="panel r04-setting-panel" data-r04-setting-section="rubric" id="r04RubricHost"></section><div class="r04-settings-live" id="r04SettingsLive"></div><div id="r04SettingsLegacyHost" hidden aria-hidden="true"></div></div></div>`;
  app.insertAdjacentHTML('afterbegin',main);
  app.insertAdjacentHTML('beforeend',settings);
@@ -1027,7 +1054,7 @@ function r412TeacherCanGrade(group){
 }
 // RUN167: administrator-only R04 persisted session status and explicit ON/OFF UI.
 // Independent of the legacy 20261017 grading controls; no implicit state mutation.
-const R04_EXAM_ID_PATTERN=/^r04_20\d{4}_r0[1-9]$/;
+const R04_EXAM_ID_PATTERN=/^(?:r04_20\d{4}_r0[1-9]|mo(?:0[1-9]|[1-9][0-9]{1,2}))$/;
 function parseR04StateReadOnly(out,id){
  if(!out||out.ok!==true||out.mode!=='admin-persisted-session-roster-read-only'||
     out.saveEnabled!==false||out.examId!==id||!R04_EXAM_ID_PATTERN.test(id)||
@@ -1157,8 +1184,8 @@ function renderR04PersistedRosterView(){
  const groupOptions=['전체','청소년','성인'].map(x=>`<option value="${x}" ${v.group===x?'selected':''}>${x}</option>`).join('');
  const statusOptions=[['전체','전체'],['active','활성'],['archived','보관']].map(([key,text])=>
   `<option value="${key}" ${v.status===key?'selected':''}>${text}</option>`).join('');
- const table=rows.length?`<div class="scroll-table top-gap"><table class="wide-table"><thead><tr><th>번호</th><th>구분</th><th>수강반</th><th>학생</th><th>참가 상태</th><th>수강 명단 비교</th></tr></thead><tbody>${visible.map((x,i)=>
-  `<tr><td>${i+1}</td><td>${esc(x.group)}</td><td>${esc(x.classLabel||'이전 수강반')}</td><td>${esc(x.studentLabel||'이전 수강생')}</td><td><span class="chip ${x.status==='active'?'ok':'wait'}">${x.status==='active'?'활성':'보관'}</span></td><td>${x.currentRosterMatch?'현재 수강':'현재 명단 외'}</td></tr>`).join('')||'<tr><td colspan="6">현재 필터에 해당하는 평가 참가 기록이 없습니다.</td></tr>'}</tbody></table></div>`:'';
+ const table=rows.length?`<div class="scroll-table top-gap"><table class="wide-table"><thead><tr><th>번호</th><th>구분</th><th>수강반</th><th>학생</th><th>참가 상태</th><th>모의고사 저장 정보</th></tr></thead><tbody>${visible.map((x,i)=>
+  `<tr><td>${i+1}</td><td>${esc(x.group)}</td><td>${esc(x.classLabel||'이전 수강반')}</td><td>${esc(x.studentLabel||'이전 수강생')}</td><td><span class="chip ${x.status==='active'?'ok':'wait'}">${x.status==='active'?'활성':'보관'}</span></td><td>${x.currentRosterMatch?'저장 정보 확인':'저장 정보 확인 필요'}</td></tr>`).join('')||'<tr><td colspan="6">현재 필터에 해당하는 평가 참가 기록이 없습니다.</td></tr>'}</tbody></table></div>`:'';
  const summary=rows.length?`<div class="stat-grid"><div class="stat"><small>저장된 참가 기록</small><strong>${rows.length}</strong></div><div class="stat"><small>활성 참가 기록</small><strong>${active}</strong></div><div class="stat"><small>보관 참가 기록</small><strong>${archived}</strong></div><div class="stat"><small>현재 표시</small><strong>${visible.length}</strong></div></div>`:'';
  const message=v.loading?'<p class="hint">서버의 참가 명단을 확인하고 있습니다.</p>':
   stale?'<p class="warn">회차 상태 버전이 변경되어 기존 명단을 숨겼습니다. 다시 조회해 주세요.</p>':
@@ -1998,8 +2025,205 @@ function renderR04StudentHistory(){
  if(next)next.onclick=()=>{if(S.r04StudentEvaluationPage+1<selected.evaluations.length){S.r04StudentEvaluationPage++;render();}};
 }
 
-async function refreshSessions(){if(preview)return;if(S.role==='student')return refreshR04StudentHistory();if(S.role==='teacher'){S.examId='r04_202610_r01';S.sessions=[{examId:S.examId,date:'2026-10-30',month:'2026-10',title:'R04 모의고사 1회차',published:false,archived:false}];return reloadR04Teacher();}if(S.role==='admin')return refreshCanonicalAdminRosterR04();const out=await call(FN.sessions,{});if(out.ok!==true)throw Error('평가 회차 목록을 불러오지 못했습니다.');S.sessions=Array.isArray(out.sessions)?out.sessions:[];if(!S.sessions.some(x=>x.examId===S.examId))S.examId=S.sessions.length?S.sessions[0].examId:'';if(S.examId)await reload();else{applySnapshot({});S.sessionTitle='';render();}}
-async function switchExam(id){if(!S.sessions.some(x=>x.examId===id))return toast('해당 회차를 열람할 수 없습니다.');if(preview){switchPreviewExam(id);return;}S.examId=id;S.edit={};S.selected=null;S.judgePage=0;S.expandedClasses={'청소년':[],'성인':[]};await reload();}
+// STAGE33: R04 moXX round workflow UI; metadata only before explicit admin actions.
+let R04_ROUND_CATALOG=[];
+let R04_ROUND_PENDING=false;
+let R04_ROUND_ERROR='';
+const R04_MO_ID=/^mo(?:0[1-9]|[1-9][0-9]{1,2})$/;
+function r04CatalogRecord(x){
+ if(!x||typeof x!=='object'||Array.isArray(x)||!R04_EXAM_ID_PATTERN.test(str(x.examId))||
+   typeof x.startDate!=='string'||!/^20\d{2}-\d{2}-\d{2}$/.test(x.startDate)||
+   !['registered','started'].includes(x.status)||
+   !['pending','open','closed'].includes(x.state))throw Error('회차 목록 항목이 유효하지 않습니다.');
+ if(!x.gradingStateByAudience||!x.resultsReleasedByAudience||
+   !['pending','open','closed'].includes(x.gradingStateByAudience.adult)||
+   !['pending','open','closed'].includes(x.gradingStateByAudience.youth)||
+   typeof x.resultsReleasedByAudience.adult!=='boolean'||
+   typeof x.resultsReleasedByAudience.youth!=='boolean'||
+   !Number.isSafeInteger(x.participantCount)||x.participantCount<0||x.participantCount>150)
+   throw Error('회차 상태가 유효하지 않습니다.');
+ if((x.status==='registered'&&(x.participantCount!==0||x.state!=='pending'))||
+   (x.status==='started'&&x.participantCount<1))throw Error('회차 등록·시작 상태가 일치하지 않습니다.');
+ return x;
+}
+async function loadR04RoundCatalog(){
+ if(preview||!['admin','teacher'].includes(S.role)||!S.auth)return;
+ const role=S.role,uid=str(S.auth.uid);
+ const out=await call(FN.r04Catalog,{});
+ if(!out||out.ok!==true||out.mode!=='r04-round-catalog-read-only'||
+    !Array.isArray(out.rounds)||out.rounds.length!==out.roundCount||out.rounds.length>400)
+    throw Error('회차 목록 서버 응답을 확인할 수 없습니다.');
+ const rows=out.rounds.map(r04CatalogRecord);
+ if(new Set(rows.map(x=>x.examId)).size!==rows.length)throw Error('중복 회차 ID가 있습니다.');
+ if(role!==S.role||uid!==str(S.auth&&S.auth.uid))return;
+ if(role==='teacher'&&rows.some(x=>x.status!=='started'))throw Error('강사에게 미시작 회차가 노출되었습니다.');
+ R04_ROUND_CATALOG=rows;R04_ROUND_ERROR='';
+ if(role==='teacher'){
+  const started=rows.filter(x=>x.status==='started');
+  S.sessions=started.map(x=>({examId:x.examId,date:x.startDate,
+    month:x.startDate.slice(0,7),title:x.examId,published:false,archived:x.state==='closed'}));
+  if(!started.some(x=>x.examId===S.examId)){
+   const previousExam=S.examId;
+   const choice=started.find(x=>x.state==='open')||started[0];
+   S.examId=choice?choice.examId:'';
+   if(previousExam!==S.examId){
+    r406StopTeacherMedia();
+    S.roster=[];S.grades=[];S.edit={};S.selected=null;
+    S.r04TeacherReady=false;S.r04TeacherGradingOpen=false;S.r04TeacherPhases=null;
+    S.r04ConfigurableRubric=null;S.r04ConfigurableRubricVersion=0;
+   }
+  }
+ }else{
+  if(!rows.some(x=>x.examId===S.r04SessionId&&x.status==='started')){
+   const choice=rows.find(x=>x.status==='started'&&x.state==='open')||
+     rows.find(x=>x.status==='started');
+   if(choice)S.r04SessionId=choice.examId;
+  }
+ }
+ render();
+}
+function renderR04AdminRoundPanel(){
+ if(preview||S.role!=='admin'||!S.rosterPreviewOnly)return;
+ const rows=R04_ROUND_CATALOG;
+ const copying=rows.filter(x=>x.status==='started');
+ const today=kstRosterDateR04();
+ const next=Array.from({length:999},(_,i)=>'mo'+String(i+1).padStart(2,'0'))
+   .find(id=>!rows.some(r=>r.examId===id))||'';
+ const item=x=>{
+  const selected=x.examId===S.r04SessionId;
+  const group=x.gradingStateByAudience;
+  const state=x.status==='registered'?'등록됨 · 명단 미확정':
+    x.state==='closed'?'평가 종료':group.adult==='open'||group.youth==='open'?'평가 진행':'평가 대기';
+  const action=x.status==='registered'?`<button type="button" class="btn line small" data-r04-round-start="${esc(x.examId)}" ${R04_ROUND_PENDING?'disabled':''}>명단 확정 · 회차 준비</button>`:
+    `<button type="button" class="btn line small" data-r04-round-select="${esc(x.examId)}" ${R04_ROUND_PENDING?'disabled':''}>${selected?'선택 중':'회차 선택'}</button>`;
+  return `<div class="flex" style="padding:9px 0;border-bottom:1px solid #e3e9e5;align-items:center;flex-wrap:wrap;gap:8px"><span style="flex:1;min-width:150px"><strong>${esc(x.examId)}</strong> · ${esc(x.startDate)} <small class="muted">${esc(state)}${x.status==='started'?' · '+x.participantCount+'명':''}</small></span>${action}</div>`;
+ };
+ app.insertAdjacentHTML('afterbegin',`<section class="panel" id="r04RoundCatalogPanel"><div class="heading-row"><div><h2>신규 모의고사 회차 관리</h2><p class="muted">회차 등록은 명단을 만들지 않습니다. 시작일 이후 명단 확정 시 울림앱의 최신 수강생·반을 독립 저장합니다.</p></div></div>
+ <form id="r04RoundRegisterForm" class="session-form-grid">
+ <div class="field"><label>회차 ID</label><input name="examId" maxlength="5" required pattern="mo(0[1-9]|[1-9][0-9]{1,2})" value="${esc(next)}" placeholder="mo01"></div>
+ <div class="field"><label>평가 시작 날짜</label><input name="startDate" type="date" min="2020-01-01" max="2099-12-31" value="${esc(today)}" required></div>
+ <div class="field"><label>평가항목 설정</label><select name="rubricMode"><option value="new">새로 설정</option><option value="copy">이전 회차에서 복사</option></select></div>
+ <div class="field"><label>복사할 회차</label><select name="sourceExamId" disabled><option value="">이전 회차를 선택하세요</option>${copying.map(x=>`<option value="${esc(x.examId)}">${esc(x.examId+' · '+x.startDate)}</option>`).join('')}</select></div>
+ <div class="action-row"><button type="submit" class="btn" ${R04_ROUND_PENDING?'disabled':''}>새 회차 등록</button><button type="button" id="r04RoundReload" class="btn line" ${R04_ROUND_PENDING?'disabled':''}>회차 목록 새로고침</button></div></form>
+ ${R04_ROUND_ERROR?`<p class="warn">${esc(R04_ROUND_ERROR)}</p>`:''}
+ <h3>등록된 회차</h3>${rows.map(item).join('')||'<p class="hint">목록을 새로고침하여 등록된 회차를 확인하세요.</p>'}
+ <p class="hint">명단 확정 이후 성인반·청소년반의 ‘회차시작’을 각각 누르면 채점이 열립니다. 회차종료는 되돌릴 수 없습니다.</p></section>`);
+ const form=$('r04RoundRegisterForm');
+ if(form){
+  const rubricMode=form.elements.rubricMode,source=form.elements.sourceExamId;
+  rubricMode.onchange=()=>{source.disabled=rubricMode.value!=='copy';};
+  form.onsubmit=e=>{e.preventDefault();if(R04_ROUND_PENDING)return;
+   const examId=str(form.elements.examId.value),startDate=str(form.elements.startDate.value),mode=rubricMode.value;
+   if(!R04_MO_ID.test(examId))return toast('회차 ID는 mo01, mo02 형식으로 입력해 주세요.');
+   if(!/^20\d{2}-\d{2}-\d{2}$/.test(startDate))return toast('평가 시작 날짜를 확인해 주세요.');
+   const payload={action:'register',examId,startDate,rubricMode:mode};
+   if(mode==='copy'){
+    if(!copying.some(x=>x.examId===source.value))return toast('복사할 이전 회차를 선택하세요.');
+    payload.sourceExamId=source.value;
+   }else if(mode!=='new')return;
+   if(!window.confirm(examId+' 회차를 '+startDate+' 시작 일정으로 등록할까요?\n아직 학생 명단이나 점수는 생성되지 않습니다.'))return;
+   mutateR04Round(payload,'admin-r04-round-registered');
+  };
+ }
+ const reload=$('r04RoundReload');if(reload)reload.onclick=()=>withBusy(reload,loadR04RoundCatalog);
+ app.querySelectorAll('[data-r04-round-start]').forEach(el=>el.onclick=()=>{
+  if(R04_ROUND_PENDING)return;
+  const examId=el.dataset.r04RoundStart;
+  const row=rows.find(x=>x.examId===examId&&x.status==='registered');if(!row)return;
+  if(row.startDate>kstRosterDateR04())return toast('설정한 시작 날짜 이전입니다.');
+  if(!window.confirm(examId+' 회차의 최신 수강생·반 명단을 확정할까요?\n이후 같은 회차를 다시 생성할 수 없습니다.'))return;
+  mutateR04Round({action:'start',examId},'admin-r04-round-started');
+ });
+ app.querySelectorAll('[data-r04-round-select]').forEach(el=>el.onclick=async()=>{
+  if(R04_ROUND_PENDING)return;
+  const id=el.dataset.r04RoundSelect;
+  if(!rows.some(x=>x.examId===id&&x.status==='started'))return;
+  await r04ChooseRound(id);
+ });
+}
+
+// STAGE34: Explicit admin session switch; no Firestore writes and no grade commands.
+async function r04ChooseRound(id){
+ if(preview||S.role!=='admin'||!S.auth||!R04_EXAM_ID_PATTERN.test(id)||
+    !R04_ROUND_CATALOG.some(x=>x.examId===id&&x.status==='started'))return;
+ if(R04_EDITOR.loading||R04_EDITOR.mutating||R04_PERSISTED_VIEW.loading||
+    S.r04StateMutationPending||S.r04ReleasePending){
+  toast('현재 조회 또는 변경 작업 중입니다. 완료 후 회차를 선택해 주세요.');return;
+ }
+ const uid=str(S.auth.uid);
+ if(S.r04SessionId!==id||R04_EDITOR.examId!==id||R04_PERSISTED_VIEW.examId!==id||
+    R04_EVALUATOR_VIEW.examId!==id||R04_SCOREBOARD.examId!==id){
+  resetR04AdminMedia();clearR04PersistedView();
+  R04_EDITOR.examId='';R04_EDITOR.rows=[];R04_EDITOR.classes=[];
+  R04_EDITOR.selectedClass='';R04_EDITOR.selectedParticipant='';
+  R04_EVALUATOR_VIEW.examId='';R04_EVALUATOR_VIEW.evaluators=[];
+  R04_SCOREBOARD.examId='';R04_SCOREBOARD.rows=[];
+  R360.examId='';R360.config=null;
+ }
+ S.r04SessionId=id;S.r04SessionState=null;S.r04ReleasePreview=null;render();
+ await Promise.all([loadR04SessionState(id),loadR04EditorRead(),loadR04PersistedRosterView()]);
+ if(S.role!=='admin'||!S.auth||str(S.auth.uid)!==uid||S.r04SessionId!==id)return;
+ if(R04_PERSISTED_VIEW.examId!==id||R04_EDITOR.examId!==id){
+  toast('선택한 회차의 명단이 아직 준비되지 않았습니다. 조회 상태를 확인하세요.');return;
+ }
+ await Promise.all([loadR04EvaluatorMatrix(),loadR04AdminScoreboard()]);
+}
+
+async function mutateR04Round(payload,expectedMode){
+ if(preview||S.role!=='admin'||!S.auth||R04_ROUND_PENDING)return;
+ R04_ROUND_PENDING=true;R04_ROUND_ERROR='';render();
+ try{
+  const out=await call(FN.r04RoundCreate,payload);
+  if(!out||out.ok!==true||out.mode!==expectedMode||out.examId!==payload.examId||
+     (payload.action==='register'&&(out.status!=='registered'||out.snapshotCount!==0))||
+     (payload.action==='start'&&(out.status!=='started'||!Number.isSafeInteger(out.participantCount)||out.participantCount<1)))
+    throw Error('등록·시작 결과가 불확실합니다. 같은 요청을 반복하지 말고 회차 목록을 다시 조회하세요.');
+  toast(payload.action==='register'?'회차 등록 완료':'수강생·반 명단 확정 완료');
+  await loadR04RoundCatalog();
+  // Do not pre-assign the new round ID: r04ChooseRound owns cache invalidation.
+  if(payload.action==='start'&&S.role==='admin'){
+   try{await r04ChooseRound(payload.examId);}catch(e){toast('회차 시작은 확인됐으나 화면 새로고침에 실패했습니다: '+errorMessage(e));}
+  }
+ }catch(e){R04_ROUND_ERROR=errorMessage(e);toast('회차 작업 결과를 확인해야 합니다: '+R04_ROUND_ERROR);}
+ finally{R04_ROUND_PENDING=false;render();}
+}
+
+async function refreshSessions(){
+ if(preview)return;
+ if(S.role==='student')return refreshR04StudentHistory();
+ if(S.role==='teacher'){
+  await loadR04RoundCatalog();
+  if(!S.examId||!S.sessions.length)throw Error('평가 가능한 시작 회차가 없습니다.');
+  return reloadR04Teacher();
+ }
+ if(S.role==='admin'){
+  await refreshCanonicalAdminRosterR04();
+  try{await loadR04RoundCatalog();}catch(e){R04_ROUND_ERROR=errorMessage(e);render();}
+  return;
+ }
+ const out=await call(FN.sessions,{});if(out.ok!==true)throw Error('평가 회차 목록을 불러오지 못했습니다.');
+ S.sessions=Array.isArray(out.sessions)?out.sessions:[];
+ if(!S.sessions.some(x=>x.examId===S.examId))S.examId=S.sessions.length?S.sessions[0].examId:'';
+ if(S.examId)await reload();else{applySnapshot({});S.sessionTitle='';render();}
+}
+async function switchExam(id){
+ if(!S.sessions.some(x=>x.examId===id))return toast('해당 회차를 열람할 수 없습니다.');
+ if(preview){switchPreviewExam(id);return;}
+ if(S.role==='teacher'){
+  if(S.examId===id)return;
+  if(Object.keys(S.edit||{}).length&&
+     !window.confirm('회차를 변경하면 저장하지 않은 평가 입력 내용이 사라질 수 있습니다. 계속하시겠습니까?'))return;
+  r406StopTeacherMedia();
+  S.examId=id;S.roster=[];S.grades=[];S.edit={};S.selected=null;
+  S.r04TeacherReady=false;S.r04TeacherGradingOpen=false;S.r04TeacherPhases=null;
+  S.r04ConfigurableRubric=null;S.r04ConfigurableRubricVersion=0;
+  S.expandedClasses={'청소년':[],'성인':[]};
+  render();
+  await reloadR04Teacher();return;
+ }
+ S.examId=id;S.edit={};S.selected=null;S.judgePage=0;
+ S.expandedClasses={'청소년':[],'성인':[]};await reload();
+}
 function sessionBar(){if(!preview&&S.role==='admin'&&S.rosterPreviewOnly){const m=S.r04SessionState;const id=str(S.r04SessionId);return `<section class="session-bar"><div><strong>평가 회차</strong><small>R04 · ${esc(id)}${m&&m.examId===id?' · '+(m.gradingOpen?'평가 ON':'평가 대기 또는 종료'):''}</small></div><span class="chip wait">관리자 회차</span></section>`;}const m=S.sessions.find(x=>x.examId===S.examId);return `<section class="session-bar"><div><strong>평가 회차</strong><small>${m?esc(m.date+' · '+m.title):'생성 또는 선택된 회차 없음'}</small></div><div class="session-picker"><select aria-label="평가 회차 선택" id="sessionSelect"><option value="" ${!S.examId?'selected':''} disabled>회차를 선택하세요</option>${S.sessions.map(x=>`<option value="${esc(x.examId)}" ${S.examId===x.examId?'selected':''}>${esc(x.month+' · '+x.title)}${x.archived?' · 보관':x.published?' · 공개':''}</option>`).join('')}</select><span class="chip ${S.archived?'wait':S.published?'ok':'wait'}">${S.archived?'보관됨':S.published?'공개됨':'작성 중'}</span></div></section>`;}
 function prefix(){return (preview?previewBar():'')+sessionBar();}
 function bindSessionPicker(){const el=$('sessionSelect');if(el)el.onchange=e=>withBusy(el,()=>switchExam(e.target.value));}
