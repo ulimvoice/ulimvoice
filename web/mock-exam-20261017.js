@@ -2323,9 +2323,16 @@ function rubric(g,editable,group){const sections=S.rubrics[group]||defaultRubric
 
 function r354DrivePreview(url){
  const u=driveLink(url);if(!u)return '';
- try{const x=new URL(u);const m=x.pathname.match(/^\/file\/d\/([A-Za-z0-9_-]+)(?:\/|$)/);
-  if(!m)return '';
-  return 'https://drive.google.com/file/d/'+m[1]+'/preview';
+ try{
+  const x=new URL(u),m=x.pathname.match(/^\/file\/d\/([A-Za-z0-9_-]+)(?:\/|$)/);
+  let id=m?m[1]:'';
+  // RUN412_STAGE74_ADMIN_DRIVE_URL: Drive desktop/smartphone may share a file as /open?id=...
+  // or /uc?id=... instead of /file/d/.../view. This only normalizes an ID
+  // for the ADMIN embedded preview; teacher streaming remains unchanged.
+  if(!id&&x.hostname==='drive.google.com'&&(x.pathname==='/open'||x.pathname==='/uc'))
+   id=x.searchParams.get('id')||'';
+  if(!/^[A-Za-z0-9_-]+$/.test(id))return '';
+  return 'https://drive.google.com/file/d/'+id+'/preview';
  }catch{return '';}
 }
 // RUN406_STAGE17: original Drive identity stays off player DOM. Only temporary proxy URLs are loaded.
