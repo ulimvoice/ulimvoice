@@ -84,7 +84,7 @@ function renderCanonicalAdminRosterR04(){
 // RUN286: Core R04 admin workspace. This is a VIEW of the existing canonical roster;
 // it never edits persisted participants and never confuses grade statuses with scores.
 // RUN288: R04 evaluation-only roster management in existing JS owner.
-const R04_EDITOR={examId:'',stateVersion:-1,sessionState:'',rows:[],classes:[],sourceStudents:[],loading:false,mutating:false,error:'',selectedClass:'',selectedParticipant:''};
+const R04_EDITOR={examId:'',stateVersion:-1,labelRevision:0,sessionState:'',rows:[],classes:[],sourceStudents:[],loading:false,mutating:false,error:'',selectedClass:'',selectedParticipant:''};
 function r04EditEligible(){return !preview&&S.role==='admin'&&!!S.auth&&R04_EDITOR.examId===str(S.r04SessionId)&&R04_EDITOR.sessionState==='open'&&!R04_EDITOR.mutating&&
  !!S.r04SessionState&&S.r04SessionState.examId===S.r04SessionId&&
  !!S.r04SessionState.gradingStateByAudience&&
@@ -105,7 +105,7 @@ async function loadR04EditorRead(){
      !['active','archived'].includes(p.status))throw Error('참가 명단에 중복 또는 손상된 식별자가 있습니다.');ids.add(p.participationId);}
   if(S.role!=='admin'||!S.auth||str(S.auth.uid)!==uid||S.r04SessionId!==examId)return;
   const oldClass=R04_EDITOR.selectedClass,oldPart=R04_EDITOR.selectedParticipant;
-  Object.assign(R04_EDITOR,{examId,stateVersion:out.stateVersion,sessionState:out.sessionState,
+  Object.assign(R04_EDITOR,{examId,stateVersion:out.stateVersion,labelRevision:out.labelRevision??0,sessionState:out.sessionState,
     classes:out.classes,rows:out.rows,sourceStudents:out.sourceStudents,error:''});
   R04_EDITOR.selectedClass=out.classes.some(c=>c.group+'|'+c.classId===oldClass)?oldClass:
     out.classes.length?out.classes[0].group+'|'+out.classes[0].classId:'';
@@ -114,6 +114,58 @@ async function loadR04EditorRead(){
  }catch(e){if(S.r04SessionId===examId){R04_EDITOR.error=errorMessage(e);R04_EDITOR.examId='';R04_EDITOR.rows=[];}}
  finally{R04_EDITOR.loading=false;if(S.role==='admin'&&S.auth&&str(S.auth.uid)===uid&&S.r04SessionId===examId)render();}
 }
+// RUN412_STAGE73: closed/released labels only. No roster or grade mutations.
+// RUN412_STAGE73: separately authorized closed/released labels only.
+function r73ClosedLabelEligible(){
+ return !preview&&S.role==='admin'&&!!S.auth&&!R04_EDITOR.loading&&!R04_EDITOR.mutating&&
+   R04_EDITOR.examId==='r04_202610_r01'&&S.r04SessionId==='r04_202610_r01'&&R04_EDITOR.sessionState==='closed'&&
+   !!S.r04SessionState&&S.r04SessionState.examId===S.r04SessionId;
+}
+async function r73CorrectClosedLabel(body){
+ if(!r73ClosedLabelEligible())return toast('종료 회차의 관리자 표시명 정정만 허용됩니다.');
+ if(!body.newLabel||!body.evidenceUrl)return toast('새 이름과 근거 링크를 입력하세요.');
+ if(!window.confirm('종료 회차의 표시명과 근거 링크만 변경합니다. 참가 ID, 소속, 점수, 공개 상태는 그대로 유지합니다. 저장하시겠습니까?'))return;
+ const examId=str(S.r04SessionId),uid=str(S.auth.uid),version=R04_EDITOR.stateVersion,revision=R04_EDITOR.labelRevision||0;
+ R04_EDITOR.mutating=true;
+ try{
+  const out=await call(FN.r04AdminRosterEdit,{action:'correctClosedLabel',examId,expectedVersion:version,expectedLabelRevision:revision,...body});
+  if(!out||out.ok!==true||out.mode!=='admin-r04-closed-label-corrected'||
+     out.examId!==examId||out.stateVersion!==version||out.labelRevision!==revision+1)
+   throw Error('저장 결과가 불명확합니다. 중복 저장하지 말고 새로고침으로 확인하세요.');
+  R04_EDITOR.mutating=false;
+  await loadR04EditorRead();
+  if(R04_EDITOR.examId!==examId||R04_EDITOR.stateVersion!==out.stateVersion||R04_EDITOR.labelRevision!==out.labelRevision)
+   throw Error('명단 재조회 버전이 다릅니다. 다시 조회하세요.');
+  if(S.role!=='admin'||!S.auth||str(S.auth.uid)!==uid||S.r04SessionId!==examId)return;
+  clearR04PersistedView();
+  await loadR04PersistedRosterView();
+  await loadR04AdminScoreboard();
+  toast('표시명 정정 저장 완료 · 감사 기록 생성');
+ }catch(e){R04_EDITOR.error=errorMessage(e);toast('저장 결과를 확인해 주세요: '+R04_EDITOR.error);}
+ finally{R04_EDITOR.mutating=false;render();}
+}
+function r73RenderClosedLabelForms(host,students,e){
+ if(!r73ClosedLabelEligible())return;
+ const cOptions=e.classes.map(x=>'<option value="'+esc(x.group+'|'+x.classId)+'">'+esc(x.group+' · '+x.className)+(x.status==='archived'?' (보관)':'')+'</option>').join('');
+ const pOptions=e.rows.map(x=>'<option value="'+esc(x.participationId)+'">'+esc(x.group+' · '+x.className+' · '+x.name+' ['+x.participationId.slice(-6)+']')+(x.status==='archived'?' (보관)':'')+'</option>').join('');
+ host.insertAdjacentHTML('beforeend','<section class="r332-section"><h4>종료 회차 반 표시명 정정</h4><p class="hint">반 추가·이동·삭제는 불가능합니다. 변경 근거 HTTPS 링크는 관리자용 기록에만 저장됩니다.</p><form id="r73ClosedClassForm" class="r332-field-row"><label>반 선택<select name="classKey">'+cOptions+'</select></label><label>새 반 이름<input name="newLabel" maxlength="100" required></label><label>확인 링크<input name="evidenceUrl" type="url" maxlength="2048" placeholder="https://drive.google.com/..." required></label><button class="btn" type="submit">반명 정정 저장</button></form></section>');
+ students.insertAdjacentHTML('beforeend','<section class="r332-section"><h4>종료 회차 학생 표시명 정정</h4><p class="hint">참가 ID 뒷 6자리로 동일 이름 학생을 구분하세요. 반 이동이나 평가 변경은 불가능합니다.</p><form id="r73ClosedStudentForm" class="r332-field-row"><label>참가 기록<select name="participationId">'+pOptions+'</select></label><label>새 학생 이름<input name="newLabel" maxlength="100" required></label><label>확인 링크<input name="evidenceUrl" type="url" maxlength="2048" placeholder="https://drive.google.com/..." required></label><button class="btn" type="submit">학생명 정정 저장</button></form></section>');
+ const cl=$('r73ClosedClassForm'),st=$('r73ClosedStudentForm');
+ const updateClass=()=>{const x=e.classes.find(y=>y.group+'|'+y.classId===cl.elements.classKey.value);if(x){cl.elements.newLabel.value=x.className;cl.elements.evidenceUrl.value=x.evidenceUrl||'';}};
+ const updateStudent=()=>{const x=e.rows.find(y=>y.participationId===st.elements.participationId.value);if(x){st.elements.newLabel.value=x.name;st.elements.evidenceUrl.value=x.evidenceUrl||'';}};
+ cl.elements.classKey.value=e.selectedClass||cl.elements.classKey.value;
+ st.elements.participationId.value=e.selectedParticipant||st.elements.participationId.value;
+ cl.elements.classKey.onchange=updateClass;
+ st.elements.participationId.onchange=updateStudent;
+ updateClass();updateStudent();
+ cl.onsubmit=event=>{event.preventDefault();const ix=cl.elements.classKey.value.indexOf('|');if(ix<1)return;const x=e.classes.find(y=>y.group+'|'+y.classId===cl.elements.classKey.value);if(!x)return;
+   r73CorrectClosedLabel({kind:'class',group:x.group,classId:x.classId,expectedLabel:x.className,
+     newLabel:str(cl.elements.newLabel.value),evidenceUrl:str(cl.elements.evidenceUrl.value)});};
+ st.onsubmit=event=>{event.preventDefault();const x=e.rows.find(y=>y.participationId===st.elements.participationId.value);if(!x)return;
+   r73CorrectClosedLabel({kind:'student',participationId:x.participationId,expectedLabel:x.name,
+     newLabel:str(st.elements.newLabel.value),evidenceUrl:str(st.elements.evidenceUrl.value)});};
+}
+// END RUN412_STAGE73
 async function commitR04Editor(action,body){
  if(!r04EditEligible()||R04_EDITOR.sessionState!=='open')throw Error('현재 회차가 편집 가능한 상태가 아닙니다.');
  const examId=str(S.r04SessionId),prev=R04_EDITOR.stateVersion;
@@ -169,6 +221,7 @@ function renderR04EditorSettings(){
  const groupSelect=$('r04EditorReclassTo');if(groupSelect&&c)groupSelect.value=c.group;
  const pselect=$('r04EditorPartSelect');if(pselect)pselect.onchange=ev=>{e.selectedParticipant=ev.target.value;renderR04EditorSettings();};
  const search=$('r04EditorFindStudent');if(search)search.oninput=ev=>{const q=str(ev.target.value).toLocaleLowerCase('ko');const options=$('r04AddStudent')?.elements.studentUid?.options||[];for(const o of options){o.hidden=!!q&&!o.textContent.toLocaleLowerCase('ko').includes(q);} };
+ r73RenderClosedLabelForms(host,students,e);
  if(!allowed)return;
  const bind=(formId,action,read)=>{const form=$(formId);if(form)form.onsubmit=ev=>{ev.preventDefault();commitR04Editor(action,read(new FormData(form)));};};
  const target=value=>{const ix=value.indexOf('|');if(ix<1)throw Error('평가용 반을 선택해주세요.');return {group:value.slice(0,ix),classId:value.slice(ix+1)};};
