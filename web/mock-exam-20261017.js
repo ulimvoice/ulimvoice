@@ -68,7 +68,30 @@ async function refreshCanonicalAdminRosterR04(date){
  S.rosterReviewSummary=response.reviewSummary||{};S.grades=[];S.judges=[];S.folders={};S.sessions=[];S.examId='';
  S.view='targets';S.published=false;S.archived=false;S.selected=null;render();if(S.role==='admin')loadR04EditorRead();
 }
+// RUN412_STAGE79: Preserve the active administrator settings dialog across any roster/round re-render.
+function r79CaptureAdminDialog(){
+ if(preview||S.role!=='admin'||!S.rosterPreviewOnly)return null;
+ const layer=$('r04AdminSettingsOverlay');
+ if(!layer||layer.style.display==='none')return null;
+ const modal=layer.querySelector('.r04-settings-modal');if(!modal)return null;
+ const active=document.activeElement;
+ return {scrollTop:modal.scrollTop,layerTop:layer.scrollTop,pageX:window.scrollX,pageY:window.scrollY,
+  focusId:active&&layer.contains(active)&&active.id?active.id:''};
+}
+function r79RestoreAdminDialog(snapshot){
+ if(!snapshot||preview||S.role!=='admin'||!S.rosterPreviewOnly)return;
+ const layer=$('r04AdminSettingsOverlay');if(!layer||layer.style.display==='none')return;
+ const modal=layer.querySelector('.r04-settings-modal');if(!modal)return;
+ modal.scrollTop=snapshot.scrollTop;
+ layer.scrollTop=snapshot.layerTop;
+ const focus=snapshot.focusId?$(snapshot.focusId):null;
+ if(focus&&layer.contains(focus)&&!focus.disabled&&!focus.hidden)focus.focus({preventScroll:true});
+ if(window.scrollX!==snapshot.pageX||window.scrollY!==snapshot.pageY)
+  window.scrollTo(snapshot.pageX,snapshot.pageY);
+}
+
 function renderCanonicalAdminRosterR04(){
+ const r79DialogSnapshot=r79CaptureAdminDialog();
  const rows=S.roster||[],checks=S.rosterReview||[],summary=S.rosterReviewSummary||{};
  const visible=rows.filter(p=>(S.rosterGroup==='전체'||p.group===S.rosterGroup)&&(!S.rosterSearch||[p.name,p.className,p.classId].some(x=>str(x).toLowerCase().includes(S.rosterSearch.toLowerCase()))));
  const classes=new Set(rows.map(p=>str(p.classId))).size;
@@ -80,6 +103,7 @@ function renderCanonicalAdminRosterR04(){
  $('r04PreviewGroup').onchange=e=>{S.rosterGroup=e.target.value;renderCanonicalAdminRosterR04();};
  $('r04PreviewSearch').onchange=e=>{S.rosterSearch=str(e.target.value);renderCanonicalAdminRosterR04();};
  renderR04AdminCore();
+ r79RestoreAdminDialog(r79DialogSnapshot);
 }
 // RUN286: Core R04 admin workspace. This is a VIEW of the existing canonical roster;
 // it never edits persisted participants and never confuses grade statuses with scores.
@@ -2160,6 +2184,27 @@ async function loadR04RoundCatalog(){
 
 // RUN412_STAGE76: Existing admin media callable now supports a started round's Drive folder.
 // Only the admin receives matched real names; teachers continue to see anonymous targets.
+// RUN412_STAGE79: Update only Drive status and buttons; never tear down its parent modal.
+function r79DriveFeedbackHtml(d){
+ const report=d.report;
+ const note=report?'<p class="hint">Drive 확인: 검사 '+report.examinedFileCount+'개 · 자동 매칭 '+report.matchedFileCount+
+  '개 · 중복/동명이인 '+report.ambiguousFileCount+'개 · 제외 '+report.skippedFileCount+'개</p>':'';
+ const rows=report&&Array.isArray(report.previewRows)?report.previewRows.slice(0,12):[];
+ const examples=rows.length?'<p class="hint">매칭 예: '+esc(rows.map(r=>r.className+' / '+r.studentName+' / '+(r.kind==='audio'?'음성':'영상')).join(' · '))+'</p>':'';
+ return (d.error?'<p class="warn">'+esc(d.error)+'</p>':'')+
+  (d.status?'<p class="hint">'+esc(d.status)+'</p>':'')+note+examples;
+}
+function r79UpdateDrivePanel(){
+ const host=$('r75DrivePanel');if(!host)return;
+ const d=R75_DRIVE;
+ const input=$('r75DriveFolderUrl');
+ if(input){input.disabled=d.busy;if(input.value!==d.url)input.value=d.url;}
+ for(const id of ['r75DriveLoad','r75DrivePreview','r75DriveSync']){
+  const btn=$(id);if(btn)btn.disabled=d.busy;
+ }
+ const feedback=$('r75DriveFeedback');if(feedback)feedback.innerHTML=r79DriveFeedbackHtml(d);
+}
+
 const R75_DRIVE={examId:'',url:'',busy:false,report:null,status:'',error:''};
 function r75DrivePanel(){
  const host=$('r04RoundCatalogPanel');if(!host||S.role!=='admin'||preview)return;
@@ -2167,11 +2212,7 @@ function r75DrivePanel(){
  if(!R04_ROUND_CATALOG.some(x=>x.examId===id&&x.status==='started'))return;
  if(R75_DRIVE.examId!==id)Object.assign(R75_DRIVE,{examId:id,url:'',busy:false,report:null,status:'',error:''});
  const d=R75_DRIVE,disabled=d.busy?'disabled':'';
- const report=d.report;
- const note=report?'<p class="hint">Drive 확인: 검사 '+report.examinedFileCount+'개 · 자동 매칭 '+report.matchedFileCount+
-  '개 · 중복/동명이인 '+report.ambiguousFileCount+'개 · 제외 '+report.skippedFileCount+'개</p>':'';
- const rows=report&&Array.isArray(report.previewRows)?report.previewRows.slice(0,12):[];
- const examples=rows.length?'<p class="hint">매칭 예: '+esc(rows.map(r=>r.className+' / '+r.studentName+' / '+(r.kind==='audio'?'음성':'영상')).join(' · '))+'</p>':'';
+ const feedback=r79DriveFeedbackHtml(d);
  host.insertAdjacentHTML('beforeend',`<section class="r332-section" id="r75DrivePanel" style="margin-top:16px;padding-top:12px;border-top:1px solid #dce9df">
  <h3>회차별 Drive 폴더 자동 연결 · ${esc(id)}</h3>
  <p class="hint">회차 폴더 아래 반 폴더/학생 폴더(또는 학생명_음성.mp3)를 읽어, 이 회차에 저장된 명단에만 연결합니다. 기존 링크는 덮어쓰지 않습니다.</p>
@@ -2179,13 +2220,12 @@ function r75DrivePanel(){
  <div class="action-row"><button id="r75DriveLoad" type="button" class="btn line" ${disabled}>저장된 링크 불러오기</button>
  <button id="r75DrivePreview" type="button" class="btn line" ${disabled}>자동 매칭 미리 확인</button>
  <button id="r75DriveSync" type="button" class="btn" ${disabled}>폴더 링크 저장 · 자동 연결</button></div>
- ${d.error?'<p class="warn">'+esc(d.error)+'</p>':''}${d.status?'<p class="hint">'+esc(d.status)+'</p>':''}
- ${note}${examples}</section>`);
+ <div id="r75DriveFeedback" aria-live="polite">${feedback}</div></section>`);
  const input=$('r75DriveFolderUrl');if(input)input.oninput=ev=>{d.url=str(ev.target.value);d.report=null;};
  const run=async action=>{
   if(d.busy||!S.auth||S.role!=='admin'||S.r04SessionId!==id)return;
   const uid=str(S.auth.uid),url=str(d.url);
-  d.busy=true;d.error='';d.status=action==='driveFolderStatus'?'저장된 폴더 링크 조회 중':'Drive 폴더 검사 중';render();
+  d.busy=true;d.error='';d.status=action==='driveFolderStatus'?'저장된 폴더 링크 조회 중':'Drive 폴더 검사 중';r79UpdateDrivePanel();
   try{
    const payload={action,examId:id};
    if(action!=='driveFolderStatus')payload.folderUrl=url;
@@ -2216,7 +2256,7 @@ function r75DrivePanel(){
     }
    }
   }catch(e){if(S.r04SessionId===id)d.error=errorMessage(e);}
-  finally{d.busy=false;if(S.role==='admin'&&S.r04SessionId===id)render();}
+  finally{d.busy=false;if(S.role==='admin'&&S.r04SessionId===id)r79UpdateDrivePanel();}
  };
  $('r75DriveLoad').onclick=()=>run('driveFolderStatus');
  $('r75DrivePreview').onclick=()=>run('driveFolderPreview');
