@@ -2156,6 +2156,72 @@ async function loadR04RoundCatalog(){
  }
  render();
 }
+
+// RUN412_STAGE76: Existing admin media callable now supports a started round's Drive folder.
+// Only the admin receives matched real names; teachers continue to see anonymous targets.
+const R75_DRIVE={examId:'',url:'',busy:false,report:null,status:'',error:''};
+function r75DrivePanel(){
+ const host=$('r04RoundCatalogPanel');if(!host||S.role!=='admin'||preview)return;
+ const id=str(S.r04SessionId);
+ if(!R04_ROUND_CATALOG.some(x=>x.examId===id&&x.status==='started'))return;
+ if(R75_DRIVE.examId!==id)Object.assign(R75_DRIVE,{examId:id,url:'',busy:false,report:null,status:'',error:''});
+ const d=R75_DRIVE,disabled=d.busy?'disabled':'';
+ const report=d.report;
+ const note=report?'<p class="hint">Drive 확인: 검사 '+report.examinedFileCount+'개 · 자동 매칭 '+report.matchedFileCount+
+  '개 · 중복/동명이인 '+report.ambiguousFileCount+'개 · 제외 '+report.skippedFileCount+'개</p>':'';
+ const rows=report&&Array.isArray(report.previewRows)?report.previewRows.slice(0,12):[];
+ const examples=rows.length?'<p class="hint">매칭 예: '+esc(rows.map(r=>r.className+' / '+r.studentName+' / '+(r.kind==='audio'?'음성':'영상')).join(' · '))+'</p>':'';
+ host.insertAdjacentHTML('beforeend',`<section class="r332-section" id="r75DrivePanel" style="margin-top:16px;padding-top:12px;border-top:1px solid #dce9df">
+ <h3>회차별 Drive 폴더 자동 연결 · ${esc(id)}</h3>
+ <p class="hint">회차 폴더 아래 반 폴더/학생 폴더(또는 학생명_음성.mp3)를 읽어, 이 회차에 저장된 명단에만 연결합니다. 기존 링크는 덮어쓰지 않습니다.</p>
+ <label>회차 Google Drive 폴더 링크 <input id="r75DriveFolderUrl" type="url" placeholder="https://drive.google.com/drive/folders/..." maxlength="2048" value="${esc(d.url)}" ${disabled} style="width:100%"></label>
+ <div class="action-row"><button id="r75DriveLoad" type="button" class="btn line" ${disabled}>저장된 링크 불러오기</button>
+ <button id="r75DrivePreview" type="button" class="btn line" ${disabled}>자동 매칭 미리 확인</button>
+ <button id="r75DriveSync" type="button" class="btn" ${disabled}>폴더 링크 저장 · 자동 연결</button></div>
+ ${d.error?'<p class="warn">'+esc(d.error)+'</p>':''}${d.status?'<p class="hint">'+esc(d.status)+'</p>':''}
+ ${note}${examples}</section>`);
+ const input=$('r75DriveFolderUrl');if(input)input.oninput=ev=>{d.url=str(ev.target.value);d.report=null;};
+ const run=async action=>{
+  if(d.busy||!S.auth||S.role!=='admin'||S.r04SessionId!==id)return;
+  const uid=str(S.auth.uid),url=str(d.url);
+  d.busy=true;d.error='';d.status=action==='driveFolderStatus'?'저장된 폴더 링크 조회 중':'Drive 폴더 검사 중';render();
+  try{
+   const payload={action,examId:id};
+   if(action!=='driveFolderStatus')payload.folderUrl=url;
+   let result;
+   if(action==='driveFolderSync'){
+    const preview=await call(FN.r04AdminMedia,{action:'driveFolderPreview',examId:id,folderUrl:url});
+    if(!preview||preview.ok!==true||preview.mode!=='admin-r04-drive-folder-preview'||preview.examId!==id)
+     throw Error('매칭 미리 확인 응답이 올바르지 않습니다.');
+    if(S.r04SessionId!==id||str(S.auth&&S.auth.uid)!==uid)return;
+    d.report=preview;
+    if(!window.confirm('이 회차의 자료 '+preview.matchedFileCount+'개를 참가 기록에 연결할까요?\n기존 음성·영상 링크는 보존됩니다.')){
+     d.status='저장하지 않았습니다. 미리 확인 결과만 표시합니다.';return;
+    }
+    result=await call(FN.r04AdminMedia,payload);
+   }else result=await call(FN.r04AdminMedia,payload);
+   if(!result||result.ok!==true||result.examId!==id||
+      result.mode!==({driveFolderStatus:'admin-r04-drive-folder-status',driveFolderPreview:'admin-r04-drive-folder-preview',driveFolderSync:'admin-r04-drive-folder-synced'}[action]))
+    throw Error('Drive 폴더 작업 응답을 확인할 수 없습니다. 같은 저장을 반복하지 말고 다시 조회하세요.');
+   if(S.role!=='admin'||S.r04SessionId!==id||str(S.auth&&S.auth.uid)!==uid)return;
+   if(action==='driveFolderStatus'){
+    d.url=str(result.folderUrl);d.report=null;d.status=d.url?'저장된 회차 폴더 링크를 불러왔습니다.':'이 회차에 저장된 폴더 링크가 없습니다.';
+   }else{
+    d.report=result;
+    d.status=action==='driveFolderPreview'?'미리 확인 완료. 저장하면 자동 연결합니다.':
+     '자동 연결 완료: 참가 기록 '+result.linkedParticipationCount+'건 · 음성 '+result.linkedAudioCount+'건 · 영상 '+result.linkedVideoCount+'건';
+    if(action==='driveFolderSync'){
+     R04_ADMIN_INLINE_MEDIA.record=null;R04_ADMIN_INLINE_MEDIA.error='';
+    }
+   }
+  }catch(e){if(S.r04SessionId===id)d.error=errorMessage(e);}
+  finally{d.busy=false;if(S.role==='admin'&&S.r04SessionId===id)render();}
+ };
+ $('r75DriveLoad').onclick=()=>run('driveFolderStatus');
+ $('r75DrivePreview').onclick=()=>run('driveFolderPreview');
+ $('r75DriveSync').onclick=()=>run('driveFolderSync');
+}
+
 function renderR04AdminRoundPanel(){
  if(preview||S.role!=='admin'||!S.rosterPreviewOnly)return;
  const rows=R04_ROUND_CATALOG;
@@ -2214,6 +2280,7 @@ function renderR04AdminRoundPanel(){
   if(!rows.some(x=>x.examId===id&&x.status==='started'))return;
   await r04ChooseRound(id);
  });
+ r75DrivePanel();
 }
 
 // STAGE34: Explicit admin session switch; no Firestore writes and no grade commands.
