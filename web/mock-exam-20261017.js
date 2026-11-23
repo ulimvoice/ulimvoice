@@ -2185,6 +2185,26 @@ async function loadR04RoundCatalog(){
 // RUN412_STAGE76: Existing admin media callable now supports a started round's Drive folder.
 // Only the admin receives matched real names; teachers continue to see anonymous targets.
 // RUN412_STAGE79: Update only Drive status and buttons; never tear down its parent modal.
+// RUN412_STAGE80: Expose the backend's already returned matching issues to admins.
+// No Drive file IDs or original filenames are added to the UI or teacher views.
+function r80IssueBreakdownHtml(report){
+ if(!report||!Array.isArray(report.issues))return '';
+ const grouped=new Map();
+ for(const issue of report.issues.slice(0,40)){
+  if(!issue||typeof issue.reason!=='string')continue;
+  const n=Number(issue.fileCount);
+  if(!Number.isSafeInteger(n)||n<1||n>1200)continue;
+  const reason=issue.reason.trim();if(!reason)continue;
+  grouped.set(reason,(grouped.get(reason)||0)+n);
+ }
+ const parts=[...grouped].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'ko'));
+ const list=parts.length?'<ul style="padding-left:20px;margin:7px 0">'+parts.map(([reason,n])=>
+  '<li>'+esc(reason)+' · '+n+'개</li>').join('')+'</ul>':'';
+ const zero=report.matchedFileCount===0&&report.examinedFileCount>0?
+  '<p class="warn">자동 매칭 0건: 아래 제외 사유를 확인하세요. 폴더 구성 예시는 회차/반명/학생명/음성.mp3 또는 회차/반명/학생명_음성.mp3입니다. 현재는 저장하지 마세요.</p>':'';
+ return zero+(list?'<div class="hint" style="margin-top:9px"><strong>제외·중복 사유</strong>'+list+
+  '<p>표시된 사유는 파일명·폴더 경로와 회차에 저장된 반·학생명의 비교 결과입니다.</p></div>':'');
+}
 function r79DriveFeedbackHtml(d){
  const report=d.report;
  const note=report?'<p class="hint">Drive 확인: 검사 '+report.examinedFileCount+'개 · 자동 매칭 '+report.matchedFileCount+
@@ -2192,7 +2212,7 @@ function r79DriveFeedbackHtml(d){
  const rows=report&&Array.isArray(report.previewRows)?report.previewRows.slice(0,12):[];
  const examples=rows.length?'<p class="hint">매칭 예: '+esc(rows.map(r=>r.className+' / '+r.studentName+' / '+(r.kind==='audio'?'음성':'영상')).join(' · '))+'</p>':'';
  return (d.error?'<p class="warn">'+esc(d.error)+'</p>':'')+
-  (d.status?'<p class="hint">'+esc(d.status)+'</p>':'')+note+examples;
+  (d.status?'<p class="hint">'+esc(d.status)+'</p>':'')+note+examples+r80IssueBreakdownHtml(report);
 }
 function r79UpdateDrivePanel(){
  const host=$('r75DrivePanel');if(!host)return;
@@ -2236,6 +2256,11 @@ function r75DrivePanel(){
      throw Error('매칭 미리 확인 응답이 올바르지 않습니다.');
     if(S.r04SessionId!==id||str(S.auth&&S.auth.uid)!==uid)return;
     d.report=preview;
+    // RUN412_STAGE80: Never persist an empty match as a seemingly successful import.
+    if(!Number.isSafeInteger(preview.matchedFileCount)||preview.matchedFileCount<1){
+     d.status='자동 매칭 0건이므로 저장하지 않았습니다. 아래 제외 사유를 확인하세요.';
+     return;
+    }
     if(!window.confirm('이 회차의 자료 '+preview.matchedFileCount+'개를 참가 기록에 연결할까요?\n기존 음성·영상 링크는 보존됩니다.')){
      d.status='저장하지 않았습니다. 미리 확인 결과만 표시합니다.';return;
     }
