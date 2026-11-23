@@ -926,30 +926,45 @@ function renderR04AdminCore(){
 
 const teacherModal=modalTeacher&&exact&&R04_ADMIN_CORE.teacherModalParticipationId===exact.participationId?`<div id="r04TeacherGradeOverlay" class="modal-wrap r04-teacher-grade-overlay" role="dialog" aria-modal="true" aria-labelledby="r04TeacherGradeModalTitle"><div class="modal r04-teacher-grade-modal" role="document"><div class="modal-head"><div><h2 id="r04TeacherGradeModalTitle">${esc(modalTeacher.name)} 평가표</h2><p class="muted">${esc(selected.name)} · ${esc(selected.className)} · 읽기 전용</p></div><button type="button" class="btn line" id="r04CloseTeacherGradePopup" aria-label="평가표 팝업 닫기">닫기 ✕</button></div>${modalContent}${modalGrade&&modalTeacher&&modalTeacher.directoryStatus==='active'&&modalGrade.revision>0?`<div class="r338-delete-controls"><button type="button" class="btn line" id="r338DeleteTeacherGrade" style="color:#ad2727;border-color:#cf9a9a">이 강사의 평가 삭제</button><p class="hint">현재 회차에서 해당 학생에 대한 이 강사의 평가 1건만 삭제합니다. 서버에서 관리자 권한과 평가 버전을 재확인합니다.</p></div>`:''}</div></div>`:'';
  const scoreRows=scoresReady?r409RankRows(scores.rows,R04_ADMIN_CORE.rankGroup):[];
- // RUN412_STAGE67_RESUME07_RANK_LABEL_SAFE_JOIN
-function r67VerifiedRankLabels(p,r,persisted,score,id){
- const strLabel=v=>typeof v==='string'?v.trim():'';
- const missingLabel=v=>!strLabel(v)||['확인 필요','이름 확인 필요','학생 확인 필요','학생명 확인 필요','반명 확인 필요','수강반 확인 필요','반 확인 필요'].includes(strLabel(v));
- let name=p?strLabel(p.studentLabel):'',className=p?strLabel(p.classLabel):'';
- // Fail closed: no use of current enrollment names, no name-only match, no cross-version join.
- if(!p||!r||!R04_EDITOR||R04_EDITOR.examId!==id||persisted.examId!==id||score.examId!==id||
-    R04_EDITOR.stateVersion!==persisted.stateVersion||score.stateVersion!==persisted.stateVersion||
-    !Array.isArray(R04_EDITOR.rows)||!Array.isArray(persisted.rows)||
-    R04_EDITOR.rows.length!==persisted.rows.length ||
-    p.participationId!==r.participationId||p.status!=='active'||
-    p.group!==(r.audience==='adult'?'성인':r.audience==='youth'?'청소년':'') ||
-    typeof p.classId!=='string'||!p.classId)
-    return {name:missingLabel(name)?'확인 필요':name,className:missingLabel(className)?'확인 필요':className};
- const candidates=R04_EDITOR.rows.filter(e=>e&&e.participationId===p.participationId);
- const ed=candidates.length===1?candidates[0]:null;
- if(ed&&ed.status==='active'&&ed.classId===p.classId&&ed.group===p.group&&
-    ed.participationId===r.participationId){
-   if(missingLabel(name)&&!missingLabel(ed.name))name=strLabel(ed.name);
-   if(missingLabel(className)&&!missingLabel(ed.className))className=strLabel(ed.className);
- }
- return {name:missingLabel(name)?'확인 필요':name,className:missingLabel(className)?'확인 필요':className};
-}
-// END_RUN412_STAGE67_RESUME07_RANK_LABEL_SAFE_JOIN
+  // RUN412_STAGE69_RANK_LABEL_REGRESSION_FIX — presentation-only, admin-only
+  // Preserve valid persisted labels; resolve verified placeholders from the SAME saved exam roster.
+  function r67VerifiedRankLabels(p,r,persisted,score,id){
+   const clean=v=>typeof v==='string'?v.trim():'';
+   // Actual server placeholder strings must be recognized, not treated as real names.
+   const missingStudent=v=>!clean(v)||[
+    '확인 필요','미확인 학생','이름 확인 필요','학생 확인 필요',
+    '학생명 확인 필요','이전 수강생'
+   ].includes(clean(v));
+   const missingClass=v=>!clean(v)||[
+    '확인 필요','평가용 반 (이름 확인 필요)','이름 확인 필요',
+    '반 확인 필요','반명 확인 필요','수강반 확인 필요','이전 수강반'
+   ].includes(clean(v));
+   let name=p?clean(p.studentLabel):'',className=p?clean(p.classLabel):'';
+   const display=()=>({name:missingStudent(name)?'확인 필요':name,
+                      className:missingClass(className)?'확인 필요':className});
+   // Already-verified labels must NEVER be blanked or overwritten by another data source.
+   if(!missingStudent(name)&&!missingClass(className))return display();
+   if(!p||!r||!R04_EDITOR||R04_EDITOR.examId!==id||
+      persisted.examId!==id||score.examId!==id||
+      !Number.isSafeInteger(R04_EDITOR.stateVersion)||
+      R04_EDITOR.stateVersion!==persisted.stateVersion||
+      score.stateVersion!==persisted.stateVersion||
+      !Array.isArray(R04_EDITOR.rows)||!Array.isArray(persisted.rows)||
+      p.participationId!==r.participationId||p.status!=='active'||
+      p.group!==(r.audience==='adult'?'성인':r.audience==='youth'?'청소년':'')||
+      typeof p.classId!=='string'||!p.classId)return display();
+   // Resolve ONLY the unique saved participation ID. No current-roster, name or index join.
+   const candidates=R04_EDITOR.rows.filter(e=>e&&e.participationId===p.participationId);
+   if(candidates.length!==1)return display();
+   const ed=candidates[0];
+   if(ed.status!=='active'||ed.classStatus==='archived'||
+      ed.classId!==p.classId||ed.group!==p.group||
+      ed.participationId!==r.participationId)return display();
+   if(missingStudent(name)&&!missingStudent(ed.name))name=clean(ed.name);
+   if(missingClass(className)&&!missingClass(ed.className))className=clean(ed.className);
+   return display();
+  }
+  // END_RUN412_STAGE69_RANK_LABEL_REGRESSION_FIX
  const scoreLeaderboard=scoreRows.length?`<div class="scroll-table"><table class="wide-table"><thead><tr><th>순위</th><th>구분</th><th>학생</th><th>수강반</th><th>합계</th><th>평균 / ${esc(maxLabel)}</th><th>제출 강사</th></tr></thead><tbody>${scoreRows.map(r=>{const p=persisted.rows.find(x=>x.participationId===r.participationId);const labels=r67VerifiedRankLabels(p,r,persisted,scores,id);return `<tr><td>${r.displayRank}위 ${r.complete?'':'· 잠정'}</td><td>${r.audience==='adult'?'성인':'청소년'}</td><td>${esc(labels.name)}</td><td>${esc(labels.className)}</td><td>${fmt(r.sum)}</td><td>${fmt(r.average)}</td><td>${r.submittedCount}/${scores.teacherCount}</td></tr>`;}).join('')}</tbody></table></div>`:
    '<p class="hint">이 구분에 최종 제출된 평가표가 없어 아직 순위를 계산할 수 없습니다.</p>';
  const teacherTable=teacherStatuses.length?`<div class="scroll-table"><table class="wide-table r04-teacher-status-table"><thead><tr><th>강사</th><th>평가 상태</th></tr></thead><tbody>${teacherStatuses.map(t=>`<tr><td><button type="button" class="r04-teacher-name-button" data-r04-teacher-popup-index="${t.index}" aria-label="${esc(t.name)} 평가표 팝업 열기">${esc(t.name)}</button></td><td><span class="chip ${t.status==='submitted'?'ok':'wait'}">${t.status==='submitted'?'완료':t.status==='draft'?'임시저장':'미평가'}</span></td></tr>`).join('')}</tbody></table></div>`:'<p class="hint">평가표 조회 전이거나 참가 ID의 정확한 연결을 확인할 수 없습니다. 다른 학생의 채점 기록은 추측하여 표시하지 않습니다.</p>';
