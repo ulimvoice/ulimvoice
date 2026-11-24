@@ -96,13 +96,13 @@ function renderCanonicalAdminRosterR04(){
  const visible=rows.filter(p=>(S.rosterGroup==='전체'||p.group===S.rosterGroup)&&(!S.rosterSearch||[p.name,p.className,p.classId].some(x=>str(x).toLowerCase().includes(S.rosterSearch.toLowerCase()))));
  const classes=new Set(rows.map(p=>str(p.classId))).size;
  app.innerHTML=prefix()+`<div class="heading-row"><div><h1>새 회차 시작 전 · 울림앱 명단 미리보기</h1><p class="muted">기존 울림앱 수강 명단 연결 확인 · 관리자 전용 조회 · 시작 전 새 회차 명단 준비용 조회입니다. 이미 시작한 회차의 학생·반 정보에는 반영되지 않습니다</p></div><span class="chip wait">읽기 전용</span></div><div class="panel"><div class="flex"><strong>${esc(S.rosterDate)} 기준 · ${classes}개 반 · 준비 대상 ${rows.length}건</strong><label>조회 날짜 <input id="r04PreviewDate" type="date" value="${esc(S.rosterDate)}"></label><button id="r04PreviewRefresh" class="btn line">새로고침</button></div><div class="flex top-gap"><label>구분 <select id="r04PreviewGroup"><option value="전체">전체</option>${GROUPS.map(g=>`<option value="${g}" ${g===S.rosterGroup?'selected':''}>${g}</option>`).join('')}</select></label><label>학생 · 반 검색 <input id="r04PreviewSearch" maxlength="100" value="${esc(S.rosterSearch)}" placeholder="학생 또는 반"></label></div><div class="scroll-table top-gap"><table class="wide-table"><thead><tr><th>구분</th><th>반</th><th>학생</th><th>상태</th></tr></thead><tbody>${visible.map(p=>`<tr><td>${esc(p.group)}</td><td>${esc(p.className)}</td><td>${esc(p.name)}</td><td><span class="chip wait">현재 수강 명단</span></td></tr>`).join('')||'<tr><td colspan="4">조회 결과가 없습니다.</td></tr>'}</tbody></table></div></div><div class="panel"><h2 class="panel-title">관리자 확인 필요 · ${checks.length}건</h2><p class="hint">담당 강사를 확인할 수 없는 반 등은 평가 대상 발급 전 관리자가 확인해야 합니다. 이 화면에서 자동으로 청소년반에 배정하지 않습니다.</p>${checks.length?`<div class="scroll-table"><table class="wide-table"><thead><tr><th>학생</th><th>사유</th><th>수강 반</th></tr></thead><tbody>${checks.map(x=>`<tr><td>${esc(x.studentName)}</td><td>${esc(x.reason)}</td><td>${esc((x.classes||[]).map(c=>c.className).join(', '))}</td></tr>`).join('')}</tbody></table></div>`:'<p>현재 관리자 확인 대상으로 분류된 명단이 없습니다.</p>'}<p class="hint">이 목록은 서버의 실제 수강 명단을 읽어 표시한 것입니다. 아직 회차 생성, 참가 ID 저장, 강사 채점·학생 공개, 관리자 이동/삭제 기능은 연결되지 않았습니다.</p></div>`;
- renderR04AdminSessionControls();
+ if(S.r04SessionId)renderR04AdminSessionControls();
  renderR04AdminRoundPanel();
  $('r04PreviewDate').onchange=()=>{};
  $('r04PreviewRefresh').onclick=()=>withBusy($('r04PreviewRefresh'),()=>refreshCanonicalAdminRosterR04($('r04PreviewDate').value));
  $('r04PreviewGroup').onchange=e=>{S.rosterGroup=e.target.value;renderCanonicalAdminRosterR04();};
  $('r04PreviewSearch').onchange=e=>{S.rosterSearch=str(e.target.value);renderCanonicalAdminRosterR04();};
- renderR04AdminCore();
+ if(S.r04SessionId)renderR04AdminCore();
  r79RestoreAdminDialog(r79DialogSnapshot);
 }
 // RUN286: Core R04 admin workspace. This is a VIEW of the existing canonical roster;
@@ -2126,6 +2126,7 @@ function renderR04StudentHistory(){
 
 // STAGE33: R04 moXX round workflow UI; metadata only before explicit admin actions.
 let R04_ROUND_CATALOG=[];
+let R88_ARCHIVED_ROUND_IDS=[];
 let R04_ROUND_PENDING=false;
 let R04_ROUND_ERROR='';
 const R04_MO_ID=/^mo(?:0[1-9]|[1-9][0-9]{1,2})$/;
@@ -2156,6 +2157,11 @@ async function loadR04RoundCatalog(){
  if(new Set(rows.map(x=>x.examId)).size!==rows.length)throw Error('중복 회차 ID가 있습니다.');
  if(role!==S.role||uid!==str(S.auth&&S.auth.uid))return;
  if(role==='teacher'&&rows.some(x=>x.status!=='started'))throw Error('강사에게 미시작 회차가 노출되었습니다.');
+ if(role==='admin'){
+  const reserved=out.archivedRoundIds??[];
+  if(!Array.isArray(reserved)||reserved.length>2000||reserved.some(x=>typeof x!=='string'||!R04_EXAM_ID_PATTERN.test(x)||rows.some(r=>r.examId===x))||new Set(reserved).size!==reserved.length)throw Error('삭제 회차 ID 목록을 확인할 수 없습니다.');
+  R88_ARCHIVED_ROUND_IDS=reserved;
+ }else R88_ARCHIVED_ROUND_IDS=[];
  R04_ROUND_CATALOG=rows;R04_ROUND_ERROR='';
  if(role==='teacher'){
   const started=rows.filter(x=>x.status==='started');
@@ -2176,7 +2182,14 @@ async function loadR04RoundCatalog(){
   if(!rows.some(x=>x.examId===S.r04SessionId&&x.status==='started')){
    const choice=rows.find(x=>x.status==='started'&&x.state==='open')||
      rows.find(x=>x.status==='started');
-   if(choice)S.r04SessionId=choice.examId;
+   if(S.r04SessionId!==(choice?.examId||'')){
+    resetR04AdminMedia();clearR04PersistedView();
+    R04_EDITOR.examId='';R04_EDITOR.rows=[];R04_EDITOR.classes=[];R04_EDITOR.selectedClass='';R04_EDITOR.selectedParticipant='';
+    R04_EVALUATOR_VIEW.examId='';R04_EVALUATOR_VIEW.evaluators=[];R04_SCOREBOARD.examId='';R04_SCOREBOARD.rows=[];R360.examId='';R360.config=null;
+    S.r04SessionState=null;S.r04ReleasePreview=null;
+    if(R407_ADMIN_MODAL.open)r407CloseAdminGrade();
+   }
+   S.r04SessionId=choice?.examId||'';
   }
  }
  render();
@@ -2308,7 +2321,7 @@ function renderR04AdminRoundPanel(){
  const copying=rows.filter(x=>x.status==='started');
  const today=kstRosterDateR04();
  const next=Array.from({length:999},(_,i)=>'mo'+String(i+1).padStart(2,'0'))
-   .find(id=>!rows.some(r=>r.examId===id))||'';
+   .find(id=>!rows.some(r=>r.examId===id)&&!R88_ARCHIVED_ROUND_IDS.includes(id))||'';
  const item=x=>{
   const selected=x.examId===S.r04SessionId;
   const group=x.gradingStateByAudience;
@@ -2316,7 +2329,8 @@ function renderR04AdminRoundPanel(){
     x.state==='closed'?'평가 종료':group.adult==='open'||group.youth==='open'?'평가 진행':'평가 대기';
   const action=x.status==='registered'?`<button type="button" class="btn line small" data-r04-round-start="${esc(x.examId)}" ${R04_ROUND_PENDING?'disabled':''}>명단 확정 · 회차 준비</button>`:
     `<button type="button" class="btn line small" data-r04-round-select="${esc(x.examId)}" ${R04_ROUND_PENDING?'disabled':''}>${selected?'선택 중':'회차 선택'}</button>`;
-  return `<div class="flex" style="padding:9px 0;border-bottom:1px solid #e3e9e5;align-items:center;flex-wrap:wrap;gap:8px"><span style="flex:1;min-width:150px"><strong>${esc(x.examId)}</strong> · ${esc(x.startDate)} <small class="muted">${esc(state)}${x.status==='started'?' · '+x.participantCount+'명':''}</small></span>${action}</div>`;
+  const remove=`<button type="button" class="btn line small" style="color:#a42929" data-r88-round-delete="${esc(x.examId)}" ${R04_ROUND_PENDING?'disabled':''}>회차 삭제</button>`;
+  return `<div class="flex" style="padding:9px 0;border-bottom:1px solid #e3e9e5;align-items:center;flex-wrap:wrap;gap:8px"><span style="flex:1;min-width:150px"><strong>${esc(x.examId)}</strong> · ${esc(x.startDate)} <small class="muted">${esc(state)}${x.status==='started'?' · '+x.participantCount+'명':''}</small></span>${action}${remove}</div>`;
  };
  app.insertAdjacentHTML('afterbegin',`<section class="panel" id="r04RoundCatalogPanel"><div class="heading-row"><div><h2>신규 모의고사 회차 관리</h2><p class="muted">회차 등록은 명단을 만들지 않습니다. 시작일 이후 명단 확정 시 울림앱의 최신 수강생·반을 독립 저장합니다.</p></div></div>
  <form id="r04RoundRegisterForm" class="session-form-grid">
@@ -2353,6 +2367,18 @@ function renderR04AdminRoundPanel(){
   if(row.startDate>kstRosterDateR04())return toast('설정한 시작 날짜 이전입니다.');
   if(!window.confirm(examId+' 회차의 최신 수강생·반 명단을 확정할까요?\n이후 같은 회차를 다시 생성할 수 없습니다.'))return;
   mutateR04Round({action:'start',examId},'admin-r04-round-started');
+ });
+ app.querySelectorAll('[data-r88-round-delete]').forEach(el=>el.onclick=()=>{
+  if(preview||S.role!=='admin'||!S.auth||R04_ROUND_PENDING)return;
+  if(R04_EDITOR.loading||R04_EDITOR.mutating||R04_PERSISTED_VIEW.loading||S.r04StateMutationPending||S.r04ReleasePending||R360.saving)return toast('현재 작업이 끝난 뒤 삭제하세요.');
+  const id=el.dataset.r88RoundDelete,row=R04_ROUND_CATALOG.find(x=>x.examId===id);
+  if(!row||!R04_EXAM_ID_PATTERN.test(id))return toast('삭제할 회차를 다시 조회하세요.');
+  const status=row.status==='registered'?'등록 대기':row.state==='closed'?'종료':row.gradingStateByAudience.adult==='open'||row.gradingStateByAudience.youth==='open'?'채점 진행':'평가 대기';
+  const released=row.resultsReleasedByAudience.adult||row.resultsReleasedByAudience.youth;
+  const typed=window.prompt(id+' ('+row.startDate+', '+status+', 참가 '+row.participantCount+'건'+(released?', 공개 결과 포함':'')+') 회차를 삭제합니다.\n관리자·강사·학생 화면에서 해당 회차와 결과가 제거됩니다. 원본 평가·명단·미디어는 복구용으로 보존되며 같은 ID는 다시 사용할 수 없습니다.\n삭제하려면 회차 ID를 정확히 입력하세요.');
+  if(typed!==id)return;
+  const fingerprint=JSON.stringify([row.examId,row.startDate,row.status,row.state,row.participantCount,row.gradingStateByAudience.adult,row.gradingStateByAudience.youth,row.resultsReleasedByAudience.adult,row.resultsReleasedByAudience.youth]);
+  mutateR04Round({action:'deleteRound',examId:id,confirmExamId:typed,expectedFingerprint:fingerprint},'admin-r04-round-deleted');
  });
  app.querySelectorAll('[data-r04-round-select]').forEach(el=>el.onclick=async()=>{
   if(R04_ROUND_PENDING)return;
@@ -2397,10 +2423,19 @@ async function mutateR04Round(payload,expectedMode){
   const out=await call(FN.r04RoundCreate,payload);
   if(!out||out.ok!==true||out.mode!==expectedMode||out.examId!==payload.examId||
      (payload.action==='register'&&(out.status!=='registered'||out.snapshotCount!==0))||
-     (payload.action==='start'&&(out.status!=='started'||!Number.isSafeInteger(out.participantCount)||out.participantCount<1)))
-    throw Error('등록·시작 결과가 불확실합니다. 같은 요청을 반복하지 말고 회차 목록을 다시 조회하세요.');
-  toast(payload.action==='register'?'회차 등록 완료':'수강생·반 명단 확정 완료');
-  await loadR04RoundCatalog();
+     (payload.action==='start'&&(out.status!=='started'||!Number.isSafeInteger(out.participantCount)||out.participantCount<1))||
+     (payload.action==='deleteRound'&&(out.status!=='deleted'||out.archived!==true||![1,2].includes(out.deletedRootCount))))
+    throw Error('회차 작업 결과가 불확실합니다. 같은 요청을 반복하지 말고 회차 목록을 다시 조회하세요.');
+  const wasSelected=S.r04SessionId===payload.examId;
+  if(payload.action==='deleteRound'){
+   await loadR04RoundCatalog();
+   if(R04_ROUND_CATALOG.some(x=>x.examId===payload.examId)||!R88_ARCHIVED_ROUND_IDS.includes(payload.examId))throw Error('삭제 결과를 확인할 수 없습니다. 같은 요청을 반복하지 마세요.');
+   if(wasSelected&&S.r04SessionId)await r04ChooseRound(S.r04SessionId);
+   toast('회차 삭제 완료');
+  }else{
+   toast(payload.action==='register'?'회차 등록 완료':'수강생·반 명단 확정 완료');
+   await loadR04RoundCatalog();
+  }
   // Do not pre-assign the new round ID: r04ChooseRound owns cache invalidation.
   if(payload.action==='start'&&S.role==='admin'){
    try{await r04ChooseRound(payload.examId);}catch(e){toast('회차 시작은 확인됐으나 화면 새로고침에 실패했습니다: '+errorMessage(e));}
@@ -2414,7 +2449,7 @@ async function refreshSessions(){
  if(S.role==='student')return refreshR04StudentHistory();
  if(S.role==='teacher'){
   await loadR04RoundCatalog();
-  if(!S.examId||!S.sessions.length)throw Error('평가 가능한 시작 회차가 없습니다.');
+  if(!S.examId||!S.sessions.length){render();return;}
   return reloadR04Teacher();
  }
  if(S.role==='admin'){
@@ -2619,6 +2654,7 @@ function teacherView(){
  r406StopTeacherMedia();
   // RUN273: The existing R04 owner renders the real authenticated teacher workspace.
   // No new callable, browser database read, role override, or client-side permission bypass.
+  if(!preview&&S.role==='teacher'&&!S.examId&&!S.sessions.length){app.innerHTML=prefix()+'<section class="center-state"><h1>평가 가능한 회차가 없습니다</h1><p>새 회차가 준비되면 다시 조회하세요.</p></section>';return;}
   if(!preview&&S.role==='teacher'&&!S.r04TeacherReady){
     app.innerHTML=prefix()+'<section class="center-state"><h1>강사 평가를 불러오고 있습니다</h1><p>인증된 R04 평가 명단을 확인한 뒤 사용할 수 있습니다.</p></section>';
     return;
