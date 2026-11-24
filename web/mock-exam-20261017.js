@@ -2187,6 +2187,19 @@ async function loadR04RoundCatalog(){
 // RUN412_STAGE79: Update only Drive status and buttons; never tear down its parent modal.
 // RUN412_STAGE80: Expose the backend's already returned matching issues to admins.
 // No Drive file IDs or original filenames are added to the UI or teacher views.
+// RUN412_STAGE81: Admin-only sample paths explain why names did not match.
+function r81MismatchSamplesHtml(report){
+ if(!report||!Array.isArray(report.mismatchSamples))return '';
+ const items=report.mismatchSamples.slice(0,12).filter(x=>x&&typeof x.reason==='string'&&
+    typeof x.fileName==='string'&&typeof x.folderPath==='string');
+ if(!items.length)return '';
+ return '<details style="margin:10px 0" open><summary>불일치 파일명·폴더 경로 보기 ('+items.length+'개 예시)</summary>'+
+  '<div class="scroll-table"><table class="wide-table"><thead><tr><th>폴더 경로</th><th>파일명</th><th>제외 이유</th><th>반 후보</th><th>학생 후보</th></tr></thead><tbody>'+
+  items.map(x=>'<tr><td>'+esc(x.folderPath)+'</td><td>'+esc(x.fileName)+'</td><td>'+esc(x.reason)+
+   '</td><td>'+esc((Array.isArray(x.classCandidates)?x.classCandidates:[]).slice(0,4).join(', ')||'—')+
+   '</td><td>'+esc((Array.isArray(x.studentCandidates)?x.studentCandidates:[]).slice(0,4).join(', ')||'—')+'</td></tr>').join('')+
+  '</tbody></table></div><p class="hint">이 정보는 관리자 미리보기 전용입니다. 학생과 파일을 임의로 연결하지 않습니다.</p></details>';
+}
 function r80IssueBreakdownHtml(report){
  if(!report||!Array.isArray(report.issues))return '';
  const grouped=new Map();
@@ -2203,7 +2216,8 @@ function r80IssueBreakdownHtml(report){
  const zero=report.matchedFileCount===0&&report.examinedFileCount>0?
   '<p class="warn">자동 매칭 0건: 아래 제외 사유를 확인하세요. 폴더 구성 예시는 회차/반명/학생명/음성.mp3 또는 회차/반명/학생명_음성.mp3입니다. 현재는 저장하지 마세요.</p>':'';
  return zero+(list?'<div class="hint" style="margin-top:9px"><strong>제외·중복 사유</strong>'+list+
-  '<p>표시된 사유는 파일명·폴더 경로와 회차에 저장된 반·학생명의 비교 결과입니다.</p></div>':'');
+  '<p>표시된 사유는 파일명·폴더 경로와 회차에 저장된 반·학생명의 비교 결과입니다.</p></div>':'')+
+  r81MismatchSamplesHtml(report);
 }
 function r79DriveFeedbackHtml(d){
  const report=d.report;
