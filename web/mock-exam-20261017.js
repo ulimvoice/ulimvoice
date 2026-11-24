@@ -1939,7 +1939,7 @@ function validateR04StudentHistory(out){
     Object.keys(raw).length!==expected.length+(hasMedia?1:0)||
     expected.some(k=>!Object.prototype.hasOwnProperty.call(raw,k))||
     Object.keys(raw).some(k=>!expected.includes(k)&&k!=='media')||
-    !/^r04_20\d{4}_r0[1-9]$/u.test(raw.examId)||
+    !R04_EXAM_ID_PATTERN.test(raw.examId)||
     typeof raw.examDate!=='string'||!/^20\d{2}-\d{2}-\d{2}$/u.test(raw.examDate)||
     !Number.isSafeInteger(raw.round)||raw.round<1||
     typeof raw.participationId!=='string'||!raw.participationId||raw.participationId.length>180||
